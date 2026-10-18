@@ -95,7 +95,7 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   "format": "hojdkurvor-plats",
   "version": 1,
   "skapad": "2026-10-18T09:12:00.000Z",
-  "kalla": "höjdkurvor.se 5.0",
+  "kalla": "höjdkurvor.se 0.5.0",
   "projekt": { "id": "uuid", "namn": "Staren 2", "kommun": "Kinda" },
   "koordinatsystem": {
     "plan": { "epsg": 3009, "namn": "SWEREF 99 15 00" },

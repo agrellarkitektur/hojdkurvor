@@ -73,13 +73,15 @@ sedan via `geodata.php`).
 
 ## Leverera en ny version
 
-1. Höj `version` och `datum` i `js/version.js`.
+1. Höj `version` och `datum` i `js/version.js`. Numreringen är 0.x så länge appen
+   är i beta: sista siffran för rättelser (0.5.1), mittersta för nya funktioner
+   (0.6.0). 1.0.0 när BETA tas bort.
 2. Skriv i `CHANGELOG.md` och i Ändringar på `om.html`.
 3. Uppdatera `instruktioner.html` och `README.md` om något syns för användaren
    eller om filer, tjänster eller inställningar har ändrats.
 4. Kör testerna.
 5. Commit och push till `main`. Lista vilka filer som är nya eller ändrade.
-6. Han publicerar en release med taggen `vX.Y` på GitHub. Då bygger
+6. Han publicerar en release med taggen `vX.Y.Z` på GitHub. Då bygger
    `.github/workflows/release.yml` zip-filen för webbhotellet och lägger den på
    releasen. Han laddar upp den till `public_html/terrang/` på
    agrellarkitektur.se själv. Ändras vilka filer appen behöver, se till att

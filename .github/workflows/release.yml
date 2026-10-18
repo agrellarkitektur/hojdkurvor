@@ -1,8 +1,8 @@
 # Packar appen och lägger en färdig zip för webbhotellet på varje release.
 #
 # Så används den: gå till Releases på GitHub, välj "Draft a new release",
-# skriv en tagg som v5.0 och publicera. Efter någon minut ligger
-# hojdkurvor-v5.0.zip under Assets på releasen. Den kan också köras för hand
+# skriv en tagg som v0.5.0 och publicera. Efter någon minut ligger
+# hojdkurvor-v0.5.0.zip under Assets på releasen. Den kan också köras för hand
 # under Actions → "Bygg för webbhotellet" → "Run workflow"; då hamnar zip-filen
 # under körningens Artifacts i stället.
 #
@@ -76,7 +76,7 @@ jobs:
           över ändringen till den nya filen först.
 
           Vill du behålla en äldre version: döp om den gamla mappen på servern
-          först (till exempel terrang-5.0) innan du laddar upp den nya.
+          först (till exempel terrang-0.5.0) innan du laddar upp den nya.
 
           Ändringar: https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md
           TXT

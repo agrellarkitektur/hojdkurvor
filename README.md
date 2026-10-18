@@ -20,13 +20,13 @@ Inget byggsteg: filerna laddas upp som de är.
 
 Enklast är att hämta en färdig zip: under
 [Releases](https://github.com/agrellarkitektur/hojdkurvor/releases) ligger
-`hojdkurvor-vX.Y.zip` under Assets på varje release. Den innehåller en mapp
+`hojdkurvor-vX.Y.Z.zip` under Assets på varje release. Den innehåller en mapp
 `terrang` med bara de filer som behövs. Ladda upp innehållet till
 `public_html/terrang/` och ersätt de gamla filerna. Har `config.js` på servern
 ändrats (till exempel en Esri-nyckel), hoppa över den filen.
 
 Zip-filen byggs av GitHub (`.github/workflows/release.yml`) när en release
-publiceras: Releases → Draft a new release, skriv en tagg som `v5.1` (samma som
+publiceras: Releases → Draft a new release, skriv en tagg som `v0.5.1` (samma som
 i `js/version.js`), skriv vad som är nytt och publicera. Efter någon minut ligger
 zip-filen på releasen. Arbetsflödet kontrollerar koden, kör enhetstestet och
 stoppar om `config.js` innehåller en nyckel eller inloggning. Det kan också

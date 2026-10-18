@@ -3,9 +3,11 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
-## 5.0 – 2026-10-18
+## 0.5.0 – 2026-10-18
 
-Första versionen i det publika repot.
+Första versionen i det publika repot. Versionerna numreras från och med nu 0.x
+så länge tjänsten är i beta (0.5.0 hette en kort stund 5.0, och 4.x heter nu 0.4.x).
+Sista siffran höjs för rättelser, den mittersta för nya funktioner.
 
 - Panelen i fyra steg: 01 Plats, 02 Underlag, 03 Analys och 04 Skiss, med
   sammanfattning av valen nederst. Ritprogrammet (Archicad, Revit, AutoCAD,
@@ -31,17 +33,17 @@ Första versionen i det publika repot.
 - Skuggstudien fungerar utan laserdata (bara terrängen och skissen skuggar).
 - Källkoden publicerad under GPL-3.0 eller senare.
 
-## 4.2
+## 0.4.2
 
 - Temamenyn fungerar på iPhone (Safari och Chrome).
 
-## 4.1
+## 0.4.1
 
 - Temameny i menyraden: Blueprint, Ljust och Mörkt.
 - Bladet Beställ, med kopiera och klistra in av områdets hörn.
 - Ritningshuvud och klickbar kontakt på informationssidorna.
 
-## 4.0
+## 0.4.0
 
 - Analyser ur Laserdata skog: träd, höjd över mark, skuggstudie, terrängsektioner
   och horisont i soldiagrammet.
