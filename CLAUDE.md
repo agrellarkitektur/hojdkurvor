@@ -78,9 +78,12 @@ sedan via `geodata.php`).
 3. Uppdatera `instruktioner.html` och `README.md` om något syns för användaren
    eller om filer, tjänster eller inställningar har ändrats.
 4. Kör testerna.
-5. Commit och push till `main`. Han laddar upp filerna till webbhotellet
-   (`public_html/terrang/` på agrellarkitektur.se) själv. Lista vilka filer som
-   är nya eller ändrade, så att han vet vad som ska upp.
+5. Commit och push till `main`. Lista vilka filer som är nya eller ändrade.
+6. Han publicerar en release med taggen `vX.Y` på GitHub. Då bygger
+   `.github/workflows/release.yml` zip-filen för webbhotellet och lägger den på
+   releasen. Han laddar upp den till `public_html/terrang/` på
+   agrellarkitektur.se själv. Ändras vilka filer appen behöver, se till att
+   arbetsflödets urval (`git archive … ':!test' …`) fortfarande stämmer.
 
 Flyttar sidan till en ny domän (höjdkurvor.se) måste Lantmäteriet godkänna den
 för CORS först, se `README.md`.

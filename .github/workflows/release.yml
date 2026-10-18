@@ -1,0 +1,97 @@
+# Packar appen och lägger en färdig zip för webbhotellet på varje release.
+#
+# Så används den: gå till Releases på GitHub, välj "Draft a new release",
+# skriv en tagg som v5.0 och publicera. Efter någon minut ligger
+# hojdkurvor-v5.0.zip under Assets på releasen. Den kan också köras för hand
+# under Actions → "Bygg för webbhotellet" → "Run workflow"; då hamnar zip-filen
+# under körningens Artifacts i stället.
+#
+# Appen har inget byggsteg. Arbetsflödet kontrollerar koden, kör enhetstestet och
+# packar filerna i en mapp som heter terrang, utan tester och dokumentation.
+
+name: Bygg för webbhotellet
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Kontrollera koden
+        run: |
+          for f in js/*.js config.js; do node --check "$f"; done
+          for f in *.php; do php -l "$f"; done
+
+      - name: Enhetstest
+        run: node test/platsanalys.test.js
+
+      - name: Kontrollera inställningarna
+        run: |
+          # Inga nycklar eller inloggningar får följa med till webbhotellet.
+          node -e "
+            global.window = {};
+            require('./config.js');
+            const k = window.TERRANG_KONFIG;
+            if (k.esriNyckel || k.inloggning) { console.error('config.js innehåller en nyckel eller inloggning'); process.exit(1); }
+          "
+
+      - name: Jämför version
+        if: github.event_name == 'release'
+        run: |
+          V=$(node -e "global.window={}; require('./js/version.js'); console.log(window.HOJDKURVOR.version)")
+          if [ "v$V" != "$GITHUB_REF_NAME" ] && [ "$V" != "$GITHUB_REF_NAME" ]; then
+            echo "::warning::Taggen $GITHUB_REF_NAME stämmer inte med version $V i js/version.js"
+          fi
+
+      - name: Packa zip
+        id: zip
+        run: |
+          NAME="hojdkurvor-${GITHUB_REF_NAME:-manuell}"
+          NAME="${NAME//\//-}"
+          # Zip-filen innehåller en mapp som heter terrang, färdig att lägga
+          # i public_html så att adressen blir …/terrang/.
+          mkdir -p package/terrang
+          git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C package/terrang
+          cat > package/terrang/LASMIG.txt <<TXT
+          höjdkurvor.se ${GITHUB_REF_NAME}
+
+          Ladda upp innehållet i mappen terrang till public_html/terrang/ på
+          webbhotellet och ersätt de gamla filerna. Sidan finns sedan på
+          https://agrellarkitektur.se/terrang/
+
+          config.js följer med utan nycklar. Har du ändrat den på servern (till
+          exempel lagt in en Esri-nyckel): ladda inte upp config.js, eller för
+          över ändringen till den nya filen först.
+
+          Vill du behålla en äldre version: döp om den gamla mappen på servern
+          först (till exempel terrang-5.0) innan du laddar upp den nya.
+
+          Ändringar: https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md
+          TXT
+          (cd package && zip -r -9 "../$NAME.zip" terrang)
+          echo "file=$NAME.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Lägg zip-filen på releasen
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "${{ steps.zip.outputs.file }}" --clobber
+
+      - name: Spara zip-filen på körningen
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hojdkurvor-webbhotell
+          path: ${{ steps.zip.outputs.file }}
