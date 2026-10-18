@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="sv" data-tema="ritning">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>höjdkurvor.se – kartan</title>
+  <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
+  <script src="js/version.js"></script>
+  <script src="js/tema.js"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="kartsida">
+  <header class="toppmeny">
+    <a class="logga" href="index.html" aria-label="höjdkurvor.se, till kartan">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><g class="ring" fill="none" stroke-width="2.4" transform="rotate(-14 32 32)"><ellipse cx="30" cy="34" rx="27" ry="21"/><ellipse cx="34.5" cy="31" rx="17.5" ry="13.5"/><ellipse cx="38" cy="29" rx="8.5" ry="6.5"/></g><path class="kors" d="M36 27 h7 M39.5 23.5 v7" stroke-width="2.4"/></svg>
+      <span class="ordbild" aria-hidden="true">höjdkurvor<span class="punkt">.</span>se</span>
+    </a>
+    <nav class="huvudmeny" aria-label="Huvudmeny">
+      <a href="index.html" aria-current="page"><span class="blad">BLAD 01</span><span class="namn">KARTAN</span></a>
+      <a href="instruktioner.html"><span class="blad">BLAD 02</span><span class="namn">INSTRUKTIONER</span></a>
+      <a href="om.html"><span class="blad">BLAD 03</span><span class="namn">OM</span></a>
+      <a href="bestall.html"><span class="blad">BLAD 04</span><span class="namn">BESTÄLL</span></a>
+      <div class="tema-val">
+        <button type="button" class="tema-knapp" aria-haspopup="menu" aria-expanded="false" aria-controls="tema-meny"><span class="blad">TEMA</span><span class="namn tema-namn">BLUEPRINT</span></button>
+        <div class="tema-meny" id="tema-meny" role="menu" aria-label="Tema">
+          <button type="button" role="menuitemradio" data-val="ritning" aria-checked="false">BLUEPRINT</button>
+          <button type="button" role="menuitemradio" data-val="lugn" aria-checked="false">LJUST</button>
+          <button type="button" role="menuitemradio" data-val="mork" aria-checked="false">MÖRKT</button>
+        </div>
+      </div>
+      <div class="cell"><span class="blad">STATUS</span><span class="beta">BETA</span></div>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <div class="kartyta">
+      <main id="karta" aria-label="Karta"></main>
+
+      <!-- Mobilflödet: markera med en ram, kopiera eller skicka till datorn -->
+      <div class="mobil-ram" id="mobil-ram" hidden aria-hidden="true">
+        <span class="hörn hörn-nv"></span><span class="hörn hörn-no"></span><span class="hörn hörn-sv"></span><span class="hörn hörn-so"></span>
+        <span class="mobil-matt" id="mobil-matt"></span>
+        <svg class="mobil-kors" viewBox="0 0 26 26"><path d="M13 3 V23 M3 13 H23"/></svg>
+      </div>
+      <form class="mobil-sok" id="mobil-sok" role="search" hidden>
+        <label for="mobil-sok-text" class="dold">Sök adress eller ort</label>
+        <input id="mobil-sok-text" type="search" placeholder="Sök adress eller ort" autocomplete="off">
+        <button type="submit">Sök</button>
+      </form>
+      <ul class="sokresultat mobil-sokresultat" id="mobil-sokresultat" hidden></ul>
+      <section class="mobil-blad" id="mobil-blad" hidden aria-live="polite">
+        <div id="mobil-markera">
+          <p>Flytta och zooma kartan tills området ryms i ramen.</p>
+          <button type="button" class="knapp primar" id="mobil-markera-knapp">Markera området</button>
+          <p class="mobil-fot"><span>Underlaget skapas på en dator</span><button type="button" class="lank-knapp" id="mobil-hela">Hela verktyget</button></p>
+        </div>
+        <div id="mobil-resultat" hidden>
+          <div class="mobil-rubrik"><h2 id="mobil-storlek"></h2><span id="mobil-kommun"></span></div>
+          <p class="mobil-system" id="mobil-system"></p>
+          <dl class="mobil-koord" id="mobil-koord"></dl>
+          <button type="button" class="knapp primar" id="mobil-dela"><svg viewBox="0 0 16 18" aria-hidden="true"><path d="M8 12 V1 M4 5 L8 1 L12 5 M2 8 V17 H14 V8"/></svg>Skicka till datorn</button>
+          <div class="knapprad mobil-knappar">
+            <button type="button" class="knapp" id="mobil-kopiera">Kopiera</button>
+            <a class="knapp" id="mobil-bestall" href="bestall.html#fran-kartan">Beställ underlaget</a>
+          </div>
+          <p class="mobil-hjalp" id="mobil-hjalp">Länken öppnar området på datorn, redan markerat. Där skapar du underlaget. Vill du slippa kan Agrell Arkitektur göra det åt dig.</p>
+          <p class="mobil-fot"><button type="button" class="lank-knapp" id="mobil-om">Markera om</button><button type="button" class="lank-knapp" id="mobil-hela-2">Hela verktyget</button></p>
+        </div>
+      </section>
+    </div>
+
+    <aside class="panel" aria-label="Skapa underlag">
+      <div class="stegnav" role="tablist" aria-label="Steg">
+        <button type="button" role="tab" id="flik-plats" aria-controls="steg-plats" aria-selected="true"><span class="nr">01</span><span class="namn">PLATS</span></button>
+        <button type="button" role="tab" id="flik-underlag" aria-controls="steg-underlag" aria-selected="false" tabindex="-1"><span class="nr">02</span><span class="namn">UNDERLAG</span></button>
+        <button type="button" role="tab" id="flik-analys" aria-controls="steg-analys" aria-selected="false" tabindex="-1"><span class="nr">03</span><span class="namn">ANALYS</span></button>
+        <button type="button" role="tab" id="flik-skiss" aria-controls="steg-skiss" aria-selected="false" tabindex="-1"><span class="nr">04</span><span class="namn">SKISS</span></button>
+      </div>
+
+      <div class="panel-rulla" id="panel-rulla">
+        <!-- 01 PLATS -->
+        <section class="steg-panel" id="steg-plats" role="tabpanel" aria-labelledby="flik-plats">
+          <p class="ingress">Rita ett utsnitt och välj koordinatsystem. Sedan väljer du underlag, platsanalys och skiss i stegen ovan. Allt räknas i din webbläsare.</p>
+
+          <div class="del" id="steg-omrade">
+            <h2 class="del-rubrik">Område</h2>
+            <form class="sok" id="sok" role="search">
+              <label for="sok-text" class="dold">Sök adress eller ort</label>
+              <input id="sok-text" type="search" placeholder="Sök adress eller ort" autocomplete="off">
+              <button type="submit" class="knapp">Sök</button>
+            </form>
+            <ul class="sokresultat" id="sokresultat" hidden></ul>
+            <button type="button" class="knapp rita" id="rita" aria-pressed="false">Rita område på kartan</button>
+            <p class="hjalp" id="rita-hjalp">Dra upp en rektangel på kartan. Kanterna hamnar på jämna 10 m. Ändra storleken med handtagen mitt på sidorna.</p>
+            <div id="utsnitt" hidden>
+              <p class="storlek"><span id="storlek-text"></span></p>
+              <fieldset class="koord">
+                <legend>Hörn i <span id="zon-namn-kort"></span></legend>
+                <label>Väst <input id="xmin" type="number" step="10" inputmode="numeric"></label>
+                <label>Öst <input id="xmax" type="number" step="10" inputmode="numeric"></label>
+                <label>Syd <input id="ymin" type="number" step="10" inputmode="numeric"></label>
+                <label>Nord <input id="ymax" type="number" step="10" inputmode="numeric"></label>
+              </fieldset>
+            </div>
+            <div class="knapprad koord-knappar">
+              <button type="button" class="knapp liten" id="koord-kopiera" hidden>Kopiera</button>
+              <button type="button" class="knapp liten" id="koord-klistra">Klistra in koordinater</button>
+            </div>
+            <div id="koord-inklistring" hidden>
+              <label for="koord-text">Klistra in här</label>
+              <textarea id="koord-text" rows="3" spellcheck="false" placeholder="Väst, öst, syd och nord, till exempel kopierade från ett annat projekt"></textarea>
+            </div>
+            <p class="hjalp" id="koord-status" aria-live="polite"></p>
+            <label for="projekt">Projekt eller fastighet</label>
+            <input id="projekt" type="text" placeholder="t.ex. Staren 2" spellcheck="false" autocomplete="off">
+            <p class="hjalp">Står på ritningarna, i info-filen och i filnamnen.</p>
+          </div>
+
+          <div class="del" id="steg-zon">
+            <h2 class="del-rubrik">Koordinatsystem</h2>
+            <label for="zon" class="dold">Koordinatsystem i plan</label>
+            <select id="zon"></select>
+            <p class="hjalp" id="zon-hjalp">Välj ett område så föreslås kommunens system. Höjder i RH 2000.</p>
+          </div>
+
+          <details class="grupp" id="g-lokalt">
+            <summary><span class="grupp-namn">NOLLPUNKT OCH VRIDNING</span><span class="sammanf" id="sf-lokalt"></span></summary>
+            <fieldset class="val">
+              <legend>Lokal nollpunkt</legend>
+              <label><input type="radio" name="nollpunkt" value="horn" checked> Sydvästra hörnet</label>
+              <label><input type="radio" name="nollpunkt" value="egen"> Egen</label>
+            </fieldset>
+            <div id="egen-nollpunkt" hidden>
+              <div class="koord tre">
+                <label>X (öst) <input id="np-x" type="text" inputmode="decimal" spellcheck="false"></label>
+                <label>Y (norr) <input id="np-y" type="text" inputmode="decimal" spellcheck="false"></label>
+                <label>Z (RH 2000) <input id="np-z" type="text" inputmode="decimal" spellcheck="false" placeholder="0"></label>
+              </div>
+              <p class="hjalp" id="np-hjalp">Ange projektets nollpunkt i samma koordinatsystem som ovan. Z dras av från alla höjder i de lokala filerna, så att till exempel färdigt golv kan bli 0.</p>
+            </div>
+            <div class="falt-rad bred">
+              <label for="vrid">Vridning</label>
+              <select id="vrid">
+                <option value="ingen" selected>Ingen</option>
+                <option value="sann">Mot sann nord</option>
+                <option value="egen">Egen vinkel</option>
+              </select>
+            </div>
+            <div class="falt-rad bred" id="vrid-egen-rad" hidden>
+              <label for="vrid-grader">Grader medurs</label>
+              <input id="vrid-grader" type="text" inputmode="decimal" spellcheck="false" placeholder="t.ex. 12,5">
+            </div>
+            <p class="hjalp" id="vrid-hjalp">Filerna med _lokal i namnet kan vridas runt nollpunkten, till exempel så att sann nord pekar uppåt eller så att huset blir rätvinkligt mot axlarna. SWEREF-filerna vrids aldrig. Gäller alla filer, även dem som skickas till cad-apa.</p>
+          </details>
+
+          <div class="del" id="steg-inloggning">
+            <h2 class="del-rubrik">Lantmäteriet</h2>
+            <p class="hjalp">Med ditt konto på Geotorget. <a href="instruktioner.html#konto">Så skaffar du ett konto</a></p>
+            <form id="inloggning" autocomplete="on" onsubmit="return false">
+              <label for="anv">Användarnamn (e-post)</label>
+              <input id="anv" type="text" autocomplete="username" spellcheck="false">
+              <label for="losen">Lösenord</label>
+              <input id="losen" type="password" autocomplete="current-password">
+              <label for="kom-ihag">Kom ihåg inloggningen</label>
+              <select id="kom-ihag">
+                <option value="nej">Nej</option>
+                <option value="flik" selected>Tills fliken stängs</option>
+                <option value="dator">På den här datorn</option>
+              </select>
+            </form>
+            <p class="hjalp" id="inlogg-kalla" hidden></p>
+            <p class="hjalp">Uppgifterna skickas bara till Lantmäteriet, aldrig till den här webbplatsen. Välj <em>På den här datorn</em> bara på en dator som ingen annan använder.</p>
+            <button type="button" class="lank-knapp" id="kopiera-lank">Kopiera länk med inloggning</button>
+            <p class="hjalp" id="lank-hjalp">Länken fyller i inloggningen automatiskt. Den innehåller lösenordet, så dela den bara i en betrodd miljö, till exempel på kontorets intranät.</p>
+          </div>
+
+          <div class="del">
+            <h2 class="del-rubrik">Projektlänk</h2>
+            <p class="hjalp">En länk som öppnar samma utsnitt och samma val igen, till exempel för en kollega. Den innehåller ingen inloggning.</p>
+            <button type="button" class="knapp liten" id="kopiera-projektlank" disabled>Kopiera projektlänk</button>
+            <p class="hjalp" id="projektlank-status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <!-- 02 UNDERLAG -->
+        <section class="steg-panel" id="steg-underlag" role="tabpanel" aria-labelledby="flik-underlag" hidden>
+          <div class="del" id="steg-installningar">
+            <span class="etikett" id="ritprogram-r">JAG RITAR I</span>
+            <div class="seg fyra-rad" role="radiogroup" aria-labelledby="ritprogram-r" id="ritprogram">
+              <button type="button" role="radio" aria-checked="false" data-prog="archicad">ARCHICAD</button>
+              <button type="button" role="radio" aria-checked="false" data-prog="revit">REVIT</button>
+              <button type="button" role="radio" aria-checked="false" data-prog="autocad">AUTOCAD</button>
+              <button type="button" role="radio" aria-checked="false" data-prog="annat">ANNAT</button>
+            </div>
+            <p class="hjalp" id="ritprogram-hjalp">Valet kryssar i de filer som passar programmet. Du kan ändra dem nedan.</p>
+          </div>
+
+          <details class="grupp" id="g-terrang" open>
+            <summary><span class="grupp-namn">TERRÄNG</span><span class="sammanf" id="sf-terrang"></span></summary>
+            <fieldset class="val filer">
+              <legend>Filer att skapa</legend>
+              <label><input type="checkbox" name="format" value="dxf" checked> Höjdkurvor, DXF</label>
+              <label><input type="checkbox" name="format" value="xyz" checked> Punkter för Archicad, XYZ</label>
+              <label><input type="checkbox" name="format" value="csv" checked> Punkter för Revit, CSV</label>
+              <label><input type="checkbox" name="tillval" value="hojdpunkter"> Höjdpunkter i rutnät, DXF</label>
+            </fieldset>
+            <div class="falt-rad">
+              <label for="hojdpunkt-steg">Höjdpunkter var</label>
+              <select id="hojdpunkt-steg">
+                <option value="5">5 m</option>
+                <option value="10" selected>10 m</option>
+                <option value="20">20 m</option>
+              </select>
+            </div>
+            <div class="falt-rad">
+              <label for="intervall">Tätaste kurvintervall</label>
+              <select id="intervall">
+                <option value="0.25">0,25 m</option>
+                <option value="0.5" selected>0,5 m</option>
+                <option value="1">1 m</option>
+              </select>
+            </div>
+            <div class="falt-rad">
+              <label for="mesh">Punktavstånd</label>
+              <select id="mesh">
+                <option value="1">1 m</option>
+                <option value="2" selected>2 m</option>
+                <option value="4">4 m</option>
+                <option value="5">5 m</option>
+              </select>
+            </div>
+            <fieldset class="val">
+              <legend>Utjämning av kurvor</legend>
+              <label><input type="radio" name="utjamning" value="0"> Ingen</label>
+              <label><input type="radio" name="utjamning" value="1" checked> Lätt</label>
+              <label><input type="radio" name="utjamning" value="2"> Kraftig</label>
+            </fieldset>
+            <div class="falt-rad">
+              <label for="namn">Filnamn</label>
+              <input id="namn" type="text" value="terrang" spellcheck="false">
+            </div>
+          </details>
+
+          <details class="grupp" id="g-laser">
+            <summary><span class="grupp-namn">LASERDATA</span><span class="sammanf" id="sf-laser"></span></summary>
+            <p class="hjalp">Kräver beställd <em>Laserdata Nedladdning, skog</em>. Laserdatan visar läget vid skanningen.</p>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="laser"> Punktmoln</label>
+              <p class="hjalp">Vegetation och byggnader som punkter, cirka 1–2 per m². LAS för Revit (via ReCap), Rhino och CloudCompare, och XYZ med färg per klass för Archicad.</p>
+            </div>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="trad"> Träd</label>
+              <p class="hjalp">Enskilda träd med höjd och kronbredd, som DXF med kronan som cirkel och som CSV. Tak sorteras bort. I tät skog hittas inte alla träd.</p>
+            </div>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="hom"> Höjd över mark</label>
+              <p class="hjalp">Träd- och byggnadshöjder som färgad bild med världsfil.</p>
+            </div>
+          </details>
+
+          <details class="grupp" id="g-kartdata">
+            <summary><span class="grupp-namn">KARTDATA</span><span class="sammanf" id="sf-kartdata"></span></summary>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="marktacke"> Marktäcke</label>
+              <p class="hjalp">Skog, åker, vatten och bebyggelse som ytor i DXF, ett lager per typ. Hela kommunens fil hämtas första gången och sparas sedan i webbläsaren. Kräver beställd <em>Marktäcke Nedladdning, vektor</em>.</p>
+            </div>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="stompunkter"> Stompunkter</label>
+              <p class="hjalp">Plan- och höjdpunkter inom utsnittet med höjd, kvalitet och lägesbeskrivning, som DXF och CSV. Kräver beställd <em>Stompunkt Direkt</em>.</p>
+            </div>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="vagar"> Vägar från OpenStreetMap</label>
+              <p class="hjalp">Vägar, gator och gångvägar som mittlinjer i DXF, ett lager per vägtyp. Kvaliteten varierar; kontrollera mot grundkartan.</p>
+            </div>
+          </details>
+
+          <details class="grupp" id="g-sektioner">
+            <summary><span class="grupp-namn">SEKTIONER</span><span class="sammanf" id="sf-sektioner"></span></summary>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="sektion"> Terrängsektioner</label>
+              <p class="hjalp">Mark, träd och byggnader längs linjer som du ritar på kartan, som DXF. Håll in Shift eller slå på 90° på kartan för linjer längs koordinataxlarna. Klicka på en linje för att vända blickriktningen.</p>
+              <div class="underval">
+                <button type="button" class="knapp liten" id="rita-sektion" aria-pressed="false">Rita sektionslinje</button>
+                <ul class="sektionslista" id="sektionslista"></ul>
+              </div>
+            </div>
+          </details>
+
+          <details class="grupp" id="g-sparat">
+            <summary><span class="grupp-namn">SPARAT I WEBBLÄSAREN</span><span class="sammanf" id="sf-sparat"></span></summary>
+            <p class="hjalp" id="lagring-status">Inget sparat.</p>
+            <ul class="lagring-lista" id="lagring-lista"></ul>
+            <button type="button" class="knapp liten" id="lagring-tom" hidden>Töm sparade filer</button>
+          </details>
+        </section>
+
+        <!-- 03 PLATSANALYS -->
+        <section class="steg-panel" id="steg-analys" role="tabpanel" aria-labelledby="flik-analys" hidden>
+          <label class="stor-kryss">
+            <input type="checkbox" name="tillval" value="platsanalys" id="platsanalys">
+            <span><strong>Skapa platsanalysblad</strong><span>Ett A3-häfte i PDF med sammanställning, sol, terräng och vatten, skydd och risker. Kartorna visas också som lager och följer med som DXF.</span></span>
+          </label>
+
+          <div class="kapitel" id="kapitel">
+            <div class="kapitel-rubrik"><span class="etikett">INNEHÅLL</span><span class="sammanf" id="sf-kapitel"></span></div>
+            <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="sol" checked><span class="kod">SOL</span><span>Soldiagram med horisont och skuggstudie</span></label>
+            <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="terrang" checked><span class="kod">TERRÄNG</span><span>Lutning i klasser för tillgänglighet</span></label>
+            <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="vatten" checked><span class="kod">VATTEN</span><span>Skyfall: lågpunkter och flödesvägar</span></label>
+            <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="skydd" checked><span class="kod">SKYDD</span><span>Fornlämningar, skyddad natur, strandskydd och översvämning</span></label>
+            <label class="kapitel-rad kommer"><input type="checkbox" disabled><span class="kod">KLIMAT</span><span>Snölast, vind och växtzon <span class="bricka">KOMMER</span></span></label>
+            <label class="kapitel-rad kommer"><input type="checkbox" disabled><span class="kod">BULLER</span><span>Indikation från vägtrafik <span class="bricka">KOMMER</span></span></label>
+          </div>
+
+          <details class="grupp" id="g-sol">
+            <summary><span class="grupp-namn">ANPASSA SOL</span><span class="sammanf" id="sf-sol"></span></summary>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="sol" checked> Soldiagram <span id="sol-ar"></span></label>
+              <p class="hjalp">Solbanor vid dagjämningar och solstånd på platsen. Följer med som eget blad i svart och vit variant.</p>
+              <label class="kryss"><input type="checkbox" name="tillval" value="horisont" checked> Horisont från terräng, träd och byggnader</label>
+              <p class="hjalp">Visar när solen skyms och hur många soltimmar punkten får. Terräng inom 5 km och träd och byggnader inom 400 m.</p>
+              <div class="underval">
+                <div class="falt-rad">
+                  <label for="ogonhojd">Höjd över mark, m</label>
+                  <input id="ogonhojd" type="text" value="1,6" inputmode="decimal" spellcheck="false">
+                </div>
+                <label class="kryss"><input type="checkbox" id="hor-tomt"> Räkna med träd och byggnader inom utsnittet</label>
+                <button type="button" class="knapp liten" id="hor-valj" aria-pressed="false">Välj punkt på kartan</button>
+                <p class="hjalp" id="hor-punkt-text">Punkten är utsnittets mitt.</p>
+              </div>
+            </div>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="skugga" checked> Skuggstudie</label>
+              <p class="hjalp">Skuggor från terräng, träd, byggnader och skissade volymer. DXF med ett lager per tidpunkt och ett översiktsblad. Utan laserdata räknas bara terrängen och skissen.</p>
+              <div class="underval">
+                <fieldset class="val"><legend>Datum</legend>
+                  <label><input type="checkbox" name="skuggdatum" value="mars" checked> Vårdagjämning</label>
+                  <label><input type="checkbox" name="skuggdatum" value="juni" checked> Sommarsolstånd</label>
+                  <label><input type="checkbox" name="skuggdatum" value="sept"> Höstdagjämning</label>
+                  <label><input type="checkbox" name="skuggdatum" value="dec" checked> Vintersolstånd</label>
+                </fieldset>
+                <div class="falt-rad bred">
+                  <label for="skuggtider">Klockslag</label>
+                  <input id="skuggtider" type="text" value="9, 12, 15, 18" spellcheck="false">
+                </div>
+                <p class="hjalp">Svensk tid, med sommartid när den gäller. Hela timmar eller till exempel 13.30.</p>
+              </div>
+            </div>
+            <button type="button" class="knapp liten" id="ladda-sol" disabled>Ladda ner bara soldiagrammet</button>
+            <p class="hjalp">Utan inloggning och utan horisont.</p>
+          </details>
+          <p class="hjalp">Sol och skuggor med träd och byggnader kräver <em>Laserdata Nedladdning, skog</em>. Skydd och risker hämtas från Riksantikvarieämbetet, Naturvårdsverket, Myndigheten för civilt försvar och OpenStreetMap och kräver ingen inloggning.</p>
+        </section>
+
+        <!-- 04 SKISS -->
+        <section class="steg-panel" id="steg-skiss" role="tabpanel" aria-labelledby="flik-skiss" hidden>
+          <p class="ingress">Pröva enkla volymer på platsen. Skissa i cad-apa och skicka tillbaka, eller importera fotavtryck från en DXF. Volymerna räknas med i skuggstudien, skyfallet och horisonten.</p>
+          <div class="knapprad">
+            <button type="button" class="knapp" id="skiss-cadapa">Rita i cad-apa</button>
+            <button type="button" class="knapp" id="skiss-importera">Importera fil</button>
+            <input type="file" id="skiss-fil" accept=".json,.dxf,application/json" class="dold">
+          </div>
+          <p class="hjalp" id="skiss-status" aria-live="polite">Skiss från cad-apa (.json) eller slutna polylinjer i DXF.</p>
+          <div id="skiss-dxf" hidden>
+            <fieldset class="val">
+              <legend>Koordinater i DXF-filen</legend>
+              <label><input type="radio" name="dxf-koord" value="lokal" checked> Lokala (nollpunkt och vridning ovan)</label>
+              <label><input type="radio" name="dxf-koord" value="zon"> SWEREF, samma system som utsnittet</label>
+            </fieldset>
+            <button type="button" class="knapp liten" id="skiss-dxf-ok">Lägg till volymerna</button>
+          </div>
+          <ul class="volymlista" id="volymlista"></ul>
+          <p class="hjalp" id="volym-hjalp" hidden>Golvnivå i RH 2000. Höjd till takfot från golvet. Ändra direkt i listan.</p>
+        </section>
+
+        <footer class="fot">
+          <p><a href="instruktioner.html#ritprogram">Så tar du in filerna i Archicad, Revit och AutoCAD</a></p>
+          <p>Höjddata, laserdata, marktäcke och Topografisk webbkarta: © Lantmäteriet, CC BY 4.0. Stompunkter: Lantmäteriet, CC0. Skydd och risker: Naturvårdsverket (CC0), Riksantikvarieämbetet och Myndigheten för civilt försvar. Karta, vägar, vatten och adressök: © OpenStreetMap-bidragsgivare. Kommunernas koordinatsystem är ett förslag och behöver kontrolleras.</p>
+          <p class="mobilvy-rad"><button type="button" class="lank-knapp" id="till-mobilvy">Tillbaka till mobilvyn</button></p>
+        </footer>
+      </div>
+
+      <div class="panel-fot">
+        <p class="val-sammanf" id="val-sammanf"></p>
+        <button type="button" class="knapp primar" id="skapa" disabled>Skapa underlag →</button>
+        <div class="status" id="status" aria-live="polite">
+          <div class="matare" id="matare" hidden><div id="matare-fyll"></div></div>
+          <p id="status-text">Välj ett område för att börja.</p>
+        </div>
+        <div id="resultat" hidden>
+          <div class="knapprad resultat-knappar">
+            <button type="button" class="knapp" id="ladda-ner">Ladda ner zip</button>
+            <button type="button" class="knapp" id="till-cadapa">Fortsätt rita i cad-apa</button>
+          </div>
+          <details class="resultat-detaljer"><summary>Sammanfattning</summary><dl class="sammanfattning" id="sammanfattning"></dl></details>
+          <p class="lokalt">Spara filerna lokalt, inte i molnet. <a href="instruktioner.html#datan">Varför?</a> · <button type="button" class="lank-knapp" id="spara-platsfil">Spara platsfil för cad-apa</button></p>
+        </div>
+        <p class="fot-lankar"><button type="button" class="lank-knapp" id="visa-3d" disabled>Visa i 3D</button><span aria-hidden="true">·</span><button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button></p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
+    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button></div>
+    <div class="vy3d-yta" id="vy3d-yta"></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="vendor/proj4.js"></script>
+  <script src="vendor/geotiff.js"></script>
+  <script src="vendor/jszip.min.js"></script>
+  <script src="js/karna.js"></script>
+  <script src="js/dxf.js"></script>
+  <script src="js/sol.js"></script>
+  <script src="js/laser.js"></script>
+  <script src="js/marktacke.js"></script>
+  <script src="js/stompunkt.js"></script>
+  <script src="js/analys.js"></script>
+  <script src="js/vagar.js"></script>
+  <script src="js/platsanalys.js"></script>
+  <script src="js/geodata.js"></script>
+  <script src="js/utbyte.js"></script>
+  <script src="js/topowebb.js"></script>
+  <script src="js/utskrift.js"></script>
+  <script src="js/platsanalysblad.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

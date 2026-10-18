@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="sv" data-tema="ritning" class="undersida">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Om – höjdkurvor.se</title>
+  <meta name="description" content="Höjdkurvor gör Lantmäteriets öppna geodata till underlag som går att rita på. En gratis betatjänst från Agrell Arkitektur.">
+  <script src="js/tema.js"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="sida">
+  <header class="toppmeny">
+    <a class="logga" href="index.html" aria-label="höjdkurvor.se, till kartan">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><g class="ring" fill="none" stroke-width="2.4" transform="rotate(-14 32 32)"><ellipse cx="30" cy="34" rx="27" ry="21"/><ellipse cx="34.5" cy="31" rx="17.5" ry="13.5"/><ellipse cx="38" cy="29" rx="8.5" ry="6.5"/></g><path class="kors" d="M36 27 h7 M39.5 23.5 v7" stroke-width="2.4"/></svg>
+      <span class="ordbild" aria-hidden="true">höjdkurvor<span class="punkt">.</span>se</span>
+    </a>
+    <nav class="huvudmeny" aria-label="Huvudmeny">
+      <a href="index.html"><span class="blad">BLAD 01</span><span class="namn">KARTAN</span></a>
+      <a href="instruktioner.html"><span class="blad">BLAD 02</span><span class="namn">INSTRUKTIONER</span></a>
+      <a href="om.html" aria-current="page"><span class="blad">BLAD 03</span><span class="namn">OM</span></a>
+      <a href="bestall.html"><span class="blad">BLAD 04</span><span class="namn">BESTÄLL</span></a>
+      <div class="tema-val">
+        <button type="button" class="tema-knapp" aria-haspopup="menu" aria-expanded="false" aria-controls="tema-meny"><span class="blad">TEMA</span><span class="namn tema-namn">BLUEPRINT</span></button>
+        <div class="tema-meny" id="tema-meny" role="menu" aria-label="Tema">
+          <button type="button" role="menuitemradio" data-val="ritning" aria-checked="false">BLUEPRINT</button>
+          <button type="button" role="menuitemradio" data-val="lugn" aria-checked="false">LJUST</button>
+          <button type="button" role="menuitemradio" data-val="mork" aria-checked="false">MÖRKT</button>
+        </div>
+      </div>
+      <div class="cell"><span class="blad">STATUS</span><span class="beta">BETA</span></div>
+    </nav>
+  </header>
+
+  <div class="rulla" tabindex="-1">
+
+  <div class="sida-innehall">
+    <main class="artikel" style="max-width: none; flex-basis: 100%">
+      <div style="display: flex; flex-wrap: wrap; gap: 40px 72px; align-items: flex-end">
+        <div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+          <h1>Om Höjdkurvor</h1>
+          <p class="ingress" style="max-width: 720px">Höjdkurvor gör Lantmäteriets öppna geodata till underlag som går att rita på: höjdkurvor, markmodeller och punktmoln för Archicad, Revit och AutoCAD. Direkt i webbläsaren, utan GIS-program och utan kostnad.</p>
+        </div>
+        <dl class="fakta">
+          <div><dt>KOSTNAD</dt><dd>Gratis</dd></div>
+          <div><dt>STATUS</dt><dd>Beta</dd></div>
+          <div><dt>DATA</dt><dd>Lantmäteriet m.fl.</dd></div>
+          <div><dt>BERÄKNAS</dt><dd>I din webbläsare</dd></div>
+        </dl>
+      </div>
+
+      <div class="citat">
+        <p class="stor" style="max-width: 900px">Det du redan har betalat via skattsedeln ska du kunna använda.</p>
+        <div class="tva">
+          <p>Lantmäteriet samlar in höjddata, laserdata och marktäcke över hela landet, till stor del med skattemedel, och i dag lämnar myndigheten ut mycket av datan avgiftsfritt.</p>
+          <p>Ändå betalar många igen, för programvara, konsulter eller timmar av eget arbete, innan datan blir något man kan rita på. Höjdkurvor finns för att det sista steget också ska vara gratis.</p>
+        </div>
+      </div>
+
+      <div class="tva" style="gap: 52px 72px">
+        <section>
+          <h2>En betatjänst</h2>
+          <p>Höjdkurvor är en gratis betatjänst. Allt som fungerar är en bonus. Vi kan inte lova att tjänsten finns kvar, fungerar som tidigare eller alltid ger rätt resultat.</p>
+          <p>Tjänsten tillhandahålls i befintligt skick och utan garantier. Underlagen är tänkta för tidiga skeden och ersätter inte en inmätning. Kontrollera alltid underlaget innan det används för projektering, bygglov eller utsättning. Agrell Arkitektur ansvarar inte för fel i data, beräkningar eller filer, eller för följder av att tjänsten används.</p>
+        </section>
+        <section>
+          <h2>Vem står bakom</h2>
+          <p>Höjdkurvor utvecklas och drivs av arkitekt Carl August Agrell genom Agrell Arkitektur. Det började som ett eget verktyg för att få in terrängen i Archicad utan omvägar, och delas nu med alla som har samma behov.</p>
+          <p>Tjänsten är gratis och fri från reklam. Den är Agrell Arkitekturs sätt att bidra, och att visa hur vi arbetar. Vill du hellre att vi tar fram underlaget åt dig går det att <a href="bestall.html">beställa</a>, men det behövs aldrig. <a href="https://agrellarkitektur.se">Läs mer om Agrell Arkitektur</a></p>
+        </section>
+        <section>
+          <h2>Utvecklad med AI</h2>
+          <p>Höjdkurvor är utvecklad med hjälp av Claude, en AI-modell från Anthropic. Idéerna, kraven och prövningen kommer från en arkitekts vardag. Mycket av koden och beräkningarna är skrivna tillsammans med AI:n.</p>
+          <p>Beräkningarna är kontrollerade mot kända referenser: solens läge mot NREL:s solpositionsalgoritm, höjdkurvor och markmodell mot GDAL, och skuggor och horisont mot testdata med känt facit. Det minskar risken för fel men tar inte bort den.</p>
+        </section>
+        <section>
+          <h2>Öppen källkod</h2>
+          <p>Källkoden finns på <a href="https://github.com/agrellarkitektur/hojdkurvor">GitHub</a> under GNU General Public License, version 3 eller senare. Du får använda, ändra och sprida den, så länge ändrade versioner också delas under samma licens.</p>
+          <p>Höjdkurvor hänger ihop med ritprogrammet cad-apa, också det öppen källkod. Platsen kan skickas till cad-apa för att skissa, och skissen tillbaka hit för nya analyser.</p>
+        </section>
+        <section>
+          <h2>Dina uppgifter</h2>
+          <p>Allt räknas i din webbläsare. Inloggningen till Lantmäteriet går direkt från webbläsaren och passerar aldrig vår server. Höjdkurvor samlar inte in uppgifter om dig eller om vilka områden du hämtar. Webbhotellet sparar, som alla webbservrar, tekniska loggar över besök.</p>
+          <p>Det som sparas finns i din egen webbläsare: marktäcket för de kommuner du har hämtat, dina inställningar och, om du väljer det, din inloggning. Du kan ta bort det sparade under 02 Underlag › Sparat i webbläsaren på kartsidan.</p>
+          <p>Platsanalysens kapitel Skydd frågar Naturvårdsverket, Riksantikvarieämbetet, Myndigheten för civilt försvar och OpenStreetMap om området. Om webbläsaren inte får fråga dem direkt går frågan via vår server, som bara skickar den vidare. Frågan innehåller områdets koordinater men inget om dig.</p>
+        </section>
+      </div>
+
+      <section style="padding-top: 40px; border-top: 1px solid var(--rule)">
+        <h2>Källor och licenser</h2>
+        <dl class="par bred">
+          <dt>Höjddata, laserdata, marktäcke</dt><dd>© Lantmäteriet, CC BY 4.0</dd>
+          <dt>Topografisk webbkarta</dt><dd>© Lantmäteriet, CC BY 4.0</dd>
+          <dt>Stompunkter</dt><dd>Lantmäteriet, öppna data (CC0)</dd>
+          <dt>Skyddad natur</dt><dd>Naturvårdsverket, Naturvårdsregistret och Natura 2000 (CC0)</dd>
+          <dt>Fornlämningar och andra lämningar</dt><dd>Riksantikvarieämbetet, Kulturmiljöregistret</dd>
+          <dt>Översvämningskarteringar</dt><dd>Myndigheten för civilt försvar</dd>
+          <dt>Bakgrundskartor, vägar och vatten</dt><dd>© OpenStreetMap-bidragsgivare (ODbL), OpenTopoMap (CC BY-SA)</dd>
+          <dt>Kommungränser</dt><dd>Valmyndigheten, via Open Knowledge Sweden</dd>
+          <dt>Programbibliotek</dt><dd>Leaflet, proj4js, geotiff.js, JSZip, jsPDF, sql.js, copc.js, laz-perf och three.js, under sina respektive öppna licenser</dd>
+          <dt>Källkod</dt><dd>Agrell Arkitektur, <a href="https://github.com/agrellarkitektur/hojdkurvor">GPL-3.0 eller senare</a></dd>
+          <dt>Typsnitt</dt><dd>Familjen Grotesk och IBM Plex Mono, SIL Open Font License</dd>
+        </dl>
+      </section>
+
+      <section id="andringar" style="padding-top: 40px; border-top: 1px solid var(--rule)">
+        <h2>Ändringar</h2>
+        <dl class="par bred">
+          <dt>5.0 · 18 okt 2026</dt><dd>Panelen i fyra steg: Plats, Underlag, Analys och Skiss. Platsanalysblad i PDF med sol, lutning, skyfall och skydd och risker. Höjdpunkter med höjdtext. Skissade volymer som räknas med i skuggor, horisont och skyfall, från cad-apa eller DXF. Fortsätt rita i cad-apa. 3D-förhandsvisning. Projektlänk. Enklare flöde på mobilen. Felrapport. Källkoden publicerad under GPL.</dd>
+          <dt>4.2</dt><dd>Temavalet fungerar på iPhone.</dd>
+          <dt>4.1</dt><dd>Temameny i menyraden, Blueprint, Ljust och Mörkt. Bladet Beställ. Ritningshuvud på informationssidorna.</dd>
+          <dt>4.0</dt><dd>Analyser ur laserdatan: träd, höjd över mark, skuggstudie, sektioner och horisont i soldiagrammet. Utskrift i skala med Lantmäteriets karta. Marktäcke, stompunkter och vägar.</dd>
+        </dl>
+      </section>
+
+      <table class="ritningshuvud">
+        <caption class="dold">Ritningshuvud</caption>
+        <tbody>
+          <tr>
+            <td rowspan="2" style="width: 31%"><span class="lbl">PROJEKT</span><a class="proj" href="index.html">höjdkurvor<span class="punkt">.</span>se</a></td>
+            <td><span class="lbl">INNEHÅLL</span>OM TJÄNSTEN</td>
+            <td><span class="lbl">BLAD</span>03 / 04</td>
+            <td><span class="lbl">SKEDE</span><span class="beta">BETA</span></td>
+          </tr>
+          <tr>
+            <td><span class="lbl">UPPHOVSMAN</span><a href="https://agrellarkitektur.se">AGRELL ARKITEKTUR</a></td>
+            <td><span class="lbl">DATA</span><a href="https://geotorget.lantmateriet.se">©&nbsp;LANTMÄTERIET</a></td>
+            <td><span class="lbl">KONTAKT</span><a href="mailto:kontakt@agrellarkitektur.se">kontakt@<wbr>agrellarkitektur.se</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+
+  <footer class="sidfot">
+    <a href="index.html"><strong>höjdkurvor.se</strong></a>
+    <span>Utvecklad av <a href="https://agrellarkitektur.se">Agrell Arkitektur</a></span>
+    <span>Data © <a href="https://geotorget.lantmateriet.se">Lantmäteriet</a></span>
+  </footer>
+  </div>
+</body>
+</html>

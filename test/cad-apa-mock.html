@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="sv">
+<head><meta charset="utf-8"><title>Låtsas-cad-apa (test)</title></head>
+<body>
+<h1>Låtsas-cad-apa</h1>
+<p>Testsida som beter sig som cad-apa i utbytet med höjdkurvor.se (se docs/UTBYTE-CAD-APA.md).</p>
+<pre id="logg"></pre>
+<button type="button" id="skicka">Skicka skiss till höjdkurvor</button>
+<script>
+  // Tar emot platspaketet och skickar tillbaka en skiss med en volym i lokala koordinater.
+  const logg = t => { document.getElementById('logg').textContent += t + '\n'; };
+  window.mottaget = null;
+  window.addEventListener('message', e => {
+    const d = e.data || {};
+    if (d.typ === 'hojdkurvor:plats') {
+      window.mottaget = d.data;
+      logg(`plats: ${d.data.projekt.namn || '(namnlöst)'}, ${d.data.koordinatsystem.plan.namn}, rutnät ${d.data.terrang.rutnat ? d.data.terrang.rutnat.W + '×' + d.data.terrang.rutnat.H : 'saknas'}`);
+      e.source.postMessage({ typ: 'cad-apa:mottaget', ok: true }, e.origin);
+    }
+    if (d.typ === 'hojdkurvor:mottaget') logg('höjdkurvor tog emot skissen: ' + d.ok);
+  });
+  if (location.hash === '#hojdkurvor-import' && window.opener) window.opener.postMessage({ typ: 'cad-apa:redo', version: 1 }, '*');
+  document.getElementById('skicka').addEventListener('click', () => {
+    const p = window.mottaget;
+    const skiss = {
+      format: 'cad-apa-skiss', version: 1, skapad: new Date().toISOString(), kalla: 'låtsas-cad-apa',
+      plats: { projekt: p.projekt, koordinatsystem: p.koordinatsystem, utsnitt: p.utsnitt, nollpunkt: p.nollpunkt, vridning: p.vridning },
+      koordinater: 'lokal',
+      volymer: [{ id: 'hus-a', namn: 'Hus A', fotavtryck: [[100, 60], [118, 60], [118, 71], [100, 71]], golv: null, takfot: 6.2, takform: 'sadel', taklutning: 27, nockriktning: 0 }],
+    };
+    window.opener.postMessage({ typ: 'cad-apa:skiss', data: skiss }, '*');
+    logg('skiss skickad');
+  });
+</script>
+</body>
+</html>

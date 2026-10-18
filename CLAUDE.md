@@ -1,0 +1,96 @@
+# höjdkurvor.se
+
+Webbapp som gör Lantmäteriets öppna geodata till ritunderlag och platsanalyser,
+helt i webbläsaren. Vanlig JavaScript utan byggsteg. GPL-3.0 eller senare.
+Läs `README.md` (vad som finns, filer, tjänster, inställningar) innan du ändrar
+något, och `docs/UTBYTE-CAD-APA.md` innan du rör utbytet med cad-apa.
+
+## Arbetssätt med Carl August
+
+- Carl August Agrell, arkitekt, Agrell Arkitektur. Kontakt i appen:
+  kontakt@agrellarkitektur.se.
+- Svara på svenska. Skriv svenska texter i appen klart och enkelt, utan
+  utfyllnad. I det här projektet får du skriva färdiga texter direkt.
+- Ge kommandon ett och ett, i var sin kodruta.
+- Han testar på iPhone 13 Pro med Chrome och Windows 11 med Chrome. Mobilen
+  används mest för att läsa och markera områden; ritandet sker på datorn.
+- Föreslå gärna förbättringar, men vänta med större bygget tills han har sagt
+  vilka som ska göras. Saker han sagt att vi avvaktar med står under Kommande i
+  `README.md`.
+
+## Koden
+
+- Varje fil i `js/` lägger ett globalt objekt på `window` (eller exporterar med
+  `module.exports` när den körs i Node, för testerna). Ordningen styrs av
+  `<script>`-taggarna i `index.html`.
+- `js/app.js` är limmet: karta, panel, lager, ritning och Skapa-flödet. Beräkningar
+  hör hemma i de andra modulerna (`karna.js`, `analys.js`, `platsanalys.js` …).
+- Koordinater: SWEREF 99-zonen i meter, höjder i RH 2000. Rutnät är
+  `{ W, H, s, x0, y1, z }` där rad 0 är norr och `x0`/`y1` är noder på utsnittets
+  kanter. Lokala filer räknas relativt nollpunkten och vridningen, se
+  `docs/UTBYTE-CAD-APA.md`.
+- Teman: `html[data-tema]` = `ritning` (Blueprint), `lugn` (Ljust), `mork` (Mörkt).
+  Färger som variabler per tema i `app.css`. Ändra alla tre.
+- Menyraden, ritningshuvudet och sidfoten finns i alla fyra HTML-sidor.
+- Inga hemligheter i repot. `config.js` ska ha `esriNyckel: ''` och
+  `inloggning: null`. Testinloggningen `test` / `hemligt-åäö` finns bara i
+  testservern.
+- Tester pekar om adresserna med `window.TERRANG_*` (se `test/README.md`). Låt
+  krokarna vara kvar, de gör inget när de inte är satta.
+- PDF:er byggs med jsPDF och typsnitten i `vendor/fonts/` via
+  `Utskrift.nyttDokument`. Platsanalysbladet lägger till soldiagram och
+  skuggstudie i samma dokument med `opt.dok`.
+
+## Tester
+
+Se `test/README.md`. Kortversion:
+
+```
+node test/platsanalys.test.js
+```
+
+```
+python3 test/server.py test/data .
+```
+
+```
+python3 test/ui_test.py test/ut ritning
+```
+
+```
+python3 test/mobil_test.py test/ut
+```
+
+Kör enhetstestet efter ändringar i beräkningarna och gränssnittstesterna efter
+ändringar i panelen. Titta på skärmbilderna i alla tre teman, och rendera
+PDF:erna (`pdftoppm`) och titta på dem. WebKit saknas i testmiljön, så be
+honom kontrollera större gränssnittsändringar på iPhone.
+
+Webbplatsens externa tjänster går inte att nå från testmiljön. Kontrollera
+nya datakällor med webbsökning och dokumentation, och bygg dem så att appen
+fungerar även när tjänsten är nere eller saknar CORS (fråga direkt först,
+sedan via `geodata.php`).
+
+## Leverera en ny version
+
+1. Höj `version` och `datum` i `js/version.js`.
+2. Skriv i `CHANGELOG.md` och i Ändringar på `om.html`.
+3. Uppdatera `instruktioner.html` och `README.md` om något syns för användaren
+   eller om filer, tjänster eller inställningar har ändrats.
+4. Kör testerna.
+5. Commit och push till `main`. Han laddar upp filerna till webbhotellet
+   (`public_html/terrang/` på agrellarkitektur.se) själv. Lista vilka filer som
+   är nya eller ändrade, så att han vet vad som ska upp.
+
+Flyttar sidan till en ny domän (höjdkurvor.se) måste Lantmäteriet godkänna den
+för CORS först, se `README.md`.
+
+## cad-apa
+
+Ritprogrammet cad-apa är ett eget projekt:
+<https://github.com/agrellarkitektur/cad-apa>, med egen CLAUDE.md och egna
+regler (bland annat: inga ändringar utan klartecken, bakåtkompatibla filformat).
+Gör inte ändringar där från det här projektet. Utbytet mellan programmen är
+beskrivet i `docs/UTBYTE-CAD-APA.md`; ändras det ska båda sidor och
+`test/cad-apa-mock.html` följa med, och formatets `version` höjas om gamla filer
+inte längre går att läsa.

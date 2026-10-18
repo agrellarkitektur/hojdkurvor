@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="sv" data-tema="ritning" class="undersida">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beställ – höjdkurvor.se</title>
+  <meta name="description" content="Låt Agrell Arkitektur ta fram underlaget åt dig mot betalning. Helt frivilligt – allt går att skapa själv, gratis.">
+  <script src="js/tema.js"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="sida">
+  <header class="toppmeny">
+    <a class="logga" href="index.html" aria-label="höjdkurvor.se, till kartan">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><g class="ring" fill="none" stroke-width="2.4" transform="rotate(-14 32 32)"><ellipse cx="30" cy="34" rx="27" ry="21"/><ellipse cx="34.5" cy="31" rx="17.5" ry="13.5"/><ellipse cx="38" cy="29" rx="8.5" ry="6.5"/></g><path class="kors" d="M36 27 h7 M39.5 23.5 v7" stroke-width="2.4"/></svg>
+      <span class="ordbild" aria-hidden="true">höjdkurvor<span class="punkt">.</span>se</span>
+    </a>
+    <nav class="huvudmeny" aria-label="Huvudmeny">
+      <a href="index.html"><span class="blad">BLAD 01</span><span class="namn">KARTAN</span></a>
+      <a href="instruktioner.html"><span class="blad">BLAD 02</span><span class="namn">INSTRUKTIONER</span></a>
+      <a href="om.html"><span class="blad">BLAD 03</span><span class="namn">OM</span></a>
+      <a href="bestall.html" aria-current="page"><span class="blad">BLAD 04</span><span class="namn">BESTÄLL</span></a>
+      <div class="tema-val">
+        <button type="button" class="tema-knapp" aria-haspopup="menu" aria-expanded="false" aria-controls="tema-meny"><span class="blad">TEMA</span><span class="namn tema-namn">BLUEPRINT</span></button>
+        <div class="tema-meny" id="tema-meny" role="menu" aria-label="Tema">
+          <button type="button" role="menuitemradio" data-val="ritning" aria-checked="false">BLUEPRINT</button>
+          <button type="button" role="menuitemradio" data-val="lugn" aria-checked="false">LJUST</button>
+          <button type="button" role="menuitemradio" data-val="mork" aria-checked="false">MÖRKT</button>
+        </div>
+      </div>
+      <div class="cell"><span class="blad">STATUS</span><span class="beta">BETA</span></div>
+    </nav>
+  </header>
+
+  <div class="rulla" tabindex="-1">
+  <div class="sida-innehall">
+    <nav class="sida-meny" aria-label="Innehåll på sidan">
+      <span class="etikett">PÅ SIDAN</span>
+      <a href="#frivilligt">01  Helt frivilligt</a>
+      <a href="#sa-gar-det-till">02  Så går det till</a>
+      <a href="#bestallning">03  Beställning</a>
+      <a href="#pris">04  Pris och leverans</a>
+    </nav>
+
+    <main class="artikel">
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        <h1>Beställ underlag</h1>
+        <p class="ingress">Vill du inte skapa underlaget själv kan Agrell Arkitektur göra det åt dig, mot betalning. Du slipper skaffa konto hos Lantmäteriet och vänta på att det godkänns.</p>
+      </div>
+
+      <section id="frivilligt" class="ruta">
+        <h2><span class="nr">01</span>Du behöver inte betala för det här</h2>
+        <p>Allt vi levererar kan du skapa själv på <a href="index.html">kartan</a>, gratis och på några minuter. Kontot hos Lantmäteriet och produkterna kostar ingenting. Betalar du oss betalar du bara för arbetstiden, aldrig för datan.</p>
+        <p>Beställningen finns för dig som hellre lämnar över jobbet, till exempel för att du inte vill registrera dig hos Lantmäteriet, inte vill vänta på att ett organisationskonto godkänns eller inte har tid att sätta dig in i verktyget.</p>
+      </section>
+
+      <section id="sa-gar-det-till">
+        <h2><span class="nr">02</span>Så går det till</h2>
+        <ol>
+          <li>Rita området på <a href="index.html">kartan</a> och kontrollera koordinatsystemet. Välj <em>Kopiera</em> under Område för att kopiera hörnens koordinater.</li>
+          <li>Klistra in koordinaterna i formuläret nedan och välj vad underlaget ska innehålla.</li>
+          <li>Välj <em>Skapa e-post</em>. Ditt e-postprogram öppnas med beställningen ifylld, och du skickar den själv. Ingenting skickas från den här sidan.</li>
+          <li>Du får ett pris tillbaka. Arbetet börjar först när du har godkänt det.</li>
+          <li>Underlaget levereras som en zip-fil, med samma filer, info-fil och källor som när du skapar det själv.</li>
+        </ol>
+      </section>
+
+      <section id="bestallning">
+        <h2><span class="nr">03</span>Beställning</h2>
+        <form class="bestallning" id="bestallning-form" novalidate>
+          <div class="falt-grupp tva-kol">
+            <div><label for="b-namn">Namn</label><input id="b-namn" type="text" autocomplete="name" required></div>
+            <div><label for="b-epost">E-post</label><input id="b-epost" type="email" autocomplete="email" required></div>
+            <div><label for="b-org">Företag eller organisation</label><input id="b-org" type="text" autocomplete="organization"></div>
+            <div><label for="b-projekt">Projekt eller fastighet</label><input id="b-projekt" type="text" placeholder="t.ex. Staren 2"></div>
+          </div>
+
+          <div class="falt-grupp">
+            <label for="b-koord">Område</label>
+            <textarea id="b-koord" rows="6" spellcheck="false" placeholder="Klistra in koordinaterna från kartan, eller beskriv området med adress eller fastighetsbeteckning."></textarea>
+            <div class="knapprad">
+              <button type="button" class="knapp liten" id="b-hamta" hidden>Hämta från kartan</button>
+              <button type="button" class="knapp liten" id="b-klistra">Klistra in</button>
+            </div>
+            <p class="hjalp" id="b-koord-hjalp"></p>
+          </div>
+
+          <fieldset class="falt-grupp innehall-val">
+            <legend>Innehåll</legend>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Höjdkurvor och markmodell" checked> Höjdkurvor och markmodell</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Punktmoln (laserdata)"> Punktmoln (laserdata)</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Träd och höjd över mark"> Träd och höjd över mark</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Skuggstudie"> Skuggstudie</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Terrängsektioner"> Terrängsektioner</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Marktäcke"> Marktäcke</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Stompunkter"> Stompunkter</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Vägar"> Vägar</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Soldiagram"> Soldiagram</label>
+            <label class="kryss"><input type="checkbox" name="b-innehall" value="Utskrift i skala (PDF)"> Utskrift i skala (PDF)</label>
+          </fieldset>
+
+          <div class="falt-grupp">
+            <label for="b-medd">Meddelande</label>
+            <textarea id="b-medd" rows="4" placeholder="Till exempel nollpunkt, skala, när du behöver underlaget eller vilket ritprogram du använder."></textarea>
+          </div>
+
+          <p class="fel-text" id="b-fel" role="alert" hidden></p>
+          <div class="knapprad">
+            <button type="submit" class="knapp primar">Skapa e-post</button>
+            <button type="button" class="knapp" id="b-kopiera">Kopiera beställningen</button>
+          </div>
+          <p class="hjalp" id="b-status">Öppnas inget e-postprogram kan du kopiera beställningen och klistra in den i ett mejl till <a href="mailto:kontakt@agrellarkitektur.se">kontakt@agrellarkitektur.se</a>.</p>
+        </form>
+      </section>
+
+      <section id="pris">
+        <h2><span class="nr">04</span>Pris och leverans</h2>
+        <p>Priset beror på hur stort området är och vad underlaget ska innehålla. Du får alltid priset innan arbetet börjar. Säger du nej kostar det ingenting.</p>
+        <p>Samma villkor gäller som när du skapar underlaget själv. Datan kommer från Lantmäteriet (CC BY 4.0) och för vägar från OpenStreetMap. Underlaget är tänkt för tidiga skeden och ersätter inte en inmätning. Uppgifterna i beställningen används bara för att hantera den.</p>
+      </section>
+
+      <table class="ritningshuvud">
+        <caption class="dold">Ritningshuvud</caption>
+        <tbody>
+          <tr>
+            <td rowspan="2" style="width: 31%"><span class="lbl">PROJEKT</span><a class="proj" href="index.html">höjdkurvor<span class="punkt">.</span>se</a></td>
+            <td><span class="lbl">INNEHÅLL</span>BESTÄLLNING</td>
+            <td><span class="lbl">BLAD</span>04 / 04</td>
+            <td><span class="lbl">SKEDE</span><span class="beta">BETA</span></td>
+          </tr>
+          <tr>
+            <td><span class="lbl">UPPHOVSMAN</span><a href="https://agrellarkitektur.se">AGRELL ARKITEKTUR</a></td>
+            <td><span class="lbl">DATA</span><a href="https://geotorget.lantmateriet.se">©&nbsp;LANTMÄTERIET</a></td>
+            <td><span class="lbl">KONTAKT</span><a href="mailto:kontakt@agrellarkitektur.se">kontakt@<wbr>agrellarkitektur.se</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+
+  <footer class="sidfot">
+    <a href="index.html"><strong>höjdkurvor.se</strong></a>
+    <span>Utvecklad av <a href="https://agrellarkitektur.se">Agrell Arkitektur</a></span>
+    <span>Data © <a href="https://geotorget.lantmateriet.se">Lantmäteriet</a></span>
+  </footer>
+  </div>
+  <script src="js/bestall.js"></script>
+</body>
+</html>

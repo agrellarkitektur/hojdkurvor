@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="sv" data-tema="ritning" class="undersida">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instruktioner – höjdkurvor.se</title>
+  <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
+  <script src="js/tema.js"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="sida">
+  <header class="toppmeny">
+    <a class="logga" href="index.html" aria-label="höjdkurvor.se, till kartan">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><g class="ring" fill="none" stroke-width="2.4" transform="rotate(-14 32 32)"><ellipse cx="30" cy="34" rx="27" ry="21"/><ellipse cx="34.5" cy="31" rx="17.5" ry="13.5"/><ellipse cx="38" cy="29" rx="8.5" ry="6.5"/></g><path class="kors" d="M36 27 h7 M39.5 23.5 v7" stroke-width="2.4"/></svg>
+      <span class="ordbild" aria-hidden="true">höjdkurvor<span class="punkt">.</span>se</span>
+    </a>
+    <nav class="huvudmeny" aria-label="Huvudmeny">
+      <a href="index.html"><span class="blad">BLAD 01</span><span class="namn">KARTAN</span></a>
+      <a href="instruktioner.html" aria-current="page"><span class="blad">BLAD 02</span><span class="namn">INSTRUKTIONER</span></a>
+      <a href="om.html"><span class="blad">BLAD 03</span><span class="namn">OM</span></a>
+      <a href="bestall.html"><span class="blad">BLAD 04</span><span class="namn">BESTÄLL</span></a>
+      <div class="tema-val">
+        <button type="button" class="tema-knapp" aria-haspopup="menu" aria-expanded="false" aria-controls="tema-meny"><span class="blad">TEMA</span><span class="namn tema-namn">BLUEPRINT</span></button>
+        <div class="tema-meny" id="tema-meny" role="menu" aria-label="Tema">
+          <button type="button" role="menuitemradio" data-val="ritning" aria-checked="false">BLUEPRINT</button>
+          <button type="button" role="menuitemradio" data-val="lugn" aria-checked="false">LJUST</button>
+          <button type="button" role="menuitemradio" data-val="mork" aria-checked="false">MÖRKT</button>
+        </div>
+      </div>
+      <div class="cell"><span class="blad">STATUS</span><span class="beta">BETA</span></div>
+    </nav>
+  </header>
+
+  <div class="rulla" tabindex="-1">
+
+  <div class="sida-innehall">
+    <nav class="sida-meny" aria-label="Innehåll på sidan">
+      <span class="etikett">PÅ SIDAN</span>
+      <a href="#konto">01  Skapa konto på Geotorget</a>
+      <a href="#produkter">02  Beställ produkterna</a>
+      <a href="#logga-in">03  Logga in</a>
+      <a href="#skapa">04  Skapa underlaget</a>
+      <a href="#platsanalys">05  Platsanalys</a>
+      <a href="#skiss">06  Skiss och cad-apa</a>
+      <a href="#kartan">07  Kartan och utskriften</a>
+      <a href="#ritprogram">08  I ritprogrammet</a>
+      <a href="#mobil">09  På mobilen</a>
+      <a href="#datan">10  Var rädd om datan</a>
+      <a href="#fel">11  Om något inte fungerar</a>
+      <a href="#bestall">12  Beställ i stället</a>
+    </nav>
+
+    <main class="artikel">
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        <h1>Instruktioner</h1>
+        <p class="ingress">Höjdkurvor hämtar data direkt från Lantmäteriet med ditt eget konto. Kontot och produkterna kostar ingenting, men de måste beställas en gång innan du kan skapa underlag.</p>
+        <div class="ruta">
+          <strong>Det här behöver du</strong>
+          <ul>
+            <li>Ett konto på Lantmäteriets Geotorget.</li>
+            <li>Produkten Markhöjdmodell Nedladdning. Den räcker för höjdkurvor, markmodell och soldiagram.</li>
+            <li>Fler produkter om du vill ha laserdata, marktäcke, stompunkter eller Lantmäteriets karta.</li>
+            <li>En dator med en aktuell webbläsare.</li>
+          </ul>
+        </div>
+      </div>
+
+      <section id="konto">
+        <h2><span class="nr">01</span>Skapa konto på Geotorget</h2>
+        <p>Geotorget är Lantmäteriets webbplats för att beställa geodata. Gå till <a href="https://geotorget.lantmateriet.se">geotorget.lantmateriet.se</a> och välj Logga in. Där kan du skapa ett konto som privatperson eller ansöka om ett konto för en organisation.</p>
+        <ul>
+          <li><strong>Privatperson.</strong> Du skapar kontot själv och kan börja beställa direkt. Användarnamnet är din e-postadress.</li>
+          <li><strong>Organisation</strong>, till exempel ett företag, en kommun, en förening eller en enskild firma. Lantmäteriets geodatasupport granskar ansökan, vilket brukar ta ungefär två arbetsdagar.</li>
+        </ul>
+      </section>
+
+      <section id="produkter">
+        <h2><span class="nr">02</span>Beställ produkterna</h2>
+        <p>Logga in på Geotorget, sök upp produkten och beställ den. Alla produkter som Höjdkurvor använder är avgiftsfria. För några av dem godkänner du särskilda användningsvillkor när du beställer.</p>
+        <div class="tabell">
+          <table>
+            <thead><tr><th scope="col">Produkt</th><th scope="col">Behövs för</th><th scope="col">Att veta</th></tr></thead>
+            <tbody>
+              <tr><td>Markhöjdmodell Nedladdning, grid 1 m</td><td>Höjdkurvor, markmodell och alla analyser</td><td>Behövs alltid</td></tr>
+              <tr><td>Laserdata Nedladdning, skog</td><td>Punktmoln, träd, höjd över mark, skuggstudie, sektioner och horisont i soldiagrammet</td><td>Särskilda användningsvillkor</td></tr>
+              <tr><td>Marktäcke Nedladdning, vektor</td><td>Skog, åker, vatten och bebyggelse som ytor</td><td>Hela kommunens fil sparas i webbläsaren</td></tr>
+              <tr><td>Stompunkt Direkt</td><td>Plan- och höjdpunkter med lägesbeskrivning</td><td>Öppna data</td></tr>
+              <tr><td>Topografisk webbkarta Nedladdning, raster</td><td>Lantmäteriets karta som bakgrund på kartan och i utskriften</td><td>Läses i små bitar ur en mycket stor fil</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="liten">Byggnader, fastighetsgränser och vattendrag kommer i en senare version. Lantmäteriet gör en särskild prövning innan de dataseten lämnas ut, så de kräver en egen ansökan.</p>
+      </section>
+
+      <section id="logga-in">
+        <h2><span class="nr">03</span>Logga in i Höjdkurvor</h2>
+        <p>Fyll i användarnamn och lösenord från Geotorget under Lantmäteriet i steg 01 Plats på <a href="index.html">kartsidan</a>. Inloggningen skickas direkt från din webbläsare till Lantmäteriet och passerar aldrig Höjdkurvors server.</p>
+        <p>Väljer du <em>På den här datorn</em> under Kom ihåg inloggningen sparas uppgifterna i webbläsaren på just den datorn. Gör det bara på en dator som ingen annan använder.</p>
+      </section>
+
+      <section id="skapa">
+        <h2><span class="nr">04</span>Skapa underlaget</h2>
+        <p>Panelen på kartsidan har fyra steg. Du kan gå mellan dem i vilken ordning du vill. Nederst i panelen ser du vad som är valt.</p>
+        <ol>
+          <li><strong>01 Plats.</strong> Sök fram platsen, välj <em>Rita område på kartan</em> och dra upp en rektangel. Kanterna hamnar på jämna 10 m. Dra i handtagen mitt på sidorna för att ändra storleken, eller klicka på krysset i hörnet för att börja om. Kontrollera koordinatsystemet; Höjdkurvor föreslår det som kommunen använder. Här anger du också nollpunkt, vridning och inloggning.</li>
+          <li><strong>02 Underlag.</strong> Välj ritprogram, så ställs formaten in efter det. Under Terräng, Laserdata, Kartdata och Sektioner väljer du vad zip-filen ska innehålla.</li>
+          <li><strong>03 Analys.</strong> Kryssa i <em>Skapa platsanalysblad</em> om du vill ha platsanalysen, se nedan.</li>
+          <li><strong>04 Skiss.</strong> Lägg till volymer om du vill pröva ett hus på platsen. Steget kan hoppas över.</li>
+          <li>Välj <em>Skapa</em>. Allt hämtas och räknas i din webbläsare. Stora områden och många tillval tar längre tid. Kontrollera resultatet på kartan och ladda ner zip-filen.</li>
+        </ol>
+        <dl class="par">
+          <dt>Kopiera område</dt><dd>Med <em>Kopiera</em> och <em>Klistra in</em> under Område flyttar du hörnens koordinater, till exempel mellan två projekt eller till en beställning.</dd>
+          <dt>Projektlänk</dt><dd><em>Kopiera projektlänk</em> i steg 01 ger en länk med området och alla val, men utan inloggning. Spara den i projektmappen eller skicka den till en kollega för att skapa samma underlag igen.</dd>
+          <dt>Nollpunkt</dt><dd>Hårkorset i ringen är den lokala nollpunkten, normalt utsnittets sydvästra hörn. Du kan ange en egen under Nollpunkt och vridning.</dd>
+          <dt>Höjdpunkter</dt><dd>Under Terräng kan du få höjdpunkter med höjdtext i ett rutnät på 5, 10 eller 20 m, som DXF.</dd>
+          <dt>Sektioner</dt><dd>Rita linjer under Sektioner i steg 02. Håll in Shift, eller slå på 90° på kartan, för linjer längs koordinataxlarna. Pilarna visar blickriktningen. Klicka på linjen för att vända den.</dd>
+        </dl>
+      </section>
+
+      <section id="platsanalys">
+        <h2><span class="nr">05</span>Platsanalys</h2>
+        <p>Platsanalysbladet är ett A3-häfte i PDF för tidiga skeden. Välj vilka kapitel det ska ha i steg 03 Analys. Kartorna visas också som lager på kartan och följer med som DXF i zip-filen.</p>
+        <dl class="par">
+          <dt>Sol</dt><dd>Soldiagram med horisont från terräng, träd och byggnader, och en skuggstudie vid dagjämning och solstånd. Under Anpassa sol väljer du betraktelsepunkt, ögonhöjd och tider. Horisonten räknas från utsnittets mitt, eller från en punkt du väljer på kartan. Står punkten i ett hus eller under ett träd räknas det objektet bort. Träd och byggnader kräver Laserdata skog.</dd>
+          <dt>Terräng</dt><dd>Markens lutning i fyra klasser: flackare än 1:50, 1:50–1:20, 1:20–1:12 och brantare än 1:12. Gränserna följer tillgänglighetskraven för gångvägar och ramper.</dd>
+          <dt>Vatten</dt><dd>Var vatten blir stående och vilka vägar det tar vid ett skyfall. Räknas ur markmodellen utan hänsyn till ledningar, kulvertar eller hur mycket marken suger upp. Skissade volymer räknas med.</dd>
+          <dt>Skydd</dt><dd>Fornlämningar och andra kulturhistoriska lämningar från Riksantikvarieämbetet, naturreservat, Natura 2000 och andra skyddade områden från Naturvårdsverket, avstånd till sjöar och vattendrag som indikation på strandskydd, och översvämningskarteringar från Myndigheten för civilt försvar. Kräver ingen inloggning.</dd>
+          <dt>Klimat och buller</dt><dd>Snölast, vind, växtzon och buller från vägar kommer i en senare version.</dd>
+        </dl>
+        <p class="liten">Platsanalysen är ett underlag för tidiga skeden och ersätter inte myndigheternas egna besked, en geoteknisk undersökning, en dagvattenutredning eller en bullerutredning. Strandskyddet är bara en indikation; kontrollera alltid med kommunen och länsstyrelsen.</p>
+      </section>
+
+      <section id="skiss">
+        <h2><span class="nr">06</span>Skiss och cad-apa</h2>
+        <p>I steg 04 Skiss kan du pröva enkla volymer på platsen. De räknas med i skuggstudien, horisonten och skyfallet nästa gång du väljer Skapa, och syns i 3D-vyn.</p>
+        <ul>
+          <li><strong>Rita i cad-apa.</strong> Öppnar ritprogrammet cad-apa i en ny flik med platsen, terrängen och kurvorna. När huset är skissat skickar du det tillbaka från cad-apa, och volymerna dyker upp i steg 04. Samma sak gör <em>Fortsätt rita i cad-apa</em> under resultatet.</li>
+          <li><strong>Importera fil.</strong> En skiss sparad från cad-apa, eller en DXF där varje sluten polylinje blir en volym. Ange om DXF-filen är ritad i lokala koordinater eller i SWEREF 99.</li>
+          <li><strong>Ändra i listan.</strong> Golvnivå i RH 2000 (tomt betyder marken vid husets mitt), höjd till takfot, takform och taklutning.</li>
+        </ul>
+        <p>Stoppar webbläsaren den nya fliken: tillåt popup-fönster för sidan, eller välj <em>Spara platsfil för cad-apa</em> och öppna filen i cad-apa.</p>
+        <p><em>Visa i 3D</em> under resultatet visar terrängen, träden och volymerna. Dra för att snurra och scrolla eller nyp för att zooma.</p>
+      </section>
+
+      <section id="kartan">
+        <h2><span class="nr">07</span>Kartan och utskriften</h2>
+        <p>Rutan uppe till höger på kartan styr bakgrund och vilka lager som visas, grupperade som underlag, analys och skiss. Lantmäteriets karta går att välja som bakgrund när du har fyllt i inloggningen. Temat, Blueprint, Ljust eller Mörkt, väljer du i menyraden högst upp.</p>
+        <p>Välj <em>Skriv ut i skala</em> för en PDF i A4 till A1. Utskriften visar samma lager som kartan. Bakgrunden kommer med om du har valt Lantmäteriets karta; OpenStreetMap och terrängkartan får inte skrivas ut. Skriv ut i verklig storlek (100 %) och kontrollera skalan med skalstocken.</p>
+      </section>
+
+      <section id="ritprogram">
+        <h2><span class="nr">08</span>I ritprogrammet</h2>
+        <p>Alla filer finns i två versioner: en i SWEREF 99-koordinater och en relativt den lokala nollpunkten. Den lokala versionen är lättare att arbeta med i ritprogram. Nollpunkten och alla andra uppgifter står i info-filen i zip-filen.</p>
+        <dl class="par">
+          <dt>Archicad</dt><dd>Sammanfoga höjdkurvorna (<code>_kurvor_lokal.dxf</code>) med File › Interoperability › Merge. Markmodellens punkter (<code>_mesh_lokal.xyz</code>) blir ett Mesh. Punktmolnet finns som XYZ med färg per klass.</dd>
+          <dt>Revit</dt><dd>Massing &amp; Site › Toposolid › Create from Import › Specify Points File, välj <code>_punkter_lokal.csv</code> och enheten meter. Punktmolnet (<code>_laser_lokal.las</code>) läses in via Autodesk ReCap.</dd>
+          <dt>AutoCAD</dt><dd>DXF-filerna öppnas direkt och kan sparas som DWG. Varje typ ligger på ett eget lager.</dd>
+          <dt>Träd</dt><dd><code>_trad.csv</code> har position, höjd och kronbredd per träd, för att placera trädobjekt med till exempel Dynamo eller Grasshopper.</dd>
+          <dt>Platsanalys</dt><dd>Lutning och skyfall ligger i mappen <code>platsanalys</code> och höjdpunkterna i <code>terrang</code>, med ett lager per klass. Skissens volymer ligger i <code>skiss</code>.</dd>
+          <dt>Sann nord</dt><dd>Höjdkurvornas DXF har lagren NORR_RUTNAT och NORR_SANN. Vinkeln mellan dem står i info-filen. Under Nollpunkt och vridning i steg 01 kan de lokala filerna vridas mot sann nord eller en egen vinkel.</dd>
+        </dl>
+      </section>
+
+      <section id="mobil">
+        <h2><span class="nr">09</span>På mobilen</h2>
+        <p>På en mobil visar kartsidan ett enklare flöde. Sök fram platsen, flytta och zooma kartan tills området ryms i ramen och välj <em>Markera området</em>. Sedan kan du</p>
+        <ul>
+          <li><strong>Skicka till datorn</strong>: en länk som öppnar området på datorn, redan markerat,</li>
+          <li><strong>Kopiera</strong> hörnens koordinater, eller</li>
+          <li><strong>Beställa underlaget</strong> med området ifyllt.</li>
+        </ul>
+        <p>Underlaget skapas bäst på en dator. Vill du ändå använda hela verktyget på mobilen, välj <em>Hela verktyget</em>.</p>
+      </section>
+
+      <section id="datan" class="ruta" style="gap: 14px">
+        <h2><span class="nr">10</span>Var rädd om datan</h2>
+        <p>Spara underlagen lokalt, på din egen dator eller i projektmappen på kontorets server. Undvik molntjänster. Där vet man sällan i vilket land filerna lagras, vem som kan komma åt dem eller hur länge de finns kvar.</p>
+        <p>Laserdata kan innehålla personuppgifter, och den som hämtar datan ansvarar för att hantera dem enligt dataskyddsförordningen (GDPR). Flera av Lantmäteriets dataset har dessutom villkor för hur de får lagras och spridas. Läs villkoren när du beställer.</p>
+      </section>
+
+      <section id="fel">
+        <h2><span class="nr">11</span>Om något inte fungerar</h2>
+        <dl class="fragor">
+          <div><dt><strong>Lantmäteriet nekade åtkomst</strong></dt><dd>Kontrollera användarnamn och lösenord, och att produkten är beställd för kontot. En ny beställning kan behöva en stund innan den gäller.</dd></div>
+          <div><dt><strong>Området är för stort</strong></dt><dd>Rita ett mindre utsnitt eller välj färre tillval. Analyserna med laserdata klarar högst 6 km².</dd></div>
+          <div><dt><strong>Kunde inte nå Lantmäteriet</strong></dt><dd>Kontrollera internetanslutningen. Vissa företagsnätverk spärrar anrop till Lantmäteriets servrar. Prova då från ett annat nätverk.</dd></div>
+          <div><dt><strong>Skydd och risker kunde inte hämtas</strong></dt><dd>Myndigheternas tjänster är ibland nere. Platsanalysen skapas ändå, och bladet visar vad som inte gick att kontrollera. Prova igen senare.</dd></div>
+          <div><dt><strong>Något annat</strong></dt><dd>Höjdkurvor är en betatjänst och allt fungerar inte alltid. Välj <em>Rapportera ett fel</em> nederst i panelen på kartsidan. Då öppnas ett mejl med version, webbläsare och de senaste felmeddelandena ifyllda. Beskriv vad du gjorde och skicka. Du kan också skriva direkt till <a href="mailto:kontakt@agrellarkitektur.se">kontakt@agrellarkitektur.se</a>.</dd></div>
+        </dl>
+      </section>
+      <section id="bestall">
+        <h2><span class="nr">12</span>Beställ i stället</h2>
+        <p>Vill du inte skaffa konto hos Lantmäteriet, eller hellre lämna över jobbet, kan Agrell Arkitektur ta fram underlaget åt dig mot betalning. Det är aldrig nödvändigt. Allt går att skapa själv, gratis.</p>
+        <ol>
+          <li>Rita området på kartan och välj <em>Kopiera</em> under Område.</li>
+          <li>Gå till <a href="bestall.html">Beställ</a>, klistra in koordinaterna och välj innehåll.</li>
+          <li>Skicka beställningen från ditt eget e-postprogram. Du får ett pris innan arbetet börjar.</li>
+        </ol>
+      </section>
+
+      <table class="ritningshuvud">
+        <caption class="dold">Ritningshuvud</caption>
+        <tbody>
+          <tr>
+            <td rowspan="2" style="width: 31%"><span class="lbl">PROJEKT</span><a class="proj" href="index.html">höjdkurvor<span class="punkt">.</span>se</a></td>
+            <td><span class="lbl">INNEHÅLL</span>INSTRUKTIONER</td>
+            <td><span class="lbl">BLAD</span>02 / 04</td>
+            <td><span class="lbl">SKEDE</span><span class="beta">BETA</span></td>
+          </tr>
+          <tr>
+            <td><span class="lbl">UPPHOVSMAN</span><a href="https://agrellarkitektur.se">AGRELL ARKITEKTUR</a></td>
+            <td><span class="lbl">DATA</span><a href="https://geotorget.lantmateriet.se">©&nbsp;LANTMÄTERIET</a></td>
+            <td><span class="lbl">KONTAKT</span><a href="mailto:kontakt@agrellarkitektur.se">kontakt@<wbr>agrellarkitektur.se</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+
+  <footer class="sidfot">
+    <a href="index.html"><strong>höjdkurvor.se</strong></a>
+    <span>Utvecklad av <a href="https://agrellarkitektur.se">Agrell Arkitektur</a></span>
+    <span>Data © <a href="https://geotorget.lantmateriet.se">Lantmäteriet</a></span>
+  </footer>
+  </div>
+</body>
+</html>

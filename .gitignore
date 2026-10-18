@@ -1,0 +1,22 @@
+# Lokala inställningar och nycklar ska aldrig checkas in
+config.local.js
+*.env
+.env*
+
+# Testresultat och stora testfiler (skapas av test/data/make_landskap.py)
+test/ut/
+test/data/*.tif
+test/data/*.laz
+test/data/*.gpkg
+test/data/facit.json
+__pycache__/
+*.pyc
+node_modules/
+
+# Editor och system
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+*.pid
