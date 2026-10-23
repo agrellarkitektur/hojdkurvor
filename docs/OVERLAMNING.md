@@ -6,7 +6,10 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 ## Läget
 
 - **0.6.0 är publicerad** 23 oktober: `v0.6.0` sammanslagen med `main`, och
-  den första FTP-körningen (Publicera på webbhotellet) gick igenom. Sidan:
+  publicerad med FTP (Publicera på webbhotellet). Första körningen hamnade i
+  fel mapp eftersom `FTP_DIR` saknade `public_html`; rätt värde är
+  `/agrellarkitektur.se/public_html/terrang/`. Den felplacerade mappen kan
+  ligga kvar på servern. Sidan:
   <https://agrellarkitektur.se/terrang/>. Ingen GitHub-release är gjord för
   0.6.0; det behövs inte längre för publiceringen.
 - Innehåll i 0.6.0: ortofoto, befintliga byggnader, fastighetsgränser,
