@@ -106,7 +106,12 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/karna.js` (`Terrang`) – höjddata, omprojicering, höjdkurvor, DXF, XYZ och
   CSV, lokal vridning och nordpilar
 - `js/laser.js` – laserdata: katalogsök, läsning av COPC, LAS och XYZ
-- `js/marktacke.js` – marktäcke: hämtning, lagring i webbläsaren, GeoPackage, DXF
+- `js/kommunfil.js` – kommunfiler från Lantmäteriets nedladdning (marktäcke,
+  byggnader, fastighetsindelning): hämtning, lagring i webbläsaren, GeoPackage
+  och klippning
+- `js/marktacke.js` – marktäcke: klasser, färger och DXF
+- `js/byggnad.js` – befintliga byggnader: höjd ur laserdatan, DXF, CSV och volymer
+- `js/fastighet.js` – fastighetsgränser, gränspunkter och beteckningar, DXF
 - `js/stompunkt.js` – Stompunkt Direkt: sökning inom utsnittet, DXF och CSV
 - `js/vagar.js` – vägar från OpenStreetMap via Overpass, klassning och DXF
 - `js/topowebb.js` – läser Topografisk webbkarta ur Lantmäteriets GeoPackage
@@ -133,7 +138,11 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 ## Externa tjänster
 
 - Höjddata och laserdata: dl1.lantmateriet.se, katalog api.lantmateriet.se
-- Marktäcke: dl1.lantmateriet.se/mark/marktacke, en fil per kommun
+- Kommunfiler (GeoPackage i zip, en per kommun, katalog api.lantmateriet.se/stac-vektor):
+  - Marktäcke: dl1.lantmateriet.se/mark/marktacke/marktacke_knKKKK.zip
+  - Byggnader: dl1.lantmateriet.se/byggnadsverk/byggnad_knKKKK.zip (skiktet `byggnad`)
+  - Fastighetsindelning: dl1.lantmateriet.se/fastighet/fastighetsindelning_knKKKK.zip
+    (skikten `registerenhetsomradesyta`, `registerenhetsomradesgrans`, `granspunkt`)
 - Stompunkter: api.lantmateriet.se/distribution/produkter/stompunkt-direkt/v1.1
 - Topografisk webbkarta: dl1.lantmateriet.se/karta/topowebb/data/topowebb-3006.gpkg
   (läses i bitar med Range; kräver inloggning och beställd produkt)
@@ -151,20 +160,21 @@ Lantmäteriets karta.
 
 Varje användare behöver ett Geotorget-konto med de produkter beställda som
 används: Markhöjdmodell Nedladdning, och för tillvalen Laserdata Nedladdning,
-skog, Marktäcke Nedladdning, vektor, Stompunkt Direkt och Topografisk
+skog, Byggnad Nedladdning, vektor, Fastighetsindelning Nedladdning, vektor,
+Marktäcke Nedladdning, vektor, Stompunkt Direkt och Topografisk
 webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inloggning.
 
 ## Kommande
 
-- Kräver särskild prövning hos Lantmäteriet: byggnader i 3D, fastighetsindelning,
-  hydrografi, Topografi 10 som vektor och NVDB.
+- 0.6.0, nästa steg: Ortofoto Nedladdning (COG via api.lantmateriet.se/stac-bild).
+- Hydrografi, Topografi 10 som vektor och NVDB. Byggnader i 3D med takformer.
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC, exempelprojekt.
 
 ## Data som sparas i webbläsaren
 
-- IndexedDB: marktäcket, en fil per kommun. Appen frågar Lantmäteriet om
+- IndexedDB: marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt. Appen frågar Lantmäteriet om
   filen ändrats innan den används igen. Under 02 Underlag, "Sparat i
   webbläsaren", kan man ta bort enstaka filer eller tömma allt.
 - localStorage: tema, bakgrund, dolda lager, utskriftens inställningar,

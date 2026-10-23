@@ -52,6 +52,14 @@ node test/platsanalys.test.js
 ```
 
 ```
+node test/byggnad.test.js
+```
+
+```
+node test/fastighet.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 

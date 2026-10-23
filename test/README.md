@@ -10,8 +10,19 @@ tjänsterna. Inga riktiga konton eller nycklar behövs. Inloggningen i testerna,
 node test/platsanalys.test.js
 ```
 
+```
+node test/byggnad.test.js
+```
+
+```
+node test/fastighet.test.js
+```
+
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
-på syntetiska rutnät. Tar någon sekund.
+på syntetiska rutnät, och byggnader och fastighetsindelning ur låtsasfilerna.
+Tar några sekunder. Med `BYGGNAD_GPKG=…/byggnad_knKKKK.gpkg` och
+`FASTIGHET_GPKG=…/fastighetsindelning_knKKKK.gpkg` körs samma kontroller
+också på riktiga filer från Lantmäteriet (för Vimmerby centrum, kommun 0884).
 
 ## Testdata
 
@@ -31,7 +42,11 @@ Kräver numpy, scipy, GDAL (osgeo) och copclib. `make_dtm.py` skapar
 höjdmodellens två rutor (`m642_53.tif`, `m642_54.tif`) och `make_landskap.py`
 en COPC-fil med träd och ett hus (`y21c007-64275_5375_25.copc.laz`) och facit
 (`facit.json`) på samma markyta.
-`marktacke_kn0513.zip` (fem ytor) ligger redan i `test/data/`.
+`marktacke_kn0513.zip` (fem ytor), `byggnad_kn0513.zip` (huset i laserdatan,
+ett garage och en lada) och `fastighetsindelning_kn0513.zip` (tre fastigheter,
+gränser med olika lägesosäkerhet) ligger redan i `test/data/`. De två senare
+skapas med `python3.12 test/data/make_vektor.py test/data` och har samma skikt
+och fält som Lantmäteriets filer i 2025-versionen.
 
 Topografisk webbkarta (`topowebb-3006.gpkg`) finns inte med. Utan den svarar
 testservern 404 när testet väljer Lantmäteriets karta, och utskriften görs utan

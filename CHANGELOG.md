@@ -3,6 +3,26 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.6.0 – under arbete
+
+- Befintliga byggnader ur Byggnad Nedladdning, vektor: fotavtryck med typ,
+  ändamål och husnummer som DXF (ett lager per typ) och CSV, med höjd över mark
+  ur laserdatan. Byggnaderna syns på kartan, i utskriften i skala, i
+  platsanalysbladets kartor och i 3D-vyn, räknas som hinder i skyfallet och
+  följer med i platspaketet till cad-apa (nytt fält `byggnader`).
+- Fastighetsgränser ur Fastighetsindelning Nedladdning, vektor: gränser,
+  gränspunkter och beteckningar som DXF, med osäkra gränser på eget lager.
+  Syns på kartan, i utskriften och i platsanalysbladet, som också listar vilka
+  fastigheter utsnittet berör. Tydlig text om att gränserna inte är rättsligt
+  bindande.
+- Latitud och longitud i decimalgrader för utsnittets mitt i panelen (med
+  kopieringsknapp) och i info-filen, för att ange platsen i Archicad och Revit.
+- Förhandsvisa i 3D är en riktig knapp. Bara knappen för nästa steg är fylld;
+  Ladda ner och Fortsätt rita i cad-apa är lika höga.
+- Marktäcke, byggnader och fastighetsindelning hämtas på samma sätt
+  (`js/kommunfil.js`) och sparas i webbläsaren per kommun och produkt.
+- Appen publiceras på webbhotellet med FTP vid varje push till `main`.
+
 ## 0.5.0 – 2026-10-18
 
 Första versionen i det publika repot. Versionerna numreras från och med nu 0.x

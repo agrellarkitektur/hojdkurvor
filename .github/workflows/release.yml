@@ -35,7 +35,7 @@ jobs:
           for f in *.php; do php -l "$f"; done
 
       - name: Enhetstest
-        run: node test/platsanalys.test.js
+        run: for f in test/*.test.js; do node "$f"; done
 
       - name: Kontrollera inställningarna
         run: |
