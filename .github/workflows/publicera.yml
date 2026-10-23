@@ -1,0 +1,85 @@
+# Kontrollerar appen och laddar upp den till webbhotellet med FTP vid varje
+# push till main (ändringar som bara rör dokumentationen hoppas över). Kan
+# också köras för hand under Actions → "Publicera på webbhotellet" → "Run
+# workflow".
+#
+# Uppgifterna ligger som secrets i repot (Settings → Secrets and variables →
+# Actions): FTP_SERVER, FTP_USERNAME, FTP_PASSWORD och FTP_DIR (mappen på
+# servern, t.ex. /agrellarkitektur.se/public_html/terrang/).
+#
+# Samma urval som zip-filen i release.yml: allt utom test, docs, .github,
+# CLAUDE.md och .gitignore. config.js följer med och ska vara utan nycklar.
+#
+# Första gången laddas allt upp; sedan bara det som ändrats (uppladdningen
+# sparar en lista i .ftp-deploy-sync-state.json på servern). Filer på servern
+# som inte kommer från repot rörs inte.
+
+name: Publicera på webbhotellet
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'test/**'
+  workflow_dispatch:
+
+concurrency:
+  group: publicera
+  cancel-in-progress: false
+
+jobs:
+  publicera:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Kontrollera koden
+        run: |
+          for f in js/*.js config.js; do node --check "$f"; done
+          for f in *.php; do php -l "$f"; done
+
+      - name: Enhetstest
+        run: for f in test/*.test.js; do node "$f"; done
+
+      - name: Kontrollera inställningarna
+        run: |
+          # Inga nycklar eller inloggningar får följa med till webbhotellet.
+          node -e "
+            global.window = {};
+            require('./config.js');
+            const k = window.TERRANG_KONFIG;
+            if (k.esriNyckel || k.inloggning) { console.error('config.js innehåller en nyckel eller inloggning'); process.exit(1); }
+          "
+
+      - name: Packa urvalet
+        run: |
+          mkdir -p ut
+          git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C ut
+
+      - name: Mappen på servern
+        id: dir
+        env:
+          DIR: ${{ secrets.FTP_DIR }}
+        # Uppladdningen kräver / i början och på slutet.
+        run: |
+          DIR="/${DIR#/}"; DIR="${DIR%/}/"
+          echo "path=$DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Ladda upp till webbhotellet
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ steps.dir.outputs.path }}
+          local-dir: ./ut/
+          protocol: ftps
+          # Webbhotellets certifikat gäller ofta värdnamnet hos leverantören,
+          # inte det egna domännamnet; anslutningen krypteras ändå.
+          security: loose

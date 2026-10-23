@@ -18,20 +18,19 @@ Inget byggsteg: filerna laddas upp som de är.
 
 ## Publicera
 
-Enklast är att hämta en färdig zip: under
-[Releases](https://github.com/agrellarkitektur/hojdkurvor/releases) ligger
-`hojdkurvor-vX.Y.Z.zip` under Assets på varje release. Den innehåller en mapp
-`terrang` med bara de filer som behövs. Ladda upp innehållet till
-`public_html/terrang/` och ersätt de gamla filerna. Har `config.js` på servern
-ändrats (till exempel en Esri-nyckel), hoppa över den filen.
+Appen publiceras av GitHub. Vid varje push till `main` kontrollerar
+`.github/workflows/publicera.yml` koden, kör enhetstesterna, stoppar om
+`config.js` innehåller en nyckel eller inloggning och laddar sedan upp appen med
+FTP till webbhotellet (`public_html/terrang/`). Bara ändrade filer laddas upp.
+Ändringar som bara rör dokumentationen eller testerna hoppas över. Uppgifterna
+ligger som secrets i repot: `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` och
+`FTP_DIR`. Arbetsflödet kan också köras för hand under Actions → Publicera på
+webbhotellet → Run workflow. `config.js` följer med, så en ändring av den på
+servern skrivs över.
 
-Zip-filen byggs av GitHub (`.github/workflows/release.yml`) när en release
-publiceras: Releases → Draft a new release, skriv en tagg som `v0.5.1` (samma som
-i `js/version.js`), skriv vad som är nytt och publicera. Efter någon minut ligger
-zip-filen på releasen. Arbetsflödet kontrollerar koden, kör enhetstestet och
-stoppar om `config.js` innehåller en nyckel eller inloggning. Det kan också
-köras för hand under Actions → Bygg för webbhotellet → Run workflow; då hamnar
-zip-filen under körningens Artifacts.
+Det går fortfarande att göra en zip: när en release publiceras med en tagg som
+`v0.6.0` lägger `.github/workflows/release.yml` filen `hojdkurvor-vX.Y.Z.zip`
+på releasen, med en mapp `terrang` som innehåller samma filer.
 
 Utan GitHub: ladda upp hela mappen (utom `test/`, `docs/`, `.github/` och
 textfilerna, som inte behövs men inte heller skadar) till webbhotellet, till
