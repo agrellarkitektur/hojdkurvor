@@ -559,3 +559,7 @@ body.mobilflode .handtag-wrap { transform-origin: center; }
   .ritningshuvud td[rowspan] { grid-column: 1 / -1; }
 }
 @media (prefers-reduced-motion: reduce) { #matare-fyll { transition: none; } }
+
+/* fastighetsbeteckningar på kartan */
+.fastighet-etikett { background: none; border: 0; }
+.fastighet-etikett span { display: inline-block; transform: translate(-50%, -50%); font-family: var(--mono); font-size: 11px; color: var(--fastighet); white-space: nowrap; text-shadow: 0 0 2px var(--halo), 0 0 2px var(--halo), 0 0 3px var(--halo); pointer-events: none; }

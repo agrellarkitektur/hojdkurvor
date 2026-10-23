@@ -17,7 +17,7 @@
 
   /**
    * opt: { fonter, titel: { projekt, kommun, system, datum }, r, kurvor, markhojd: { lo, hi },
-   *        lutning: { lt, konturer }, skyfall: { lagpunkter, floden }, volymer, byggnader,
+   *        lutning: { lt, konturer }, skyfall: { lagpunkter, floden }, volymer, byggnader, fastigheter,
    *        sol: (opt till Sol.soldiagramPdf), skuggor: (opt till Utskrift.skuggblad),
    *        natur, lamningar, oversvamning, strand, kallor: [text], kapitel: { sol, terrang, vatten, skydd } }
    * Värdena natur/lamningar/oversvamning/strand är antingen data eller { fel: text }.
@@ -161,6 +161,11 @@
   }
   function ritaVolymer(doc, P, L, opt) {
     const F = U().F;
+    if (opt.fastigheter) {
+      doc.setDrawColor(176, 48, 106); doc.setLineWidth(0.25);
+      opt.fastigheter.granser.forEach(g => { doc.setLineDashPattern(g.osakerhet > 1 ? [1.2, 0.8] : [], 0); L(g.pts, false); doc.stroke(); });
+      doc.setLineDashPattern([], 0);
+    }
     (opt.byggnader || []).forEach(b => {
       doc.setFillColor(205, 200, 194); doc.setDrawColor(55, 55, 55); doc.setLineWidth(0.15);
       L(b.fotavtryck, true); doc.fillStroke();
@@ -206,6 +211,7 @@
     if (opt.kapitel.vatten && opt.skyfall) { rader.push([ruta(doc, LJUSBLA, BLA), 'Lågpunkt, vatten blir stående']); rader.push([linje(doc, BLA, 0.45), 'Flödesväg vid skyfall']); }
     if (opt.kapitel.skydd && Array.isArray(opt.lamningar) && opt.lamningar.length) rader.push([romb(doc, LILA), 'Lämning (RAÄ)']);
     if (opt.kapitel.skydd && Array.isArray(opt.natur) && opt.natur.length) rader.push([linje(doc, GRON, 0.45, [2, 1]), 'Skyddad natur']);
+    if (opt.fastigheter && opt.fastigheter.granser.length) rader.push([linje(doc, [176, 48, 106], 0.3), 'Fastighetsgräns']);
     if (opt.byggnader && opt.byggnader.length) rader.push([ruta(doc, [205, 200, 194], [55, 55, 55]), 'Befintlig byggnad']);
     if (opt.volymer && opt.volymer.length) rader.push([ruta(doc, [255, 255, 255], F.annot), 'Skissad volym']);
     rader.push([linje(doc, F.ram, 0.35), 'Utsnitt']);
@@ -258,6 +264,15 @@
       rad('Strandskydd', s && !s.fel ? strandText(s).kort : 'Kunde inte kontrolleras');
       const o = opt.oversvamning;
       rad('Översvämning, 100-årsflöde', Array.isArray(o) ? oversvamningKort(o) : 'Kunde inte kontrolleras');
+      linjeUnder();
+    }
+    if (opt.fastigheter) {
+      rubrik('FASTIGHETER');
+      const fl = opt.fastigheter.fastigheter, visa = fl.slice(0, fl.length > 6 ? 5 : 6);
+      if (!fl.length) rad('Berörda fastigheter', 'Inga i registret');
+      visa.forEach(f => rad(f.beteckning, `${komma(f.yta)} m²`));
+      if (fl.length > visa.length) rad(`och ${fl.length - visa.length} till`, 'se info-filen');
+      rad('Gränsernas läge', 'Ej rättsligt bindande');
       linjeUnder();
     }
     rubrik('KLIMAT');

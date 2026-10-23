@@ -63,7 +63,7 @@ with sync_playwright() as p:
     pg.click('#ritprogram button[data-prog=archicad]')
     for g in ['g-laser', 'g-kartdata', 'g-sektioner']:
         pg.evaluate(f"document.getElementById('{g}').open = true")
-    for v in ['laser', 'trad', 'hom', 'byggnader', 'marktacke', 'stompunkter', 'vagar', 'sektion']:
+    for v in ['laser', 'trad', 'hom', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion']:
         pg.check(f'input[name=tillval][value={v}]')
     pg.screenshot(path=f'{UT}/02_underlag.png')
 

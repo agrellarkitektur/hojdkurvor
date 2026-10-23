@@ -80,7 +80,7 @@
   /**
    * opt: { format, liggande, skala, utsnitt, lager: {...}, titel: {...}, fonter }
    * lager: { bakgrund: {bild (dataURL), x0, y1, W, H, s}, kurvor, siffror, marktacke: {ytor}, marktackeFarg,
-   *          byggnader: [{fotavtryck, hal, husnummer, centrum}],
+   *          byggnader: [{fotavtryck, hal, husnummer, centrum}], fastigheter: {granser, ytor},
    *          hom: {bild, x0, y1, W, H, s}, skuggor: {konturer, etikett}, trad, stompunkter, dz, vagar: {linjer},
    *          sektioner: [{namn, a, b, vand}], nollpunkt: {x, y}, ram, rutnat }
    */
@@ -223,6 +223,21 @@
         doc.setTextColor(0, 0, 0);
       }
     }
+    // fastighetsgränser (streckade där registret anger osäkerhet över 1 m) och beteckningar
+    if (g.fastigheter) {
+      doc.setDrawColor(176, 48, 106);
+      for (const gr of g.fastigheter.granser) {
+        doc.setLineWidth(gr.typ === 'fastighetsgräns' ? 0.3 : 0.45);
+        doc.setLineDashPattern(gr.osakerhet > 1 ? [1.6, 1.0] : [], 0);
+        L(gr.pts, false); doc.stroke();
+      }
+      doc.setLineDashPattern([], 0);
+      if (opt.skala <= 2000) for (const y of g.fastigheter.ytor) {
+        if (!y.ankare) continue;
+        const [x, yy] = P(y.ankare[0], y.ankare[1]);
+        halo(y.etikett, x, yy, opt.skala <= 500 ? 9 : 7, { farg: [176, 48, 106] });
+      }
+    }
     // skissade volymer
     if (g.volymer) {
       doc.setFillColor(255, 255, 255); doc.setDrawColor(...F.annot); doc.setLineWidth(0.35);
@@ -347,6 +362,7 @@
     if (g.kurvor) rader.push([(x, y) => { doc.setDrawColor(...F.kurva); doc.setLineWidth(0.28); doc.line(x, y, x + 7, y); }, `Höjdkurvor${t.ekvidistans ? ', ' + t.ekvidistans : ''}`]);
     if (g.marktacke) rader.push([(x, y) => { doc.setFillColor(220, 235, 213); doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.08); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Marktäcke']);
     if (g.byggnader) rader.push([(x, y) => { doc.setFillColor(205, 200, 194); doc.setDrawColor(55, 55, 55); doc.setLineWidth(0.18); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Befintlig byggnad']);
+    if (g.fastigheter) rader.push([(x, y) => { doc.setDrawColor(176, 48, 106); doc.setLineWidth(0.3); doc.line(x, y, x + 3, y); doc.setLineDashPattern([1, 0.7], 0); doc.line(x + 4, y, x + 7, y); doc.setLineDashPattern([], 0); }, 'Fastighetsgräns (streckad: osäker)']);
     if (g.hom) rader.push([(x, y) => { doc.setFillColor(120, 170, 110); doc.rect(x, y - 1.1, 7, 2.2, 'F'); }, 'Höjd över mark']);
     if (g.skuggor) rader.push([(x, y) => { doc.setFillColor(170, 170, 170); doc.rect(x, y - 1.1, 7, 2.2, 'F'); }, `Skugga ${g.skuggor.etikett || ''}`]);
     if (g.lutning) rader.push([(x, y) => { [[241, 215, 122], [237, 162, 90], [200, 85, 61]].forEach((c, i) => { doc.setFillColor(...c); doc.rect(x + i * 2.34, y - 1.1, 2.34, 2.2, 'F'); }); }, 'Lutning 1:50 / 1:20 / 1:12']);

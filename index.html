@@ -276,6 +276,10 @@
               </div>
             </div>
             <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="fastigheter"> Fastighetsgränser</label>
+              <p class="hjalp">Gränser, gränspunkter och fastighetsbeteckningar som DXF, och en lista över fastigheterna som utsnittet berör. Gränserna är inte inmätta och kan avvika flera meter. Kräver beställd <em>Fastighetsindelning Nedladdning, vektor</em>.</p>
+            </div>
+            <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="stompunkter"> Stompunkter</label>
               <p class="hjalp">Plan- och höjdpunkter inom utsnittet med höjd, kvalitet och lägesbeskrivning, som DXF och CSV. Kräver beställd <em>Stompunkt Direkt</em>.</p>
             </div>
@@ -385,7 +389,7 @@
 
         <footer class="fot">
           <p><a href="instruktioner.html#ritprogram">Så tar du in filerna i Archicad, Revit och AutoCAD</a></p>
-          <p>Höjddata, laserdata, marktäcke och Topografisk webbkarta: © Lantmäteriet, CC BY 4.0. Stompunkter: Lantmäteriet, CC0. Skydd och risker: Naturvårdsverket (CC0), Riksantikvarieämbetet och Myndigheten för civilt försvar. Karta, vägar, vatten och adressök: © OpenStreetMap-bidragsgivare. Kommunernas koordinatsystem är ett förslag och behöver kontrolleras.</p>
+          <p>Höjddata, laserdata, byggnader, fastighetsindelning, marktäcke och Topografisk webbkarta: © Lantmäteriet, CC BY 4.0. Stompunkter: Lantmäteriet, CC0. Skydd och risker: Naturvårdsverket (CC0), Riksantikvarieämbetet och Myndigheten för civilt försvar. Karta, vägar, vatten och adressök: © OpenStreetMap-bidragsgivare. Kommunernas koordinatsystem är ett förslag och behöver kontrolleras.</p>
           <p class="mobilvy-rad"><button type="button" class="lank-knapp" id="till-mobilvy">Tillbaka till mobilvyn</button></p>
         </footer>
       </div>
@@ -428,6 +432,7 @@
   <script src="js/kommunfil.js"></script>
   <script src="js/marktacke.js"></script>
   <script src="js/byggnad.js"></script>
+  <script src="js/fastighet.js"></script>
   <script src="js/stompunkt.js"></script>
   <script src="js/analys.js"></script>
   <script src="js/vagar.js"></script>

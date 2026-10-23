@@ -137,14 +137,14 @@
   // --- resultatlager som visas på kartan och i utskriften
   // [id, namn, symbol, färg, grupp]
   const RES = [
-    ['kurvor', 'Höjdkurvor', 'linje', 'sw-kurva', 'u'], ['hojdpunkter', 'Höjdpunkter', 'ring', 'annot', 'u'], ['byggnader', 'Byggnader', 'yta', 'sw-byggnad', 'u'], ['marktacke', 'Marktäcke', 'yta', 'sw-mark', 'u'],
+    ['kurvor', 'Höjdkurvor', 'linje', 'sw-kurva', 'u'], ['hojdpunkter', 'Höjdpunkter', 'ring', 'annot', 'u'], ['byggnader', 'Byggnader', 'yta', 'sw-byggnad', 'u'], ['fastigheter', 'Fastighetsgränser', 'linje', 'sw-fastighet', 'u'], ['marktacke', 'Marktäcke', 'yta', 'sw-mark', 'u'],
     ['hom', 'Höjd över mark', 'yta', 'sw-hom', 'u'], ['trad', 'Träd', 'ring', 'sw-trad', 'u'], ['stompunkter', 'Stompunkter', 'ring', 'sw-sp', 'u'],
     ['vagar', 'Vägar (OSM)', 'linje', 'sw-vag', 'u'], ['laser', 'Laserpunkter', 'yta', 'sw-skugga', 'u'],
     ['lutning', 'Lutning', 'yta', 'sw-lutning', 'a'], ['skyfall', 'Skyfall', 'yta', 'sw-skyfall', 'a'], ['skugga', 'Skugga', 'yta', 'sw-skugga', 'a'],
     ['lamningar', 'Lämningar (RAÄ)', 'ring', 'sw-lamning', 'a'], ['natur', 'Skyddad natur', 'linje', 'sw-natur', 'a'], ['oversvamning', 'Översvämning', 'yta', 'sw-skyfall', 'a'],
   ];
   const GRUPPER = { u: 'UNDERLAG', a: 'ANALYS', s: 'SKISS' };
-  const UTSKRIVBARA = new Set(['kurvor', 'byggnader', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
+  const UTSKRIVBARA = new Set(['kurvor', 'byggnader', 'fastigheter', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
   const resultat = {};
   const dolda = new Set(lager.las('localStorage', 'terrang-dolda-lager') || []);
   const synlig = id => !dolda.has(id);
@@ -849,7 +849,7 @@
     const lista = (par) => { const v = par.filter(([n, , vv]) => kryssad(n, vv)).map(([, t]) => t); return v.length ? `${v.join(', ')} · ${v.length} av ${par.length}` : 'inget valt'; };
     $('sf-terrang').textContent = lista([['format', 'kurvor', 'dxf'], ['format', 'XYZ', 'xyz'], ['format', 'CSV', 'csv'], ['tillval', 'höjdpunkter', 'hojdpunkter']]);
     $('sf-laser').textContent = lista([['tillval', 'punktmoln', 'laser'], ['tillval', 'träd', 'trad'], ['tillval', 'höjd över mark', 'hom']]);
-    $('sf-kartdata').textContent = lista([['tillval', 'byggnader', 'byggnader'], ['tillval', 'marktäcke', 'marktacke'], ['tillval', 'stompunkter', 'stompunkter'], ['tillval', 'vägar', 'vagar']]);
+    $('sf-kartdata').textContent = lista([['tillval', 'byggnader', 'byggnader'], ['tillval', 'fastighetsgränser', 'fastigheter'], ['tillval', 'marktäcke', 'marktacke'], ['tillval', 'stompunkter', 'stompunkter'], ['tillval', 'vägar', 'vagar']]);
     const sek = state.sektioner || [];
     $('sf-sektioner').textContent = kryssad('tillval', 'sektion') ? (sek.length ? sek.map(x => `${x.namn}–${x.namn}`).join(', ') : 'ingen ritad') : 'av';
     const np = document.querySelector('input[name=nollpunkt]:checked');
@@ -859,7 +859,7 @@
     $('kapitel').classList.toggle('av', !kryssad('tillval', 'platsanalys'));
     $('sf-sol').textContent = [kryssad('tillval', 'sol') && 'soldiagram', kryssad('tillval', 'sol') && kryssad('tillval', 'horisont') && 'horisont', kryssad('tillval', 'skugga') && 'skuggor'].filter(Boolean).join(', ') || 'inget valt';
     const ev = effektivaVal(), f = formatVal();
-    const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'byggnader', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
+    const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
     const vol = (state.volymer || []).length;
     $('val-sammanf').innerHTML = `<span>Underlag · ${antal} val</span><span>Platsanalys · ${ev.platsanalys ? `${kn} kapitel` : 'av'}</span><span>Skiss · ${vol ? vol + (vol === 1 ? ' volym' : ' volymer') : '–'}</span>`;
     $('skapa').textContent = ev.platsanalys ? 'Skapa underlag och platsanalys →' : 'Skapa underlag →';
@@ -1383,8 +1383,8 @@
       knapp.disabled = false; matare(null); return;
     }
 
-    const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.marktacke && 'marktacke', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
-    const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, marktacke: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
+    const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.fastigheter && 'fastigheter', val.marktacke && 'marktacke', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
+    const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, fastigheter: 1, marktacke: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
     const totalVikt = plan.reduce((a, k) => a + vikt[k], 0);
     const delStart = k => 100 * plan.slice(0, plan.indexOf(k)).reduce((a, x) => a + vikt[x], 0) / totalVikt;
     const delFramsteg = (k, f, txt) => { matare(delStart(k) + 100 * vikt[k] / totalVikt * Math.min(1, f)); if (txt) visaStatus(txt + ' …'); };
@@ -1728,6 +1728,45 @@
         } catch (e) { console.error(e); varningar.push('Sektioner: ' + e.message); }
       }
 
+      // --- Fastighetsindelning
+      if (val.fastigheter) {
+        try {
+          delFramsteg('fastigheter', 0, 'Hämtar fastighetsindelning');
+          await laddaSkript('vendor/sql-wasm.js');
+          const kommuner = kommunerIUtsnitt();
+          if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
+          const fi = await Fastighet.hamta({
+            kommuner, utsnitt: r, epsg, auth,
+            logg: t => visaStatus(t),
+            framsteg: f => delFramsteg('fastigheter', f * 0.9),
+            bekrafta: async storlek => window.confirm(`Fastighetsindelningen för kommunen är ${fmt(storlek / 1e6)} MB. Den hämtas en gång och sparas sedan i webbläsaren. Vill du hämta den?`),
+          });
+          senaste.fastigheter = fi;
+          filer[`fastigheter/${namn}_fastigheter_lokal.dxf`] = Fastighet.dxf(fi, r, X0, Y0);
+          filer[`fastigheter/${namn}_fastigheter_sweref.dxf`] = Fastighet.dxf(fi, r, 0, 0);
+          const pl = Fastighet.perLager(fi);
+          extraInfo.push('', 'FASTIGHETSINDELNING',
+            '  Källa: Fastighetsindelning Nedladdning, vektor. © Lantmäteriet. Bearbetad: utklippt och omprojicerad. Licens: CC BY 4.0.',
+            ...Fastighet.VARNING.match(/.{1,100}(\s|$)/g).map(t => '  ' + t.trim()),
+            '  DXF-lager:',
+            ...Object.keys(pl).sort().map(l => `    ${l}: ${pl[l]} linjer`),
+            `    _OSAKER i lagernamnet: lägesosäkerhet över ${Fastighet.OSAKER} m enligt registret.`,
+            `    GRANSPUNKT: ${fi.punkter.length} gränspunkter. FASTIGHET_BETECKNING: beteckningen inne i varje område.`,
+            `  Fastigheter som utsnittet berör (${fi.fastigheter.length}), största delen först:`,
+            ...fi.fastigheter.map(f => `    ${f.beteckning}${f.kommun ? ', ' + f.kommun : ''}: ${fmt(f.yta)} m² inom utsnittet` + (f.typ !== 'fastighetsområde' ? ` (${f.typ})` : '')));
+          sammanExtra.push(['Fastigheter', `${fi.fastigheter.length} st`]);
+          const fstil = g => ({ color: farg('fastighet'), weight: 1.6, opacity: 0.95, dashArray: g.osakerhet > Fastighet.OSAKER ? '6 5' : null, interactive: true });
+          const fgrp = L.featureGroup([
+            ...fi.granser.map(g => L.polyline(g.pts.map(tt), fstil(g))
+              .bindTooltip(`${esc(g.typ)}${g.osakerhet != null ? `, osäkerhet ${fmt(g.osakerhet, 2)} m` : ''}${g.metod ? `<br><small>${esc(g.metod)}</small>` : ''}`, { sticky: true })),
+            ...fi.ytor.filter(y => y.ankare).map(y => L.marker(tt(y.ankare), { interactive: false, keyboard: false,
+              icon: L.divIcon({ className: 'fastighet-etikett', html: `<span>${esc(y.etikett)}</span>`, iconSize: null }) })),
+          ]);
+          visaResultatLager('fastigheter', fgrp, () => fgrp.eachLayer(l => { if (l.setStyle) l.setStyle({ color: farg('fastighet') }); }));
+          visaLagring();
+        } catch (e) { console.error(e); varningar.push('Fastighetsindelning: ' + e.message); }
+      }
+
       // --- Marktäcke
       if (val.marktacke) {
         try {
@@ -1863,7 +1902,9 @@
           delFramsteg('blad', 0, 'Ritar platsanalysbladet');
           await laddaPdf();
           const kap = kapitel();
-          const kallor = ['Markhöjdmodell, Laserdata skog och Marktäcke: © Lantmäteriet (CC BY 4.0).'];
+          const kallor = [['Markhöjdmodell', pTM && 'Laserdata skog', val.byggnader && 'Byggnad', val.fastigheter && 'Fastighetsindelning', val.marktacke && 'Marktäcke']
+            .filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' och $1') + ': © Lantmäteriet (CC BY 4.0).'];
+          if (val.fastigheter) kallor.push(Fastighet.VARNING);
           if (val.skydd) kallor.push(...Object.values(Geodata.KALLOR));
           if (val.sol) kallor.push('Solens läge: NOAA:s solalgoritm och Meeus, kontrollerat mot NREL SPA.');
           kallor.push(`Skapat ${idag()} med höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}.`);
@@ -1871,7 +1912,7 @@
             fonter, r, kurvor: res.kurvor, markhojd: { lo: res.lo, hi: res.hi },
             titel: { projekt: projekt || namn, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000`, datum: idag() },
             kapitel: { sol: kap.sol, terrang: kap.terrang, vatten: kap.vatten, skydd: kap.skydd },
-            lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: senaste.volymer, byggnader: senaste.byggnader,
+            lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: senaste.volymer, byggnader: senaste.byggnader, fastigheter: senaste.fastigheter,
             sol: kap.sol ? senaste.solOpt : null, skuggor: kap.sol ? senaste.skuggOpt : null,
             solSammanfattning: senaste.horisont ? [['Horisont', state.horPunkt ? 'från vald punkt, se blad 2' : 'från utsnittets mitt, se blad 2']] : null,
             natur: senaste.natur, lamningar: senaste.lamningar, oversvamning: senaste.oversvamning, oversvamningBilder: senaste.oversvamningBilder, strand: senaste.strand,
@@ -2038,6 +2079,7 @@
         lager: {
           bakgrund,
           kurvor: syns('kurvor') ? s.kurvor : null, siffror: syns('kurvor') && $('pr-siffror').checked,
+          fastigheter: syns('fastigheter') && s.fastigheter ? s.fastigheter : null,
           byggnader: syns('byggnader') && s.byggnader ? s.byggnader.map(b => Object.assign({ centrum: Byggnad.tyngdpunkt(b.fotavtryck) }, b)) : null,
           marktacke: syns('marktacke') ? s.marktacke : null, marktackeFarg: MFARG,
           hom: syns('hom') ? s.hom : null,
