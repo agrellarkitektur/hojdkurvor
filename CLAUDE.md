@@ -4,6 +4,8 @@ Webbapp som gör Lantmäteriets öppna geodata till ritunderlag och platsanalyse
 helt i webbläsaren. Vanlig JavaScript utan byggsteg. GPL-3.0 eller senare.
 Läs `README.md` (vad som finns, filer, tjänster, inställningar) innan du ändrar
 något, och `docs/UTBYTE-CAD-APA.md` innan du rör utbytet med cad-apa.
+**Börja varje session med `docs/OVERLAMNING.md`**: läget, vad som ska göras
+härnäst och vad som väntar. Skriv om den när sessionen slutar.
 
 ## Arbetssätt med Carl August
 
@@ -81,7 +83,9 @@ sedan via `geodata.php`).
    eller om filer, tjänster eller inställningar har ändrats.
 4. Kör testerna.
 5. Commit och push till `main`. Lista vilka filer som är nya eller ändrade.
-6. Han publicerar en release med taggen `vX.Y.Z` på GitHub. Då bygger
+6. **Ändras snart:** versioner ska publiceras direkt på webbhotellet med FTP
+   (secrets finns i repot), se `docs/OVERLAMNING.md`. Tills det är byggt:
+   han publicerar en release med taggen `vX.Y.Z` på GitHub. Då bygger
    `.github/workflows/release.yml` zip-filen för webbhotellet och lägger den på
    releasen. Han laddar upp den till `public_html/terrang/` på
    agrellarkitektur.se själv. Ändras vilka filer appen behöver, se till att
