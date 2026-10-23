@@ -1,25 +1,20 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 23 oktober 2026, 0.6.0 klar på
-grenen, inte publicerad.
+överlämning; historiken finns i git. Senast: 23 oktober 2026, 0.6.0 publicerad.
 
 ## Läget
 
-- **0.5.0 är släppt** och ligger på <https://agrellarkitektur.se/terrang/>.
-- **0.6.0 är klar på grenen `v0.6.0`** (inte `main`): version och datum i
-  `js/version.js`, `CHANGELOG.md`, Ändringar på `om.html`, README,
-  instruktionerna och källorna är uppdaterade. Alla tester är gröna
-  (enhetstesterna, gränssnittstestet i alla tre teman, mobiltestet), och
-  skärmbilder och PDF:er är granskade.
+- **0.6.0 är publicerad** 23 oktober: `v0.6.0` sammanslagen med `main`, och
+  den första FTP-körningen (Publicera på webbhotellet) gick igenom. Sidan:
+  <https://agrellarkitektur.se/terrang/>. Ingen GitHub-release är gjord för
+  0.6.0; det behövs inte längre för publiceringen.
 - Innehåll i 0.6.0: ortofoto, befintliga byggnader, fastighetsgränser,
   lat/long, tydligare knappar, gemensam kommunfilshämtning (`js/kommunfil.js`)
   och FTP-publicering vid push till `main`.
-- **Väntar på Carl August**: om grenen ska slås ihop och publiceras nu.
-  Ortofotot och de andra nya produkterna går bara att prova på riktigt från
-  den publicerade sidan, eftersom Lantmäteriets server bara svarar
-  agrellarkitektur.se (CORS). Förslaget är att publicera, låta honom testa på
-  iPhone och Windows, och rätta i 0.6.1 om något inte fungerar.
+- **Väntar på Carl August**: hans test på iPhone och Windows mot riktiga data
+  (knapparna, lat/long, byggnader, fastighetsgränser, ortofotot). Det mesta
+  av det nya kan bara provas på den publicerade sidan (Lantmäteriets CORS).
 
 ## Ortofoto (`js/ortofoto.js`)
 
@@ -47,11 +42,13 @@ grenen, inte publicerad.
 
 ## Nästa session
 
-1. Om Carl August sagt ja: slå ihop `v0.6.0` med `main` och pusha. Första
-   FTP-körningen laddar upp allt. Kontrollera med `gh run list` och att sidan
-   fungerar.
-2. Ta emot hans testresultat (iPhone och Windows: knapparna, lat/long, de nya
-   tillvalen, ortofotot på riktiga data) och rätta i 0.6.1.
+1. Kontrollera att sidan visar 0.6.0 (Om-sidan eller `js/version.js`). Visar
+   den fortfarande 0.5.0 kan webbläsaren ha cachat; annars titta i loggen för
+   körningen med `gh run view`.
+2. Ta emot hans testresultat och rätta i 0.6.1, på en egen gren som slås ihop
+   med `main` när den är klar.
+3. Arbetsflödena varnar för Node 20 (`actions/checkout@v4`, `setup-node@v4`,
+   FTP-Deploy-Action). Fungerar än; byt till nyare versioner när de finns.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
