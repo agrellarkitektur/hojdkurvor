@@ -59,6 +59,12 @@
     return P()('EPSG:' + fran, 'EPSG:' + till);
   }
 
+  /** Latitud och longitud (WGS 84) som text med punkt och fem decimaler, t.ex. "57.66291, 15.85612". */
+  function latLonText(epsg, x, y) {
+    const [lon, lat] = omvandlare(epsg, 4326).forward([x, y]);
+    return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  }
+
   // ------------------------------------------------------------------
   // Utsnitt
   // ------------------------------------------------------------------
@@ -567,6 +573,11 @@
       `Koordinatsystem i plan: ${z.namn} (EPSG:${epsg})` + (opt.kommun ? ` – föreslaget för ${opt.kommun}` : ''),
       'Höjdsystem: RH 2000',
       '',
+      'PLATSEN I DECIMALGRADER (WGS 84, latitud, longitud)',
+      `  Utsnittets mitt: ${latLonText(epsg, (r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2)}`,
+      `  Nollpunkten:     ${latLonText(epsg, X0, Y0)}`,
+      '  Ange mitten som projektets plats i Archicad eller Revit, så blir solen rätt.',
+      '',
       `LOKAL NOLLPUNKT (0,0,0 i filerna med _lokal i namnet) – ${egen ? 'egen' : 'utsnittets sydvästra hörn'}`,
       `  X0 (öst)  = ${X0.toFixed(3)}`,
       `  Y0 (norr) = ${Y0.toFixed(3)}`,
@@ -602,7 +613,7 @@
   }
 
   return {
-    ZONER, zon, registreraZoner, narmasteZon, omvandlare, avrunda, kantlinje, rutor,
+    ZONER, zon, registreraZoner, narmasteZon, omvandlare, latLonText, avrunda, kantlinje, rutor,
     dlUrl, basicAuth, InloggningsFel, provaInloggning, lasHojderGrov, sampla, kurvorForNiva, forenkla, lasHojder, rutnat, utjamna, skapaKurvor,
     kurvlager, dxf, xyz, skapaUnderlag, lokal, tillLokal, lokalRuta, nordpilar,
   };

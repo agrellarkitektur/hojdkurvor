@@ -54,7 +54,7 @@ with sync_playwright() as p:
     h = pg.locator('.handtag-wrap').nth(3).bounding_box()
     hx, hy = h['x'] + h['width'] / 2, h['y'] + h['height'] / 2
     pg.mouse.move(hx, hy); pg.mouse.down(); pg.mouse.move(hx + 25, hy, steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
-    print('utsnitt:', [pg.input_value('#' + k) for k in ('xmin', 'xmax', 'ymin', 'ymax')], pg.locator('#storlek-text').inner_text())
+    print('utsnitt:', [pg.input_value('#' + k) for k in ('xmin', 'xmax', 'ymin', 'ymax')], pg.locator('#storlek-text').inner_text(), '| mitt:', pg.locator('#latlon-text').inner_text())
     pg.fill('#projekt', 'Staren 2')
     pg.fill('#anv', 'test'); pg.fill('#losen', 'hemligt-åäö'); pg.dispatch_event('#losen', 'change')
 
@@ -63,7 +63,7 @@ with sync_playwright() as p:
     pg.click('#ritprogram button[data-prog=archicad]')
     for g in ['g-laser', 'g-kartdata', 'g-sektioner']:
         pg.evaluate(f"document.getElementById('{g}').open = true")
-    for v in ['laser', 'trad', 'hom', 'marktacke', 'stompunkter', 'vagar', 'sektion']:
+    for v in ['laser', 'trad', 'hom', 'byggnader', 'marktacke', 'stompunkter', 'vagar', 'sektion']:
         pg.check(f'input[name=tillval][value={v}]')
     pg.screenshot(path=f'{UT}/02_underlag.png')
 

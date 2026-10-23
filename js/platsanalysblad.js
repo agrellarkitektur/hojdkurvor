@@ -17,7 +17,7 @@
 
   /**
    * opt: { fonter, titel: { projekt, kommun, system, datum }, r, kurvor, markhojd: { lo, hi },
-   *        lutning: { lt, konturer }, skyfall: { lagpunkter, floden }, volymer,
+   *        lutning: { lt, konturer }, skyfall: { lagpunkter, floden }, volymer, byggnader,
    *        sol: (opt till Sol.soldiagramPdf), skuggor: (opt till Utskrift.skuggblad),
    *        natur, lamningar, oversvamning, strand, kallor: [text], kapitel: { sol, terrang, vatten, skydd } }
    * Värdena natur/lamningar/oversvamning/strand är antingen data eller { fel: text }.
@@ -161,6 +161,10 @@
   }
   function ritaVolymer(doc, P, L, opt) {
     const F = U().F;
+    (opt.byggnader || []).forEach(b => {
+      doc.setFillColor(205, 200, 194); doc.setDrawColor(55, 55, 55); doc.setLineWidth(0.15);
+      L(b.fotavtryck, true); doc.fillStroke();
+    });
     (opt.volymer || []).forEach(v => {
       doc.setFillColor(255, 255, 255); doc.setDrawColor(...F.annot); doc.setLineWidth(0.4);
       L(v.fotavtryck, true); doc.fillStroke();
@@ -202,6 +206,7 @@
     if (opt.kapitel.vatten && opt.skyfall) { rader.push([ruta(doc, LJUSBLA, BLA), 'Lågpunkt, vatten blir stående']); rader.push([linje(doc, BLA, 0.45), 'Flödesväg vid skyfall']); }
     if (opt.kapitel.skydd && Array.isArray(opt.lamningar) && opt.lamningar.length) rader.push([romb(doc, LILA), 'Lämning (RAÄ)']);
     if (opt.kapitel.skydd && Array.isArray(opt.natur) && opt.natur.length) rader.push([linje(doc, GRON, 0.45, [2, 1]), 'Skyddad natur']);
+    if (opt.byggnader && opt.byggnader.length) rader.push([ruta(doc, [205, 200, 194], [55, 55, 55]), 'Befintlig byggnad']);
     if (opt.volymer && opt.volymer.length) rader.push([ruta(doc, [255, 255, 255], F.annot), 'Skissad volym']);
     rader.push([linje(doc, F.ram, 0.35), 'Utsnitt']);
     doc.setFillColor(255, 255, 255); doc.setDrawColor(...F.blck); doc.setLineWidth(0.2);

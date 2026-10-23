@@ -1,5 +1,5 @@
 /*
- * 3D-förhandsvisning av utsnittet: terrängen, träden och skissade volymer.
+ * 3D-förhandsvisning av utsnittet: terrängen, träden, befintliga byggnader och skissade volymer.
  * three.js (vendor/three/three.module.min.js) laddas först när vyn öppnas.
  * Egen enkel styrning: dra för att snurra, scrolla eller nyp för att zooma.
  */
@@ -73,6 +73,19 @@
         stam.setMatrixAt(i, m);
       });
       grupp.add(krona, stam);
+    }
+
+    // befintliga byggnader: lådor till höjden ur laserdatan
+    if (data.befintliga && data.befintliga.length) {
+      const mat = new THREE.MeshLambertMaterial({ color: data.befintlig || '#b9b3aa' });
+      data.befintliga.forEach(v => {
+        const shape = new THREE.Shape(v.fotavtryck.map(p => new THREE.Vector2(p[0] - cx, p[1] - cy)));
+        const g = new THREE.ExtrudeGeometry(shape, { depth: v.takfot, bevelEnabled: false });
+        g.rotateX(-Math.PI / 2);
+        const mesh = new THREE.Mesh(g, mat);
+        mesh.position.y = v.golv - zmin;
+        grupp.add(mesh);
+      });
     }
 
     // skissade volymer: väggar till takfot och tak efter takform

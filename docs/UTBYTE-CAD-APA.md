@@ -119,6 +119,10 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   "vagar": [ { "typ": "secondary", "lager": "VAG_HUVUDVAG", "namn": "Bygatan", "pts": [[x, y], ...] } ],
   "stompunkter": [ { "namn": "Staren", "x": 0, "y": 0, "z": 114.218 } ],
   "volymer": [ /* samma form som i skissen, zonens koordinater */ ],
+  "byggnader": [          // befintliga byggnader (Byggnad Nedladdning, vektor), från 0.6.0
+    { "id": "uuid", "typ": "Bostad", "andamal": ["Småhus friliggande"], "husnummer": "1", "namn": null,
+      "fotavtryck": [[x, y], ...], "mark": 115.2, "hojd": 7.8 }
+  ],
   "lankar": { "projekt": "https://…/terrang/#p=…" },
   "licens": "Höjddata och laserdata © Lantmäteriet (CC BY 4.0). Vägar © OpenStreetMap-bidragsgivare (ODbL)."
 }
@@ -132,6 +136,12 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   högst 1,2 miljoner noder, så `s` kan vara större än 1 m vid stora utsnitt.
 - Fält som saknas betyder att användaren inte valde det tillvalet.
 - `licens` ska följa med i det cad-apa sparar eller skriver ut.
+- `byggnader` (från höjdkurvor 0.6.0, fältet är nytt men version 1 gäller
+  fortfarande): befintliga byggnader som berör utsnittet, hela fotavtrycket
+  (sluten polygon utan upprepad första punkt). `mark` är markhöjden i RH 2000
+  (median inom fotavtrycket), `hojd` höjden över mark i meter ur laserdatan
+  (90:e percentilen, platt tak). Båda kan vara `null`. Fotavtrycken är oftast
+  inmätta vid takkanten. Program som inte känner till fältet kan hoppa över det.
 
 ## Skiss (cad-apa → höjdkurvor)
 

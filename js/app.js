@@ -137,14 +137,14 @@
   // --- resultatlager som visas på kartan och i utskriften
   // [id, namn, symbol, färg, grupp]
   const RES = [
-    ['kurvor', 'Höjdkurvor', 'linje', 'sw-kurva', 'u'], ['hojdpunkter', 'Höjdpunkter', 'ring', 'annot', 'u'], ['marktacke', 'Marktäcke', 'yta', 'sw-mark', 'u'],
+    ['kurvor', 'Höjdkurvor', 'linje', 'sw-kurva', 'u'], ['hojdpunkter', 'Höjdpunkter', 'ring', 'annot', 'u'], ['byggnader', 'Byggnader', 'yta', 'sw-byggnad', 'u'], ['marktacke', 'Marktäcke', 'yta', 'sw-mark', 'u'],
     ['hom', 'Höjd över mark', 'yta', 'sw-hom', 'u'], ['trad', 'Träd', 'ring', 'sw-trad', 'u'], ['stompunkter', 'Stompunkter', 'ring', 'sw-sp', 'u'],
     ['vagar', 'Vägar (OSM)', 'linje', 'sw-vag', 'u'], ['laser', 'Laserpunkter', 'yta', 'sw-skugga', 'u'],
     ['lutning', 'Lutning', 'yta', 'sw-lutning', 'a'], ['skyfall', 'Skyfall', 'yta', 'sw-skyfall', 'a'], ['skugga', 'Skugga', 'yta', 'sw-skugga', 'a'],
     ['lamningar', 'Lämningar (RAÄ)', 'ring', 'sw-lamning', 'a'], ['natur', 'Skyddad natur', 'linje', 'sw-natur', 'a'], ['oversvamning', 'Översvämning', 'yta', 'sw-skyfall', 'a'],
   ];
   const GRUPPER = { u: 'UNDERLAG', a: 'ANALYS', s: 'SKISS' };
-  const UTSKRIVBARA = new Set(['kurvor', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
+  const UTSKRIVBARA = new Set(['kurvor', 'byggnader', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
   const resultat = {};
   const dolda = new Set(lager.las('localStorage', 'terrang-dolda-lager') || []);
   const synlig = id => !dolda.has(id);
@@ -399,6 +399,7 @@
       state.utsnitt = r;
       ritaUtsnittsGrafik(kant);
       $('storlek-text').textContent = `${fmt(r.xmax - r.xmin)} × ${fmt(r.ymax - r.ymin)} m`;
+      visaLatLon();
     });
     m.on('dragend', () => { satGeoFranUtsnitt(); uppdateraKommun(); visaUtsnitt(); });
     return m;
@@ -487,6 +488,7 @@
     ['xmin', 'xmax', 'ymin', 'ymax'].forEach(k => { $(k).value = r[k]; });
     const area = b * h;
     $('storlek-text').textContent = `${fmt(b)} × ${fmt(h)} m` + (area >= 1e6 ? ` (${fmt(area / 1e6, 2)} km²)` : '') + (state.kommun ? `  ·  ${state.kommun.namn}` : '');
+    visaLatLon();
     nollstallResultat();
     if (area > MAX_AREA) {
       visaStatus(`Området är för stort. Högst ${fmt(MAX_AREA / 1e6)} km² går att hämta på en gång.`, true);
@@ -815,6 +817,7 @@
     return Object.assign({}, t, {
       sol: pa && k.sol && t.sol, horisont: pa && k.sol && t.sol && t.horisont, skugga: pa && k.sol && t.skugga,
       lutning: pa && k.terrang, skyfall: pa && k.vatten, skydd: pa && k.skydd,
+      byggnadshojd: !!(t.byggnader && t.byggnadshojd),
     });
   }
 
@@ -846,7 +849,7 @@
     const lista = (par) => { const v = par.filter(([n, , vv]) => kryssad(n, vv)).map(([, t]) => t); return v.length ? `${v.join(', ')} · ${v.length} av ${par.length}` : 'inget valt'; };
     $('sf-terrang').textContent = lista([['format', 'kurvor', 'dxf'], ['format', 'XYZ', 'xyz'], ['format', 'CSV', 'csv'], ['tillval', 'höjdpunkter', 'hojdpunkter']]);
     $('sf-laser').textContent = lista([['tillval', 'punktmoln', 'laser'], ['tillval', 'träd', 'trad'], ['tillval', 'höjd över mark', 'hom']]);
-    $('sf-kartdata').textContent = lista([['tillval', 'marktäcke', 'marktacke'], ['tillval', 'stompunkter', 'stompunkter'], ['tillval', 'vägar', 'vagar']]);
+    $('sf-kartdata').textContent = lista([['tillval', 'byggnader', 'byggnader'], ['tillval', 'marktäcke', 'marktacke'], ['tillval', 'stompunkter', 'stompunkter'], ['tillval', 'vägar', 'vagar']]);
     const sek = state.sektioner || [];
     $('sf-sektioner').textContent = kryssad('tillval', 'sektion') ? (sek.length ? sek.map(x => `${x.namn}–${x.namn}`).join(', ') : 'ingen ritad') : 'av';
     const np = document.querySelector('input[name=nollpunkt]:checked');
@@ -856,7 +859,7 @@
     $('kapitel').classList.toggle('av', !kryssad('tillval', 'platsanalys'));
     $('sf-sol').textContent = [kryssad('tillval', 'sol') && 'soldiagram', kryssad('tillval', 'sol') && kryssad('tillval', 'horisont') && 'horisont', kryssad('tillval', 'skugga') && 'skuggor'].filter(Boolean).join(', ') || 'inget valt';
     const ev = effektivaVal(), f = formatVal();
-    const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
+    const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'byggnader', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
     const vol = (state.volymer || []).length;
     $('val-sammanf').innerHTML = `<span>Underlag · ${antal} val</span><span>Platsanalys · ${ev.platsanalys ? `${kn} kapitel` : 'av'}</span><span>Skiss · ${vol ? vol + (vol === 1 ? ' volym' : ' volymer') : '–'}</span>`;
     $('skapa').textContent = ev.platsanalys ? 'Skapa underlag och platsanalys →' : 'Skapa underlag →';
@@ -940,9 +943,25 @@
     $('matare').hidden = p === null;
     $('matare-fyll').style.width = (p || 0) + '%';
   }
+  function visaLatLon() {
+    const r = state.utsnitt;
+    $('latlon-text').textContent = r ? T.latLonText(state.epsg, (r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2) : '';
+  }
+  $('kopiera-latlon').addEventListener('click', async () => {
+    const t = $('latlon-text').textContent, k = $('kopiera-latlon');
+    let ok = false;
+    try { await navigator.clipboard.writeText(t); ok = true; } catch (e) {
+      const sel = window.getSelection(), rng = document.createRange();
+      rng.selectNodeContents($('latlon-text')); sel.removeAllRanges(); sel.addRange(rng);
+      try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+    }
+    k.textContent = ok ? 'Kopierat' : 'Markerat, kopiera själv';
+    setTimeout(() => { k.textContent = 'Kopiera'; }, 1800);
+  });
   function nollstallResultat() {
     $('resultat').hidden = true;
-    $('visa-3d').disabled = true;
+    $('visa-3d').hidden = true;
+    $('skapa').classList.remove('gjord');
     state.zipBlob = null;
     state.senaste = null;
     Object.keys(resultat).forEach(n => visaResultatLager(n, null));
@@ -1203,7 +1222,7 @@
   const datumKort = ms => { if (!ms) return '–'; const d = new Date(ms); return `${d.getDate()} ${['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'][d.getMonth()]} ${d.getFullYear()}`; };
   const storlekText = b => b < 1e6 ? `${fmt(Math.max(1, Math.round(b / 1e3)))} kB` : `${fmt(b / 1e6, 1)} MB`;
   async function visaLagring() {
-    const lista = await Marktacke.listaSparade();
+    const lista = await Kommunfil.listaSparade();
     const ul = $('lagring-lista');
     ul.innerHTML = '';
     const total = lista.reduce((a, f) => a + f.storlek, 0);
@@ -1213,17 +1232,18 @@
     lista.sort((a, b) => (b.anvand || 0) - (a.anvand || 0)).forEach(f => {
       const k = state.kommuner && state.kommuner.find(x => x.properties.kod === f.kod);
       const li = document.createElement('li');
-      li.innerHTML = `<span>Marktäcke ${k ? k.properties.namn : f.kod}, ${storlekText(f.storlek)}<br><small>hämtat ${datumKort(f.sparad)}, använt ${datumKort(f.anvand)}</small></span>`;
+      const prod = Kommunfil.PRODUKTER[f.produkt];
+      li.innerHTML = `<span>${prod ? prod.namn : f.produkt} ${k ? k.properties.namn : f.kod}, ${storlekText(f.storlek)}<br><small>hämtat ${datumKort(f.sparad)}, använt ${datumKort(f.anvand)}</small></span>`;
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'lank-ta-bort'; b.textContent = 'Ta bort';
-      b.addEventListener('click', async () => { await Marktacke.taBort(f.nyckel); visaLagring(); });
+      b.addEventListener('click', async () => { await Kommunfil.taBort(f.nyckel); visaLagring(); });
       li.append(b); ul.append(li);
     });
     $('lagring-tom').hidden = !lista.length;
   }
   $('lagring-tom').addEventListener('click', async () => {
     if (!window.confirm('Ta bort alla sparade filer? De hämtas på nytt nästa gång de behövs.')) return;
-    await Marktacke.taBort(null); visaLagring();
+    await Kommunfil.taBort(null); visaLagring();
   });
   $('g-sparat').addEventListener('toggle', () => { if ($('g-sparat').open) visaLagring(); });
   setTimeout(visaLagring, 500);
@@ -1337,8 +1357,8 @@
     const mitt = mittV;
     const horLL = val.sol && val.horisont && state.horPunkt ? { lat: state.horPunkt[0], lon: state.horPunkt[1] } : { lat: mitt.lat, lon: mitt.lon };
     const behoverYta = val.trad || val.hom || val.skugga;
-    const behoverLaser = val.laser || behoverYta || val.sektion || (val.sol && val.horisont);
-    const behoverDtm = behoverYta || val.sektion || val.hojdpunkter || val.lutning || val.skyfall || volymer.length;
+    const behoverLaser = val.laser || behoverYta || val.sektion || (val.sol && val.horisont) || val.byggnadshojd;
+    const behoverDtm = behoverYta || val.sektion || val.hojdpunkter || val.lutning || val.skyfall || volymer.length || val.byggnader;
 
     // områden: utsnittet, marginal för skuggor, sektionslinjer, horisontens närområde
     const MARG_SKUGGA = 150;
@@ -1352,6 +1372,7 @@
     const MARG_SKYFALL = 60;
     if (val.skyfall) rm = forena(rm, { xmin: r.xmin - MARG_SKYFALL, ymin: r.ymin - MARG_SKYFALL, xmax: r.xmax + MARG_SKYFALL, ymax: r.ymax + MARG_SKYFALL });
     if (val.lutning) rm = forena(rm, { xmin: r.xmin - 3, ymin: r.ymin - 3, xmax: r.xmax + 3, ymax: r.ymax + 3 });
+    if (val.byggnader) rm = forena(rm, { xmin: r.xmin - 30, ymin: r.ymin - 30, xmax: r.xmax + 30, ymax: r.ymax + 30 });   // hus som sticker ut
     rm = T.avrunda(rm, 1);
     let tmBox = tmRuta(rm, epsg);
     const mittTM = T.omvandlare(4326, 3006).forward([horLL.lon, horLL.lat]);
@@ -1362,8 +1383,8 @@
       knapp.disabled = false; matare(null); return;
     }
 
-    const plan = ['hojd', 'terrang', behoverLaser && 'laser', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.marktacke && 'marktacke', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
-    const vikt = { hojd: 2, terrang: 2, laser: 3, analys: 2, platsanalys: 2, skydd: 1, marktacke: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
+    const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.marktacke && 'marktacke', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
+    const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, marktacke: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
     const totalVikt = plan.reduce((a, k) => a + vikt[k], 0);
     const delStart = k => 100 * plan.slice(0, plan.indexOf(k)).reduce((a, x) => a + vikt[x], 0) / totalVikt;
     const delFramsteg = (k, f, txt) => { matare(delStart(k) + 100 * vikt[k] / totalVikt * Math.min(1, f)); if (txt) visaStatus(txt + ' …'); };
@@ -1443,6 +1464,49 @@
       // --- Analyser: ytmodell, träd, höjd över mark, skuggor
       let dtmZ = null;
       if (behoverDtm) dtmZ = T.rutnat(mos, rm, 1, epsg);
+
+      // --- Befintliga byggnader (höjd ur ytmodellen, som sedan återanvänds av analyserna)
+      let ytaFardig = null;
+      if (val.byggnader) {
+        try {
+          delFramsteg('byggnader', 0, 'Hämtar byggnader');
+          await laddaSkript('vendor/sql-wasm.js');
+          const kommuner = kommunerIUtsnitt();
+          if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
+          const bygg = await Byggnad.hamta({
+            kommuner, utsnitt: r, epsg, auth,
+            logg: t => visaStatus(t),
+            framsteg: f => delFramsteg('byggnader', f * 0.8),
+            bekrafta: async storlek => window.confirm(`Byggnaderna för kommunen är ${fmt(storlek / 1e6)} MB. De hämtas en gång och sparas sedan i webbläsaren. Vill du hämta dem?`),
+          });
+          delFramsteg('byggnader', 0.85, 'Räknar byggnadshöjder');
+          if (pz && val.byggnadshojd) ytaFardig = Analys.ytmodell(dtmZ, pz);
+          Byggnad.hojder(bygg, ytaFardig || { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length) });
+          senaste.byggnader = bygg;
+          const medHojd = bygg.filter(b => b.hojd != null).length;
+          filer[`byggnader/${namn}_byggnader_lokal.dxf`] = Byggnad.dxf(bygg, r, X0, Y0, Z0);
+          filer[`byggnader/${namn}_byggnader_sweref.dxf`] = Byggnad.dxf(bygg, r, 0, 0, 0);
+          filer[`byggnader/${namn}_byggnader.csv`] = Byggnad.csv(bygg, X0, Y0, Z0);
+          const per = Byggnad.perTyp(bygg);
+          extraInfo.push('', 'BEFINTLIGA BYGGNADER',
+            '  Källa: Byggnad Nedladdning, vektor. © Lantmäteriet. Bearbetad: utvald och omprojicerad. Licens: CC BY 4.0.',
+            `  ${bygg.length} byggnader som berör utsnittet. Hela fotavtrycket är med, även den del som ligger utanför.`,
+            ...Object.keys(per).sort().map(t => `    ${t}: ${per[t]} st (lager ${Byggnad.lagerFor({ typ: t })})`),
+            '  Fotavtrycken är oftast inmätta vid takkanten, inte vid fasaden, och kan avvika någon meter.',
+            '  Kontrollera mot grundkartan eller en inmätning innan de används för projektering.',
+            '  DXF: fotavtrycket på markhöjden, BYGGNAD_TAK på takhöjden när den är känd, BYGGNAD_TEXT med husnummer, ändamål och höjd.',
+            pz && val.byggnadshojd
+              ? `  Höjd över mark ur laserdata ${laserDatum} (90:e percentilen inom fotavtrycket) för ${medHojd} av ${bygg.length} byggnader. Taken är förenklade till platta.`
+              : '  Ingen höjd: laserdata hämtades inte. Markhöjd ur Markhöjdmodell (median inom fotavtrycket).',
+            '  CSV (semikolon): id, typ, ändamål, husnummer, namn, huvudbyggnad, yta, tyngdpunkt, markhöjd och höjd (höjder minus Z0).');
+          sammanExtra.push(['Byggnader', `${bygg.length} st` + (medHojd ? `, ${medHojd} med höjd` : '')]);
+          const bstil = () => ({ color: farg('byggnad'), weight: 1.2, fillColor: farg('byggnad'), fillOpacity: 0.35 });
+          const bgrp = L.featureGroup(bygg.map(b => L.polygon([b.fotavtryck.map(tt), ...b.hal.map(h => h.map(tt))], bstil())
+            .bindTooltip(esc(Byggnad.beteckning(b)) + (b.hojd != null ? `, ${fmt(b.hojd, 1)} m` : ''), { sticky: true })));
+          visaResultatLager('byggnader', bgrp, () => bgrp.setStyle(bstil()));
+          visaLagring();
+        } catch (e) { console.error(e); varningar.push('Byggnader: ' + e.message); }
+      }
       // skissade volymer utan golvnivå står på marken i fotavtryckets tyngdpunkt
       volymer.forEach(v => {
         if (!(v.golv === v.golv) && dtmZ) { const c = Platsanalys.tyngdpunkt(v.fotavtryck); v.golv = Math.round(Analys.nod(dtmZ, dtmZ.z, c[0], c[1]) * 100) / 100; }
@@ -1451,7 +1515,7 @@
       if (behoverYta && (pz || val.skugga)) {
         try {
           delFramsteg('analys', 0, 'Bygger ytmodell');
-          const y = pz ? Analys.ytmodell(dtmZ, pz) : { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length), dsm: Float32Array.from(dtmZ.z) };
+          const y = ytaFardig || (pz ? Analys.ytmodell(dtmZ, pz) : { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length), dsm: Float32Array.from(dtmZ.z) });
           if (!pz) varningar.push(`Skuggstudien räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
           senaste.yta = y;
           const iUtsnitt = t => t.x >= r.xmin && t.x <= r.xmax && t.y >= r.ymin && t.y <= r.ymax;
@@ -1582,14 +1646,16 @@
             const omr = { xmin: r.xmin - MARG_SKYFALL, ymin: r.ymin - MARG_SKYFALL, xmax: r.xmax + MARG_SKYFALL, ymax: r.ymax + MARG_SKYFALL };
             const sSky = Math.max(1, Math.ceil(Math.sqrt((omr.xmax - omr.xmin) * (omr.ymax - omr.ymin) / 1.5e6)));
             const gs = T.rutnat(mos, omr, sSky, epsg);
-            if (senaste.volymer.length) gs.z = Platsanalys.branInVolymer(gs, gs.z, senaste.volymer, { spar: true });
+            const befSpar = senaste.byggnader ? Byggnad.somVolymer(senaste.byggnader, { utanHojd: 3 }) : [];
+            const hinder = senaste.volymer.concat(befSpar);
+            if (hinder.length) gs.z = Platsanalys.branInVolymer(gs, gs.z, hinder, { spar: true });
             await new Promise(ok => setTimeout(ok, 0));
             const sk = Platsanalys.skyfall(gs, r);
             senaste.skyfall = sk;
             filer[`platsanalys/${namn}_skyfall_lokal.dxf`] = Platsanalys.dxfSkyfall(sk, r, X0, Y0);
             filer[`platsanalys/${namn}_skyfall_sweref.dxf`] = Platsanalys.dxfSkyfall(sk, r, 0, 0);
             extraInfo.push('', 'SKYFALL',
-              `  Lågpunkter (instängda områden) och flödesvägar ur Markhöjdmodell (${sSky} m), ${MARG_SKYFALL} m runt utsnittet.` + (senaste.volymer.length ? ' Skissade volymer räknas som hinder.' : ''),
+              `  Lågpunkter (instängda områden) och flödesvägar ur Markhöjdmodell (${sSky} m), ${MARG_SKYFALL} m runt utsnittet.` + (senaste.volymer.length ? ' Skissade volymer räknas som hinder.' : '') + (befSpar.length ? ` ${befSpar.length} befintliga byggnader räknas som hinder.` : ''),
               '  Ingen hänsyn till ledningar, trummor, infiltration eller regnets mängd.',
               '  DXF-lager: SKYFALL_LAGPUNKT (slutna polylinjer), SKYFALL_FLODESVAG, SKYFALL_TEXT (nummer och största djup).',
               ...sk.lagpunkter.map((l, i) => `    L${i + 1}: ${fmt(l.yta)} m², största djup ${fmt(l.maxDjup, 2)} m, ${fmt(l.volym, 1)} m³`));
@@ -1805,7 +1871,7 @@
             fonter, r, kurvor: res.kurvor, markhojd: { lo: res.lo, hi: res.hi },
             titel: { projekt: projekt || namn, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000`, datum: idag() },
             kapitel: { sol: kap.sol, terrang: kap.terrang, vatten: kap.vatten, skydd: kap.skydd },
-            lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: senaste.volymer,
+            lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: senaste.volymer, byggnader: senaste.byggnader,
             sol: kap.sol ? senaste.solOpt : null, skuggor: kap.sol ? senaste.skuggOpt : null,
             solSammanfattning: senaste.horisont ? [['Horisont', state.horPunkt ? 'från vald punkt, se blad 2' : 'från utsnittets mitt, se blad 2']] : null,
             natur: senaste.natur, lamningar: senaste.lamningar, oversvamning: senaste.oversvamning, oversvamningBilder: senaste.oversvamningBilder, strand: senaste.strand,
@@ -1842,7 +1908,8 @@
       state.senaste = senaste;
       visaSkugga();
       $('resultat').hidden = false;
-      $('visa-3d').disabled = !senaste.rutnat;
+      $('visa-3d').hidden = !senaste.rutnat;
+      $('skapa').classList.add('gjord');
       matare(null);
       visaStatus(varningar.length ? varningar.join('\n') : 'Klart. Resultatet visas på kartan som kontroll.', false);
 
@@ -1971,6 +2038,7 @@
         lager: {
           bakgrund,
           kurvor: syns('kurvor') ? s.kurvor : null, siffror: syns('kurvor') && $('pr-siffror').checked,
+          byggnader: syns('byggnader') && s.byggnader ? s.byggnader.map(b => Object.assign({ centrum: Byggnad.tyngdpunkt(b.fotavtryck) }, b)) : null,
           marktacke: syns('marktacke') ? s.marktacke : null, marktackeFarg: MFARG,
           hom: syns('hom') ? s.hom : null,
           skuggor: sk ? { konturer: sk.konturer, etikett: `${KORT_DATUM[sk.k]} kl ${sk.etikett}` } : null,
@@ -2183,7 +2251,7 @@
       vridning: $('vrid').value === 'sann' ? m.konvergens : $('vrid').value === 'egen' ? (tal($('vrid-grader').value) || 0) : 0,
       sannNord: m.konvergens,
       rutnat: s && s.rutnat, kurvor: s && s.kurvor, trad: s && s.trad, vagar: s && s.vagar, stompunkter: s && s.stompunkter,
-      volymer: state.volymer, projektlank: projektlank(), kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
+      volymer: state.volymer, byggnader: s && s.byggnader, projektlank: projektlank(), kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
     });
   }
   async function tillCadApa(statusEl) {
@@ -2368,7 +2436,7 @@
     try {
       await laddaSkript('js/vy3d.js');
       if (vy3d) vy3d.stang();
-      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, kurvor: s.kurvor, bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot') });
+      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null, kurvor: s.kurvor, bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot') });
       $('vy3d-faktor').textContent = '1';
     } catch (e) {
       console.error(e);

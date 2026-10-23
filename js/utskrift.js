@@ -80,6 +80,7 @@
   /**
    * opt: { format, liggande, skala, utsnitt, lager: {...}, titel: {...}, fonter }
    * lager: { bakgrund: {bild (dataURL), x0, y1, W, H, s}, kurvor, siffror, marktacke: {ytor}, marktackeFarg,
+   *          byggnader: [{fotavtryck, hal, husnummer, centrum}],
    *          hom: {bild, x0, y1, W, H, s}, skuggor: {konturer, etikett}, trad, stompunkter, dz, vagar: {linjer},
    *          sektioner: [{namn, a, b, vand}], nollpunkt: {x, y}, ram, rutnat }
    */
@@ -208,6 +209,20 @@
         doc.setTextColor(0, 0, 0);
       }
     }
+    // befintliga byggnader, med husnummer i skala 1:1000 och större
+    if (g.byggnader) {
+      doc.setFillColor(205, 200, 194); doc.setDrawColor(55, 55, 55); doc.setLineWidth(0.18);
+      for (const b of g.byggnader) { L(b.fotavtryck, true); (b.hal || []).forEach(h => L(h, true)); doc.fillStrokeEvenOdd(); }
+      if (opt.skala <= 1000) {
+        doc.setTextColor(55, 55, 55);
+        for (const b of g.byggnader) {
+          if (!b.husnummer || !b.centrum) continue;
+          const [x, y] = P(b.centrum[0], b.centrum[1]);
+          text(b.husnummer, x, y, 5, { ha: 'center' });
+        }
+        doc.setTextColor(0, 0, 0);
+      }
+    }
     // skissade volymer
     if (g.volymer) {
       doc.setFillColor(255, 255, 255); doc.setDrawColor(...F.annot); doc.setLineWidth(0.35);
@@ -331,6 +346,7 @@
     const rader = [];
     if (g.kurvor) rader.push([(x, y) => { doc.setDrawColor(...F.kurva); doc.setLineWidth(0.28); doc.line(x, y, x + 7, y); }, `Höjdkurvor${t.ekvidistans ? ', ' + t.ekvidistans : ''}`]);
     if (g.marktacke) rader.push([(x, y) => { doc.setFillColor(220, 235, 213); doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.08); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Marktäcke']);
+    if (g.byggnader) rader.push([(x, y) => { doc.setFillColor(205, 200, 194); doc.setDrawColor(55, 55, 55); doc.setLineWidth(0.18); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Befintlig byggnad']);
     if (g.hom) rader.push([(x, y) => { doc.setFillColor(120, 170, 110); doc.rect(x, y - 1.1, 7, 2.2, 'F'); }, 'Höjd över mark']);
     if (g.skuggor) rader.push([(x, y) => { doc.setFillColor(170, 170, 170); doc.rect(x, y - 1.1, 7, 2.2, 'F'); }, `Skugga ${g.skuggor.etikett || ''}`]);
     if (g.lutning) rader.push([(x, y) => { [[241, 215, 122], [237, 162, 90], [200, 85, 61]].forEach((c, i) => { doc.setFillColor(...c); doc.rect(x + i * 2.34, y - 1.1, 2.34, 2.2, 'F'); }); }, 'Lutning 1:50 / 1:20 / 1:12']);

@@ -96,6 +96,7 @@
             <p class="hjalp" id="rita-hjalp">Dra upp en rektangel på kartan. Kanterna hamnar på jämna 10 m. Ändra storleken med handtagen mitt på sidorna.</p>
             <div id="utsnitt" hidden>
               <p class="storlek"><span id="storlek-text"></span></p>
+              <p class="latlon"><span title="Utsnittets mitt i decimalgrader (WGS 84), latitud och longitud">Mitt</span> <span id="latlon-text"></span> <button type="button" class="lank-knapp" id="kopiera-latlon">Kopiera</button></p>
               <fieldset class="koord">
                 <legend>Hörn i <span id="zon-namn-kort"></span></legend>
                 <label>Väst <input id="xmin" type="number" step="10" inputmode="numeric"></label>
@@ -267,6 +268,14 @@
               <p class="hjalp">Skog, åker, vatten och bebyggelse som ytor i DXF, ett lager per typ. Hela kommunens fil hämtas första gången och sparas sedan i webbläsaren. Kräver beställd <em>Marktäcke Nedladdning, vektor</em>.</p>
             </div>
             <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="byggnader"> Befintliga byggnader</label>
+              <p class="hjalp">Fotavtryck med typ, ändamål och husnummer som DXF, ett lager per typ, och som CSV. Kommer med på kartan, i utskriften, i platsanalysen och till cad-apa. Hela kommunens fil hämtas första gången och sparas sedan i webbläsaren. Kräver beställd <em>Byggnad Nedladdning, vektor</em>.</p>
+              <div class="underval">
+                <label class="kryss"><input type="checkbox" name="tillval" value="byggnadshojd" checked> Höjd ur laserdatan</label>
+                <p class="hjalp">Höjd över mark för varje byggnad, så att husen får tak i DXF och syns i 3D. Hämtar laserdata.</p>
+              </div>
+            </div>
+            <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="stompunkter"> Stompunkter</label>
               <p class="hjalp">Plan- och höjdpunkter inom utsnittet med höjd, kvalitet och lägesbeskrivning, som DXF och CSV. Kräver beställd <em>Stompunkt Direkt</em>.</p>
             </div>
@@ -389,14 +398,15 @@
           <p id="status-text">Välj ett område för att börja.</p>
         </div>
         <div id="resultat" hidden>
+          <button type="button" class="knapp steg" id="visa-3d">Förhandsvisa i 3D</button>
           <div class="knapprad resultat-knappar">
-            <button type="button" class="knapp" id="ladda-ner">Ladda ner zip</button>
-            <button type="button" class="knapp" id="till-cadapa">Fortsätt rita i cad-apa</button>
+            <button type="button" class="knapp steg nasta" id="ladda-ner">Ladda ner zip</button>
+            <button type="button" class="knapp steg" id="till-cadapa">Fortsätt rita i cad-apa</button>
           </div>
           <details class="resultat-detaljer"><summary>Sammanfattning</summary><dl class="sammanfattning" id="sammanfattning"></dl></details>
           <p class="lokalt">Spara filerna lokalt, inte i molnet. <a href="instruktioner.html#datan">Varför?</a> · <button type="button" class="lank-knapp" id="spara-platsfil">Spara platsfil för cad-apa</button></p>
         </div>
-        <p class="fot-lankar"><button type="button" class="lank-knapp" id="visa-3d" disabled>Visa i 3D</button><span aria-hidden="true">·</span><button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button></p>
+        <p class="fot-lankar"><button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button></p>
       </div>
     </aside>
   </div>
@@ -415,7 +425,9 @@
   <script src="js/dxf.js"></script>
   <script src="js/sol.js"></script>
   <script src="js/laser.js"></script>
+  <script src="js/kommunfil.js"></script>
   <script src="js/marktacke.js"></script>
+  <script src="js/byggnad.js"></script>
   <script src="js/stompunkt.js"></script>
   <script src="js/analys.js"></script>
   <script src="js/vagar.js"></script>

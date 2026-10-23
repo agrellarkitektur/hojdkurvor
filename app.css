@@ -36,8 +36,10 @@
   --seg-on-bg: #f2f6fb; --seg-on-fg: #133b66; --seg-rule: rgba(242,246,251,.5);
   --attr-bg: rgba(240,238,233,.9); --attr-ink: #5e6266;
   /* lager på kartan */
+  --byggnad: #5b4636; --fastighet: #b0306a;
   --kurva: #8f4f22; --trad: #3f7a3a; --trad-fyll: rgba(63,143,58,.18); --skugga: #222; --skugga-op: .3;
   --sp: #aa1e1e; --sp-fyll: #fff; --vag: #6b6258; --vag-gang: #8a7f72;
+  --sw-byggnad: #d9c6a5; --sw-fastighet: #ff9ccc;
   --sw-kurva: #c98a5e; --sw-trad: #8cc287; --sw-skugga: #8a8f96; --sw-sp: #ff8e8e; --sw-mark: #bfd3b0; --sw-hom: #8db283; --sw-vag: #cfc4b6;
   --skyfall: #1f6fb2; --natur: #2e7d32; --sw-lutning: #eda25a; --sw-skyfall: #7fb2e0; --sw-natur: #7fbf7f; --sw-lamning: #c3a6e8;
 }
@@ -55,6 +57,7 @@
   --panel-bg: #fff; --panel-kant: #c9c9c3; --panel-ink: #17191b; --panel-muted: #5e6266;
   --seg-on-bg: #17191b; --seg-on-fg: #f5f5f2; --seg-rule: #c9c9c3;
   --attr-bg: rgba(255,255,255,.88); --attr-ink: #5e6266;
+  --sw-byggnad: #6b5747; --sw-fastighet: #b0306a;
   --sw-kurva: #8f4f22; --sw-trad: #3f7a3a; --sw-skugga: #a9a9a6; --sw-sp: #aa1e1e; --sw-mark: #dce6d3; --sw-hom: #8db283; --sw-vag: #8a7f72;
   --sw-lutning: #eda25a; --sw-skyfall: #1f6fb2; --sw-natur: #2e7d32; --sw-lamning: #6b3fa0;
 }
@@ -71,8 +74,10 @@
   --panel-bg: #141518; --panel-kant: rgba(255,255,255,.14); --panel-ink: #e8e9ea; --panel-muted: #8d9196;
   --seg-on-bg: #e8e9ea; --seg-on-fg: #0e0f11; --seg-rule: rgba(255,255,255,.25);
   --attr-bg: rgba(20,21,24,.85); --attr-ink: #8d9196;
+  --byggnad: #d8c7a8; --fastighet: #f07cb4;
   --kurva: #c98a5e; --trad: #7dbb73; --trad-fyll: rgba(125,187,115,.15); --skugga: #000; --skugga-op: .45;
   --sp: #ff6b6b; --sp-fyll: #1a1c1f; --vag: #b8ad9f; --vag-gang: #8f877d;
+  --sw-byggnad: #c9b48f; --sw-fastighet: #f07cb4;
   --sw-kurva: #c98a5e; --sw-trad: #7dbb73; --sw-skugga: #6e737a; --sw-sp: #ff6b6b; --sw-mark: #3e4a3a; --sw-hom: #5f8a57; --sw-vag: #b8ad9f;
   --skyfall: #5aa8f0; --natur: #7dbb73; --sw-lutning: #eda25a; --sw-skyfall: #5aa8f0; --sw-natur: #7dbb73; --sw-lamning: #b48be6;
 }
@@ -188,7 +193,16 @@ details.grupp + details.grupp { border-top: 1px solid var(--rule); }
 .panel-fot { flex: none; border-top: 1px solid var(--rule); padding: 14px 26px 14px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); background-image: var(--bg-bild); background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px; max-height: 55%; overflow-y: auto; }
 .val-sammanf { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
 .panel-fot .status p { margin-top: 6px; }
+.resultat-knappar { align-items: stretch; margin-top: 10px; }
 .resultat-knappar .knapp { flex: 1 1 140px; }
+/* Bara nästa steg är fyllt; de andra stegen har ram i samma färg. */
+.knapp.steg { width: 100%; min-height: 48px; border: 2px solid var(--btn-bg); color: var(--ink); font-weight: 600; letter-spacing: .06em; }
+.resultat-knappar .knapp.steg { width: auto; }
+.knapp.steg:not(:disabled):hover { border-color: var(--btn-hover); color: var(--ink); background: color-mix(in srgb, var(--btn-bg) 14%, transparent); }
+.knapp.steg.nasta, .knapp.steg.nasta:not(:disabled):hover { background: var(--btn-bg); color: var(--btn-fg); }
+.knapp.steg.nasta:not(:disabled):hover { background: var(--btn-hover); border-color: var(--btn-hover); }
+.knapp.primar.gjord { background: transparent; border: 2px solid var(--btn-bg); color: var(--ink); }
+.knapp.primar.gjord:not(:disabled):hover { background: color-mix(in srgb, var(--btn-bg) 14%, transparent); color: var(--ink); }
 .resultat-detaljer { margin-top: 8px; font-size: 13px; }
 .resultat-detaljer > summary { cursor: pointer; font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .resultat-detaljer > summary:hover { color: var(--brand); }
@@ -251,6 +265,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--kryss-farg); width
 .sokresultat button:hover, .sokresultat button:focus-visible { background: var(--nav-on); }
 
 .storlek { font-family: var(--mono); font-size: 13px; margin: 14px 0 2px; }
+.latlon { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 2px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.latlon #latlon-text { color: var(--ink); user-select: all; }
+.latlon .lank-knapp { font-size: 12px; padding: 0; }
 .koord { border: 0; padding: 0; margin: 4px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .koord legend { padding: 0; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .koord input { font-family: var(--mono); }

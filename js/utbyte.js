@@ -32,7 +32,7 @@
 
   /**
    * Bygger ett platspaket. o: { projekt, kommun, projektId, epsg, systemNamn, utsnitt, nollpunkt {x,y,z},
-   *   vridning, sannNord, rutnat {W,H,s,x0,y1,z}, kurvor, trad, vagar, stompunkter, volymer, projektlank, kalla }
+   *   vridning, sannNord, rutnat {W,H,s,x0,y1,z}, kurvor, trad, vagar, stompunkter, volymer, byggnader, projektlank, kalla }
    */
   function platspaket(o) {
     const p = {
@@ -56,6 +56,13 @@
     if (o.vagar) p.vagar = o.vagar.linjer.map(l => ({ typ: l.typ, lager: l.lager, namn: l.namn || '', pts: runda(l.pts) }));
     if (o.stompunkter) p.stompunkter = o.stompunkter.map(s => ({ namn: s.namn || s.id, x: s.x, y: s.y, z: s.z }));
     if (o.volymer && o.volymer.length) p.volymer = o.volymer.map(volymTillPaket);
+    if (o.byggnader && o.byggnader.length) {
+      p.byggnader = o.byggnader.map(b => ({
+        id: b.id || null, typ: b.typ, andamal: b.andamal || [], husnummer: b.husnummer || null, namn: b.namn || null,
+        fotavtryck: runda(b.fotavtryck), mark: b.mark == null ? null : avrunda(b.mark, 2), hojd: b.hojd == null ? null : avrunda(b.hojd, 1),
+      }));
+      p.licens = p.licens.replace('Höjddata och laserdata', 'Höjddata, laserdata och byggnader');
+    }
     return p;
   }
   const volymTillPaket = v => ({ id: v.id, namn: v.namn, fotavtryck: runda(v.fotavtryck), golv: avrunda(v.golv), takfot: avrunda(v.takfot), takform: v.takform || 'platt', taklutning: v.taklutning || 0, nockriktning: v.nockriktning == null ? null : v.nockriktning });
