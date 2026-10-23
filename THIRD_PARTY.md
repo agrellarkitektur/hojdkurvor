@@ -43,7 +43,7 @@ Hämtas av besökarens webbläsare och ingår inte i källkoden:
 
 | Källa | Licens |
 |---|---|
-| Lantmäteriet: Markhöjdmodell, Laserdata skog, Marktäcke, Topografisk webbkarta | CC BY 4.0 |
+| Lantmäteriet: Markhöjdmodell, Laserdata skog, Ortofoto, Byggnad, Fastighetsindelning, Marktäcke, Topografisk webbkarta | CC BY 4.0 |
 | Lantmäteriet: Stompunkter | CC0 |
 | Naturvårdsverket: Naturvårdsregistret, Natura 2000 | CC0 |
 | Riksantikvarieämbetet: Kulturmiljöregistret (lämningar) | Se Riksantikvarieämbetets villkor |

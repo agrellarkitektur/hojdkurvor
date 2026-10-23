@@ -137,15 +137,16 @@
   // --- resultatlager som visas på kartan och i utskriften
   // [id, namn, symbol, färg, grupp]
   const RES = [
-    ['kurvor', 'Höjdkurvor', 'linje', 'sw-kurva', 'u'], ['hojdpunkter', 'Höjdpunkter', 'ring', 'annot', 'u'], ['byggnader', 'Byggnader', 'yta', 'sw-byggnad', 'u'], ['fastigheter', 'Fastighetsgränser', 'linje', 'sw-fastighet', 'u'], ['marktacke', 'Marktäcke', 'yta', 'sw-mark', 'u'],
+    ['kurvor', 'Höjdkurvor', 'linje', 'sw-kurva', 'u'], ['hojdpunkter', 'Höjdpunkter', 'ring', 'annot', 'u'], ['byggnader', 'Byggnader', 'yta', 'sw-byggnad', 'u'], ['fastigheter', 'Fastighetsgränser', 'linje', 'sw-fastighet', 'u'], ['marktacke', 'Marktäcke', 'yta', 'sw-mark', 'u'], ['ortofoto', 'Ortofoto', 'yta', 'sw-orto', 'u'],
     ['hom', 'Höjd över mark', 'yta', 'sw-hom', 'u'], ['trad', 'Träd', 'ring', 'sw-trad', 'u'], ['stompunkter', 'Stompunkter', 'ring', 'sw-sp', 'u'],
     ['vagar', 'Vägar (OSM)', 'linje', 'sw-vag', 'u'], ['laser', 'Laserpunkter', 'yta', 'sw-skugga', 'u'],
     ['lutning', 'Lutning', 'yta', 'sw-lutning', 'a'], ['skyfall', 'Skyfall', 'yta', 'sw-skyfall', 'a'], ['skugga', 'Skugga', 'yta', 'sw-skugga', 'a'],
     ['lamningar', 'Lämningar (RAÄ)', 'ring', 'sw-lamning', 'a'], ['natur', 'Skyddad natur', 'linje', 'sw-natur', 'a'], ['oversvamning', 'Översvämning', 'yta', 'sw-skyfall', 'a'],
   ];
   const GRUPPER = { u: 'UNDERLAG', a: 'ANALYS', s: 'SKISS' };
-  const UTSKRIVBARA = new Set(['kurvor', 'byggnader', 'fastigheter', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
+  const UTSKRIVBARA = new Set(['ortofoto', 'kurvor', 'byggnader', 'fastigheter', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
   const resultat = {};
+  karta.createPane('ortofotoPane').style.zIndex = 350;      // under kurvor och andra resultat
   const dolda = new Set(lager.las('localStorage', 'terrang-dolda-lager') || []);
   const synlig = id => !dolda.has(id);
   function visaResultatLager(id, lagerObj, stil) {
@@ -849,7 +850,7 @@
     const lista = (par) => { const v = par.filter(([n, , vv]) => kryssad(n, vv)).map(([, t]) => t); return v.length ? `${v.join(', ')} · ${v.length} av ${par.length}` : 'inget valt'; };
     $('sf-terrang').textContent = lista([['format', 'kurvor', 'dxf'], ['format', 'XYZ', 'xyz'], ['format', 'CSV', 'csv'], ['tillval', 'höjdpunkter', 'hojdpunkter']]);
     $('sf-laser').textContent = lista([['tillval', 'punktmoln', 'laser'], ['tillval', 'träd', 'trad'], ['tillval', 'höjd över mark', 'hom']]);
-    $('sf-kartdata').textContent = lista([['tillval', 'byggnader', 'byggnader'], ['tillval', 'fastighetsgränser', 'fastigheter'], ['tillval', 'marktäcke', 'marktacke'], ['tillval', 'stompunkter', 'stompunkter'], ['tillval', 'vägar', 'vagar']]);
+    $('sf-kartdata').textContent = lista([['tillval', 'ortofoto', 'ortofoto'], ['tillval', 'byggnader', 'byggnader'], ['tillval', 'fastighetsgränser', 'fastigheter'], ['tillval', 'marktäcke', 'marktacke'], ['tillval', 'stompunkter', 'stompunkter'], ['tillval', 'vägar', 'vagar']]);
     const sek = state.sektioner || [];
     $('sf-sektioner').textContent = kryssad('tillval', 'sektion') ? (sek.length ? sek.map(x => `${x.namn}–${x.namn}`).join(', ') : 'ingen ritad') : 'av';
     const np = document.querySelector('input[name=nollpunkt]:checked');
@@ -859,7 +860,7 @@
     $('kapitel').classList.toggle('av', !kryssad('tillval', 'platsanalys'));
     $('sf-sol').textContent = [kryssad('tillval', 'sol') && 'soldiagram', kryssad('tillval', 'sol') && kryssad('tillval', 'horisont') && 'horisont', kryssad('tillval', 'skugga') && 'skuggor'].filter(Boolean).join(', ') || 'inget valt';
     const ev = effektivaVal(), f = formatVal();
-    const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
+    const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'ortofoto', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
     const vol = (state.volymer || []).length;
     $('val-sammanf').innerHTML = `<span>Underlag · ${antal} val</span><span>Platsanalys · ${ev.platsanalys ? `${kn} kapitel` : 'av'}</span><span>Skiss · ${vol ? vol + (vol === 1 ? ' volym' : ' volymer') : '–'}</span>`;
     $('skapa').textContent = ev.platsanalys ? 'Skapa underlag och platsanalys →' : 'Skapa underlag →';
@@ -1383,8 +1384,8 @@
       knapp.disabled = false; matare(null); return;
     }
 
-    const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.fastigheter && 'fastigheter', val.marktacke && 'marktacke', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
-    const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, fastigheter: 1, marktacke: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
+    const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.fastigheter && 'fastigheter', val.marktacke && 'marktacke', val.ortofoto && 'ortofoto', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
+    const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, fastigheter: 1, marktacke: 2, ortofoto: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
     const totalVikt = plan.reduce((a, k) => a + vikt[k], 0);
     const delStart = k => 100 * plan.slice(0, plan.indexOf(k)).reduce((a, x) => a + vikt[x], 0) / totalVikt;
     const delFramsteg = (k, f, txt) => { matare(delStart(k) + 100 * vikt[k] / totalVikt * Math.min(1, f)); if (txt) visaStatus(txt + ' …'); };
@@ -1799,6 +1800,48 @@
         } catch (e) { console.error(e); varningar.push('Marktäcke: ' + e.message); }
       }
 
+      // --- Ortofoto
+      if (val.ortofoto) {
+        try {
+          delFramsteg('ortofoto', 0, 'Söker ortofoto');
+          const tmR = tmRuta(r, epsg);
+          const v = Ortofoto.valj(await Ortofoto.sok(tmR), tmR);
+          if (!v) throw new Error('det finns inget ortofoto i färg för området.');
+          const s = Ortofoto.upplosning(r, v.upplosning), mal = Ortofoto.rutnat(r, s);
+          delFramsteg('ortofoto', 0.05, `Läser ortofoto från ${v.ar}`);
+          const b = await Ortofoto.las(v.valda, mal, epsg, auth, { framsteg: f => delFramsteg('ortofoto', 0.05 + 0.8 * f) });
+          if (!b.tackt) throw new Error('bildfilerna innehöll ingen bild inom utsnittet.');
+          delFramsteg('ortofoto', 0.9, 'Sparar ortofotot');
+          const c = document.createElement('canvas'); c.width = b.W; c.height = b.H;
+          const cx = c.getContext('2d');
+          cx.putImageData(new ImageData(b.rgba, b.W, b.H), 0, 0);
+          // JPEG saknar genomskinlighet: tomma delar blir vita
+          const jc = document.createElement('canvas'); jc.width = b.W; jc.height = b.H;
+          const jx = jc.getContext('2d'); jx.fillStyle = '#ffffff'; jx.fillRect(0, 0, b.W, b.H); jx.drawImage(c, 0, 0);
+          const bild = jc.toDataURL('image/jpeg', 0.88);
+          const x0c = mal.x0 + s / 2, y1c = mal.y1 - s / 2;     // mitten av övre vänstra pixeln
+          filer[`ortofoto/${namn}_ortofoto.jpg`] = await (await fetch(bild)).arrayBuffer();
+          filer[`ortofoto/${namn}_ortofoto_sweref.jgw`] = Analys.varldsfil(x0c, y1c, s);
+          filer[`ortofoto/${namn}_ortofoto_lokal.jgw`] = Analys.varldsfil(x0c, y1c, s, X0, Y0);
+          senaste.ortofoto = { bild, x0: x0c, y1: y1c, W: b.W, H: b.H, s, canvas: jc, ar: v.ar };
+          const sTxt = String(s).replace('.', ',');
+          extraInfo.push('', 'ORTOFOTO',
+            '  Källa: ' + Ortofoto.kallText(v) + ' © Lantmäteriet. Bearbetad: utklippt och omprojicerad.',
+            '  Licens: CC BY 4.0.',
+            `  Rutor: ${b.rutor.join(', ')}`,
+            `  Bild: ${b.W} × ${b.H} pixlar, ${sTxt} m per pixel, i ${T.zon(epsg).namn}. JPEG utan genomskinlighet; delar utan bild är vita.`,
+            '  Byt namn på en av .jgw-filerna så att den heter som bilden för att få den på rätt plats (lokalt eller SWEREF).');
+          if (b.tackt < 0.995) varningar.push(`Ortofoto: bara ${fmt(b.tackt * 100)} % av utsnittet har bild från ${v.ar}.`);
+          sammanExtra.push(['Ortofoto', `flygår ${v.ar}, ${sTxt} m per pixel`]);
+          // på kartan i lägre upplösning (stora bilder blir tunga som överlägg)
+          const f = Math.max(1, Math.ceil(Math.max(b.W, b.H) / 2048));
+          const liten = document.createElement('canvas'); liten.width = Math.ceil(b.W / f); liten.height = Math.ceil(b.H / f);
+          liten.getContext('2d').drawImage(c, 0, 0, b.W / f, b.H / f);
+          const kb = bildTillKarta(liten, mal.x0 + s * f / 2, mal.y1 - s * f / 2, s * f, epsg);
+          visaResultatLager('ortofoto', L.imageOverlay(kb.url, kb.bounds, { pane: 'ortofotoPane', interactive: false }));
+        } catch (e) { console.error(e); varningar.push('Ortofoto: ' + e.message); }
+      }
+
       // --- Stompunkter
       if (val.stompunkter) {
         try {
@@ -2078,6 +2121,7 @@
         format, liggande, skala, utsnitt: s.r, fonter,
         lager: {
           bakgrund,
+          ortofoto: syns('ortofoto') ? s.ortofoto : null,
           kurvor: syns('kurvor') ? s.kurvor : null, siffror: syns('kurvor') && $('pr-siffror').checked,
           fastigheter: syns('fastigheter') && s.fastigheter ? s.fastigheter : null,
           byggnader: syns('byggnader') && s.byggnader ? s.byggnader.map(b => Object.assign({ centrum: Byggnad.tyngdpunkt(b.fotavtryck) }, b)) : null,
@@ -2478,8 +2522,12 @@
     try {
       await laddaSkript('js/vy3d.js');
       if (vy3d) vy3d.stang();
-      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null, kurvor: s.kurvor, bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot') });
+      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null, kurvor: s.kurvor, bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
+        ortofoto: s.ortofoto ? { canvas: s.ortofoto.canvas, x0: s.ortofoto.x0 - s.ortofoto.s / 2, y1: s.ortofoto.y1 + s.ortofoto.s / 2, bredd: s.ortofoto.W * s.ortofoto.s, hojd: s.ortofoto.H * s.ortofoto.s } : null });
       $('vy3d-faktor').textContent = '1';
+      const orto = vy3d.ortofoto();
+      $('vy3d-orto').hidden = orto == null;
+      $('vy3d-orto').setAttribute('aria-pressed', String(!!orto));
     } catch (e) {
       console.error(e);
       $('vy3d-yta').textContent = '3D-vyn kunde inte öppnas: ' + e.message;
@@ -2489,6 +2537,11 @@
   const stang3d = () => { $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen'); if (vy3d) { vy3d.stang(); vy3d = null; } $('visa-3d').focus(); };
   $('vy3d-stang').addEventListener('click', stang3d);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('vy3d').hidden) stang3d(); });
+  $('vy3d-orto').addEventListener('click', () => {
+    if (!vy3d) return;
+    const pa = vy3d.ortofoto(!vy3d.ortofoto());
+    $('vy3d-orto').setAttribute('aria-pressed', String(!!pa));
+  });
   $('vy3d-overdriv').addEventListener('click', () => {
     if (!vy3d) return;
     const f = vy3d.overdriv() === 1 ? 2 : 1;

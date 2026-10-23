@@ -18,8 +18,16 @@ node test/byggnad.test.js
 node test/fastighet.test.js
 ```
 
+```
+node test/ortofoto.test.js
+```
+
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
 på syntetiska rutnät, och byggnader och fastighetsindelning ur låtsasfilerna.
+Ortofototestet prövar urvalet på ett riktigt svar från Lantmäteriets
+bildkatalog (Vimmerby) och läsningen och omritningen till zon 15 00 på
+låtsasortofotona: kontrollinjerna ska hamna rätt, skarven mellan två rutor och
+JPEG med YCbCr ska bli rätt.
 Tar några sekunder. Med `BYGGNAD_GPKG=…/byggnad_knKKKK.gpkg` och
 `FASTIGHET_GPKG=…/fastighetsindelning_knKKKK.gpkg` körs samma kontroller
 också på riktiga filer från Lantmäteriet (för Vimmerby centrum, kommun 0884).
@@ -48,6 +56,16 @@ gränser med olika lägesosäkerhet) ligger redan i `test/data/`. De två senare
 skapas med `python3.12 test/data/make_vektor.py test/data` och har samma skikt
 och fält som Lantmäteriets filer i 2025-versionen.
 
+Låtsasortofotona (`o64275_*.tif`, COG med 0,5 m pixlar: två rutor från 2025
+med fyra band och en från 2019 som JPEG) skapas av höjdmodellen med:
+
+```
+python3.12 test/data/make_orto.py test/data
+```
+
+De har röda och blå linjer var tionde meter i SWEREF 99 TM, så att läget går
+att kontrollera.
+
 Topografisk webbkarta (`topowebb-3006.gpkg`) finns inte med. Utan den svarar
 testservern 404 när testet väljer Lantmäteriets karta, och utskriften görs utan
 bakgrund. Resten av testet påverkas inte.
@@ -61,8 +79,8 @@ python3 test/server.py test/data .
 Lyssnar på `http://127.0.0.1:8765` och serverar appen därifrån. Kräver pyproj.
 Den låtsas vara:
 
-- Lantmäteriets nedladdning (Basic auth, Range, HEAD, CORS), STAC-katalogen
-  och Stompunkt Direkt
+- Lantmäteriets nedladdning (Basic auth, Range, HEAD, CORS), STAC-katalogerna
+  för laserdata (`/stac-hojd/`) och ortofoto (`/stac-bild/`) och Stompunkt Direkt
 - Overpass (vägar, och sjön Lillsjön när frågan gäller vatten)
 - Naturvårdsverkets WFS (`/nv/wfs`, ett naturreservat), Natura 2000 (`/n2k/wfs`, tomt)
 - Riksantikvarieämbetets WMS (`/raa/wms`, två lämningar)

@@ -60,7 +60,7 @@
           <ul>
             <li>Ett konto på Lantmäteriets Geotorget.</li>
             <li>Produkten Markhöjdmodell Nedladdning. Den räcker för höjdkurvor, markmodell och soldiagram.</li>
-            <li>Fler produkter om du vill ha laserdata, marktäcke, stompunkter eller Lantmäteriets karta.</li>
+            <li>Fler produkter om du vill ha laserdata, ortofoto, byggnader, fastighetsgränser, marktäcke, stompunkter eller Lantmäteriets karta.</li>
             <li>En dator med en aktuell webbläsare.</li>
           </ul>
         </div>
@@ -84,6 +84,7 @@
             <tbody>
               <tr><td>Markhöjdmodell Nedladdning, grid 1 m</td><td>Höjdkurvor, markmodell och alla analyser</td><td>Behövs alltid</td></tr>
               <tr><td>Laserdata Nedladdning, skog</td><td>Punktmoln, träd, höjd över mark, skuggstudie, sektioner och horisont i soldiagrammet</td><td>Särskilda användningsvillkor</td></tr>
+              <tr><td>Ortofoto Nedladdning</td><td>Flygfoto i färg över utsnittet, på kartan, i utskriften och på terrängen i 3D</td><td>Särskilda användningsvillkor. Bara utsnittet läses, från senaste flygningen</td></tr>
               <tr><td>Byggnad Nedladdning, vektor</td><td>Befintliga byggnader med typ, ändamål och husnummer, och deras höjd ur laserdatan</td><td>Särskilda användningsvillkor. Hela kommunens fil sparas i webbläsaren</td></tr>
               <tr><td>Fastighetsindelning Nedladdning, vektor</td><td>Fastighetsgränser, gränspunkter och beteckningar, och vilka fastigheter utsnittet berör</td><td>Särskilda användningsvillkor. Gränserna är inte rättsligt bindande</td></tr>
               <tr><td>Marktäcke Nedladdning, vektor</td><td>Skog, åker, vatten och bebyggelse som ytor</td><td>Hela kommunens fil sparas i webbläsaren</td></tr>
@@ -142,13 +143,13 @@
           <li><strong>Ändra i listan.</strong> Golvnivå i RH 2000 (tomt betyder marken vid husets mitt), höjd till takfot, takform och taklutning.</li>
         </ul>
         <p>Stoppar webbläsaren den nya fliken: tillåt popup-fönster för sidan, eller välj <em>Spara platsfil för cad-apa</em> och öppna filen i cad-apa.</p>
-        <p><em>Visa i 3D</em> under resultatet visar terrängen, träden och volymerna. Dra för att snurra och scrolla eller nyp för att zooma.</p>
+        <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen, träden, byggnaderna och volymerna. Har du valt ortofoto ligger det på terrängen; knappen <em>Ortofoto</em> slår av och på det. Dra för att snurra och scrolla eller nyp för att zooma.</p>
       </section>
 
       <section id="kartan">
         <h2><span class="nr">07</span>Kartan och utskriften</h2>
         <p>Rutan uppe till höger på kartan styr bakgrund och vilka lager som visas, grupperade som underlag, analys och skiss. Lantmäteriets karta går att välja som bakgrund när du har fyllt i inloggningen. Temat, Blueprint, Ljust eller Mörkt, väljer du i menyraden högst upp.</p>
-        <p>Välj <em>Skriv ut i skala</em> för en PDF i A4 till A1. Utskriften visar samma lager som kartan. Bakgrunden kommer med om du har valt Lantmäteriets karta; OpenStreetMap och terrängkartan får inte skrivas ut. Skriv ut i verklig storlek (100 %) och kontrollera skalan med skalstocken.</p>
+        <p>Välj <em>Skriv ut i skala</em> för en PDF i A4 till A1. Utskriften visar samma lager som kartan. Bakgrunden kommer med om du har valt Lantmäteriets karta; OpenStreetMap och terrängkartan får inte skrivas ut. Ortofotot kommer med inom utsnittet om lagret är på. Skriv ut i verklig storlek (100 %) och kontrollera skalan med skalstocken.</p>
       </section>
 
       <section id="ritprogram">
@@ -158,6 +159,7 @@
           <dt>Archicad</dt><dd>Sammanfoga höjdkurvorna (<code>_kurvor_lokal.dxf</code>) med File › Interoperability › Merge. Markmodellens punkter (<code>_mesh_lokal.xyz</code>) blir ett Mesh. Punktmolnet finns som XYZ med färg per klass.</dd>
           <dt>Revit</dt><dd>Massing &amp; Site › Toposolid › Create from Import › Specify Points File, välj <code>_punkter_lokal.csv</code> och enheten meter. Punktmolnet (<code>_laser_lokal.las</code>) läses in via Autodesk ReCap.</dd>
           <dt>AutoCAD</dt><dd>DXF-filerna öppnas direkt och kan sparas som DWG. Varje typ ligger på ett eget lager.</dd>
+          <dt>Ortofoto</dt><dd><code>_ortofoto.jpg</code> har två världsfiler, <code>_ortofoto_lokal.jgw</code> och <code>_ortofoto_sweref.jgw</code>. Byt namn på den du vill använda så att den heter <code>_ortofoto.jgw</code>, så hamnar bilden rätt när ritprogrammet läser in den. Pixelstorleken står i info-filen: 0,16 m för mindre utsnitt, grövre för större.</dd>
           <dt>Träd</dt><dd><code>_trad.csv</code> har position, höjd och kronbredd per träd, för att placera trädobjekt med till exempel Dynamo eller Grasshopper.</dd>
           <dt>Platsanalys</dt><dd>Lutning och skyfall ligger i mappen <code>platsanalys</code> och höjdpunkterna i <code>terrang</code>, med ett lager per klass. Skissens volymer ligger i <code>skiss</code>.</dd>
           <dt>Sann nord</dt><dd>Höjdkurvornas DXF har lagren NORR_RUTNAT och NORR_SANN. Vinkeln mellan dem står i info-filen. Under Nollpunkt och vridning i steg 01 kan de lokala filerna vridas mot sann nord eller en egen vinkel.</dd>
@@ -178,7 +180,7 @@
       <section id="datan" class="ruta" style="gap: 14px">
         <h2><span class="nr">10</span>Var rädd om datan</h2>
         <p>Spara underlagen lokalt, på din egen dator eller i projektmappen på kontorets server. Undvik molntjänster. Där vet man sällan i vilket land filerna lagras, vem som kan komma åt dem eller hur länge de finns kvar.</p>
-        <p>Laserdata kan innehålla personuppgifter, och den som hämtar datan ansvarar för att hantera dem enligt dataskyddsförordningen (GDPR). Flera av Lantmäteriets dataset har dessutom villkor för hur de får lagras och spridas. Läs villkoren när du beställer.</p>
+        <p>Laserdata och ortofoton kan innehålla personuppgifter, och den som hämtar datan ansvarar för att hantera dem enligt dataskyddsförordningen (GDPR). Flera av Lantmäteriets dataset har dessutom villkor för hur de får lagras och spridas. Läs villkoren när du beställer.</p>
       </section>
 
       <section id="fel">

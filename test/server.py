@@ -1,5 +1,5 @@
 """Testserver för höjdkurvor.se. Efterliknar Lantmäteriet (Basic auth test:hemligt-åäö, Range, CORS, HEAD,
-STAC-sök, Stompunkt Direkt) och Overpass, Naturvårdsverket, Riksantikvarieämbetet och MCF på port 8765.
+STAC-sök för laserdata och ortofoto, Stompunkt Direkt) och Overpass, Naturvårdsverket, Riksantikvarieämbetet och MCF på port 8765.
 Användning: python3 test/server.py DATAKATALOG APPKATALOG"""
 import base64, os, sys, json, hashlib
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -17,6 +17,16 @@ STAC_ITEMS = {'type': 'FeatureCollection', 'links': [], 'features': [
     {'id': '15a001-gammal', 'properties': {'datetime': '2015-05-01T12:00:00Z', 'skanningsomrade': '15A001',
      'proj:bbox': [539000.0, 6427000.0, 541000.0, 6429000.0], 'punkttathet': 0.5},
      'assets': {'data': {'href': 'https://dl1.lantmateriet.se/hojd/data/pointcloud/sls/15a001/gammal.copc.laz'}}},
+]}
+# Ortofoton (test/data/make_orto.py): 2025 i två rutor, 2019 i den ena, och två som inte ska väljas (cir, historisk)
+def _orto(id, ar, typ, x0, x1, epsg=3006, s=0.5):
+    return {'id': id, 'collection': f'orto-test-{ar}', 'properties': {'datetime': f'{ar}-06-13T12:00:00Z', 'flygar': ar,
+            'spektraltyp': typ, 'upplosning': s, 'proj:code': f'EPSG:{epsg}', 'proj:bbox': [x0, 6427000.0, x1, 6429000.0]},
+            'assets': {'data': {'href': f'https://dl1.lantmateriet.se/bild/data/orto/test/{id}.tif'}}}
+STAC_BILD = {'type': 'FeatureCollection', 'links': [], 'features': [
+    _orto('o64275_5390_t_mr25', 2025, 'rgbi', 539000.0, 539800.0), _orto('o64275_5398_t_mr25', 2025, 'rgbi', 539800.0, 540600.0),
+    _orto('o64275_5390_t_im25', 2025, 'cir', 539000.0, 540600.0), _orto('o64275_5390_t_fm19', 2019, 'rgb', 539000.0, 539800.0),
+    _orto('o06h0a_c75', 1975, 'pan', 1539000.0, 1540600.0, 3021, 1.0),
 ]}
 # Stompunkter i SWEREF 99 TM med RH 2000-höjd
 STOMPUNKTER = [
@@ -173,8 +183,8 @@ class H(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'image/png'); self.send_header('Content-Length', len(b)); self.end_headers()
             if not head: self.wfile.write(b)
             return
-        if path.startswith('/stac-hojd/'):
-            b = json.dumps(STAC_ITEMS).encode()
+        if path.startswith(('/stac-hojd/', '/stac-bild/')):
+            b = json.dumps(STAC_BILD if path.startswith('/stac-bild/') else STAC_ITEMS).encode()
             self.send_response(200); self.cors(alla=True)
             self.send_header('Content-Type', 'application/geo+json'); self.send_header('Content-Length', len(b)); self.end_headers()
             if not head:

@@ -2,7 +2,8 @@
 
 Gör Lantmäteriets öppna geodata till underlag för Archicad, Revit och AutoCAD,
 direkt i webbläsaren: höjdkurvor och höjdpunkter (DXF), markmodell (XYZ och CSV),
-punktmoln ur Laserdata skog (LAS och XYZ), marktäcke, stompunkter och vägar
+punktmoln ur Laserdata skog (LAS och XYZ), ortofoto (JPEG med världsfil),
+befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
 (DXF), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
 PDF med lutning, skyfall och skydd och risker. Skissade volymer kan prövas på
 platsen, och platsen kan skickas vidare till ritprogrammet
@@ -106,6 +107,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/karna.js` (`Terrang`) – höjddata, omprojicering, höjdkurvor, DXF, XYZ och
   CSV, lokal vridning och nordpilar
 - `js/laser.js` – laserdata: katalogsök, läsning av COPC, LAS och XYZ
+- `js/ortofoto.js` – ortofoto: katalogsök, val av bild, läsning av COG med
+  Range från lämplig översiktsnivå och omritning till zonen
 - `js/kommunfil.js` – kommunfiler från Lantmäteriets nedladdning (marktäcke,
   byggnader, fastighetsindelning): hämtning, lagring i webbläsaren, GeoPackage
   och klippning
@@ -138,6 +141,10 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 ## Externa tjänster
 
 - Höjddata och laserdata: dl1.lantmateriet.se, katalog api.lantmateriet.se
+- Ortofoto: COG på dl1.lantmateriet.se/bild/data/orto/…, katalog
+  api.lantmateriet.se/stac-bild (`/v1/search?bbox=…` över alla år). Appen väljer
+  senaste flygåret med färgbild (`rgbi` eller `rgb`) i SWEREF 99 TM som täcker
+  utsnittet och läser bara utsnittet, som laserdatan
 - Kommunfiler (GeoPackage i zip, en per kommun, katalog api.lantmateriet.se/stac-vektor):
   - Marktäcke: dl1.lantmateriet.se/mark/marktacke/marktacke_knKKKK.zip
   - Byggnader: dl1.lantmateriet.se/byggnadsverk/byggnad_knKKKK.zip (skiktet `byggnad`)
@@ -160,13 +167,13 @@ Lantmäteriets karta.
 
 Varje användare behöver ett Geotorget-konto med de produkter beställda som
 används: Markhöjdmodell Nedladdning, och för tillvalen Laserdata Nedladdning,
-skog, Byggnad Nedladdning, vektor, Fastighetsindelning Nedladdning, vektor,
+skog, Ortofoto Nedladdning, Byggnad Nedladdning, vektor, Fastighetsindelning Nedladdning, vektor,
 Marktäcke Nedladdning, vektor, Stompunkt Direkt och Topografisk
 webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inloggning.
 
 ## Kommande
 
-- 0.6.0, nästa steg: Ortofoto Nedladdning (COG via api.lantmateriet.se/stac-bild).
+- Ortofoto som bakgrund för hela kartan kräver Ortofoto Visning, en annan produkt.
 - Hydrografi, Topografi 10 som vektor och NVDB. Byggnader i 3D med takformer.
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
@@ -185,12 +192,12 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 
 ## Licenser för datan
 
-Höjddata, laserdata, marktäcke och Topografisk webbkarta: © Lantmäteriet,
-CC BY 4.0. Stompunkter: Lantmäteriet, öppna data (CC0). Skyddad natur:
+Höjddata, laserdata, ortofoto, byggnader, fastighetsindelning, marktäcke och
+Topografisk webbkarta: © Lantmäteriet, CC BY 4.0. Stompunkter: Lantmäteriet, öppna data (CC0). Skyddad natur:
 Naturvårdsverket, CC0. Lämningar: Riksantikvarieämbetet. Översvämningskarteringar:
 Myndigheten för civilt försvar. Vägar och vatten: © OpenStreetMap-bidragsgivare,
 ODbL. Källan anges i varje nedladdad info-fil, i utskriften och i
-platsanalysbladet. Laserdata kan enligt Lantmäteriets villkor innehålla
+platsanalysbladet. Laserdata och ortofoton kan enligt Lantmäteriets villkor innehålla
 personuppgifter. Den som hämtar datan ansvarar för att hantera den enligt GDPR.
 
 ## Ändra en kommuns zon

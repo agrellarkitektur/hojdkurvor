@@ -3,8 +3,15 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
-## 0.6.0 – under arbete
+## 0.6.0 – 2026-10-23
 
+- Ortofoto ur Ortofoto Nedladdning: färgbild över utsnittet från den senaste
+  flygningen, som JPEG med världsfiler (lokal och SWEREF). Bara utsnittet läses
+  ur Lantmäteriets molnoptimerade GeoTIFF-filer, från lämplig översiktsnivå, och
+  bilden ritas om till vald SWEREF 99-zon. Källans upplösning (0,16 m) för
+  utsnitt upp till cirka 16 Mpx, annars 0,25, 0,5 m och så vidare. Syns på
+  kartan (under de andra lagren), i utskriften i skala inom utsnittet och som
+  textur på terrängen i 3D-vyn, med en knapp för att slå av och på det.
 - Befintliga byggnader ur Byggnad Nedladdning, vektor: fotavtryck med typ,
   ändamål och husnummer som DXF (ett lager per typ) och CSV, med höjd över mark
   ur laserdatan. Byggnaderna syns på kartan, i utskriften i skala, i

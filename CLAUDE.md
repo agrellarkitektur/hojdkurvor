@@ -60,6 +60,10 @@ node test/fastighet.test.js
 ```
 
 ```
+node test/ortofoto.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 

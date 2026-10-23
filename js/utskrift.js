@@ -81,7 +81,7 @@
    * opt: { format, liggande, skala, utsnitt, lager: {...}, titel: {...}, fonter }
    * lager: { bakgrund: {bild (dataURL), x0, y1, W, H, s}, kurvor, siffror, marktacke: {ytor}, marktackeFarg,
    *          byggnader: [{fotavtryck, hal, husnummer, centrum}], fastigheter: {granser, ytor},
-   *          hom: {bild, x0, y1, W, H, s}, skuggor: {konturer, etikett}, trad, stompunkter, dz, vagar: {linjer},
+   *          hom: {bild, x0, y1, W, H, s}, ortofoto: {bild (JPEG), x0, y1, W, H, s, ar}, skuggor: {konturer, etikett}, trad, stompunkter, dz, vagar: {linjer},
    *          sektioner: [{namn, a, b, vand}], nollpunkt: {x, y}, ram, rutnat }
    */
   function plan(opt) {
@@ -123,10 +123,17 @@
       const b = g.bakgrund, [x0, y0] = P(b.x0, b.y1);
       doc.addImage(b.bild, 'JPEG', x0, y0, b.W * b.s * k, b.H * b.s * k, undefined, 'FAST');
     }
-    // marktäcke (halvgenomskinligt om det finns en bakgrundskarta)
+    // ortofoto, bara inom utsnittet
+    if (g.ortofoto && g.ortofoto.bild) {
+      klippUtsnitt();
+      const o = g.ortofoto, [x0, y0] = P(o.x0 - o.s / 2, o.y1 + o.s / 2);
+      doc.addImage(o.bild, 'JPEG', x0, y0, o.W * o.s * k, o.H * o.s * k, undefined, 'FAST');
+      doc.restoreGraphicsState();
+    }
+    // marktäcke (halvgenomskinligt om det finns en bakgrundskarta eller ett ortofoto)
     if (g.marktacke) {
       doc.saveGraphicsState();
-      if (g.bakgrund) doc.setGState(new doc.GState({ opacity: 0.55 }));
+      if (g.bakgrund || g.ortofoto) doc.setGState(new doc.GState({ opacity: 0.55 }));
       doc.setLineWidth(0.08); doc.setDrawColor(150, 150, 150);
       for (const y of g.marktacke.ytor) {
         doc.setFillColor(...(g.marktackeFarg ? g.marktackeFarg(y.klass) : [235, 235, 235]));
@@ -359,6 +366,7 @@
     const t = opt.titel || {};
     // teckenförklaring och källor bestämmer rutans höjd
     const rader = [];
+    if (g.ortofoto) rader.push([(x, y) => { [[118, 139, 92], [164, 158, 132], [92, 112, 80]].forEach((c, i) => { doc.setFillColor(...c); doc.rect(x + i * 2.34, y - 1.1, 2.34, 2.2, 'F'); }); }, `Ortofoto ${g.ortofoto.ar || ''}`.trim()]);
     if (g.kurvor) rader.push([(x, y) => { doc.setDrawColor(...F.kurva); doc.setLineWidth(0.28); doc.line(x, y, x + 7, y); }, `Höjdkurvor${t.ekvidistans ? ', ' + t.ekvidistans : ''}`]);
     if (g.marktacke) rader.push([(x, y) => { doc.setFillColor(220, 235, 213); doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.08); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Marktäcke']);
     if (g.byggnader) rader.push([(x, y) => { doc.setFillColor(205, 200, 194); doc.setDrawColor(55, 55, 55); doc.setLineWidth(0.18); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Befintlig byggnad']);

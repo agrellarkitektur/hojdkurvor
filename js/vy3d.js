@@ -1,5 +1,5 @@
 /*
- * 3D-förhandsvisning av utsnittet: terrängen, träden, befintliga byggnader och skissade volymer.
+ * 3D-förhandsvisning av utsnittet: terrängen (med ortofoto om det finns), träden, befintliga byggnader och skissade volymer.
  * three.js (vendor/three/three.module.min.js) laddas först när vyn öppnas.
  * Egen enkel styrning: dra för att snurra, scrolla eller nyp för att zooma.
  */
@@ -50,8 +50,33 @@
     geo.setAttribute('color', new THREE.BufferAttribute(farg, 3));
     geo.setIndex(idx);
     geo.computeVertexNormals();
-    const terrang = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+    const markMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const terrang = new THREE.Mesh(geo, markMat);
     grupp.add(terrang);
+
+    // ortofoto som textur: o.x0, o.y1 = bildens övre vänstra hörn, o.bredd × o.hojd i meter
+    let ortoMat = null;
+    if (data.ortofoto && data.ortofoto.canvas) {
+      const o = data.ortofoto, max = Math.min(4096, renderer.capabilities.maxTextureSize || 4096);
+      let src = o.canvas;
+      if (Math.max(src.width, src.height) > max) {
+        const f = max / Math.max(src.width, src.height), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.floor(src.width * f)); c.height = Math.max(1, Math.floor(src.height * f));
+        c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+        src = c;
+      }
+      const uv = new Float32Array(nx * ny * 2);
+      for (let n = 0; n < nx * ny; n++) {
+        const X = pos[n * 3] + cx, Y = -pos[n * 3 + 2] + cy;
+        uv[n * 2] = (X - o.x0) / o.bredd; uv[n * 2 + 1] = 1 - (o.y1 - Y) / o.hojd;
+      }
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      const tex = new THREE.CanvasTexture(src);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      ortoMat = new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide });
+      terrang.material = ortoMat;
+    }
 
     // utsnittets ram
     const ramPts = [[r.xmin, r.ymin], [r.xmax, r.ymin], [r.xmax, r.ymax], [r.xmin, r.ymax], [r.xmin, r.ymin]].map(([x, y]) => {
@@ -167,12 +192,15 @@
     const loop = () => { if (!aktiv) return; renderer.render(scen, kamera); requestAnimationFrame(loop); };
     loop();
     return {
+      /** Ortofotot på eller av; null om det saknas. */
+      ortofoto(pa) { if (!ortoMat) return null; if (pa != null) terrang.material = pa ? ortoMat : markMat; return terrang.material === ortoMat; },
       overdriv(f) { if (f == null) return faktor; faktor = f; grupp.scale.set(1, f, 1); return faktor; },
       stang() {
         aktiv = false;
         window.removeEventListener('resize', storleksandring);
         renderer.dispose();
-        scen.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+        scen.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+        [markMat, ortoMat].forEach(m => { if (m) { if (m.map) m.map.dispose(); m.dispose(); } });
         yta.innerHTML = '';
       },
     };

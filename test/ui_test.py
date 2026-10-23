@@ -6,7 +6,7 @@ Gränssnittstest för hela flödet mot testservern (test/server.py) med Playwrig
 
 Testar: rita och ändra utsnitt, sektioner med 90° och Shift, val i alla fyra steg,
 DXF-skiss, inloggning, Skapa med alla tillval och platsanalys, zip, utskrift,
-3D-vyn, projektlänk och utbytet med en låtsas-cad-apa (test/cad-apa-mock.html).
+3D-vyn med ortofoto, projektlänk och utbytet med en låtsas-cad-apa (test/cad-apa-mock.html).
 """
 import zipfile, io, re, sys, json, os
 from playwright.sync_api import sync_playwright
@@ -63,7 +63,7 @@ with sync_playwright() as p:
     pg.click('#ritprogram button[data-prog=archicad]')
     for g in ['g-laser', 'g-kartdata', 'g-sektioner']:
         pg.evaluate(f"document.getElementById('{g}').open = true")
-    for v in ['laser', 'trad', 'hom', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion']:
+    for v in ['laser', 'trad', 'hom', 'ortofoto', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion']:
         pg.check(f'input[name=tillval][value={v}]')
     pg.screenshot(path=f'{UT}/02_underlag.png')
 
@@ -123,7 +123,11 @@ with sync_playwright() as p:
     # 3D
     pg.click('#visa-3d'); pg.wait_for_timeout(4000)
     pg.screenshot(path=f'{UT}/06_3d.png')
-    print('3d:', pg.locator('#vy3d-yta canvas').count(), 'canvas', pg.locator('#vy3d-yta').inner_text()[:100])
+    print('3d:', pg.locator('#vy3d-yta canvas').count(), 'canvas', pg.locator('#vy3d-yta').inner_text()[:100],
+          '| ortofoto', 'av' if pg.locator('#vy3d-orto').is_hidden() else pg.get_attribute('#vy3d-orto', 'aria-pressed'))
+    if pg.locator('#vy3d-orto').is_visible():
+        pg.click('#vy3d-orto'); pg.wait_for_timeout(800); pg.screenshot(path=f'{UT}/06b_3d_utan_orto.png')
+        print('  ortofoto efter klick:', pg.get_attribute('#vy3d-orto', 'aria-pressed'))
     pg.click('#vy3d-stang')
 
     # projektlänk

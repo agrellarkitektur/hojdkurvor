@@ -264,6 +264,10 @@
           <details class="grupp" id="g-kartdata">
             <summary><span class="grupp-namn">KARTDATA</span><span class="sammanf" id="sf-kartdata"></span></summary>
             <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="ortofoto"> Ortofoto</label>
+              <p class="hjalp">Flygfoto i färg över utsnittet som JPEG med världsfil, från den senaste flygningen. Upp till 0,16 m per pixel för mindre utsnitt. Syns på kartan, i utskriften i skala och på terrängen i 3D. Kräver beställd <em>Ortofoto Nedladdning</em>.</p>
+            </div>
+            <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="marktacke"> Marktäcke</label>
               <p class="hjalp">Skog, åker, vatten och bebyggelse som ytor i DXF, ett lager per typ. Hela kommunens fil hämtas första gången och sparas sedan i webbläsaren. Kräver beställd <em>Marktäcke Nedladdning, vektor</em>.</p>
             </div>
@@ -389,7 +393,7 @@
 
         <footer class="fot">
           <p><a href="instruktioner.html#ritprogram">Så tar du in filerna i Archicad, Revit och AutoCAD</a></p>
-          <p>Höjddata, laserdata, byggnader, fastighetsindelning, marktäcke och Topografisk webbkarta: © Lantmäteriet, CC BY 4.0. Stompunkter: Lantmäteriet, CC0. Skydd och risker: Naturvårdsverket (CC0), Riksantikvarieämbetet och Myndigheten för civilt försvar. Karta, vägar, vatten och adressök: © OpenStreetMap-bidragsgivare. Kommunernas koordinatsystem är ett förslag och behöver kontrolleras.</p>
+          <p>Höjddata, laserdata, ortofoto, byggnader, fastighetsindelning, marktäcke och Topografisk webbkarta: © Lantmäteriet, CC BY 4.0. Stompunkter: Lantmäteriet, CC0. Skydd och risker: Naturvårdsverket (CC0), Riksantikvarieämbetet och Myndigheten för civilt försvar. Karta, vägar, vatten och adressök: © OpenStreetMap-bidragsgivare. Kommunernas koordinatsystem är ett förslag och behöver kontrolleras.</p>
           <p class="mobilvy-rad"><button type="button" class="lank-knapp" id="till-mobilvy">Tillbaka till mobilvyn</button></p>
         </footer>
       </div>
@@ -416,7 +420,7 @@
   </div>
 
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
-    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button></div>
+    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button></div>
     <div class="vy3d-yta" id="vy3d-yta"></div>
   </div>
 
@@ -429,6 +433,7 @@
   <script src="js/dxf.js"></script>
   <script src="js/sol.js"></script>
   <script src="js/laser.js"></script>
+  <script src="js/ortofoto.js"></script>
   <script src="js/kommunfil.js"></script>
   <script src="js/marktacke.js"></script>
   <script src="js/byggnad.js"></script>
