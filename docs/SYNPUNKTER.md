@@ -15,6 +15,8 @@ flyttas till CHANGELOG.md.
 - Skriv ihop ett synpunktsformulär på samma vis som i cad-apa där man ska kunna lämna feedback anonymt. Kommer kräva php och mailen ska gå att vidarebefordra till gmail, vilket har varit svårt tidigare.
 - Möjlighet att förhandsvisa mer info i 3D-fönstret, som byggnader, träd, höjdkurvor.
 - "Klistra in koordinater" borde öppna en dialog där man dels kan ange koordinaterna och sen välja vilket SWEREF/kommun det gäller, så att man inte hamnar i fel koordinatsystem.
+- Lägg till fastighetsgränser i utbytet till cad-apa.
+- Preliminärt kommer vi inte att behöva ta emot modell från cad-apa, de sköter analyserna själva. Så därför kanske vi skulle titta på att ha en enkel skissmodellsbyggare i Höjdkurvor. Där man kan rita former i 2D och extrudera upp typ, på enklaste sätt och se hur det påverkar siten.
 
 ## 0.6.1 – rättelser
 
