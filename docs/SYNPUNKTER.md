@@ -7,7 +7,12 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-_(tom)_
+### 2026-10-26, 3D-förhandsvisning
+
+- Man verkar inte kunna pan:a i 3D-förhandsvisningen och snurrar alltid runt mitten. Vore fint om man kunde flytta sig mer fritt.
+- Bra om appen tar bort träd som ligger preciiiiis vid en byggnad, det är ofta själva byggnaden som är inmätt då.
+- Höjdkurvor i 3D-preview kan vara svarta (eller möjlighet att välja själv).
+- Möjlighet att slå på konturer på 3D-byggnaderna i 3D-preview.
 
 ## 0.7.1 – rättelser
 
