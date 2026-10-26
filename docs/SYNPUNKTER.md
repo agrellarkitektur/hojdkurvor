@@ -14,6 +14,12 @@ flyttas till CHANGELOG.md.
 - Höjdkurvor i 3D-preview kan vara svarta (eller möjlighet att välja själv).
 - Möjlighet att slå på konturer på 3D-byggnaderna i 3D-preview.
 
+### 2026-10-26, 3D-förhandsvisning, skuggor och färger
+
+- Slå på skuggor och ange tidpunkt för att se hur de faller i 3D-preview.
+- Välja färg på befintliga byggnaders ytor.
+- Går det att växla mellan low-poly och mer realistiska träd i 3D-preview?
+
 ## 0.7.1 – rättelser
 
 ## 0.8.0 – nya funktioner
