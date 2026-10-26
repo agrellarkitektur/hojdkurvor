@@ -50,7 +50,9 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
    körningen med `gh run view`.
 2. Ta emot hans testresultat och rätta i 0.6.1, på en egen gren som slås ihop
    med `main` när den är klar.
-3. Arbetsflödena varnar för Node 20 (`actions/checkout@v4`, `setup-node@v4`,
+3. Sortera Inkorgen i `docs/SYNPUNKTER.md` efter version innan nästa version
+   planeras.
+4. Arbetsflödena varnar för Node 20 (`actions/checkout@v4`, `setup-node@v4`,
    FTP-Deploy-Action). Fungerar än; byt till nyare versioner när de finns.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
