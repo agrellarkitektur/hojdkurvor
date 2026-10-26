@@ -38,7 +38,8 @@ textfilerna, som inte behövs men inte heller skadar) till webbhotellet, till
 exempel som `public_html/terrang/`. Sidan nås då på `https://agrellarkitektur.se/terrang/`.
 WordPress påverkas inte, eftersom riktiga mappar går före WordPress
 omskrivningar. Ingen databas behövs. PHP behövs bara för reservvägarna
-`stac.php` och `geodata.php`, se nedan.
+`stac.php` och `geodata.php` och för formuläret Skicka synpunkter
+(`synpunkter.php`), se nedan.
 
 Lantmäteriets server släpper bara igenom anrop från godkända webbplatser.
 `https://agrellarkitektur.se` är godkänd. Om sidan nås från en annan adress,
@@ -83,6 +84,28 @@ Internt heter temana `ritning`, `lugn` och `mork`.
 Tomma värden betyder att funktionen är avstängd. Nycklar i `config.js` syns för
 alla som öppnar sidan, så checka aldrig in riktiga nycklar eller inloggningar.
 
+## Synpunkter (synpunkter.php)
+
+BETA-knappen i menyraden öppnar formuläret *Skicka synpunkter* (`js/synpunkter.js`),
+som skickar till `synpunkter.php`. Skriptet mejlar synpunkten vidare med
+webbhotellets `mail()`. Vart det skickas står inte i koden, utan i
+`feedback-config.php`, samma fil som cad-apa använder:
+
+```php
+<?php return ['to' => 'ca@agrellarkitektur.se', 'from' => 'kontakt@agrellarkitektur.se'];
+```
+
+Skriptet letar först i mappen ovanför appen (`public_html`, bredvid `terrang`
+och `cad-apa`) och sedan i appens egen mapp. Ligger filen redan i
+`public_html` för cad-apa behövs inget mer. Uppladdningen från GitHub rör inte
+filer som inte finns i repot, så filen ligger kvar vid uppdateringar.
+
+`from` ska vara en adress som finns på webbplatsens domän. Den sätts också som
+kuvertavsändare, så att brev som vidarebefordras (till exempel från webbposten
+till Gmail) inte stoppas av SPF/DMARC. Öppna `…/terrang/synpunkter.php` i
+webbläsaren för att se om konfigurationen hittas. Formuläret visar serverns
+felmeddelande om det inte går att skicka, och erbjuder då ett vanligt mejl.
+
 ## stac.php och geodata.php
 
 Laserdatans rutor heter efter skanningsområde, så appen frågar Lantmäteriets
@@ -126,11 +149,13 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   vatten från andra myndigheter och OpenStreetMap
 - `js/platsanalysblad.js` – platsanalysens A3-häfte (PDF)
 - `js/utbyte.js` (`Utbyte`) – utbytet med cad-apa, se `docs/UTBYTE-CAD-APA.md`
-- `js/vy3d.js` (`Vy3D`) – 3D-förhandsvisning med three.js, laddas först när den öppnas
+- `js/vy3d.js` (`Vy3D`) – 3D-förhandsvisning med three.js, laddas först när den
+  öppnas; lager som kan slås av och på
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
 - `js/dxf.js` – DXF-skrivare
 - `js/bestall.js` – beställningsformuläret
+- `js/synpunkter.js` – BETA-knappen och formuläret Skicka synpunkter, på alla sidor
 - `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, felrapport
 - `data/kommuner.json` – förenklade kommungränser med kommunkod och föreslagen
   SWEREF 99-zon (fältet `epsg`; Kiruna saknar värde eftersom kommunen använder
@@ -188,7 +213,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
   formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
   om användaren väljer det, inloggningen.
 - sessionStorage: aktivt steg, sektionslinjer, horisontens betraktelsepunkt,
-  skissens volymer och projekt-id, bara så länge fliken är öppen.
+  skissens volymer, projekt-id och dolda lager i 3D-vyn, bara så länge fliken är öppen.
 
 ## Licenser för datan
 

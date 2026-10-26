@@ -3,6 +3,33 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.7.0 – 2026-10-26
+
+- BETA-rutan i menyraden är en knapp, *Beta 0.7.0 – Skicka synpunkter*, på
+  alla sidor. Den öppnar ett formulär som skickar synpunkten med e-post via
+  `synpunkter.php`, anonymt om man inte fyller i sin adress. Samma upplägg som
+  i cad-apa: mottagaren står i `feedback-config.php` på servern (samma fil som
+  cad-apa använder), kuvertavsändaren sätts till avsändaradressen så att
+  vidarebefordran till Gmail inte stoppas av SPF/DMARC, och skydd mot spam med
+  dolt fält, tidsspärr och högst fem i timmen. Går skriptet inte att nå öppnas
+  ett mejl i stället. *Skicka synpunkter* finns också bredvid *Rapportera ett fel*.
+- *Klistra in koordinater* öppnar en dialog: klistra in hörnen, välj kommun och
+  koordinatsystem. Dialogen föreslår det system där området hamnar i en kommun
+  som normalt använder det, säger vilken kommun det blir i det valda systemet
+  och om koordinaterna passar fler system. Även inklistring direkt i
+  hörnfälten går via dialogen.
+- 3D-vyn visar också höjdkurvor, fastighetsgränser och vägar (draperade på
+  marken) och byggnader utan laserhöjd som fotavtryck. Varje lager har en
+  knapp; valen gäller så länge fliken är öppen.
+- Fastighetsgränserna följer med i platspaketet till cad-apa (nytt fält
+  `fastigheter`: gränser, gränspunkter och fastighetsområden, version 1 gäller
+  fortfarande), se `docs/UTBYTE-CAD-APA.md`.
+- Rättat: höjdkurvornas höjd kom med som `null` i platspaketet till cad-apa
+  sedan 0.5.0 (kurvorna har höjden i `h`, paketet läste `z`).
+- Länk till cad-apa på Om-sidan. Systerprojekten cad-apa och Sisyfos som
+  referens i `CLAUDE.md`.
+- Nya enhetstest: `test/koordinater.test.js` och `test/utbyte.test.js`.
+
 ## 0.6.0 – 2026-10-23
 
 - Ortofoto ur Ortofoto Nedladdning: färgbild över utsnittet från den senaste

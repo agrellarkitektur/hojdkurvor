@@ -566,18 +566,16 @@
     if (ost.length < 2 || nord.length < 2) return null;
     return { epsg, xmin: Math.min(ost[0], ost[1]), xmax: Math.max(ost[0], ost[1]), ymin: Math.min(nord[0], nord[1]), ymax: Math.max(nord[0], nord[1]) };
   }
-  function anvandKoordinater(text) {
-    const k = lasKoordinater(text);
-    if (!k) { $('koord-status').textContent = 'Hittade inte fyra koordinater i texten. Det behövs två östvärden och två nordvärden.'; return false; }
-    if (k.epsg && k.epsg !== state.epsg) {
-      state.epsg = k.epsg; state.zonManuell = true; zonVal.value = k.epsg;
-      $('zon-hjalp').textContent = `${T.zon(k.epsg).namn} från de inklistrade koordinaterna.`;
+  /** Ställer in utsnittet efter tolkade koordinater k i systemet epsg. */
+  function anvandKoordinater(k, epsg) {
+    if (epsg !== state.epsg) {
+      state.epsg = epsg; zonVal.value = epsg;
     }
+    state.zonManuell = true;
+    $('zon-hjalp').textContent = `${T.zon(epsg).namn}, valt när koordinaterna klistrades in.`;
     for (const n of ['xmin', 'xmax', 'ymin', 'ymax']) $(n).value = k[n];
-    $('xmin').dispatchEvent(new Event('change'));
-    $('koord-inklistring').hidden = true; $('koord-text').value = '';
-    $('koord-status').textContent = `Koordinaterna är inklistrade i ${T.zon(state.epsg).namn}.`;
-    return true;
+    $('xmin').dispatchEvent(new Event('change'));   // uppdaterar kommunen och säger till om systemet inte är kommunens
+    $('koord-status').textContent = `Koordinaterna är inklistrade i ${T.zon(epsg).namn}.`;
   }
   async function kopieraText(text) {
     try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* reserv nedan */ }
@@ -594,23 +592,95 @@
     const ok = await kopieraText(koordinatText());
     $('koord-status').textContent = ok ? 'Hörnens koordinater är kopierade.' : 'Kunde inte kopiera. Markera koordinaterna ovan och kopiera dem för hand.';
   });
+  // --- dialogen Klistra in koordinater: text, kommun och koordinatsystem (0.7.0)
+  const kd = { dlg: $('koorddialog'), k: null, kand: [] };
+  [...T.ZONER.filter(z => z.epsg !== 3006).sort((a, b) => a.lon0 - b.lon0), T.zon(3006)].forEach(z => {
+    const o = document.createElement('option');
+    o.value = z.epsg; o.textContent = z.epsg === 3006 ? 'SWEREF 99 TM (rikstäckande)' : z.namn;
+    $('kd-zon').append(o);
+  });
+  const sifferText = v => fmt(Math.round(v));
+  /** Var mitten av de tolkade koordinaterna hamnar i det valda systemet. */
+  function kdKontroll() {
+    const k = kd.k, epsg = Number($('kd-zon').value), ut = $('kd-kontroll');
+    $('kd-ok').disabled = !k;
+    if (!k) { ut.textContent = ''; return; }
+    const rad = T.tolkaZon((k.xmin + k.xmax) / 2, (k.ymin + k.ymax) / 2, hittaKommun).find(t => t.epsg === epsg);
+    const namn = T.zon(epsg).namn;
+    if (!state.kommuner) ut.textContent = `Läser in kommungränserna … Kontrollera att ${namn} stämmer.`;
+    else if (!rad || !rad.kommun) ut.textContent = `I ${namn} hamnar området utanför Sveriges kommuner. Koordinaterna hör troligen till ett annat system.`;
+    else if (rad.passar) ut.textContent = `I ${namn} hamnar området i ${rad.kommun.namn} kommun, som normalt använder just det systemet.`;
+    else if (rad.kommun.epsg) ut.textContent = `I ${namn} hamnar området i ${rad.kommun.namn} kommun, som normalt använder ${T.zon(rad.kommun.epsg).namn}. Kontrollera att systemet stämmer.`;
+    else ut.textContent = `I ${namn} hamnar området i ${rad.kommun.namn} kommun, som använder flera zoner. Kontrollera att systemet stämmer.`;
+    const andra = (kd.kand || []).filter(t => t.epsg !== epsg);
+    if (andra.length) ut.textContent += ` Koordinaterna passar också ${andra.map(t => `${T.zon(t.epsg).namn} (${t.kommun.namn} kommun)`).join(' och ')}. Välj den kommun som gäller.`;
+  }
+  /** Tolkar texten och föreslår system: det som står i texten, annars ett som passar kommunen där området hamnar. */
+  function kdTolka() {
+    const text = $('kd-text').value, k = text.trim() ? lasKoordinater(text) : null;
+    kd.k = k; kd.kand = [];
+    if (!k) {
+      $('kd-tolkat').textContent = text.trim() ? 'Hittade inte fyra koordinater i texten. Två östvärden och två nordvärden behövs.'
+        : 'Klistra in med Ctrl+V (Cmd+V på Mac). Två östvärden och två nordvärden behövs.';
+      kdKontroll();
+      return;
+    }
+    $('kd-tolkat').textContent = `Väst ${sifferText(k.xmin)}, öst ${sifferText(k.xmax)}, syd ${sifferText(k.ymin)}, nord ${sifferText(k.ymax)}: ${fmt(k.xmax - k.xmin)} × ${fmt(k.ymax - k.ymin)} m.`;
+    let epsg = k.epsg, kommun = null;
+    kd.kand = state.kommuner ? T.tolkaZon((k.xmin + k.xmax) / 2, (k.ymin + k.ymax) / 2, hittaKommun).filter(t => t.passar && t.epsg !== 3006) : [];
+    if (!epsg && kd.kand.length) {
+      const kand = kd.kand;
+      const val = kand.find(t => state.kommun && t.kommun.kod === state.kommun.kod) || kand.find(t => t.epsg === state.epsg) || kand[0];
+      if (val) { epsg = val.epsg; kommun = val.kommun; }
+    }
+    if (epsg) {
+      $('kd-zon').value = epsg;
+      if (!kommun) { const rad = T.tolkaZon((k.xmin + k.xmax) / 2, (k.ymin + k.ymax) / 2, hittaKommun).find(t => t.epsg === epsg); kommun = rad && rad.kommun; }
+      $('kd-kommun').value = kommun ? kommun.kod : '';
+    }
+    kdKontroll();
+    if (k.epsg) $('kd-kontroll').textContent = `${T.zon(k.epsg).namn} står i texten. ` + $('kd-kontroll').textContent;
+  }
+  function oppnaKoordDialog(text) {
+    if (!$('kd-kommun').options[1] && state.kommuner) {
+      [...state.kommuner].map(f => f.properties).sort((a, b) => a.namn.localeCompare(b.namn, 'sv')).forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.kod; o.textContent = p.namn;
+        $('kd-kommun').append(o);
+      });
+    }
+    $('kd-zon').value = state.epsg;
+    $('kd-kommun').value = state.kommun ? state.kommun.kod : '';
+    $('kd-text').value = text || '';
+    kdTolka();
+    kd.dlg.showModal();
+    $('kd-text').focus();
+  }
+  $('kd-text').addEventListener('input', kdTolka);
+  $('kd-zon').addEventListener('change', kdKontroll);
+  $('kd-kommun').addEventListener('change', () => {
+    const f = (state.kommuner || []).find(f => f.properties.kod === $('kd-kommun').value);
+    if (f && f.properties.epsg) $('kd-zon').value = f.properties.epsg;
+    kdKontroll();
+    if (f && !f.properties.epsg) $('kd-kontroll').textContent = `${f.properties.namn} kommun använder flera zoner. Välj systemet nedan. ` + $('kd-kontroll').textContent;
+  });
+  kd.dlg.addEventListener('click', e => { if (e.target === kd.dlg || e.target.closest('[data-kd-avbryt]')) kd.dlg.close(); });
+  kd.dlg.querySelector('form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!kd.k) return;
+    anvandKoordinater(kd.k, Number($('kd-zon').value));
+    kd.dlg.close();
+  });
+  kd.dlg.addEventListener('close', () => $('koord-klistra').focus());
   $('koord-klistra').addEventListener('click', async () => {
-    let text = null;
-    try { text = await navigator.clipboard.readText(); } catch (e) { text = null; }
-    if (text && anvandKoordinater(text)) return;
-    $('koord-inklistring').hidden = false;
-    $('koord-text').focus();
-    $('koord-status').textContent = 'Klistra in med Ctrl+V (Cmd+V på Mac) i rutan.';
+    let text = '';
+    try { text = await navigator.clipboard.readText(); } catch (e) { text = ''; }
+    oppnaKoordDialog(text && lasKoordinater(text) ? text : '');
   });
-  $('koord-text').addEventListener('paste', e => {
-    const text = (e.clipboardData || window.clipboardData).getData('text');
-    if (text) { e.preventDefault(); $('koord-text').value = text; anvandKoordinater(text); }
-  });
-  $('koord-text').addEventListener('change', () => { if ($('koord-text').value.trim()) anvandKoordinater($('koord-text').value); });
-  // klistrar man in alla fyra värden i ett av fälten fördelas de
+  // klistrar man in alla fyra värden i ett av fälten öppnas dialogen med dem
   ['xmin', 'xmax', 'ymin', 'ymax'].forEach(n => $(n).addEventListener('paste', e => {
     const text = (e.clipboardData || window.clipboardData).getData('text');
-    if (text && lasKoordinater(text)) { e.preventDefault(); anvandKoordinater(text); }
+    if (text && lasKoordinater(text)) { e.preventDefault(); oppnaKoordDialog(text); }
   }));
 
   function nyttOmrade(sv, no) {
@@ -2337,7 +2407,7 @@
       vridning: $('vrid').value === 'sann' ? m.konvergens : $('vrid').value === 'egen' ? (tal($('vrid-grader').value) || 0) : 0,
       sannNord: m.konvergens,
       rutnat: s && s.rutnat, kurvor: s && s.kurvor, trad: s && s.trad, vagar: s && s.vagar, stompunkter: s && s.stompunkter,
-      volymer: state.volymer, byggnader: s && s.byggnader, projektlank: projektlank(), kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
+      volymer: state.volymer, byggnader: s && s.byggnader, fastigheter: s && s.fastigheter, fastighetVarning: Fastighet.VARNING, projektlank: projektlank(), kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
     });
   }
   async function tillCadApa(statusEl) {
@@ -2522,12 +2592,17 @@
     try {
       await laddaSkript('js/vy3d.js');
       if (vy3d) vy3d.stang();
-      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null, kurvor: s.kurvor, bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
+      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null,
+        fotavtryck: s.byggnader ? s.byggnader.filter(b => b.hojd == null).map(b => b.fotavtryck) : null,
+        kurvor: s.kurvor, fastigheter: s.fastigheter ? s.fastigheter.granser.map(g => g.pts) : null, vagar: s.vagar ? s.vagar.linjer.map(l => l.pts) : null,
+        kurva: farg('kurva'), fastighet: farg('fastighet'), vag: farg('vag'), byggnad: farg('byggnad'),
+        bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
         ortofoto: s.ortofoto ? { canvas: s.ortofoto.canvas, x0: s.ortofoto.x0 - s.ortofoto.s / 2, y1: s.ortofoto.y1 + s.ortofoto.s / 2, bredd: s.ortofoto.W * s.ortofoto.s, hojd: s.ortofoto.H * s.ortofoto.s } : null });
       $('vy3d-faktor').textContent = '1';
       const orto = vy3d.ortofoto();
       $('vy3d-orto').hidden = orto == null;
       $('vy3d-orto').setAttribute('aria-pressed', String(!!orto));
+      ritaLager3d();
     } catch (e) {
       console.error(e);
       $('vy3d-yta').textContent = '3D-vyn kunde inte öppnas: ' + e.message;
@@ -2537,6 +2612,28 @@
   const stang3d = () => { $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen'); if (vy3d) { vy3d.stang(); vy3d = null; } $('visa-3d').focus(); };
   $('vy3d-stang').addEventListener('click', stang3d);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('vy3d').hidden) stang3d(); });
+  /** En knapp per lager som finns i 3D-vyn, i samma ordning varje gång. Valen sparas så länge fliken är öppen. */
+  const LAGER3D = [['kurvor', 'Höjdkurvor'], ['trad', 'Träd'], ['byggnader', 'Byggnader'], ['fastigheter', 'Fastighetsgränser'], ['vagar', 'Vägar'], ['skiss', 'Skiss']];
+  function ritaLager3d() {
+    const rad = $('vy3d-lager'), finns = vy3d.lager(), dolda = lager.las('sessionStorage', 'terrang-3d-dolda') || [];
+    rad.querySelectorAll('[data-lager3d]').forEach(b => b.remove());
+    for (const [namn, text] of LAGER3D) {
+      if (!(namn in finns)) continue;
+      const pa = !dolda.includes(namn);
+      vy3d.visaLager(namn, pa);
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'knapp liten'; b.dataset.lager3d = namn; b.textContent = text;
+      b.setAttribute('aria-pressed', String(pa));
+      b.addEventListener('click', () => {
+        const nu = vy3d.visaLager(namn, !vy3d.visaLager(namn));
+        b.setAttribute('aria-pressed', String(nu));
+        const d = (lager.las('sessionStorage', 'terrang-3d-dolda') || []).filter(n => n !== namn);
+        if (!nu) d.push(namn);
+        lager.spara('sessionStorage', 'terrang-3d-dolda', d);
+      });
+      rad.append(b);
+    }
+  }
   $('vy3d-orto').addEventListener('click', () => {
     if (!vy3d) return;
     const pa = vy3d.ortofoto(!vy3d.ortofoto());

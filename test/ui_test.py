@@ -6,7 +6,8 @@ Gränssnittstest för hela flödet mot testservern (test/server.py) med Playwrig
 
 Testar: rita och ändra utsnitt, sektioner med 90° och Shift, val i alla fyra steg,
 DXF-skiss, inloggning, Skapa med alla tillval och platsanalys, zip, utskrift,
-3D-vyn med ortofoto, projektlänk och utbytet med en låtsas-cad-apa (test/cad-apa-mock.html).
+3D-vyn med ortofoto och lager, projektlänk, utbytet med en låtsas-cad-apa (test/cad-apa-mock.html),
+BETA-knappen med formuläret Skicka synpunkter (synpunkter.php fångas upp) och dialogen Klistra in koordinater.
 """
 import zipfile, io, re, sys, json, os
 from playwright.sync_api import sync_playwright
@@ -38,8 +39,24 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: logg.append(f'PAGEERROR: {e}'))
     ctx.add_init_script(INIT)
     ctx.route(re.compile(r'https://.*(openstreetmap|opentopomap|arcgis).*'), lambda r: r.abort())
+    synpunkt = []
+    def fanga(route):
+        synpunkt.append(json.loads(route.request.post_data))
+        route.fulfill(status=200, content_type='application/json', body='{"ok":true}')
+    ctx.route(re.compile(r'.*/synpunkter\.php$'), fanga)
     pg.goto(APP); pg.wait_for_timeout(700)
     pg.screenshot(path=f'{UT}/01_start.png')
+
+    # BETA-knappen och Skicka synpunkter
+    print('beta:', pg.locator('.beta-knapp').inner_text().replace('\n', ' | '))
+    pg.click('.beta-knapp'); pg.wait_for_timeout(300)
+    pg.fill('#sp-text', 'Testsynpunkt från gränssnittstestet.')
+    pg.screenshot(path=f'{UT}/00_synpunkter.png')
+    pg.wait_for_timeout(3000)
+    pg.click('.sp-skicka'); pg.wait_for_timeout(500)
+    print('synpunkt:', pg.locator('.sp-status').inner_text(), '|', {k: v for k, v in (synpunkt[0] if synpunkt else {}).items() if k != 'elapsed'})
+    pg.wait_for_timeout(1500)
+    print('  dialogen stängd:', not pg.locator('dialog.synpunkter').is_visible())
 
     # 01 Plats
     pg.click('#rita')
@@ -51,6 +68,17 @@ with sync_playwright() as p:
     for k, v in dict(xmin=c[0] - 150, xmax=c[0] + 150, ymin=c[1] - 100, ymax=c[1] + 100).items():
         pg.fill('#' + k, str(round(v))); pg.dispatch_event('#' + k, 'change')
     pg.wait_for_timeout(1500)
+    # Klistra in koordinater: samma hörn i 15 00 utan system i texten; dialogen ska föreslå 15 00 (Kinda)
+    pg.select_option('#zon', '3006')
+    pg.evaluate(f"navigator.clipboard.writeText('Väst {round(c[0] - 150)}\\nÖst {round(c[0] + 150)}\\nSyd {round(c[1] - 100)}\\nNord {round(c[1] + 100)}')")
+    pg.click('#koord-klistra'); pg.wait_for_timeout(400)
+    print('koordinatdialog:', pg.input_value('#kd-zon'), pg.locator('#kd-kommun option:checked').inner_text(), '|', pg.locator('#kd-tolkat').inner_text(), '|', pg.locator('#kd-kontroll').inner_text())
+    pg.screenshot(path=f'{UT}/01b_koordinater.png')
+    pg.select_option('#kd-zon', '3011'); pg.wait_for_timeout(100)
+    print('  i 18 00:', pg.locator('#kd-kontroll').inner_text())
+    pg.select_option('#kd-kommun', label='Kinda'); pg.wait_for_timeout(100)
+    pg.click('#kd-ok'); pg.wait_for_timeout(1500)
+    print('  använt:', pg.input_value('#zon'), [pg.input_value('#' + k) for k in ('xmin', 'xmax', 'ymin', 'ymax')], '|', pg.locator('#koord-status').inner_text())
     h = pg.locator('.handtag-wrap').nth(3).bounding_box()
     hx, hy = h['x'] + h['width'] / 2, h['y'] + h['height'] / 2
     pg.mouse.move(hx, hy); pg.mouse.down(); pg.mouse.move(hx + 25, hy, steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
@@ -125,6 +153,12 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{UT}/06_3d.png')
     print('3d:', pg.locator('#vy3d-yta canvas').count(), 'canvas', pg.locator('#vy3d-yta').inner_text()[:100],
           '| ortofoto', 'av' if pg.locator('#vy3d-orto').is_hidden() else pg.get_attribute('#vy3d-orto', 'aria-pressed'))
+    print('  lager i 3D:', [(e.inner_text(), e.get_attribute('aria-pressed')) for e in pg.locator('#vy3d-lager button:visible').all()])
+    for namn in ('trad', 'byggnader'):
+        if pg.locator(f'[data-lager3d={namn}]').count(): pg.click(f'[data-lager3d={namn}]')
+    pg.wait_for_timeout(800); pg.screenshot(path=f'{UT}/06c_3d_utan_trad_och_hus.png')
+    for namn in ('trad', 'byggnader'):
+        if pg.locator(f'[data-lager3d={namn}]').count(): pg.click(f'[data-lager3d={namn}]')
     if pg.locator('#vy3d-orto').is_visible():
         pg.click('#vy3d-orto'); pg.wait_for_timeout(800); pg.screenshot(path=f'{UT}/06b_3d_utan_orto.png')
         print('  ortofoto efter klick:', pg.get_attribute('#vy3d-orto', 'aria-pressed'))

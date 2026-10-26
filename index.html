@@ -7,6 +7,7 @@
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
   <script src="js/version.js"></script>
   <script src="js/tema.js"></script>
+  <script src="js/synpunkter.js" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="app.css">
@@ -30,7 +31,7 @@
           <button type="button" role="menuitemradio" data-val="mork" aria-checked="false">MÖRKT</button>
         </div>
       </div>
-      <div class="cell"><span class="blad">STATUS</span><span class="beta">BETA</span></div>
+      <button type="button" class="cell beta-knapp" data-synpunkter aria-haspopup="dialog" title="Höjdkurvor är en betaversion. Skicka synpunkter"><span class="beta">BETA <span class="hk-version"></span></span><span class="under">SKICKA SYNPUNKTER</span></button>
     </nav>
   </header>
 
@@ -107,11 +108,7 @@
             </div>
             <div class="knapprad koord-knappar">
               <button type="button" class="knapp liten" id="koord-kopiera" hidden>Kopiera</button>
-              <button type="button" class="knapp liten" id="koord-klistra">Klistra in koordinater</button>
-            </div>
-            <div id="koord-inklistring" hidden>
-              <label for="koord-text">Klistra in här</label>
-              <textarea id="koord-text" rows="3" spellcheck="false" placeholder="Väst, öst, syd och nord, till exempel kopierade från ett annat projekt"></textarea>
+              <button type="button" class="knapp liten" id="koord-klistra" aria-haspopup="dialog">Klistra in koordinater</button>
             </div>
             <p class="hjalp" id="koord-status" aria-live="polite"></p>
             <label for="projekt">Projekt eller fastighet</label>
@@ -281,7 +278,7 @@
             </div>
             <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="fastigheter"> Fastighetsgränser</label>
-              <p class="hjalp">Gränser, gränspunkter och fastighetsbeteckningar som DXF, och en lista över fastigheterna som utsnittet berör. Gränserna är inte inmätta och kan avvika flera meter. Kräver beställd <em>Fastighetsindelning Nedladdning, vektor</em>.</p>
+              <p class="hjalp">Gränser, gränspunkter och fastighetsbeteckningar som DXF, och en lista över fastigheterna som utsnittet berör. Följer med till cad-apa. Gränserna är inte inmätta och kan avvika flera meter. Kräver beställd <em>Fastighetsindelning Nedladdning, vektor</em>.</p>
             </div>
             <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="stompunkter"> Stompunkter</label>
@@ -414,13 +411,29 @@
           <details class="resultat-detaljer"><summary>Sammanfattning</summary><dl class="sammanfattning" id="sammanfattning"></dl></details>
           <p class="lokalt">Spara filerna lokalt, inte i molnet. <a href="instruktioner.html#datan">Varför?</a> · <button type="button" class="lank-knapp" id="spara-platsfil">Spara platsfil för cad-apa</button></p>
         </div>
-        <p class="fot-lankar"><button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button></p>
+        <p class="fot-lankar"><button type="button" class="lank-knapp" data-synpunkter>Skicka synpunkter</button> · <button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button></p>
       </div>
     </aside>
   </div>
 
+  <dialog class="koorddialog" id="koorddialog" aria-labelledby="kd-rubrik">
+    <form method="dialog" novalidate>
+      <div class="sp-huvud"><h2 id="kd-rubrik">Klistra in koordinater</h2><button type="button" class="sp-stang" data-kd-avbryt aria-label="Stäng">×</button></div>
+      <label for="kd-text">Koordinater</label>
+      <textarea id="kd-text" rows="4" spellcheck="false" placeholder="Väst, öst, syd och nord i valfri ordning, till exempel kopierade från ett annat projekt"></textarea>
+      <p class="hjalp" id="kd-tolkat" aria-live="polite">Klistra in med Ctrl+V (Cmd+V på Mac). Två östvärden och två nordvärden behövs.</p>
+      <label for="kd-kommun">Kommun</label>
+      <select id="kd-kommun"><option value="">Välj kommun</option></select>
+      <label for="kd-zon">Koordinatsystem</label>
+      <select id="kd-zon"></select>
+      <p class="hjalp" id="kd-kontroll" aria-live="polite"></p>
+      <div class="knapprad sp-knappar"><button type="button" class="knapp liten" data-kd-avbryt>Avbryt</button><button type="submit" class="knapp liten kd-ok" id="kd-ok" disabled>Använd koordinaterna</button></div>
+    </form>
+  </dialog>
+
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
-    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button></div>
+    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
+      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button></div></div>
     <div class="vy3d-yta" id="vy3d-yta"></div>
   </div>
 

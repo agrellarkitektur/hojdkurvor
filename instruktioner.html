@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – höjdkurvor.se</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
+  <script src="js/version.js"></script>
   <script src="js/tema.js"></script>
+  <script src="js/synpunkter.js" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="app.css">
 </head>
@@ -28,7 +30,7 @@
           <button type="button" role="menuitemradio" data-val="mork" aria-checked="false">MÖRKT</button>
         </div>
       </div>
-      <div class="cell"><span class="blad">STATUS</span><span class="beta">BETA</span></div>
+      <button type="button" class="cell beta-knapp" data-synpunkter aria-haspopup="dialog" title="Höjdkurvor är en betaversion. Skicka synpunkter"><span class="beta">BETA <span class="hk-version"></span></span><span class="under">SKICKA SYNPUNKTER</span></button>
     </nav>
   </header>
 
@@ -113,7 +115,7 @@
           <li>Välj <em>Skapa</em>. Allt hämtas och räknas i din webbläsare. Stora områden och många tillval tar längre tid. Kontrollera resultatet på kartan och ladda ner zip-filen.</li>
         </ol>
         <dl class="par">
-          <dt>Kopiera område</dt><dd>Med <em>Kopiera</em> och <em>Klistra in</em> under Område flyttar du hörnens koordinater, till exempel mellan två projekt eller till en beställning.</dd>
+          <dt>Kopiera område</dt><dd>Med <em>Kopiera</em> och <em>Klistra in koordinater</em> under Område flyttar du hörnens koordinater, till exempel mellan två projekt eller till en beställning. <em>Klistra in koordinater</em> öppnar en ruta där du klistrar in väst, öst, syd och nord och väljer kommun och koordinatsystem. Rutan visar vilken kommun området hamnar i med det valda systemet, så att du ser direkt om koordinaterna hör till ett annat.</dd>
           <dt>Projektlänk</dt><dd><em>Kopiera projektlänk</em> i steg 01 ger en länk med området och alla val, men utan inloggning. Spara den i projektmappen eller skicka den till en kollega för att skapa samma underlag igen.</dd>
           <dt>Nollpunkt</dt><dd>Hårkorset i ringen är den lokala nollpunkten, normalt utsnittets sydvästra hörn. Du kan ange en egen under Nollpunkt och vridning.</dd>
           <dt>Höjdpunkter</dt><dd>Under Terräng kan du få höjdpunkter med höjdtext i ett rutnät på 5, 10 eller 20 m, som DXF.</dd>
@@ -143,7 +145,8 @@
           <li><strong>Ändra i listan.</strong> Golvnivå i RH 2000 (tomt betyder marken vid husets mitt), höjd till takfot, takform och taklutning.</li>
         </ul>
         <p>Stoppar webbläsaren den nya fliken: tillåt popup-fönster för sidan, eller välj <em>Spara platsfil för cad-apa</em> och öppna filen i cad-apa.</p>
-        <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen, träden, byggnaderna och volymerna. Har du valt ortofoto ligger det på terrängen; knappen <em>Ortofoto</em> slår av och på det. Dra för att snurra och scrolla eller nyp för att zooma.</p>
+        <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen med det du har skapat: höjdkurvor, träd, byggnader, fastighetsgränser, vägar och volymerna. Byggnader utan höjd ur laserdatan visas som fotavtryck på marken. Har du valt ortofoto ligger det på terrängen. Knapparna överst slår av och på varje lager. Dra för att snurra och scrolla eller nyp för att zooma.</p>
+        <p>Till cad-apa följer terrängen, kurvorna, träden, vägarna, stompunkterna, de befintliga byggnaderna och fastighetsgränserna med, om du har valt dem.</p>
       </section>
 
       <section id="kartan">
@@ -190,6 +193,7 @@
           <div><dt><strong>Området är för stort</strong></dt><dd>Rita ett mindre utsnitt eller välj färre tillval. Analyserna med laserdata klarar högst 6 km².</dd></div>
           <div><dt><strong>Kunde inte nå Lantmäteriet</strong></dt><dd>Kontrollera internetanslutningen. Vissa företagsnätverk spärrar anrop till Lantmäteriets servrar. Prova då från ett annat nätverk.</dd></div>
           <div><dt><strong>Skydd och risker kunde inte hämtas</strong></dt><dd>Myndigheternas tjänster är ibland nere. Platsanalysen skapas ändå, och bladet visar vad som inte gick att kontrollera. Prova igen senare.</dd></div>
+          <div><dt><strong>Synpunkter</strong></dt><dd>Tryck på <em>Beta – Skicka synpunkter</em> uppe till höger, på vilken sida som helst. Skriv vad som fungerar, vad som saknas eller vad som blir fel. Synpunkten skickas anonymt; fyll i e-post bara om du vill ha svar.</dd></div>
           <div><dt><strong>Något annat</strong></dt><dd>Höjdkurvor är en betatjänst och allt fungerar inte alltid. Välj <em>Rapportera ett fel</em> nederst i panelen på kartsidan. Då öppnas ett mejl med version, webbläsare och de senaste felmeddelandena ifyllda. Beskriv vad du gjorde och skicka. Du kan också skriva direkt till <a href="mailto:kontakt@agrellarkitektur.se">kontakt@agrellarkitektur.se</a>.</dd></div>
         </dl>
       </section>

@@ -1,5 +1,6 @@
 /*
- * 3D-förhandsvisning av utsnittet: terrängen (med ortofoto om det finns), träden, befintliga byggnader och skissade volymer.
+ * 3D-förhandsvisning av utsnittet: terrängen (med ortofoto om det finns), höjdkurvor, träd, befintliga byggnader,
+ * fastighetsgränser, vägar och skissade volymer. Varje lager kan slås av och på (0.7.0).
  * three.js (vendor/three/three.module.min.js) laddas först när vyn öppnas.
  * Egen enkel styrning: dra för att snurra, scrolla eller nyp för att zooma.
  */
@@ -26,6 +27,32 @@
     let faktor = 1;
     const grupp = new THREE.Group();
     scen.add(grupp);
+    // lager som kan slås av och på: namn → grupp
+    const lager = {};
+    const nyttLager = namn => { const l = new THREE.Group(); l.name = namn; grupp.add(l); lager[namn] = l; return l; };
+    /** Markhöjden i (x, y) ur rutnätet, bilinjärt. */
+    const markZ = (x, y) => {
+      const fi = Math.max(0, Math.min(g.W - 1.001, (x - g.x0) / g.s)), fj = Math.max(0, Math.min(g.H - 1.001, (g.y1 - y) / g.s));
+      const i = Math.floor(fi), j = Math.floor(fj), u = fi - i, v = fj - j;
+      const z = (a, b) => { const q = g.z[b * g.W + a]; return q === q ? q : zmin; };
+      return (z(i, j) * (1 - u) + z(i + 1, j) * u) * (1 - v) + (z(i, j + 1) * (1 - u) + z(i + 1, j + 1) * u) * v;
+    };
+    /** Linjer draperade på marken (tätare punkter än rutnätet), lyfta lyft meter. */
+    const draperade = (linjer, farg, lyft) => {
+      const p = [], steg = Math.max(0.5, g.s);
+      for (const pts of linjer) for (let n = 0; n + 1 < pts.length; n++) {
+        const [xa, ya] = pts[n], [xb, yb] = pts[n + 1];
+        const delar = Math.max(1, Math.ceil(Math.hypot(xb - xa, yb - ya) / steg));
+        for (let d = 0; d < delar; d++) {
+          const t0 = d / delar, t1 = (d + 1) / delar;
+          const x0 = xa + (xb - xa) * t0, y0 = ya + (yb - ya) * t0, x1 = xa + (xb - xa) * t1, y1 = ya + (yb - ya) * t1;
+          p.push(x0 - cx, markZ(x0, y0) - zmin + lyft, -(y0 - cy), x1 - cx, markZ(x1, y1) - zmin + lyft, -(y1 - cy));
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+      return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: farg }));
+    };
 
     // terräng: glesa till högst ~250 000 noder
     let k = 1;
@@ -97,23 +124,42 @@
         m.compose(new THREE.Vector3(t.x - cx, b + (h - kr * 0.6) / 2, -(t.y - cy)), new THREE.Quaternion(), new THREE.Vector3(1, Math.max(0.5, h - kr * 0.6), 1));
         stam.setMatrixAt(i, m);
       });
-      grupp.add(krona, stam);
+      nyttLager('trad').add(krona, stam);
     }
 
-    // befintliga byggnader: lådor till höjden ur laserdatan
-    if (data.befintliga && data.befintliga.length) {
+    // höjdkurvor på sin egen höjd, lite ovanför marken så att de syns
+    if (data.kurvor && data.kurvor.length) {
+      const p = [];
+      for (const k of data.kurvor) {
+        const pts = k.sluten ? k.pts.concat([k.pts[0]]) : k.pts, y = (k.h != null ? k.h : k.z) - zmin + 0.05;
+        for (let n = 0; n + 1 < pts.length; n++) p.push(pts[n][0] - cx, y, -(pts[n][1] - cy), pts[n + 1][0] - cx, y, -(pts[n + 1][1] - cy));
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+      nyttLager('kurvor').add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: data.kurva || '#8f4f22' })));
+    }
+
+    // fastighetsgränser och vägar draperade på marken
+    if (data.fastigheter && data.fastigheter.length) nyttLager('fastigheter').add(draperade(data.fastigheter, data.fastighet || '#b0306a', 0.25));
+    if (data.vagar && data.vagar.length) nyttLager('vagar').add(draperade(data.vagar, data.vag || '#6b6258', 0.15));
+
+    // befintliga byggnader: lådor till höjden ur laserdatan, fotavtryck på marken för dem utan höjd
+    if ((data.befintliga && data.befintliga.length) || (data.fotavtryck && data.fotavtryck.length)) {
+      const l = nyttLager('byggnader');
       const mat = new THREE.MeshLambertMaterial({ color: data.befintlig || '#b9b3aa' });
-      data.befintliga.forEach(v => {
+      (data.befintliga || []).forEach(v => {
         const shape = new THREE.Shape(v.fotavtryck.map(p => new THREE.Vector2(p[0] - cx, p[1] - cy)));
         const g = new THREE.ExtrudeGeometry(shape, { depth: v.takfot, bevelEnabled: false });
         g.rotateX(-Math.PI / 2);
         const mesh = new THREE.Mesh(g, mat);
         mesh.position.y = v.golv - zmin;
-        grupp.add(mesh);
+        l.add(mesh);
       });
+      if (data.fotavtryck && data.fotavtryck.length) l.add(draperade(data.fotavtryck.map(f => f.concat([f[0]])), data.byggnad || '#5b4636', 0.3));
     }
 
     // skissade volymer: väggar till takfot och tak efter takform
+    const skiss = (data.volymer || []).length ? nyttLager('skiss') : null;
     (data.volymer || []).forEach(v => {
       const fp = v.fotavtryck;
       const shape = new THREE.Shape(fp.map(p => new THREE.Vector2(p[0] - cx, p[1] - cy)));
@@ -121,7 +167,7 @@
       vagg.rotateX(-Math.PI / 2);
       const mesh = new THREE.Mesh(vagg, new THREE.MeshLambertMaterial({ color: '#ffffff' }));
       mesh.position.y = v.golv - zmin;
-      grupp.add(mesh);
+      skiss.add(mesh);
       if (v.takform && v.takform !== 'platt' && v.taklutning > 0 && typeof Platsanalys !== 'undefined') {
         const xs = fp.map(p => p[0]), ys = fp.map(p => p[1]), st = 0.5;
         const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
@@ -139,11 +185,11 @@
         }
         const tg = new THREE.BufferGeometry();
         tg.setAttribute('position', new THREE.BufferAttribute(tp, 3)); tg.setIndex(ti); tg.computeVertexNormals();
-        grupp.add(new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ color: data.volym || '#e85528', side: THREE.DoubleSide })));
+        skiss.add(new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ color: data.volym || '#e85528', side: THREE.DoubleSide })));
       } else {
         const tak = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshLambertMaterial({ color: data.volym || '#e85528', side: THREE.DoubleSide }));
         tak.rotateX(-Math.PI / 2); tak.position.y = v.golv + v.takfot - zmin + 0.02;
-        grupp.add(tak);
+        skiss.add(tak);
       }
     });
 
@@ -194,6 +240,10 @@
     return {
       /** Ortofotot på eller av; null om det saknas. */
       ortofoto(pa) { if (!ortoMat) return null; if (pa != null) terrang.material = pa ? ortoMat : markMat; return terrang.material === ortoMat; },
+      /** Lagren som finns i vyn och om de syns: { kurvor: true, … }. */
+      lager() { const ut = {}; for (const n in lager) ut[n] = lager[n].visible; return ut; },
+      /** Slår ett lager av eller på; returnerar om det syns, eller null om det saknas. */
+      visaLager(namn, pa) { const l = lager[namn]; if (!l) return null; if (pa != null) l.visible = !!pa; return l.visible; },
       overdriv(f) { if (f == null) return faktor; faktor = f; grupp.scale.set(1, f, 1); return faktor; },
       stang() {
         aktiv = false;

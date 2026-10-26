@@ -22,12 +22,23 @@ node test/fastighet.test.js
 node test/ortofoto.test.js
 ```
 
+```
+node test/koordinater.test.js
+```
+
+```
+node test/utbyte.test.js
+```
+
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
 på syntetiska rutnät, och byggnader och fastighetsindelning ur låtsasfilerna.
 Ortofototestet prövar urvalet på ett riktigt svar från Lantmäteriets
 bildkatalog (Vimmerby) och läsningen och omritningen till zon 15 00 på
 låtsasortofotona: kontrollinjerna ska hamna rätt, skarven mellan två rutor och
 JPEG med YCbCr ska bli rätt.
+Koordinattestet prövar hur dialogen Klistra in koordinater föreslår
+koordinatsystem mot de riktiga kommungränserna. Utbytestestet bygger
+platspaketet till cad-apa med kurvor och fastighetsgränser ur låtsasfilen.
 Tar några sekunder. Med `BYGGNAD_GPKG=…/byggnad_knKKKK.gpkg` och
 `FASTIGHET_GPKG=…/fastighetsindelning_knKKKK.gpkg` körs samma kontroller
 också på riktiga filer från Lantmäteriet (för Vimmerby centrum, kommun 0884).
@@ -98,9 +109,10 @@ python3 test/ui_test.py test/ut ritning
 python3 test/mobil_test.py test/ut
 ```
 
-`ui_test.py` går igenom hela flödet på en dator: rita och ändra utsnittet,
-alla fyra stegen, DXF-skiss, inloggning, Skapa med alla tillval och
-platsanalysen, zip-filens innehåll, utskrift i skala, 3D-vyn, projektlänken och
+`ui_test.py` går igenom hela flödet på en dator: BETA-knappen och formuläret
+Skicka synpunkter (anropet till `synpunkter.php` fångas upp i testet), rita och
+ändra utsnittet, dialogen Klistra in koordinater, alla fyra stegen, DXF-skiss, inloggning, Skapa med alla tillval och
+platsanalysen, zip-filens innehåll, utskrift i skala, 3D-vyn med lagerknapparna, projektlänken och
 utbytet med en låtsas-cad-apa (`test/cad-apa-mock.html`). Andra argumentet är
 temat: `ritning`, `lugn` eller `mork`. Skärmbilder och zip-filens innehåll
 hamnar i utkatalogen. Ett helt varv tar några minuter.
@@ -109,7 +121,7 @@ hamnar i utkatalogen. Ett helt varv tar några minuter.
 
 Testerna pekar om appens adresser med globala variabler som sätts före sidan
 laddas (`TERRANG_DL_ROT`, `TERRANG_STAC_BAS`, `TERRANG_API_BAS`,
-`TERRANG_OVERPASS`, `TERRANG_GEODATA`, `TERRANG_CADAPA`) och använder
+`TERRANG_OVERPASS`, `TERRANG_GEODATA`, `TERRANG_CADAPA`, `TERRANG_SYNPUNKTER`) och använder
 `window.__punkt` för att räkna om koordinater till skärmpunkter. De påverkar
 inte appen när de inte är satta.
 

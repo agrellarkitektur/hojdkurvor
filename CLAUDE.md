@@ -33,7 +33,8 @@ härnäst och vad som väntar. Skriv om den när sessionen slutar.
   `docs/UTBYTE-CAD-APA.md`.
 - Teman: `html[data-tema]` = `ritning` (Blueprint), `lugn` (Ljust), `mork` (Mörkt).
   Färger som variabler per tema i `app.css`. Ändra alla tre.
-- Menyraden, ritningshuvudet och sidfoten finns i alla fyra HTML-sidor.
+- Menyraden, ritningshuvudet och sidfoten finns i alla fyra HTML-sidor. BETA-knappen
+  och formuläret Skicka synpunkter (`js/synpunkter.js`) laddas på alla fyra.
 - Inga hemligheter i repot. `config.js` ska ha `esriNyckel: ''` och
   `inloggning: null`. Testinloggningen `test` / `hemligt-åäö` finns bara i
   testservern.
@@ -61,6 +62,14 @@ node test/fastighet.test.js
 
 ```
 node test/ortofoto.test.js
+```
+
+```
+node test/koordinater.test.js
+```
+
+```
+node test/utbyte.test.js
 ```
 
 ```
@@ -104,6 +113,15 @@ sedan via `geodata.php`).
 
 Flyttar sidan till en ny domän (höjdkurvor.se) måste Lantmäteriet godkänna den
 för CORS först, se `README.md`.
+
+## Systerprojekt att använda som referens
+
+Carl Augusts andra appar ligger öppet på GitHub och kan läsas (klona med
+`git clone --depth 1`) för att se hur saker redan är lösta, till exempel
+synpunktsformuläret, menyraden och publiceringen. Ändra inget i dem härifrån.
+
+- cad-apa, ritprogrammet: <https://github.com/agrellarkitektur/cad-apa>
+- Sisyfos, tidrapport och projektdagbok: <https://github.com/agrellarkitektur/sisyfos>
 
 ## cad-apa
 

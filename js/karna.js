@@ -59,6 +59,21 @@
     return P()('EPSG:' + fran, 'EPSG:' + till);
   }
 
+  /**
+   * Var en punkt (x öst, y nord) hamnar om den tolkas i varje SWEREF 99-system.
+   * hittaKommun(lon, lat) ger kommunens egenskaper { namn, kod, epsg } eller null.
+   * Returnerar en rad per system: { epsg, lat, lon, kommun, passar }, där passar
+   * betyder att punkten hamnar i en kommun som normalt använder just det systemet.
+   * De lokala zonerna har samma falska östvärde, så fel zon flyttar platsen i öst–väst.
+   */
+  function tolkaZon(x, y, hittaKommun) {
+    return ZONER.map(z => {
+      const [lon, lat] = omvandlare(z.epsg, 4326).forward([x, y]);
+      const kommun = isFinite(lon) && isFinite(lat) && hittaKommun ? hittaKommun(lon, lat) : null;
+      return { epsg: z.epsg, lat, lon, kommun, passar: !!(kommun && kommun.epsg === z.epsg) };
+    });
+  }
+
   /** Latitud och longitud (WGS 84) som text med punkt och fem decimaler, t.ex. "57.66291, 15.85612". */
   function latLonText(epsg, x, y) {
     const [lon, lat] = omvandlare(epsg, 4326).forward([x, y]);
@@ -613,7 +628,7 @@
   }
 
   return {
-    ZONER, zon, registreraZoner, narmasteZon, omvandlare, latLonText, avrunda, kantlinje, rutor,
+    ZONER, zon, registreraZoner, narmasteZon, omvandlare, tolkaZon, latLonText, avrunda, kantlinje, rutor,
     dlUrl, basicAuth, InloggningsFel, provaInloggning, lasHojderGrov, sampla, kurvorForNiva, forenkla, lasHojder, rutnat, utjamna, skapaKurvor,
     kurvlager, dxf, xyz, skapaUnderlag, lokal, tillLokal, lokalRuta, nordpilar,
   };

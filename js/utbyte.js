@@ -32,7 +32,8 @@
 
   /**
    * Bygger ett platspaket. o: { projekt, kommun, projektId, epsg, systemNamn, utsnitt, nollpunkt {x,y,z},
-   *   vridning, sannNord, rutnat {W,H,s,x0,y1,z}, kurvor, trad, vagar, stompunkter, volymer, byggnader, projektlank, kalla }
+   *   vridning, sannNord, rutnat {W,H,s,x0,y1,z}, kurvor, trad, vagar, stompunkter, volymer, byggnader,
+   *   fastigheter { granser, punkter, ytor }, fastighetVarning, projektlank, kalla }
    */
   function platspaket(o) {
     const p = {
@@ -51,7 +52,7 @@
       const g = o.rutnat;
       p.terrang.rutnat = { x0: g.x0, y1: g.y1, s: g.s, W: g.W, H: g.H, z: kodaFloat32(g.z instanceof Float32Array ? g.z : Float32Array.from(g.z)) };
     }
-    if (o.kurvor) p.terrang.kurvor = o.kurvor.map(k => ({ z: avrunda(k.z, 3), lager: k.lager, sluten: !!k.sluten, pts: runda(k.pts) }));
+    if (o.kurvor) p.terrang.kurvor = o.kurvor.map(k => ({ z: avrunda(k.h != null ? k.h : k.z, 3), lager: k.lager, sluten: !!k.sluten, pts: runda(k.pts) }));
     if (o.trad) p.trad = o.trad.map(t => ({ x: avrunda(t.x), y: avrunda(t.y), mark: avrunda(t.zMark != null ? t.zMark : t.mark, 2), hojd: avrunda(t.hojd, 1), krona: avrunda(t.krona, 1) }));
     if (o.vagar) p.vagar = o.vagar.linjer.map(l => ({ typ: l.typ, lager: l.lager, namn: l.namn || '', pts: runda(l.pts) }));
     if (o.stompunkter) p.stompunkter = o.stompunkter.map(s => ({ namn: s.namn || s.id, x: s.x, y: s.y, z: s.z }));
@@ -62,6 +63,17 @@
         fotavtryck: runda(b.fotavtryck), mark: b.mark == null ? null : avrunda(b.mark, 2), hojd: b.hojd == null ? null : avrunda(b.hojd, 1),
       }));
       p.licens = p.licens.replace('Höjddata och laserdata', 'Höjddata, laserdata och byggnader');
+    }
+    if (o.fastigheter && (o.fastigheter.granser.length || o.fastigheter.ytor.length)) {
+      const f = o.fastigheter, osaker = v => (v == null ? null : avrunda(v, 2));
+      p.fastigheter = {
+        granser: f.granser.map(g => ({ typ: g.typ, osakerhet: osaker(g.osakerhet), pts: runda(g.pts) })),
+        punkter: f.punkter.map(q => ({ x: avrunda(q.x), y: avrunda(q.y), typ: q.typ, markering: q.markering || null, osakerhet: osaker(q.osakerhet) })),
+        ytor: f.ytor.map(y => ({ beteckning: y.beteckning, etikett: y.etikett, kommun: y.kommun || '', typ: y.typ,
+          ringar: y.ringar.map(runda), ankare: y.ankare ? [avrunda(y.ankare[0]), avrunda(y.ankare[1])] : null, yta: avrunda(y.yta, 1) })),
+        varning: o.fastighetVarning || '',
+      };
+      p.licens = p.licens.replace(/^(Höjddata[^©]*?) ©/, (m, a) => a.replace(/ och ([^,]+)$/, ', $1') + ' och fastighetsindelning ©');
     }
     return p;
   }

@@ -130,6 +130,29 @@ code { font-family: var(--mono); font-size: .9em; background: var(--nav-on); pad
 .huvudmeny a[aria-current="page"] { background: var(--nav-on); }
 .huvudmeny a[aria-current="page"] .namn { font-weight: 600; }
 .huvudmeny .beta { color: var(--brand); font-size: 14px; letter-spacing: .06em; }
+/* BETA-knappen: version och Skicka synpunkter (0.7.0) */
+.huvudmeny .beta-knapp { font: inherit; text-align: left; background: none; border: 0; cursor: pointer; color: var(--ink); }
+.huvudmeny .beta-knapp:hover, .huvudmeny .beta-knapp:focus-visible { background: var(--nav-on); }
+.huvudmeny .beta-knapp .hk-version { font-weight: 600; }
+.huvudmeny .beta-knapp .under { font-size: 10px; letter-spacing: .12em; color: var(--muted); }
+.huvudmeny .beta-knapp:hover .under { color: var(--brand); }
+
+/* Dialoger: Skicka synpunkter och Klistra in koordinater */
+dialog.synpunkter, dialog.koorddialog { width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 0; color: var(--panel-ink); background: var(--panel-bg); border: 1px solid var(--rule); box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+dialog.synpunkter::backdrop, dialog.koorddialog::backdrop { background: rgba(10, 20, 35, .55); }
+dialog.synpunkter form, dialog.koorddialog form { padding: 18px 22px 20px; }
+.sp-huvud { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule); margin-bottom: 6px; }
+.sp-huvud h2 { margin: 0; font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; }
+.sp-stang { font: inherit; font-size: 22px; line-height: 1; padding: 2px 8px; background: none; border: 0; color: var(--panel-ink); cursor: pointer; }
+.sp-stang:hover { color: var(--brand); }
+dialog.synpunkter textarea, dialog.koorddialog textarea { width: 100%; box-sizing: border-box; }
+dialog.synpunkter input[type=email] { width: 100%; box-sizing: border-box; }
+.sp-falla { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.sp-knappar { justify-content: flex-end; margin-top: 14px; }
+.knapp.sp-skicka, .knapp.kd-ok { background: var(--btn-bg); color: var(--btn-fg); border-color: var(--btn-bg); font-weight: 600; }
+.knapp.sp-skicka:not(:disabled):hover, .knapp.kd-ok:not(:disabled):hover { background: var(--btn-hover); color: var(--btn-fg); border-color: var(--btn-hover); }
+.sp-status:empty { display: none; }
+.sp-status .lank-knapp { margin-left: 4px; }
 
 /* ---------- Kartsidan ---------- */
 .kartsida { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -481,6 +504,8 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .vy3d-huvud h2 { margin: 0; font-family: var(--mono); font-size: 13px; letter-spacing: .14em; font-weight: 500; text-transform: uppercase; }
 .vy3d-huvud .hjalp { margin: 0; flex: 1 1 260px; }
 .vy3d-huvud .knapp.liten { margin: 0; }
+.vy3d-lager { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+.vy3d-lager:empty, .vy3d-lager:not(:has(button:not([hidden]))) { display: none; }
 .vy3d-yta { flex: 1; min-height: 0; position: relative; }
 .vy3d-yta canvas { display: block; }
 body.vy3d-oppen { overflow: hidden; }

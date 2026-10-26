@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Om – höjdkurvor.se</title>
   <meta name="description" content="Höjdkurvor gör Lantmäteriets öppna geodata till underlag som går att rita på. En gratis betatjänst från Agrell Arkitektur.">
+  <script src="js/version.js"></script>
   <script src="js/tema.js"></script>
+  <script src="js/synpunkter.js" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="app.css">
 </head>
@@ -28,7 +30,7 @@
           <button type="button" role="menuitemradio" data-val="mork" aria-checked="false">MÖRKT</button>
         </div>
       </div>
-      <div class="cell"><span class="blad">STATUS</span><span class="beta">BETA</span></div>
+      <button type="button" class="cell beta-knapp" data-synpunkter aria-haspopup="dialog" title="Höjdkurvor är en betaversion. Skicka synpunkter"><span class="beta">BETA <span class="hk-version"></span></span><span class="under">SKICKA SYNPUNKTER</span></button>
     </nav>
   </header>
 
@@ -76,7 +78,7 @@
         <section>
           <h2>Öppen källkod</h2>
           <p>Källkoden finns på <a href="https://github.com/agrellarkitektur/hojdkurvor">GitHub</a> under GNU General Public License, version 3 eller senare. Du får använda, ändra och sprida den, så länge ändrade versioner också delas under samma licens.</p>
-          <p>Höjdkurvor hänger ihop med ritprogrammet cad-apa, också det öppen källkod. Platsen kan skickas till cad-apa för att skissa, och skissen tillbaka hit för nya analyser.</p>
+          <p>Höjdkurvor hänger ihop med ritprogrammet <a href="https://github.com/agrellarkitektur/cad-apa">cad-apa</a>, också det öppen källkod. Platsen kan skickas till cad-apa för att skissa, och skissen tillbaka hit för nya analyser.</p>
         </section>
         <section>
           <h2>Dina uppgifter</h2>
@@ -106,6 +108,7 @@
       <section id="andringar" style="padding-top: 40px; border-top: 1px solid var(--rule)">
         <h2>Ändringar</h2>
         <dl class="par bred">
+          <dt>0.7.0 · 26 okt 2026</dt><dd>Skicka synpunkter direkt från BETA-knappen, anonymt om du vill. Versionsnumret står vid BETA. Klistra in koordinater i en ruta där du väljer kommun och koordinatsystem och ser var området hamnar. 3D-vyn visar också höjdkurvor, fastighetsgränser och vägar, och varje lager kan slås av och på. Fastighetsgränserna följer med till cad-apa. Rättat: kurvornas höjd kom inte med till cad-apa.</dd>
           <dt>0.6.0 · 23 okt 2026</dt><dd>Ortofoto i färg över utsnittet, som bild med världsfil, på kartan, i utskriften och på terrängen i 3D. Befintliga byggnader med typ, ändamål, husnummer och höjd, som DXF och CSV och i 3D, skuggstudien och skyfallet. Fastighetsgränser med beteckningar och en lista över berörda fastigheter. Latitud och longitud för utsnittets mitt. Tydligare knappar under resultatet.</dd>
           <dt>0.5.0 · 18 okt 2026</dt><dd>Panelen i fyra steg: Plats, Underlag, Analys och Skiss. Platsanalysblad i PDF med sol, lutning, skyfall och skydd och risker. Höjdpunkter med höjdtext. Skissade volymer som räknas med i skuggor, horisont och skyfall, från cad-apa eller DXF. Fortsätt rita i cad-apa. 3D-förhandsvisning. Projektlänk. Enklare flöde på mobilen. Felrapport. Källkoden publicerad under GPL. Versionerna numreras från och med nu 0.x så länge tjänsten är i beta; 0.5.0 hette tidigare 5.0.</dd>
           <dt>0.4.2</dt><dd>Temavalet fungerar på iPhone.</dd>

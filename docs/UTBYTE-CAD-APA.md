@@ -123,6 +123,13 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
     { "id": "uuid", "typ": "Bostad", "andamal": ["Småhus friliggande"], "husnummer": "1", "namn": null,
       "fotavtryck": [[x, y], ...], "mark": 115.2, "hojd": 7.8 }
   ],
+  "fastigheter": {        // fastighetsgränser (Fastighetsindelning Nedladdning, vektor), från 0.7.0
+    "granser": [ { "typ": "fastighetsgräns", "osakerhet": 4.5, "pts": [[x, y], ...] } ],
+    "punkter": [ { "x": 0, "y": 0, "typ": "gränspunkt", "markering": "rör", "osakerhet": null } ],
+    "ytor": [ { "beteckning": "Staren 1:2", "etikett": "1:2", "kommun": "Kinda", "typ": "fastighetsområde",
+                "ringar": [[[x, y], ...], [[x, y], ...]], "ankare": [x, y], "yta": 6400 } ],
+    "varning": "Gränserna i fastighetsregistrets karta är inte rättsligt bindande …"
+  },
   "lankar": { "projekt": "https://…/terrang/#p=…" },
   "licens": "Höjddata och laserdata © Lantmäteriet (CC BY 4.0). Vägar © OpenStreetMap-bidragsgivare (ODbL)."
 }
@@ -142,6 +149,17 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   (median inom fotavtrycket), `hojd` höjden över mark i meter ur laserdatan
   (90:e percentilen, platt tak). Båda kan vara `null`. Fotavtrycken är oftast
   inmätta vid takkanten. Program som inte känner till fältet kan hoppa över det.
+- `fastigheter` (från höjdkurvor 0.7.0, version 1 gäller fortfarande): allt är
+  klippt till utsnittet. `granser` är öppna linjer per gränstyp (`typ` som i
+  registret, t.ex. `fastighetsgräns`, `traktgräns`). `osakerhet` är
+  lägesosäkerheten i plan i meter enligt registret, eller `null`; höjdkurvor
+  streckar gränser med mer än 1 m. `punkter` är gränspunkter. `ytor` är
+  fastighetsområdena inom utsnittet: `ringar[0]` är den yttre ringen och
+  resten hål (slutna, utan upprepad första punkt), `etikett` den korta
+  beteckningen att skriva i ytan, `ankare` en punkt inne i ytan att sätta den
+  på (kan vara `null`) och `yta` arean inom utsnittet i m². En fastighet med
+  flera områden har en post per område. `varning` ska visas för användaren:
+  gränserna är inte inmätta och kan avvika flera meter.
 
 ## Skiss (cad-apa → höjdkurvor)
 

@@ -1,23 +1,46 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 23 oktober 2026, 0.6.0 publicerad.
+överlämning; historiken finns i git. Senast: 26 oktober 2026, 0.7.0 publicerad.
 
 ## Läget
 
-- **0.6.0 är publicerad** 23 oktober: `v0.6.0` sammanslagen med `main`, och
-  publicerad med FTP (Publicera på webbhotellet). Första körningen hamnade i
-  fel mapp eftersom `FTP_DIR` saknade `public_html`; rätt värde är
-  `/agrellarkitektur.se/public_html/terrang/`. Den felplacerade mappen kan
-  ligga kvar på servern. Sidan:
-  <https://agrellarkitektur.se/terrang/>. Ingen GitHub-release är gjord för
-  0.6.0; det behövs inte längre för publiceringen.
-- Innehåll i 0.6.0: ortofoto, befintliga byggnader, fastighetsgränser,
-  lat/long, tydligare knappar, gemensam kommunfilshämtning (`js/kommunfil.js`)
-  och FTP-publicering vid push till `main`.
-- **Väntar på Carl August**: hans test på iPhone och Windows mot riktiga data
-  (knapparna, lat/long, byggnader, fastighetsgränser, ortofotot). Det mesta
-  av det nya kan bara provas på den publicerade sidan (Lantmäteriets CORS).
+- **0.7.0 är klar** 26 oktober: byggd på grenen `v0.7.0`, sammanslagen med
+  `main` och publicerad med FTP. Innehåll: BETA-knapp med version och
+  formuläret Skicka synpunkter (`js/synpunkter.js`, `synpunkter.php`),
+  dialogen Klistra in koordinater med kommun och koordinatsystem, lager i
+  3D-vyn (höjdkurvor, fastighetsgränser, vägar, fotavtryck för hus utan höjd),
+  fastighetsgränser i platspaketet till cad-apa, och en rättelse: kurvornas
+  höjd kom med som `null` till cad-apa sedan 0.5.0.
+- **Synpunkterna kräver `feedback-config.php` på servern.** Skriptet letar i
+  mappen ovanför appen (`public_html`) och sedan i `terrang/`. Ligger cad-apas
+  fil redan i `public_html` fungerar det direkt. Kontroll: öppna
+  <https://agrellarkitektur.se/terrang/synpunkter.php> i webbläsaren; det ska
+  svara `"ok":true`. Inte provat mot webbhotellet.
+- **Väntar på Carl August**: test på iPhone och Windows mot riktiga data av
+  både 0.6.0 (byggnader, fastighetsgränser, ortofoto, lat/long) och 0.7.0
+  (synpunktsformuläret skickar och når Gmail, koordinatdialogen, 3D-lagren).
+  Koordinatdialogen läser urklippet direkt; på iPhone kan Chrome fråga om lov
+  eller inte tillåta det, och då klistrar man in i rutan.
+
+## Koordinatdialogen
+
+`Terrang.tolkaZon(x, y, hittaKommun)` prövar utsnittets mitt i alla 13
+system. Ett system "passar" om punkten hamnar i en kommun som normalt använder
+det (`data/kommuner.json`). Alla lokala zoner har samma falska östvärde, så
+fel zon flyttar platsen 0,75–1,5 grader i öst–väst, och det händer att den då
+hamnar i en annan kommun som också passar (Vimmerbys koordinater i 15 00
+passar t.ex. en kommun längre västerut). Dialogen väljer i första hand den
+kommun som redan är vald, sedan den zon som redan är vald, och säger alltid
+vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
+
+## 3D-vyn
+
+`Vy3D.visa` får kurvor, fastighetsgränsernas linjer, vägarnas linjer och
+fotavtryck för byggnader utan höjd. Linjerna draperas på marken med bilinjär
+höjd ur rutnätet (punkter minst var 0,5 m). `vy3d.lager()` och
+`vy3d.visaLager(namn, på)` styr lagren; knapparna byggs i `ritaLager3d` i
+`app.js` och dolda lager sparas i sessionStorage (`terrang-3d-dolda`).
 
 ## Ortofoto (`js/ortofoto.js`)
 
@@ -45,13 +68,13 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 
 ## Nästa session
 
-1. Kontrollera att sidan visar 0.6.0 (Om-sidan eller `js/version.js`). Visar
-   den fortfarande 0.5.0 kan webbläsaren ha cachat; annars titta i loggen för
-   körningen med `gh run view`.
-2. Ta emot hans testresultat och rätta i 0.6.1, på en egen gren som slås ihop
+1. Kontrollera att sidan visar 0.7.0 (BETA-knappen) och att
+   `synpunkter.php` svarar `"ok":true`. Fråga Carl August om ett prov på
+   formuläret kom fram till Gmail.
+2. Ta emot hans testresultat och rätta i 0.7.1, på en egen gren som slås ihop
    med `main` när den är klar.
 3. Sortera Inkorgen i `docs/SYNPUNKTER.md` efter version innan nästa version
-   planeras.
+   planeras, och stäm av sorteringen med honom.
 4. Arbetsflödena varnar för Node 20 (`actions/checkout@v4`, `setup-node@v4`,
    FTP-Deploy-Action). Fungerar än; byt till nyare versioner när de finns.
 
@@ -76,14 +99,18 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 
 - Ortofotot i platsanalysbladets kartor och som underlag i cad-apa.
 - Val av flygår eller upplösning för ortofotot (nu senaste och automatiskt).
-- Fastighetsgränserna i platspaketet till cad-apa (nu bara byggnaderna).
-- Byggnader utan laserdata: höjd saknas; schablon per typ vore möjligt men osäkert.
+- Byggnader utan laserdata: höjd saknas (i 3D syns de som fotavtryck);
+  schablon per typ vore möjligt men osäkert.
+- En enkel skissmodellsbyggare i höjdkurvor (rita i 2D och extrudera), om
+  cad-apa inte behöver skicka tillbaka modeller. Står under Senare i
+  synpunktsfilen.
 - Byggnader i skuggstudien utan laserdata.
 
 ## Kvar sedan tidigare
 
 - **cad-apa har inte byggt sin sida av utbytet än.** Ändra inget i cad-apa
-  härifrån. Fältet `byggnader` är beskrivet i `docs/UTBYTE-CAD-APA.md`.
+  härifrån. Fälten `byggnader` och `fastigheter` är beskrivna i
+  `docs/UTBYTE-CAD-APA.md`.
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller står som KOMMER.
 - Avvaktar enligt Carl August: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC,
   exempelprojekt.
@@ -95,9 +122,13 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 
 ## Testmiljön
 
-GDAL saknas från början. `apt-get install gdal-bin python3-gdal poppler-utils`
-och `python3.12 -m pip install --break-system-packages "numpy<2" "scipy<1.15" copclib`
-behövs för `make_dtm.py`, `make_landskap.py`, `make_vektor.py` och
-`make_orto.py` (kör `make_dtm.py` först); `pip install --break-system-packages
-pyproj playwright pillow` och `python3 -m playwright install --with-deps
-chromium` för testservern och gränssnittstesterna.
+GDAL saknas från början. Kör `apt-get update` först, annars hittas inte
+paketen: `apt-get install gdal-bin python3-gdal poppler-utils`, och
+`python3.12 -m pip install --break-system-packages "numpy<2" "scipy<1.15" copclib`
+för `make_dtm.py`, `make_landskap.py`, `make_vektor.py` och `make_orto.py`
+(kör `make_dtm.py` först). Testservern och gränssnittstesterna körs med
+`python3` (som kan vara en annan version än 3.12):
+`python3 -m pip install --break-system-packages pyproj playwright pillow` och
+`python3 -m playwright install --with-deps chromium`. Kvarvarande 404 i
+gränssnittstestet (`m643_*.tif` för horisonten och `topowebb-3006.gpkg`) är
+kända luckor i testdatan.
