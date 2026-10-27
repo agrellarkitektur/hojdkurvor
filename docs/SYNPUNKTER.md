@@ -7,9 +7,9 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-## 0.8.2 – rättelser
+## Att testa
 
-- (2026-10-27) Test av 0.8.1 godkänt på Windows: IFC importeras i Archicad och hamnar rätt i lokal nolla (SWEREF-filen inte provad), Flytta och skift-dra fungerar, Kurvfärg fungerar. iPhone inte testad än. Carl August kör rättelsen separat.
+- iPhone: dra med två fingrar i 3D-vyn (0.8.0/0.8.1). Windows godkänt 2026-10-27.
 
 ## 0.9.0 – 3D-vyn som studieverktyg
 

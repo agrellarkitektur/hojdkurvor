@@ -1,7 +1,7 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.1 testad, 0.9.0 och 0.10.0 planerade.
+överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.2 publicerad, 0.9.0 och 0.10.0 planerade.
 
 ## Läget
 
@@ -25,8 +25,14 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 - **0.8.1 godkänd på Windows** (Carl August, 27 oktober): IFC importeras i
   Archicad och hamnar rätt i lokal nolla (SWEREF-filen inte provad), Flytta och
   skift-dra i 3D fungerar, Kurvfärg fungerar. iPhone inte testad än.
+- **0.8.2 är klar** 27 oktober (gren `v0.8.2`, sammanslagen med `main`). Bara
+  publiceringen: `actions/checkout@v7`, `setup-node@v7`, `upload-artifact@v7`
+  och `FTP-Deploy-Action@v4.4.0`, alla med Node 24 (varningen om Node 20 i
+  0.8.1). Steget Kontrollera koden installerar PHP om det saknas, eftersom
+  `ubuntu-latest` blir Ubuntu 26 från hösten 2026. Appen är oförändrad utöver
+  versionsnumret. iPhone (två fingrar i 3D) är fortfarande inte testad.
 - **Planen** (stämd av 27 oktober, se `docs/SYNPUNKTER.md`):
-  - 0.8.2: rättelser. Carl August kör den i en egen chatt.
+  - 0.8.2: klar (se nedan).
   - 0.9.0: 3D-vyn som studieverktyg. Skuggor med dag och tid, konturer på
     byggnaderna, färg på befintliga byggnader, low-poly eller realistiska träd
     (low-poly som standard, för iPhone). Öppna frågor nedan.
@@ -112,12 +118,10 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Se efter att steget Kontrollera webbplatsen i publiceringen fortsätter gå
-   igenom (0.8.1, körning 40460173007, var grön och `.htaccess` gav inget
-   500-fel).
-2. 0.8.2 görs i en egen chatt. Arbetsflödena varnar för Node 20
-   (`actions/checkout@v4`, `setup-node@v4`, FTP-Deploy-Action); byt när nyare
-   versioner finns.
+1. Se efter att steget Kontrollera webbplatsen fortsätter gå igenom och att
+   varningen om Node 20 är borta (0.8.2 var första körningen med
+   FTP-Deploy-Action 4.4.0).
+2. Be Carl August testa två fingrar i 3D på iPhone när han hinner.
 3. 0.9.0 på en egen gren när Carl August har svarat på de öppna frågorna.
    Skuggorna tar solens läge ur `js/sol.js`, så att 3D-vyn och skuggstudien i
    PDF:en räknar likadant. Träden är i dag klot och cylindrar

@@ -19,6 +19,9 @@
 # (.github/scripts/kontrollera-webbplatsen.sh). Filer som saknas eller är gamla
 # laddas upp igen med curl, och körningen misslyckas om de ändå inte stämmer.
 # Webbadressen kan ändras med variabeln SIDA_URL (Settings → Variables).
+#
+# Alla actions körs med Node 24 sedan 0.8.2 (checkout@v7, setup-node@v7,
+# FTP-Deploy-Action@v4.4.0). Byt när GitHub varnar för en äldre Node-version.
 
 name: Publicera på webbhotellet
 
@@ -39,15 +42,17 @@ jobs:
   publicera:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Kontrollera koden
         run: |
           for f in js/*.js config.js; do node --check "$f"; done
+          # Ubuntu 26 (ubuntu-latest från hösten 2026) har kanske inte PHP med.
+          command -v php >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q php-cli; }
           for f in *.php; do php -l "$f"; done
 
       - name: Enhetstest
@@ -78,7 +83,7 @@ jobs:
           echo "path=$DIR" >> "$GITHUB_OUTPUT"
 
       - name: Ladda upp till webbhotellet
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}

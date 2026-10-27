@@ -3,6 +3,15 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.8.2 – 2026-10-27
+
+- Publiceringen: `actions/checkout@v7`, `actions/setup-node@v7`,
+  `actions/upload-artifact@v7` och `SamKirkland/FTP-Deploy-Action@v4.4.0`, som
+  alla körs med Node 24. GitHub varnade för att Node 20 tas bort.
+- Kontrollen av PHP-filerna installerar PHP om det saknas, inför att
+  `ubuntu-latest` blir Ubuntu 26.
+- Inga ändringar i appen utöver versionsnumret.
+
 ## 0.8.1 – 2026-10-27
 
 - Rättelse: 0.8.0 kom inte upp helt på webbhotellet. `index.html` och
