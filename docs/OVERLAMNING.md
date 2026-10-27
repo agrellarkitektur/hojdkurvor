@@ -91,8 +91,9 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Se efter i den senaste körningen av Publicera att steget Kontrollera
-   webbplatsen gick igenom, och vad det skrev (laddades något upp igen?).
+1. Publiceringen av 0.8.1 (körning 40460173007) laddade upp allt och steget
+   Kontrollera webbplatsen fann att alla filer stämde; `.htaccess` gav inget
+   500-fel. Se efter att steget fortsätter gå igenom vid nästa version.
 2. Ta emot Carl Augusts test av 0.8.1 och rätta i 0.8.2 på en egen gren.
 3. Sortera Inkorgen i `docs/SYNPUNKTER.md` efter version och stäm av med honom.
    Under 0.9.0 står skuggor med tidpunkt, konturer och färg på byggnader i 3D.
