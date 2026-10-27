@@ -1,7 +1,7 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.1 publicerad.
+överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.1 testad, 0.9.0 och 0.10.0 planerade.
 
 ## Läget
 
@@ -22,10 +22,31 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   *Flytta* i 3D (`vy3d.dragLage`); statusraden säger till när ingen IFC skapas.
 - **Synpunktsformuläret** fungerar: `synpunkter.php` svarar och provet kom
   fram till Gmail (Carl August, 27 oktober).
-- **Väntar på Carl August**: test av 0.8.1 på Windows och iPhone. Särskilt:
-  att zip:en har IFC (med Befintliga byggnader och Höjd ur laserdatan
-  ikryssade), att IFC-filen hamnar rätt i Archicad, Flytta och skift-dra i 3D,
-  Kurvfärg, och två fingrar på iPhone.
+- **0.8.1 godkänd på Windows** (Carl August, 27 oktober): IFC importeras i
+  Archicad och hamnar rätt i lokal nolla (SWEREF-filen inte provad), Flytta och
+  skift-dra i 3D fungerar, Kurvfärg fungerar. iPhone inte testad än.
+- **Planen** (stämd av 27 oktober, se `docs/SYNPUNKTER.md`):
+  - 0.8.2: rättelser. Carl August kör den i en egen chatt.
+  - 0.9.0: 3D-vyn som studieverktyg. Skuggor med dag och tid, konturer på
+    byggnaderna, färg på befintliga byggnader, low-poly eller realistiska träd
+    (low-poly som standard, för iPhone). Öppna frågor nedan.
+  - 0.10.0: rita volymer i Höjdkurvor i steg 04 Skiss. Steget finns redan
+    (volymer från cad-apa eller DXF räknas med i skuggor, horisont och skyfall
+    och syns i 3D); det som saknas är att rita dem. Carl August vill helst
+    kunna sänka takfotens linjer var för sig och få en egen takform, men
+    platta volymer duger att börja med om det är krångligt.
+
+## Öppna frågor för 0.9.0 (ställda 27 oktober)
+
+1. Skuggor: reglage för tid på dagen och val av datum, med snabbval för
+   vårdagjämning, midsommar och vintersolstånd som i skuggstudien? Uppspelning
+   över dagen?
+2. Ska terrängen och träden också kasta skugga, eller bara byggnaderna?
+3. En färg för alla befintliga byggnader, och skissvolymerna i en egen färg?
+4. Konturerna: svarta, eller samma som Kurvfärg?
+
+Föreslaget av Claude, inte beslutat: Spara bild (PNG) av 3D-vyn, vy i
+ögonhöjd från en punkt man klickar på, norrpil i 3D.
 
 ## IFC (`js/ifc.js`)
 
@@ -91,15 +112,16 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Publiceringen av 0.8.1 (körning 40460173007) laddade upp allt och steget
-   Kontrollera webbplatsen fann att alla filer stämde; `.htaccess` gav inget
-   500-fel. Se efter att steget fortsätter gå igenom vid nästa version.
-2. Ta emot Carl Augusts test av 0.8.1 och rätta i 0.8.2 på en egen gren.
-3. Sortera Inkorgen i `docs/SYNPUNKTER.md` efter version och stäm av med honom.
-   Under 0.9.0 står skuggor med tidpunkt, konturer och färg på byggnader i 3D.
-   Skuggorna kan ta solens läge ur `js/sol.js`.
-4. Arbetsflödena varnar för Node 20 (`actions/checkout@v4`, `setup-node@v4`,
-   FTP-Deploy-Action). Fungerar än; byt när nyare versioner finns.
+1. Se efter att steget Kontrollera webbplatsen i publiceringen fortsätter gå
+   igenom (0.8.1, körning 40460173007, var grön och `.htaccess` gav inget
+   500-fel).
+2. 0.8.2 görs i en egen chatt. Arbetsflödena varnar för Node 20
+   (`actions/checkout@v4`, `setup-node@v4`, FTP-Deploy-Action); byt när nyare
+   versioner finns.
+3. 0.9.0 på en egen gren när Carl August har svarat på de öppna frågorna.
+   Skuggorna tar solens läge ur `js/sol.js`, så att 3D-vyn och skuggstudien i
+   PDF:en räknar likadant. Träden är i dag klot och cylindrar
+   (`InstancedMesh` i `vy3d.js`).
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
