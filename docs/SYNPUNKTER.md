@@ -20,6 +20,11 @@ flyttas till CHANGELOG.md.
 - Välja färg på befintliga byggnaders ytor.
 - Går det att växla mellan low-poly och mer realistiska träd i 3D-preview?
 
+### 2026-10-27, export
+
+- Leverera även en 3D-modell för befintliga byggnader i IFC (nått annat format också?).
+- Se till att fastighetsgränser inkluderas i underlaget till cad-apa.
+
 ## 0.7.1 – rättelser
 
 ## 0.8.0 – nya funktioner
