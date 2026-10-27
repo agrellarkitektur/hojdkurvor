@@ -23,15 +23,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Kontrollera koden
         run: |
           for f in js/*.js config.js; do node --check "$f"; done
+          # Ubuntu 26 (ubuntu-latest från hösten 2026) har kanske inte PHP med.
+          command -v php >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q php-cli; }
           for f in *.php; do php -l "$f"; done
 
       - name: Enhetstest
@@ -91,7 +93,7 @@ jobs:
 
       - name: Spara zip-filen på körningen
         if: github.event_name != 'release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hojdkurvor-webbhotell
           path: ${{ steps.zip.outputs.file }}
