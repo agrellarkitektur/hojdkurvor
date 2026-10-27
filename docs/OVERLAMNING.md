@@ -1,27 +1,55 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 26 oktober 2026, 0.7.0 publicerad.
+överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.0 publicerad.
 
 ## Läget
 
-- **0.7.0 är klar** 26 oktober: byggd på grenen `v0.7.0`, sammanslagen med
-  `main` och publicerad med FTP. Innehåll: BETA-knapp med version och
-  formuläret Skicka synpunkter (`js/synpunkter.js`, `synpunkter.php`),
-  dialogen Klistra in koordinater med kommun och koordinatsystem, lager i
-  3D-vyn (höjdkurvor, fastighetsgränser, vägar, fotavtryck för hus utan höjd),
-  fastighetsgränser i platspaketet till cad-apa, och en rättelse: kurvornas
-  höjd kom med som `null` till cad-apa sedan 0.5.0.
-- **Synpunkterna kräver `feedback-config.php` på servern.** Skriptet letar i
-  mappen ovanför appen (`public_html`) och sedan i `terrang/`. Ligger cad-apas
-  fil redan i `public_html` fungerar det direkt. Kontroll: öppna
-  <https://agrellarkitektur.se/terrang/synpunkter.php> i webbläsaren; det ska
-  svara `"ok":true`. Inte provat mot webbhotellet.
+- **0.8.0 är klar** 27 oktober: byggd på grenen `v0.8.0`, sammanslagen med
+  `main` och publicerad med FTP. Carl August bad om "0.7.1 med de nya
+  synpunkterna"; eftersom IFC-exporten är en ny funktion blev numret 0.8.0.
+  Innehåll: IFC4 för befintliga byggnader (`js/ifc.js`), fri panorering i
+  3D-vyn, svarta höjdkurvor i 3D med valbar färg, träd vid byggnader bortrensade
+  (`Byggnad.tradVidByggnader`, marginal 1 m, `TRAD_VID_HUS` i `app.js`) och en
+  påminnelse när fastighetsgränser eller byggnader saknas i platsen till cad-apa.
+- **Fastighetsgränserna till cad-apa** fanns redan i platspaketet sedan 0.7.0,
+  och cad-apa läser dem (`src/core/siteImport.ts`, kontrollerat 27 oktober).
+  De kommer bara med om *Fastighetsgränser* är ikryssat; nu säger statusraden
+  till när de saknas.
+- **Synpunktsformuläret** (0.7.0) kräver `feedback-config.php` på servern.
+  Kontroll: <https://agrellarkitektur.se/terrang/synpunkter.php> ska svara
+  `"ok":true`. Inte bekräftat än.
 - **Väntar på Carl August**: test på iPhone och Windows mot riktiga data av
-  både 0.6.0 (byggnader, fastighetsgränser, ortofoto, lat/long) och 0.7.0
-  (synpunktsformuläret skickar och når Gmail, koordinatdialogen, 3D-lagren).
-  Koordinatdialogen läser urklippet direkt; på iPhone kan Chrome fråga om lov
-  eller inte tillåta det, och då klistrar man in i rutan.
+  0.6.0–0.8.0. Särskilt: att IFC-filen går att sammanfoga i Archicad och hamnar
+  rätt mot höjdkurvorna (lokal fil), panorering med två fingrar på iPhone (WebKit
+  saknas i testmiljön), och att formuläret når Gmail.
+
+## IFC (`js/ifc.js`)
+
+- En IfcBuildingElementProxy per byggnad med höjd, direkt i IfcSite (ingen
+  IfcBuilding). IfcExtrudedAreaSolid från markhöjden (`b.mark − dz`) med
+  djupet `b.hojd`; gårdar blir IfcArbitraryProfileDefWithVoids. Yttre ring
+  moturs, hål medurs. Ett gemensamt grått IfcSurfaceStyle.
+- Egenskaper i `Hojdkurvor_Byggnad`: objektidentitet, typ, ändamål, husnummer,
+  namn, huvudbyggnad, markhöjd (RH 2000), höjd, tak, källa.
+- GlobalId räknas ur `projektId` + lokal/sweref + objektidentitet (cyrb128),
+  så att en ny export ger samma id. IfcSite.RefElevation = Z0 i den lokala filen.
+- Ingen IfcMapConversion än; den lokala filen följer `Terrang.tillLokal` som
+  DXF-filerna. Hus utan höjd hoppas över (räknas i info-filen).
+- Kontrollerat med IfcOpenShell 0.8 (`validate` med EXPRESS-regler: 0 fel,
+  geometrin skapas). Inte provat i Archicad.
+
+## 3D-vyn
+
+`Vy3D.visa` får kurvor, fastighetsgränsernas linjer, vägarnas linjer och
+fotavtryck för byggnader utan höjd. Linjerna draperas på marken med bilinjär
+höjd ur rutnätet (punkter minst var 0,5 m). `vy3d.lager()` och
+`vy3d.visaLager(namn, på)` styr lagren; knapparna byggs i `ritaLager3d` i
+`app.js` och dolda lager sparas i sessionStorage (`terrang-3d-dolda`).
+Sedan 0.8.0: `panorera(dx, dy)` flyttar målpunkten längs marken (högerdra,
+mittenknapp, skift/ctrl-dra, två fingrar), hålls inom utsnittet ± en bredd och
+följer markhöjden; dubbelklick och `aterstall()` går tillbaka. `kurvfarg(hex)`
+byter kurvfärg; valet sparas i localStorage (`terrang-3d-kurvfarg`), förval svart.
 
 ## Koordinatdialogen
 
@@ -33,14 +61,6 @@ hamnar i en annan kommun som också passar (Vimmerbys koordinater i 15 00
 passar t.ex. en kommun längre västerut). Dialogen väljer i första hand den
 kommun som redan är vald, sedan den zon som redan är vald, och säger alltid
 vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
-
-## 3D-vyn
-
-`Vy3D.visa` får kurvor, fastighetsgränsernas linjer, vägarnas linjer och
-fotavtryck för byggnader utan höjd. Linjerna draperas på marken med bilinjär
-höjd ur rutnätet (punkter minst var 0,5 m). `vy3d.lager()` och
-`vy3d.visaLager(namn, på)` styr lagren; knapparna byggs i `ritaLager3d` i
-`app.js` och dolda lager sparas i sessionStorage (`terrang-3d-dolda`).
 
 ## Ortofoto (`js/ortofoto.js`)
 
@@ -68,15 +88,15 @@ höjd ur rutnätet (punkter minst var 0,5 m). `vy3d.lager()` och
 
 ## Nästa session
 
-1. Kontrollera att sidan visar 0.7.0 (BETA-knappen) och att
-   `synpunkter.php` svarar `"ok":true`. Fråga Carl August om ett prov på
-   formuläret kom fram till Gmail.
-2. Ta emot hans testresultat och rätta i 0.7.1, på en egen gren som slås ihop
-   med `main` när den är klar.
-3. Sortera Inkorgen i `docs/SYNPUNKTER.md` efter version innan nästa version
-   planeras, och stäm av sorteringen med honom.
+1. Kontrollera att sidan visar 0.8.0 (BETA-knappen) och fråga Carl August om
+   `synpunkter.php` svarar `"ok":true` och om ett prov kom fram till Gmail.
+2. Ta emot hans testresultat (IFC i Archicad, panorering på iPhone m.m.) och
+   rätta i 0.8.1, på en egen gren.
+3. Sortera Inkorgen i `docs/SYNPUNKTER.md` efter version och stäm av med honom.
+   Under 0.9.0 står skuggor med tidpunkt, konturer och färg på byggnader i 3D.
+   Skuggorna kan ta solens läge ur `js/sol.js`.
 4. Arbetsflödena varnar för Node 20 (`actions/checkout@v4`, `setup-node@v4`,
-   FTP-Deploy-Action). Fungerar än; byt till nyare versioner när de finns.
+   FTP-Deploy-Action). Fungerar än; byt när nyare versioner finns.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
@@ -99,8 +119,10 @@ höjd ur rutnätet (punkter minst var 0,5 m). `vy3d.lager()` och
 
 - Ortofotot i platsanalysbladets kartor och som underlag i cad-apa.
 - Val av flygår eller upplösning för ortofotot (nu senaste och automatiskt).
-- Byggnader utan laserdata: höjd saknas (i 3D syns de som fotavtryck);
-  schablon per typ vore möjligt men osäkert.
+- Byggnader utan laserdata: höjd saknas (i 3D syns de som fotavtryck, i IFC
+  saknas de); schablon per typ vore möjligt men osäkert.
+- IfcMapConversion i IFC-filen, så att den lokala filen också bär sin placering
+  i SWEREF.
 - En enkel skissmodellsbyggare i höjdkurvor (rita i 2D och extrudera), om
   cad-apa inte behöver skicka tillbaka modeller. Står under Senare i
   synpunktsfilen.
@@ -108,12 +130,12 @@ höjd ur rutnätet (punkter minst var 0,5 m). `vy3d.lager()` och
 
 ## Kvar sedan tidigare
 
-- **cad-apa har inte byggt sin sida av utbytet än.** Ändra inget i cad-apa
-  härifrån. Fälten `byggnader` och `fastigheter` är beskrivna i
-  `docs/UTBYTE-CAD-APA.md`.
+- **cad-apa läser platspaketet** (`src/core/siteImport.ts`: terräng, träd,
+  vägar, stompunkter, byggnader och fastighetsgränser), kontrollerat 27 oktober.
+  Ändra inget i cad-apa härifrån. Fälten är beskrivna i `docs/UTBYTE-CAD-APA.md`.
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller står som KOMMER.
-- Avvaktar enligt Carl August: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC,
-  exempelprojekt.
+- Avvaktar enligt Carl August: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för
+  terrängen och skissen, exempelprojekt.
 - Licensvillkoren för Riksantikvarieämbetets och MCF:s data och
   kommungränserna (`data/kommuner.json`) är inte kontrollerade.
 - Myndigheternas tjänster i kapitlet Skydd är bara testade mot låtsassvar.
@@ -131,4 +153,6 @@ för `make_dtm.py`, `make_landskap.py`, `make_vektor.py` och `make_orto.py`
 `python3 -m pip install --break-system-packages pyproj playwright pillow` och
 `python3 -m playwright install --with-deps chromium`. Kvarvarande 404 i
 gränssnittstestet (`m643_*.tif` för horisonten och `topowebb-3006.gpkg`) är
-kända luckor i testdatan.
+kända luckor i testdatan. För att kontrollera IFC: `python3.12 -m pip install
+--break-system-packages ifcopenshell pytest` och `IFC_UT=mapp node test/ifc.test.js`
+(se `test/README.md`).

@@ -505,7 +505,10 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .vy3d-huvud .hjalp { margin: 0; flex: 1 1 260px; }
 .vy3d-huvud .knapp.liten { margin: 0; }
 .vy3d-lager { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
-.vy3d-lager:empty, .vy3d-lager:not(:has(button:not([hidden]))) { display: none; }
+.vy3d-lager:empty, .vy3d-lager:not(:has(button:not([hidden]), label:not([hidden]))) { display: none; }
+.vy3d-farg { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.vy3d-farg[hidden] { display: none; }
+.vy3d-farg input { width: 34px; height: 26px; padding: 0 2px; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); cursor: pointer; }
 .vy3d-yta { flex: 1; min-height: 0; position: relative; }
 .vy3d-yta canvas { display: block; }
 body.vy3d-oppen { overflow: hidden; }

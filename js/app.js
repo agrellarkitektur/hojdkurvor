@@ -144,6 +144,7 @@
     ['lamningar', 'Lämningar (RAÄ)', 'ring', 'sw-lamning', 'a'], ['natur', 'Skyddad natur', 'linje', 'sw-natur', 'a'], ['oversvamning', 'Översvämning', 'yta', 'sw-skyfall', 'a'],
   ];
   const GRUPPER = { u: 'UNDERLAG', a: 'ANALYS', s: 'SKISS' };
+  const TRAD_VID_HUS = 1;   // meter: träd så nära en byggnad räknas som byggnaden
   const UTSKRIVBARA = new Set(['ortofoto', 'kurvor', 'byggnader', 'fastigheter', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
   const resultat = {};
   karta.createPane('ortofotoPane').style.zIndex = 350;      // under kurvor och andra resultat
@@ -1558,6 +1559,14 @@
           filer[`byggnader/${namn}_byggnader_lokal.dxf`] = Byggnad.dxf(bygg, r, X0, Y0, Z0);
           filer[`byggnader/${namn}_byggnader_sweref.dxf`] = Byggnad.dxf(bygg, r, 0, 0, 0);
           filer[`byggnader/${namn}_byggnader.csv`] = Byggnad.csv(bygg, X0, Y0, Z0);
+          // 3D-modell i IFC för byggnader med höjd (0.8.0)
+          const ifcOpt = { projekt: $('projekt').value.trim() || namn, projektId: state.projektId || namn, systemNamn: T.zon(epsg).namn,
+            kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim() };
+          const ifcLokal = Ifc.byggnader(bygg, Object.assign({ dx: X0, dy: Y0, dz: Z0, lokal: true, filnamn: `${namn}_byggnader_lokal.ifc` }, ifcOpt));
+          if (ifcLokal.antal) {
+            filer[`byggnader/${namn}_byggnader_lokal.ifc`] = ifcLokal.text;
+            filer[`byggnader/${namn}_byggnader_sweref.ifc`] = Ifc.byggnader(bygg, Object.assign({ lokal: false, filnamn: `${namn}_byggnader_sweref.ifc` }, ifcOpt)).text;
+          }
           const per = Byggnad.perTyp(bygg);
           extraInfo.push('', 'BEFINTLIGA BYGGNADER',
             '  Källa: Byggnad Nedladdning, vektor. © Lantmäteriet. Bearbetad: utvald och omprojicerad. Licens: CC BY 4.0.',
@@ -1569,7 +1578,13 @@
             pz && val.byggnadshojd
               ? `  Höjd över mark ur laserdata ${laserDatum} (90:e percentilen inom fotavtrycket) för ${medHojd} av ${bygg.length} byggnader. Taken är förenklade till platta.`
               : '  Ingen höjd: laserdata hämtades inte. Markhöjd ur Markhöjdmodell (median inom fotavtrycket).',
-            '  CSV (semikolon): id, typ, ändamål, husnummer, namn, huvudbyggnad, yta, tyngdpunkt, markhöjd och höjd (höjder minus Z0).');
+            '  CSV (semikolon): id, typ, ändamål, husnummer, namn, huvudbyggnad, yta, tyngdpunkt, markhöjd och höjd (höjder minus Z0).',
+            ifcLokal.antal
+              ? `  IFC (IFC4): ${ifcLokal.antal} ${ifcLokal.antal === 1 ? 'byggnad som volym' : 'byggnader som volymer'} från markhöjden till takhöjden, med platta tak och gårdar som hål. Varje hus är ett eget objekt`
+                + ' (IfcBuildingElementProxy) med husnummer, ändamål och höjd i egenskaperna Hojdkurvor_Byggnad. _lokal.ifc har samma nollpunkt, vridning och Z0 som'
+                + ' de lokala DXF-filerna; _sweref.ifc har SWEREF-koordinater och höjder i RH 2000. Samma hus får samma id vid en ny export.'
+                + (ifcLokal.utanHojd ? ` ${ifcLokal.utanHojd} ${ifcLokal.utanHojd === 1 ? 'byggnad' : 'byggnader'} utan höjd är inte med.` : '')
+              : '  IFC: ingen byggnad har höjd, så ingen IFC-fil skapades. Kryssa i Höjd ur laserdatan.');
           sammanExtra.push(['Byggnader', `${bygg.length} st` + (medHojd ? `, ${medHojd} med höjd` : '')]);
           const bstil = () => ({ color: farg('byggnad'), weight: 1.2, fillColor: farg('byggnad'), fillOpacity: 0.35 });
           const bgrp = L.featureGroup(bygg.map(b => L.polygon([b.fotavtryck.map(tt), ...b.hal.map(h => h.map(tt))], bstil())
@@ -1592,7 +1607,9 @@
           const iUtsnitt = t => t.x >= r.xmin && t.x <= r.xmax && t.y >= r.ymin && t.y <= r.ymax;
           if (val.trad && pz) {
             delFramsteg('analys', 0.1, 'Söker träd');
-            const trad = Analys.hittaTrad(y, pz).filter(iUtsnitt);
+            const hittade = Analys.hittaTrad(y, pz).filter(iUtsnitt);
+            // träd på eller precis vid en byggnad är oftast takkanten, inte ett träd (0.8.0)
+            const { kvar: trad, borttagna: tradVidHus } = Byggnad.tradVidByggnader(hittade, senaste.byggnader, TRAD_VID_HUS);
             senaste.trad = trad;
             filer[`trad/${namn}_trad_lokal.dxf`] = Analys.dxfTrad(trad, r, X0, Y0, Z0);
             filer[`trad/${namn}_trad_sweref.dxf`] = Analys.dxfTrad(trad, r, 0, 0, 0);
@@ -1600,6 +1617,11 @@
             extraInfo.push('', 'TRÄD',
               `  ${trad.length} träd med höjd minst 3 m, hittade som toppar i höjd över mark (laserdata ${laserDatum}).`,
               '  Toppar utan markträffar under kronan räknas som tak och är borttagna. I tät skog hittas inte alla träd.',
+              senaste.byggnader
+                ? (tradVidHus.length
+                  ? `  ${tradVidHus.length} ${tradVidHus.length === 1 ? 'topp' : 'toppar'} på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad ${tradVidHus.length === 1 ? 'är borttagen' : 'är borttagna'}, eftersom det oftast är byggnaden som är inmätt.`
+                  : `  Ingen topp låg på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad.`)
+                : '  Kryssa i Befintliga byggnader för att också ta bort toppar som ligger på eller precis vid en byggnad.',
               '  DXF-lager: TRAD_KRONA (cirkel på toppens höjd), TRAD_STAM (punkt på marken), TRAD_TEXT (höjd).',
               '  CSV: id;x;y;x_lokal;y_lokal;markhojd;tradhojd_m;topphojd;kronbredd_m (höjder minus Z0).');
             sammanExtra.push(['Träd', `${fmt(trad.length)} st`]);
@@ -2410,13 +2432,20 @@
       volymer: state.volymer, byggnader: s && s.byggnader, fastigheter: s && s.fastigheter, fastighetVarning: Fastighet.VARNING, projektlank: projektlank(), kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
     });
   }
+  /** Påminnelse om fastighetsgränser och byggnader som inte kom med, eftersom de inte var ikryssade (0.8.0). */
+  function saknasTillCadApa() {
+    const s = state.senaste;
+    if (!s) return '';
+    const saknas = [!s.fastigheter && 'Fastighetsgränser', !s.byggnader && 'Befintliga byggnader'].filter(Boolean);
+    return saknas.length ? ` ${saknas.join(' och ')} kom inte med. Kryssa i dem och skapa underlaget igen om du vill ha med dem.` : '';
+  }
   async function tillCadApa(statusEl) {
     if (!state.utsnitt) { statusEl.textContent = 'Välj ett område först.'; return; }
     const paket = platspaket();
     statusEl.textContent = state.senaste ? 'Öppnar cad-apa …' : 'Öppnar cad-apa med platsen. Terrängen följer med när du har skapat underlaget.';
     try {
       const svar = await Utbyte.skickaTillCadApa(CADAPA, paket);
-      statusEl.textContent = svar === 'mottaget' ? 'Platsen är öppnad i cad-apa.' : 'Platsen är skickad till cad-apa.';
+      statusEl.textContent = (svar === 'mottaget' ? 'Platsen är öppnad i cad-apa.' : 'Platsen är skickad till cad-apa.') + saknasTillCadApa();
     } catch (e) { statusEl.textContent = 'cad-apa: ' + e.message; }
   }
   $('skiss-cadapa').addEventListener('click', () => tillCadApa($('skiss-status')));
@@ -2595,7 +2624,7 @@
       vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null,
         fotavtryck: s.byggnader ? s.byggnader.filter(b => b.hojd == null).map(b => b.fotavtryck) : null,
         kurvor: s.kurvor, fastigheter: s.fastigheter ? s.fastigheter.granser.map(g => g.pts) : null, vagar: s.vagar ? s.vagar.linjer.map(l => l.pts) : null,
-        kurva: farg('kurva'), fastighet: farg('fastighet'), vag: farg('vag'), byggnad: farg('byggnad'),
+        kurva: kurvfarg3d(), fastighet: farg('fastighet'), vag: farg('vag'), byggnad: farg('byggnad'),
         bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
         ortofoto: s.ortofoto ? { canvas: s.ortofoto.canvas, x0: s.ortofoto.x0 - s.ortofoto.s / 2, y1: s.ortofoto.y1 + s.ortofoto.s / 2, bredd: s.ortofoto.W * s.ortofoto.s, hojd: s.ortofoto.H * s.ortofoto.s } : null });
       $('vy3d-faktor').textContent = '1';
@@ -2603,6 +2632,8 @@
       $('vy3d-orto').hidden = orto == null;
       $('vy3d-orto').setAttribute('aria-pressed', String(!!orto));
       ritaLager3d();
+      $('vy3d-kurvfarg-rad').hidden = vy3d.kurvfarg() == null;
+      $('vy3d-kurvfarg').value = kurvfarg3d();
     } catch (e) {
       console.error(e);
       $('vy3d-yta').textContent = '3D-vyn kunde inte öppnas: ' + e.message;
@@ -2633,12 +2664,24 @@
       });
       rad.append(b);
     }
+    rad.append($('vy3d-kurvfarg-rad'));   // färgvalet sist i raden
   }
   $('vy3d-orto').addEventListener('click', () => {
     if (!vy3d) return;
     const pa = vy3d.ortofoto(!vy3d.ortofoto());
     $('vy3d-orto').setAttribute('aria-pressed', String(!!pa));
   });
+  /** Höjdkurvornas färg i 3D-vyn: svart om inget annat är valt. Valet sparas i webbläsaren. */
+  function kurvfarg3d() {
+    const c = lager.las('localStorage', 'terrang-3d-kurvfarg');
+    return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : '#000000';
+  }
+  $('vy3d-kurvfarg').addEventListener('input', e => {
+    if (!vy3d) return;
+    vy3d.kurvfarg(e.target.value);
+    lager.spara('localStorage', 'terrang-3d-kurvfarg', e.target.value);
+  });
+  $('vy3d-aterstall').addEventListener('click', () => { if (vy3d) vy3d.aterstall(); });
   $('vy3d-overdriv').addEventListener('click', () => {
     if (!vy3d) return;
     const f = vy3d.overdriv() === 1 ? 2 : 1;

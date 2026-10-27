@@ -145,8 +145,8 @@
           <li><strong>Ändra i listan.</strong> Golvnivå i RH 2000 (tomt betyder marken vid husets mitt), höjd till takfot, takform och taklutning.</li>
         </ul>
         <p>Stoppar webbläsaren den nya fliken: tillåt popup-fönster för sidan, eller välj <em>Spara platsfil för cad-apa</em> och öppna filen i cad-apa.</p>
-        <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen med det du har skapat: höjdkurvor, träd, byggnader, fastighetsgränser, vägar och volymerna. Byggnader utan höjd ur laserdatan visas som fotavtryck på marken. Har du valt ortofoto ligger det på terrängen. Knapparna överst slår av och på varje lager. Dra för att snurra och scrolla eller nyp för att zooma.</p>
-        <p>Till cad-apa följer terrängen, kurvorna, träden, vägarna, stompunkterna, de befintliga byggnaderna och fastighetsgränserna med, om du har valt dem.</p>
+        <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen med det du har skapat: höjdkurvor, träd, byggnader, fastighetsgränser, vägar och volymerna. Byggnader utan höjd ur laserdatan visas som fotavtryck på marken. Har du valt ortofoto ligger det på terrängen. Knapparna överst slår av och på varje lager, och <em>Kurvfärg</em> byter färg på höjdkurvorna. Dra för att snurra. Högerdra, skift-dra eller dra med två fingrar för att flytta. Scrolla eller nyp för att zooma. Dubbelklicka eller välj <em>Återställ vy</em> för att komma tillbaka till början.</p>
+        <p>Till cad-apa följer terrängen, kurvorna, träden, vägarna, stompunkterna, de befintliga byggnaderna och fastighetsgränserna med, om du har valt dem. Saknas fastighetsgränserna eller byggnaderna säger appen till när du skickar.</p>
       </section>
 
       <section id="kartan">
@@ -163,6 +163,7 @@
           <dt>Revit</dt><dd>Massing &amp; Site › Toposolid › Create from Import › Specify Points File, välj <code>_punkter_lokal.csv</code> och enheten meter. Punktmolnet (<code>_laser_lokal.las</code>) läses in via Autodesk ReCap.</dd>
           <dt>AutoCAD</dt><dd>DXF-filerna öppnas direkt och kan sparas som DWG. Varje typ ligger på ett eget lager.</dd>
           <dt>Ortofoto</dt><dd><code>_ortofoto.jpg</code> har två världsfiler, <code>_ortofoto_lokal.jgw</code> och <code>_ortofoto_sweref.jgw</code>. Byt namn på den du vill använda så att den heter <code>_ortofoto.jgw</code>, så hamnar bilden rätt när ritprogrammet läser in den. Pixelstorleken står i info-filen: 0,16 m för mindre utsnitt, grövre för större.</dd>
+          <dt>Befintliga byggnader i 3D</dt><dd><code>_byggnader_lokal.ifc</code> och <code>_byggnader_sweref.ifc</code> har husen som volymer med platta tak, till höjden ur laserdatan. I Archicad: File › Interoperability › Merge, eller öppna filen och kopiera in husen. Varje hus är ett eget objekt med husnummer, ändamål och höjd i egenskaperna. Hus utan höjd kommer inte med. Gör en ny export, så får samma hus samma id.</dd>
           <dt>Träd</dt><dd><code>_trad.csv</code> har position, höjd och kronbredd per träd, för att placera trädobjekt med till exempel Dynamo eller Grasshopper.</dd>
           <dt>Platsanalys</dt><dd>Lutning och skyfall ligger i mappen <code>platsanalys</code> och höjdpunkterna i <code>terrang</code>, med ett lager per klass. Skissens volymer ligger i <code>skiss</code>.</dd>
           <dt>Sann nord</dt><dd>Höjdkurvornas DXF har lagren NORR_RUTNAT och NORR_SANN. Vinkeln mellan dem står i info-filen. Under Nollpunkt och vridning i steg 01 kan de lokala filerna vridas mot sann nord eller en egen vinkel.</dd>

@@ -4,7 +4,7 @@ Gör Lantmäteriets öppna geodata till underlag för Archicad, Revit och AutoCA
 direkt i webbläsaren: höjdkurvor och höjdpunkter (DXF), markmodell (XYZ och CSV),
 punktmoln ur Laserdata skog (LAS och XYZ), ortofoto (JPEG med världsfil),
 befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
-(DXF), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
+(DXF), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
 PDF med lutning, skyfall och skydd och risker. Skissade volymer kan prövas på
 platsen, och platsen kan skickas vidare till ritprogrammet
 [cad-apa](https://github.com/agrellarkitektur/cad-apa).
@@ -136,7 +136,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   byggnader, fastighetsindelning): hämtning, lagring i webbläsaren, GeoPackage
   och klippning
 - `js/marktacke.js` – marktäcke: klasser, färger och DXF
-- `js/byggnad.js` – befintliga byggnader: höjd ur laserdatan, DXF, CSV och volymer
+- `js/byggnad.js` – befintliga byggnader: höjd ur laserdatan, DXF, CSV och volymer; tar bort träd vid husen
+- `js/ifc.js` (`Ifc`) – befintliga byggnader som IFC4 (extruderade volymer, egenskaper, stabila GlobalId)
 - `js/fastighet.js` – fastighetsgränser, gränspunkter och beteckningar, DXF
 - `js/stompunkt.js` – Stompunkt Direkt: sökning inom utsnittet, DXF och CSV
 - `js/vagar.js` – vägar från OpenStreetMap via Overpass, klassning och DXF
@@ -150,7 +151,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/platsanalysblad.js` – platsanalysens A3-häfte (PDF)
 - `js/utbyte.js` (`Utbyte`) – utbytet med cad-apa, se `docs/UTBYTE-CAD-APA.md`
 - `js/vy3d.js` (`Vy3D`) – 3D-förhandsvisning med three.js, laddas först när den
-  öppnas; lager som kan slås av och på
+  öppnas; lager som kan slås av och på, panorering, valbar kurvfärg
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
 - `js/dxf.js` – DXF-skrivare
@@ -202,7 +203,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Hydrografi, Topografi 10 som vektor och NVDB. Byggnader i 3D med takformer.
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
-- Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC, exempelprojekt.
+- Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
 
 ## Data som sparas i webbläsaren
 

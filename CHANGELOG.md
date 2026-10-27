@@ -3,6 +3,28 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.8.0 – 2026-10-27
+
+- Befintliga byggnader som 3D-modell i IFC (IFC4): `byggnader/…_byggnader_lokal.ifc`
+  och `…_byggnader_sweref.ifc`. Varje byggnad med höjd ur laserdatan blir en
+  volym från markhöjden till takhöjden, med platt tak och gårdar som hål, som
+  ett eget objekt (IfcBuildingElementProxy) i IfcSite. Husnummer, ändamål,
+  objekttyp, markhöjd och höjd står i egenskaperna `Hojdkurvor_Byggnad`. Den
+  lokala filen har samma nollpunkt, vridning och Z0 som de lokala DXF-filerna.
+  Samma hus får samma GlobalId vid en ny export. Ny modul `js/ifc.js`, test
+  `test/ifc.test.js` (kontrollerad med IfcOpenShell utan valideringsfel).
+- 3D-vyn: högerdra, skift-dra eller dra med två fingrar för att flytta vyn,
+  inte bara snurra runt mitten. Dubbelklick eller *Återställ vy* går tillbaka
+  till början. Man kan också zooma närmare än förut.
+- 3D-vyn: höjdkurvorna är svarta, och färgen kan väljas med *Kurvfärg*. Valet
+  sparas i webbläsaren.
+- Träd vars topp ligger på ett byggnadsfotavtryck eller högst 1 m utanför tas
+  bort, eftersom det oftast är takkanten som laserdatan har tagit för ett träd.
+  Gäller när befintliga byggnader är ikryssade. Antalet står i info-filen.
+  `Byggnad.tradVidByggnader`.
+- När platsen skickas till cad-apa utan fastighetsgränser eller byggnader säger
+  statusraden att de inte kom med och att de behöver kryssas i.
+
 ## 0.7.0 – 2026-10-26
 
 - BETA-rutan i menyraden är en knapp, *Beta 0.7.0 – Skicka synpunkter*, på

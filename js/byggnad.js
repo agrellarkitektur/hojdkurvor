@@ -184,6 +184,43 @@
     return '﻿' + rad.join('\r\n') + '\r\n';
   }
 
+  /** Kortaste avståndet från (x, y) till en ring (polygonens kanter). */
+  function avstandTillRing(ring, x, y) {
+    let d = Infinity;
+    for (let i = 0; i < ring.length; i++) {
+      const [ax, ay] = ring[i], [bx, by] = ring[(i + 1) % ring.length];
+      const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / l2)) : 0;
+      d = Math.min(d, Math.hypot(x - ax - t * vx, y - ay - t * vy));
+    }
+    return d;
+  }
+
+  /**
+   * Delar upp träden i dem som står fritt och dem vars topp ligger på ett fotavtryck eller
+   * högst marginal meter utanför det. De senare är oftast takkanten eller en skorsten som
+   * laserdatan har tagit för ett träd. Byggnadens hål (gårdar) räknas inte som byggnad.
+   * Returnerar { kvar, borttagna }.
+   */
+  function tradVidByggnader(trad, byggnader, marginal = 1) {
+    if (!byggnader || !byggnader.length) return { kvar: trad.slice(), borttagna: [] };
+    const lador = byggnader.map(b => {
+      const xs = b.fotavtryck.map(p => p[0]), ys = b.fotavtryck.map(p => p[1]);
+      return { b, x0: Math.min(...xs) - marginal, x1: Math.max(...xs) + marginal, y0: Math.min(...ys) - marginal, y1: Math.max(...ys) + marginal };
+    });
+    const kvar = [], borttagna = [];
+    for (const t of trad) {
+      const vid = lador.some(({ b, x0, x1, y0, y1 }) => {
+        if (t.x < x0 || t.x > x1 || t.y < y0 || t.y > y1) return false;
+        const iGard = (b.hal || []).some(h => inuti(h, t.x, t.y) && avstandTillRing(h, t.x, t.y) > marginal);
+        if (iGard) return false;
+        return inuti(b.fotavtryck, t.x, t.y) || avstandTillRing(b.fotavtryck, t.x, t.y) <= marginal;
+      });
+      (vid ? borttagna : kvar).push(t);
+    }
+    return { kvar, borttagna };
+  }
+
   /** Antal per objekttyp, för info-filen. */
   function perTyp(byggnader) {
     const ut = {};
@@ -191,5 +228,5 @@
     return ut;
   }
 
-  return { hamta, franObjekt, hojder, somVolymer, dxf, csv, perTyp, lagerFor, typInfo, beteckning, andamalText, tyngdpunkt, inuti, FALT, arByggnadsyta };
+  return { hamta, franObjekt, hojder, somVolymer, dxf, csv, perTyp, lagerFor, typInfo, beteckning, andamalText, tyngdpunkt, inuti, avstandTillRing, tradVidByggnader, FALT, arByggnadsyta };
 }));

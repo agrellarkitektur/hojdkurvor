@@ -30,6 +30,10 @@ node test/koordinater.test.js
 node test/utbyte.test.js
 ```
 
+```
+node test/ifc.test.js
+```
+
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
 på syntetiska rutnät, och byggnader och fastighetsindelning ur låtsasfilerna.
 Ortofototestet prövar urvalet på ett riktigt svar från Lantmäteriets
@@ -39,6 +43,14 @@ JPEG med YCbCr ska bli rätt.
 Koordinattestet prövar hur dialogen Klistra in koordinater föreslår
 koordinatsystem mot de riktiga kommungränserna. Utbytestestet bygger
 platspaketet till cad-apa med kurvor och fastighetsgränser ur låtsasfilen.
+IFC-testet bygger IFC-filen för befintliga byggnader (med en gård och ett
+hus utan höjd) och kontrollerar referenser, GlobalId, koordinater, vridning och
+ringarnas riktning, och rensningen av träd vid byggnader. Med `IFC_UT=mapp`
+sparas filerna, så att de kan kontrolleras med IfcOpenShell
+(`python3.12 -m pip install --break-system-packages ifcopenshell pytest`, sedan
+`ifcopenshell.validate.validate(f, logger, express_rules=True)`). `ui_test.py`
+kontrollerar också att IFC-filerna kommer med i zip:en, att 3D-vyn flyttas vid
+högerdrag och att dubbelklick återställer den.
 Tar några sekunder. Med `BYGGNAD_GPKG=…/byggnad_knKKKK.gpkg` och
 `FASTIGHET_GPKG=…/fastighetsindelning_knKKKK.gpkg` körs samma kontroller
 också på riktiga filer från Lantmäteriet (för Vimmerby centrum, kommun 0884).

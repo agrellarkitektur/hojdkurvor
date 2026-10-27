@@ -250,7 +250,7 @@
             </div>
             <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="trad"> Träd</label>
-              <p class="hjalp">Enskilda träd med höjd och kronbredd, som DXF med kronan som cirkel och som CSV. Tak sorteras bort. I tät skog hittas inte alla träd.</p>
+              <p class="hjalp">Enskilda träd med höjd och kronbredd, som DXF med kronan som cirkel och som CSV. Tak sorteras bort, och med befintliga byggnader ikryssade även toppar som ligger precis vid ett hus. I tät skog hittas inte alla träd.</p>
             </div>
             <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="hom"> Höjd över mark</label>
@@ -273,7 +273,7 @@
               <p class="hjalp">Fotavtryck med typ, ändamål och husnummer som DXF, ett lager per typ, och som CSV. Kommer med på kartan, i utskriften, i platsanalysen och till cad-apa. Hela kommunens fil hämtas första gången och sparas sedan i webbläsaren. Kräver beställd <em>Byggnad Nedladdning, vektor</em>.</p>
               <div class="underval">
                 <label class="kryss"><input type="checkbox" name="tillval" value="byggnadshojd" checked> Höjd ur laserdatan</label>
-                <p class="hjalp">Höjd över mark för varje byggnad, så att husen får tak i DXF och syns i 3D. Hämtar laserdata.</p>
+                <p class="hjalp">Höjd över mark för varje byggnad, så att husen får tak i DXF, syns i 3D och kommer med som 3D-modell i IFC. Hämtar laserdata.</p>
               </div>
             </div>
             <div class="tillval">
@@ -432,8 +432,8 @@
   </dialog>
 
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
-    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
-      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button></div></div>
+    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra. Högerdra, skift-dra eller dra med två fingrar för att flytta. Scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-aterstall">Återställ vy</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
+      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label></div></div>
     <div class="vy3d-yta" id="vy3d-yta"></div>
   </div>
 
@@ -450,6 +450,7 @@
   <script src="js/kommunfil.js"></script>
   <script src="js/marktacke.js"></script>
   <script src="js/byggnad.js"></script>
+  <script src="js/ifc.js"></script>
   <script src="js/fastighet.js"></script>
   <script src="js/stompunkt.js"></script>
   <script src="js/analys.js"></script>

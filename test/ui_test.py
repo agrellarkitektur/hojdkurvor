@@ -139,6 +139,15 @@ with sync_playwright() as p:
     for i in z.infolist():
         if not i.filename.endswith('/'): print('   ', i.filename, i.file_size)
     z.extractall(f'{UT}/zip')
+    namn_i_zip = [i.filename for i in z.infolist()]
+    if any('_byggnader_lokal.dxf' in n for n in namn_i_zip):
+        ifc = [n for n in namn_i_zip if n.endswith('.ifc')]
+        print('  ifc:', ifc)
+        assert len(ifc) == 2, 'IFC lokal och sweref följer med byggnaderna'
+        assert z.read(ifc[0]).startswith(b'ISO-10303-21;'), 'IFC-filen börjar med STEP-huvudet'
+    info = next((z.read(n).decode('utf-8', 'replace') for n in namn_i_zip if n.endswith('info.txt')), '')
+    for rad in info.splitlines():
+        if 'IFC' in rad or 'från en byggnad är borttagna' in rad or 'precis vid en byggnad' in rad: print('  info:', rad.strip()[:160])
 
     # utskrift i skala med Lantmäteriets karta
     pg.click('#lp-bakgrund button:has-text("LANTMÄTERIET")'); pg.wait_for_timeout(2000)
@@ -162,6 +171,23 @@ with sync_playwright() as p:
     if pg.locator('#vy3d-orto').is_visible():
         pg.click('#vy3d-orto'); pg.wait_for_timeout(800); pg.screenshot(path=f'{UT}/06b_3d_utan_orto.png')
         print('  ortofoto efter klick:', pg.get_attribute('#vy3d-orto', 'aria-pressed'))
+    # panorera med högerdrag, dubbelklick återställer (0.8.0)
+    yta = pg.locator('#vy3d-yta canvas').bounding_box()
+    if yta:
+        mx, my = yta['x'] + yta['width'] / 2, yta['y'] + yta['height'] / 2
+        fore = pg.locator('#vy3d-yta canvas').screenshot()
+        pg.mouse.move(mx, my); pg.mouse.down(button='right'); pg.mouse.move(mx + 160, my + 60, steps=8); pg.mouse.up(button='right')
+        pg.wait_for_timeout(500)
+        efter = pg.locator('#vy3d-yta canvas').screenshot()
+        pg.screenshot(path=f'{UT}/06d_3d_panorerad.png')
+        assert efter != fore, 'vyn flyttades vid högerdrag'
+        pg.mouse.dblclick(mx, my); pg.wait_for_timeout(500)
+        print('  panorering: flyttad, återställd lika start:', pg.locator('#vy3d-yta canvas').screenshot() == fore)
+    if pg.locator('#vy3d-kurvfarg-rad').is_visible():
+        print('  kurvfärg:', pg.input_value('#vy3d-kurvfarg'))
+        pg.eval_on_selector('#vy3d-kurvfarg', "e => { e.value = '#e02020'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
+        pg.wait_for_timeout(500); pg.screenshot(path=f'{UT}/06e_3d_roda_kurvor.png')
+        pg.eval_on_selector('#vy3d-kurvfarg', "e => { e.value = '#000000'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
     pg.click('#vy3d-stang')
 
     # projektlänk

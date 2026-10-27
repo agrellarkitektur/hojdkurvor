@@ -7,28 +7,16 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-### 2026-10-26, 3D-förhandsvisning
+## 0.8.1 – rättelser
 
-- Man verkar inte kunna pan:a i 3D-förhandsvisningen och snurrar alltid runt mitten. Vore fint om man kunde flytta sig mer fritt.
-- Bra om appen tar bort träd som ligger preciiiiis vid en byggnad, det är ofta själva byggnaden som är inmätt då.
-- Höjdkurvor i 3D-preview kan vara svarta (eller möjlighet att välja själv).
-- Möjlighet att slå på konturer på 3D-byggnaderna i 3D-preview.
+## 0.9.0 – nya funktioner
 
-### 2026-10-26, 3D-förhandsvisning, skuggor och färger
-
-- Slå på skuggor och ange tidpunkt för att se hur de faller i 3D-preview.
-- Välja färg på befintliga byggnaders ytor.
-- Går det att växla mellan low-poly och mer realistiska träd i 3D-preview?
-
-### 2026-10-27, export
-
-- Leverera även en 3D-modell för befintliga byggnader i IFC (nått annat format också?).
-- Se till att fastighetsgränser inkluderas i underlaget till cad-apa.
-
-## 0.7.1 – rättelser
-
-## 0.8.0 – nya funktioner
+- (2026-10-26) Slå på skuggor och ange tidpunkt för att se hur de faller i 3D-preview.
+- (2026-10-26) Möjlighet att slå på konturer på 3D-byggnaderna i 3D-preview.
+- (2026-10-26) Välja färg på befintliga byggnaders ytor.
 
 ## Senare / avvaktar
 
+- (2026-10-26) Går det att växla mellan low-poly och mer realistiska träd i 3D-preview?
+- (2026-10-27) Befintliga byggnader i fler format än IFC ("nått annat format också?"). IFC kom i 0.8.0; OBJ eller glTF vore nästa om något program behöver det.
 - (2026-10-26) Preliminärt kommer vi inte att behöva ta emot modell från cad-apa, de sköter analyserna själva. Så därför kanske vi skulle titta på att ha en enkel skissmodellsbyggare i Höjdkurvor. Där man kan rita former i 2D och extrudera upp typ, på enklaste sätt och se hur det påverkar siten.

@@ -2,7 +2,8 @@
  * 3D-förhandsvisning av utsnittet: terrängen (med ortofoto om det finns), höjdkurvor, träd, befintliga byggnader,
  * fastighetsgränser, vägar och skissade volymer. Varje lager kan slås av och på (0.7.0).
  * three.js (vendor/three/three.module.min.js) laddas först när vyn öppnas.
- * Egen enkel styrning: dra för att snurra, scrolla eller nyp för att zooma.
+ * Egen enkel styrning: dra för att snurra, scrolla eller nyp för att zooma, högerdra, skift-dra eller
+ * dra med två fingrar för att flytta (0.8.0). Dubbelklick återställer vyn.
  */
 (function () {
   'use strict';
@@ -128,6 +129,8 @@
     }
 
     // höjdkurvor på sin egen höjd, lite ovanför marken så att de syns
+    // (svarta om inget annat anges, färgen kan bytas med kurvfarg)
+    let kurvMat = null;
     if (data.kurvor && data.kurvor.length) {
       const p = [];
       for (const k of data.kurvor) {
@@ -136,7 +139,8 @@
       }
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-      nyttLager('kurvor').add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: data.kurva || '#8f4f22' })));
+      kurvMat = new THREE.LineBasicMaterial({ color: data.kurva || '#000000' });
+      nyttLager('kurvor').add(new THREE.LineSegments(geo, kurvMat));
     }
 
     // fastighetsgränser och vägar draperade på marken
@@ -201,36 +205,62 @@
     // kamera och styrning
     const storlek = Math.max(r.xmax - r.xmin, r.ymax - r.ymin);
     const kamera = new THREE.PerspectiveCamera(40, W() / H(), 0.5, storlek * 20);
-    let azimut = -0.6, lutning = 0.65, avst = storlek * 1.4;
-    const mal = new THREE.Vector3(0, (zmax - zmin) / 2, 0);
+    const START = { azimut: -0.6, lutning: 0.65, avst: storlek * 1.4, mal: [0, (zmax - zmin) / 2, 0] };
+    let azimut = START.azimut, lutning = START.lutning, avst = START.avst;
+    const mal = new THREE.Vector3(...START.mal);
     const placera = () => {
       kamera.position.set(mal.x + avst * Math.cos(lutning) * Math.sin(azimut), mal.y + avst * Math.sin(lutning), mal.z + avst * Math.cos(lutning) * Math.cos(azimut));
       kamera.lookAt(mal);
     };
     placera();
+    /**
+     * Flyttar punkten som kameran tittar på längs marken, som att dra kartan med handen.
+     * dx, dy i pixlar; meter per pixel följer avståndet. Punkten hålls inom utsnittet plus en halv bredd.
+     */
+    const panorera = (dx, dy) => {
+      const mpp = 2 * avst * Math.tan(20 * Math.PI / 180) / H();
+      const sa = Math.sin(azimut), ca = Math.cos(azimut), fram = mpp / Math.max(0.35, Math.sin(lutning));
+      mal.x += -dx * mpp * ca - dy * fram * sa;
+      mal.z += dx * mpp * sa - dy * fram * ca;
+      const grans = storlek;
+      mal.x = Math.max(-grans, Math.min(grans, mal.x)); mal.z = Math.max(-grans, Math.min(grans, mal.z));
+      mal.y = (markZ(mal.x + cx, -mal.z + cy) - zmin) * faktor;
+    };
     const pekare = new Map();
-    let pinch = null;
+    let pinch = null, mitt = null, panLage = false;
     const el = renderer.domElement;
     el.style.touchAction = 'none';
-    el.addEventListener('pointerdown', e => { pekare.set(e.pointerId, [e.clientX, e.clientY]); el.setPointerCapture(e.pointerId); });
+    el.addEventListener('contextmenu', e => e.preventDefault());
+    el.addEventListener('pointerdown', e => {
+      pekare.set(e.pointerId, [e.clientX, e.clientY]); el.setPointerCapture(e.pointerId);
+      // höger- eller mittenknappen, eller skift/ctrl med vänster: flytta i stället för att snurra
+      panLage = e.pointerType === 'mouse' && (e.button === 1 || e.button === 2 || e.shiftKey || e.ctrlKey || e.metaKey);
+    });
     el.addEventListener('pointermove', e => {
       const f = pekare.get(e.pointerId);
       if (!f) return;
       if (pekare.size === 1) {
-        azimut -= (e.clientX - f[0]) * 0.008;
-        lutning = Math.max(0.08, Math.min(1.5, lutning + (e.clientY - f[1]) * 0.006));
+        if (panLage) panorera(e.clientX - f[0], e.clientY - f[1]);
+        else {
+          azimut -= (e.clientX - f[0]) * 0.008;
+          lutning = Math.max(0.08, Math.min(1.5, lutning + (e.clientY - f[1]) * 0.006));
+        }
       }
       pekare.set(e.pointerId, [e.clientX, e.clientY]);
       if (pekare.size === 2) {
-        const [a, b] = [...pekare.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
-        if (pinch) avst = Math.max(storlek * 0.2, Math.min(storlek * 8, avst * pinch / d));
-        pinch = d;
+        // två fingrar: nyp för att zooma, dra för att flytta
+        const [a, b] = [...pekare.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+        if (pinch) avst = Math.max(storlek * 0.05, Math.min(storlek * 8, avst * pinch / d));
+        if (mitt) panorera(m[0] - mitt[0], m[1] - mitt[1]);
+        pinch = d; mitt = m;
       }
       placera();
     });
-    const slapp = e => { pekare.delete(e.pointerId); if (pekare.size < 2) pinch = null; };
+    const slapp = e => { pekare.delete(e.pointerId); if (pekare.size < 2) { pinch = null; mitt = null; } if (!pekare.size) panLage = false; };
     el.addEventListener('pointerup', slapp); el.addEventListener('pointercancel', slapp);
-    el.addEventListener('wheel', e => { e.preventDefault(); avst = Math.max(storlek * 0.2, Math.min(storlek * 8, avst * Math.exp(e.deltaY * 0.001))); placera(); }, { passive: false });
+    el.addEventListener('wheel', e => { e.preventDefault(); avst = Math.max(storlek * 0.05, Math.min(storlek * 8, avst * Math.exp(e.deltaY * 0.001))); placera(); }, { passive: false });
+    el.addEventListener('dblclick', () => aterstall());
+    const aterstall = () => { azimut = START.azimut; lutning = START.lutning; avst = START.avst; mal.set(...START.mal); placera(); };
     const storleksandring = () => { renderer.setSize(W(), H()); kamera.aspect = W() / H(); kamera.updateProjectionMatrix(); };
     window.addEventListener('resize', storleksandring);
 
@@ -244,7 +274,15 @@
       lager() { const ut = {}; for (const n in lager) ut[n] = lager[n].visible; return ut; },
       /** Slår ett lager av eller på; returnerar om det syns, eller null om det saknas. */
       visaLager(namn, pa) { const l = lager[namn]; if (!l) return null; if (pa != null) l.visible = !!pa; return l.visible; },
-      overdriv(f) { if (f == null) return faktor; faktor = f; grupp.scale.set(1, f, 1); return faktor; },
+      overdriv(f) { if (f == null) return faktor; mal.y = mal.y / faktor * f; faktor = f; grupp.scale.set(1, f, 1); placera(); return faktor; },
+      /** Höjdkurvornas färg (#rrggbb); utan argument den nuvarande. null om kurvor saknas. */
+      kurvfarg(c) { if (!kurvMat) return null; if (c) kurvMat.color.set(c); return '#' + kurvMat.color.getHexString(); },
+      /** Kameran tillbaka till startläget (även dubbelklick). */
+      aterstall() { aterstall(); },
+      /** Kamerans läge, för testerna. */
+      kameralage() { return { azimut, lutning, avst, mal: [mal.x, mal.y, mal.z] }; },
+      /** Flyttar vyn dx, dy pixlar som när man drar (för testerna). */
+      panorera(dx, dy) { panorera(dx, dy); placera(); },
       stang() {
         aktiv = false;
         window.removeEventListener('resize', storleksandring);

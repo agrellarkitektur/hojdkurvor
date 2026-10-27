@@ -73,6 +73,10 @@ node test/utbyte.test.js
 ```
 
 ```
+node test/ifc.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 
