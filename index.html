@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>höjdkurvor.se – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js"></script>
-  <script src="js/tema.js"></script>
-  <script src="js/synpunkter.js" defer></script>
+  <script src="js/version.js?v=0.8.1"></script>
+  <script src="js/tema.js?v=0.8.1"></script>
+  <script src="js/synpunkter.js?v=0.8.1" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.8.1">
+  <link rel="stylesheet" href="app.css?v=0.8.1">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -432,35 +432,35 @@
   </dialog>
 
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
-    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra. Högerdra, skift-dra eller dra med två fingrar för att flytta. Scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-aterstall">Återställ vy</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
+    <div class="vy3d-huvud"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, eller välj Flytta och dra för att flytta vyn. Högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-flytta" aria-pressed="false">Flytta</button><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-aterstall">Återställ vy</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
       <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label></div></div>
     <div class="vy3d-yta" id="vy3d-yta"></div>
   </div>
 
-  <script src="config.js"></script>
-  <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="vendor/proj4.js"></script>
-  <script src="vendor/geotiff.js"></script>
-  <script src="vendor/jszip.min.js"></script>
-  <script src="js/karna.js"></script>
-  <script src="js/dxf.js"></script>
-  <script src="js/sol.js"></script>
-  <script src="js/laser.js"></script>
-  <script src="js/ortofoto.js"></script>
-  <script src="js/kommunfil.js"></script>
-  <script src="js/marktacke.js"></script>
-  <script src="js/byggnad.js"></script>
-  <script src="js/ifc.js"></script>
-  <script src="js/fastighet.js"></script>
-  <script src="js/stompunkt.js"></script>
-  <script src="js/analys.js"></script>
-  <script src="js/vagar.js"></script>
-  <script src="js/platsanalys.js"></script>
-  <script src="js/geodata.js"></script>
-  <script src="js/utbyte.js"></script>
-  <script src="js/topowebb.js"></script>
-  <script src="js/utskrift.js"></script>
-  <script src="js/platsanalysblad.js"></script>
-  <script src="js/app.js"></script>
+  <script src="config.js?v=0.8.1"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.8.1"></script>
+  <script src="vendor/proj4.js?v=0.8.1"></script>
+  <script src="vendor/geotiff.js?v=0.8.1"></script>
+  <script src="vendor/jszip.min.js?v=0.8.1"></script>
+  <script src="js/karna.js?v=0.8.1"></script>
+  <script src="js/dxf.js?v=0.8.1"></script>
+  <script src="js/sol.js?v=0.8.1"></script>
+  <script src="js/laser.js?v=0.8.1"></script>
+  <script src="js/ortofoto.js?v=0.8.1"></script>
+  <script src="js/kommunfil.js?v=0.8.1"></script>
+  <script src="js/marktacke.js?v=0.8.1"></script>
+  <script src="js/byggnad.js?v=0.8.1"></script>
+  <script src="js/ifc.js?v=0.8.1"></script>
+  <script src="js/fastighet.js?v=0.8.1"></script>
+  <script src="js/stompunkt.js?v=0.8.1"></script>
+  <script src="js/analys.js?v=0.8.1"></script>
+  <script src="js/vagar.js?v=0.8.1"></script>
+  <script src="js/platsanalys.js?v=0.8.1"></script>
+  <script src="js/geodata.js?v=0.8.1"></script>
+  <script src="js/utbyte.js?v=0.8.1"></script>
+  <script src="js/topowebb.js?v=0.8.1"></script>
+  <script src="js/utskrift.js?v=0.8.1"></script>
+  <script src="js/platsanalysblad.js?v=0.8.1"></script>
+  <script src="js/app.js?v=0.8.1"></script>
 </body>
 </html>

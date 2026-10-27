@@ -1,0 +1,20 @@
+# höjdkurvor.se på webbhotellet (0.8.1)
+#
+# Webbläsaren ska fråga servern om sidorna har ändrats i stället för att
+# använda en gammal kopia, så att en ny version syns direkt. Skript och
+# stilmallar laddas dessutom med ?v=<version> (se test/version.test.js).
+# Filerna skickas som UTF-8, så att å, ä och ö syns rätt även när en fil
+# öppnas direkt.
+#
+# Allt ligger inom IfModule, så att webbhotellet hoppar över det som saknas.
+# Svarar sidan 500 efter publiceringen tar publicera.yml bort filen från servern.
+
+<IfModule mod_mime.c>
+  AddCharset utf-8 .html .js .css .json .md .txt
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css|json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

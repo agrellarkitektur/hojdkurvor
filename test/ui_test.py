@@ -23,6 +23,7 @@ window.TERRANG_DL_ROT='{ROT}'; window.TERRANG_STAC_BAS='{ROT}'; window.TERRANG_A
 window.TERRANG_OVERPASS='{ROT}/api/interpreter';
 window.TERRANG_GEODATA = {{ naturWfs: '{ROT}/nv/wfs', natura2000Wfs: '{ROT}/n2k/wfs', lamningarWms: '{ROT}/raa/wms', oversvamningWms: '{ROT}/mcf/wms', overpass: '{ROT}/api/interpreter' }};
 window.TERRANG_CADAPA = '/test/cad-apa-mock.html';
+window.TERRANG_TEST = {{}};
 delete window.showSaveFilePicker;
 try {{ localStorage.setItem('terrang-tema', '{TEMA}'); }} catch (e) {{}}
 """
@@ -183,6 +184,30 @@ with sync_playwright() as p:
         assert efter != fore, 'vyn flyttades vid högerdrag'
         pg.mouse.dblclick(mx, my); pg.wait_for_timeout(500)
         print('  panorering: flyttad, återställd lika start:', pg.locator('#vy3d-yta canvas').screenshot() == fore)
+        # vad dragningen gör, mätt på kameran (0.8.1): snurra ändrar riktningen, flytta målpunkten
+        kam = lambda: pg.evaluate('TERRANG_TEST.vy3d.kameralage()')
+        def drag(knapp='left', skift=False):
+            pg.mouse.dblclick(mx, my); pg.wait_for_timeout(200)
+            fore = kam()
+            if skift: pg.keyboard.down('Shift')
+            pg.mouse.move(mx, my); pg.mouse.down(button=knapp); pg.mouse.move(mx + 120, my + 40, steps=6); pg.mouse.up(button=knapp)
+            if skift: pg.keyboard.up('Shift')
+            efter = kam()
+            snurrad = abs(efter['azimut'] - fore['azimut']) > 1e-6
+            flyttad = any(abs(a - b) > 1e-6 for a, b in zip(efter['mal'], fore['mal']))
+            return snurrad, flyttad
+        assert drag() == (True, False), 'vanlig dragning snurrar'
+        assert drag(skift=True) == (False, True), 'skift-dra flyttar'
+        assert drag(knapp='right') == (False, True), 'högerdra flyttar'
+        pg.click('#vy3d-flytta')
+        assert pg.get_attribute('#vy3d-flytta', 'aria-pressed') == 'true'
+        assert drag() == (False, True), 'vanlig dragning flyttar i läget Flytta'
+        assert drag(skift=True) == (True, False), 'skift-dra snurrar i läget Flytta'
+        pg.screenshot(path=f'{UT}/06f_3d_flytta.png')
+        pg.click('#vy3d-flytta')
+        assert drag() == (True, False), 'tillbaka till Snurra'
+        print('  dragning: snurra, skift-dra, högerdra och Flytta gör rätt')
+    assert pg.locator('#gamla-filer').count() == 0, 'ingen varning om gamla filer när versionerna stämmer'
     if pg.locator('#vy3d-kurvfarg-rad').is_visible():
         print('  kurvfärg:', pg.input_value('#vy3d-kurvfarg'))
         pg.eval_on_selector('#vy3d-kurvfarg', "e => { e.value = '#e02020'; e.dispatchEvent(new Event('input', { bubbles: true })); }")

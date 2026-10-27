@@ -11,8 +11,14 @@
 # CLAUDE.md och .gitignore. config.js följer med och ska vara utan nycklar.
 #
 # Första gången laddas allt upp; sedan bara det som ändrats (uppladdningen
-# sparar en lista i .ftp-deploy-sync-state.json på servern). Filer på servern
-# som inte kommer från repot rörs inte.
+# sparar en lista i .ftp-deploy-sync-state-2.json på servern). Filer på servern
+# som inte kommer från repot rörs inte. Listan bytte namn i 0.8.1, när 0.8.0
+# visade sig sakna filer på servern; då laddades allt upp en gång till.
+#
+# Efter uppladdningen hämtas varje fil från webbplatsen och jämförs med repot
+# (.github/scripts/kontrollera-webbplatsen.sh). Filer som saknas eller är gamla
+# laddas upp igen med curl, och körningen misslyckas om de ändå inte stämmer.
+# Webbadressen kan ändras med variabeln SIDA_URL (Settings → Variables).
 
 name: Publicera på webbhotellet
 
@@ -83,3 +89,15 @@ jobs:
           # Webbhotellets certifikat gäller ofta värdnamnet hos leverantören,
           # inte det egna domännamnet; anslutningen krypteras ändå.
           security: loose
+          state-name: .ftp-deploy-sync-state-2.json
+
+      - name: Kontrollera webbplatsen
+        env:
+          SIDA: ${{ vars.SIDA_URL || 'https://agrellarkitektur.se/terrang/' }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIR: ${{ steps.dir.outputs.path }}
+        run: |
+          sleep 5
+          bash .github/scripts/kontrollera-webbplatsen.sh

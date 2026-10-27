@@ -34,6 +34,15 @@ node test/utbyte.test.js
 node test/ifc.test.js
 ```
 
+```
+node test/version.test.js
+```
+
+Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
+och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
+Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
+`TERRANG_TEST.vy3d`, så att testet kan läsa kamerans läge.
+
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
 på syntetiska rutnät, och byggnader och fastighetsindelning ur låtsasfilerna.
 Ortofototestet prövar urvalet på ett riktigt svar från Lantmäteriets

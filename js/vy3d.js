@@ -3,7 +3,8 @@
  * fastighetsgränser, vägar och skissade volymer. Varje lager kan slås av och på (0.7.0).
  * three.js (vendor/three/three.module.min.js) laddas först när vyn öppnas.
  * Egen enkel styrning: dra för att snurra, scrolla eller nyp för att zooma, högerdra, skift-dra eller
- * dra med två fingrar för att flytta (0.8.0). Dubbelklick återställer vyn.
+ * dra med två fingrar för att flytta (0.8.0). Läget Flytta gör vanlig dragning till flyttning (0.8.1).
+ * Dubbelklick återställer vyn.
  */
 (function () {
   'use strict';
@@ -227,14 +228,15 @@
       mal.y = (markZ(mal.x + cx, -mal.z + cy) - zmin) * faktor;
     };
     const pekare = new Map();
-    let pinch = null, mitt = null, panLage = false;
+    let pinch = null, mitt = null, panLage = false, dragLage = 'snurra';
     const el = renderer.domElement;
     el.style.touchAction = 'none';
     el.addEventListener('contextmenu', e => e.preventDefault());
     el.addEventListener('pointerdown', e => {
       pekare.set(e.pointerId, [e.clientX, e.clientY]); el.setPointerCapture(e.pointerId);
-      // höger- eller mittenknappen, eller skift/ctrl med vänster: flytta i stället för att snurra
-      panLage = e.pointerType === 'mouse' && (e.button === 1 || e.button === 2 || e.shiftKey || e.ctrlKey || e.metaKey);
+      // höger- eller mittenknappen, eller skift/ctrl med vänster, gör det motsatta mot valt läge (Snurra/Flytta)
+      const byt = e.pointerType === 'mouse' && (e.button === 1 || e.button === 2 || e.shiftKey || e.ctrlKey || e.metaKey);
+      panLage = (dragLage === 'flytta') !== byt;
     });
     el.addEventListener('pointermove', e => {
       const f = pekare.get(e.pointerId);
@@ -277,6 +279,8 @@
       overdriv(f) { if (f == null) return faktor; mal.y = mal.y / faktor * f; faktor = f; grupp.scale.set(1, f, 1); placera(); return faktor; },
       /** Höjdkurvornas färg (#rrggbb); utan argument den nuvarande. null om kurvor saknas. */
       kurvfarg(c) { if (!kurvMat) return null; if (c) kurvMat.color.set(c); return '#' + kurvMat.color.getHexString(); },
+      /** Vad det gör att dra med ett finger eller vänster musknapp: 'snurra' eller 'flytta' (0.8.1). */
+      dragLage(l) { if (l === 'snurra' || l === 'flytta') dragLage = l; return dragLage; },
       /** Kameran tillbaka till startläget (även dubbelklick). */
       aterstall() { aterstall(); },
       /** Kamerans läge, för testerna. */
@@ -293,5 +297,6 @@
       },
     };
   }
-  window.Vy3D = { visa };
+  /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
+  window.Vy3D = { visa, version: '0.8.1' };
 }());

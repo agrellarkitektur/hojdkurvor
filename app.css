@@ -591,3 +591,7 @@ body.mobilflode .handtag-wrap { transform-origin: center; }
 /* fastighetsbeteckningar på kartan */
 .fastighet-etikett { background: none; border: 0; }
 .fastighet-etikett span { display: inline-block; transform: translate(-50%, -50%); font-family: var(--mono); font-size: 11px; color: var(--fastighet); white-space: nowrap; text-shadow: 0 0 2px var(--halo), 0 0 2px var(--halo), 0 0 3px var(--halo); pointer-events: none; }
+
+/* Varning när webbläsaren eller webbhotellet har gamla filer kvar (0.8.1) */
+.gamla-filer { position: relative; z-index: 3000; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  margin: 0; padding: 10px 16px; font-size: 14px; color: var(--fel); background: var(--bg); box-shadow: inset 0 0 0 999px var(--fel-bg); }

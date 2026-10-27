@@ -23,6 +23,10 @@ Appen publiceras av GitHub. Vid varje push till `main` kontrollerar
 `.github/workflows/publicera.yml` koden, kör enhetstesterna, stoppar om
 `config.js` innehåller en nyckel eller inloggning och laddar sedan upp appen med
 FTP till webbhotellet (`public_html/terrang/`). Bara ändrade filer laddas upp.
+Sedan hämtas varje fil från webbplatsen och jämförs med repot; det som saknas
+eller är gammalt laddas upp igen med curl
+(`.github/scripts/kontrollera-webbplatsen.sh`). Webbadressen kan ändras med
+variabeln `SIDA_URL`.
 Ändringar som bara rör dokumentationen eller testerna hoppas över. Uppgifterna
 ligger som secrets i repot: `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` och
 `FTP_DIR`. Arbetsflödet kan också köras för hand under Actions → Publicera på
@@ -126,7 +130,10 @@ Inga inloggningsuppgifter passerar någon av filerna.
 Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `window`.
 
 - `js/tema.js` – temaval och temamenyn (laddas först i `<head>`)
-- `js/version.js` – versionsnummer och datum (`window.HOJDKURVOR`)
+- `js/version.js` – versionsnummer och datum (`window.HOJDKURVOR`). Skript och
+  stilmallar laddas med `?v=<version>`; `node test/version.test.js --skriv`
+  skriver in den i HTML-sidorna, `app.js` och `vy3d.js`
+- `.htaccess` – `Cache-Control: no-cache` och UTF-8 på webbhotellet
 - `js/karna.js` (`Terrang`) – höjddata, omprojicering, höjdkurvor, DXF, XYZ och
   CSV, lokal vridning och nordpilar
 - `js/laser.js` – laserdata: katalogsök, läsning av COPC, LAS och XYZ

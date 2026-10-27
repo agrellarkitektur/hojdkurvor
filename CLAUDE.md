@@ -77,6 +77,10 @@ node test/ifc.test.js
 ```
 
 ```
+node test/version.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 
@@ -102,7 +106,8 @@ sedan via `geodata.php`).
 
 1. Höj `version` och `datum` i `js/version.js`. Numreringen är 0.x så länge appen
    är i beta: sista siffran för rättelser (0.5.1), mittersta för nya funktioner
-   (0.6.0). 1.0.0 när BETA tas bort.
+   (0.6.0). 1.0.0 när BETA tas bort. Kör sedan `node test/version.test.js --skriv`,
+   som skriver in versionen i `?v=` på alla sidor, i `app.js` och i `vy3d.js`.
 2. Skriv i `CHANGELOG.md` och i Ändringar på `om.html`.
 3. Uppdatera `instruktioner.html` och `README.md` om något syns för användaren
    eller om filer, tjänster eller inställningar har ändrats.
@@ -111,6 +116,7 @@ sedan via `geodata.php`).
 6. Pushen till `main` publicerar appen på webbhotellet med FTP
    (`.github/workflows/publicera.yml`). Kontrollera körningen med
    `gh run list` och att <https://agrellarkitektur.se/terrang/> fungerar.
+   Steget Kontrollera webbplatsen jämför varje fil på servern med repot.
    Arbeta därför på en egen gren tills versionen är klar. Ändras vilka filer
    appen behöver, se till att urvalet (`git archive … ':!test' …`) stämmer i
    både `publicera.yml` och `release.yml`.

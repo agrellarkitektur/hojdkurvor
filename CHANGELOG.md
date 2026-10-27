@@ -3,6 +3,27 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.8.1 – 2026-10-27
+
+- Rättelse: 0.8.0 kom inte upp helt på webbhotellet. `index.html` och
+  `version.js` var nya, men `app.js` och `vy3d.js` var kvar från 0.7.0, så IFC,
+  panorering och *Kurvfärg* saknades. Uppladdningen gör nu om allt en gång
+  (ny lista `.ftp-deploy-sync-state-2.json`), och efter varje uppladdning
+  hämtar `publicera.yml` alla filer från webbplatsen och jämför dem med repot.
+  Filer som saknas eller är gamla laddas upp igen, och körningen misslyckas om
+  de ändå inte stämmer (`.github/scripts/kontrollera-webbplatsen.sh`).
+- Skript och stilmallar laddas med `?v=<version>`, även de som laddas senare
+  (`vy3d.js`, jsPDF m.fl.), så att webbläsaren hämtar nya filer vid en ny
+  version. `node test/version.test.js --skriv` skriver in versionen; testet
+  stoppar publiceringen om något inte stämmer.
+- Ny `.htaccess`: sidor, skript och stilmallar skickas med
+  `Cache-Control: no-cache` och som UTF-8.
+- Varning överst på sidan, med knappen *Ladda om*, när `app.js` eller
+  `vy3d.js` inte har samma version som `version.js`.
+- 3D-vyn: knappen *Flytta* gör vanlig dragning (ett finger eller vänster
+  musknapp) till flyttning. Högerdra och skift-dra gör det motsatta.
+- Statusraden säger till när ingen IFC-fil skapades, och varför.
+
 ## 0.8.0 – 2026-10-27
 
 - Befintliga byggnader som 3D-modell i IFC (IFC4): `byggnader/…_byggnader_lokal.ifc`

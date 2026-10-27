@@ -1,6 +1,25 @@
 /* höjdkurvor.se – kartan och gränssnittet */
 (function () {
   'use strict';
+  /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
+  const FILVERSION = '0.8.1';
+  const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
+  /**
+   * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
+   * Visas överst på sidan med en knapp som laddar om.
+   */
+  function varnaGamlaFiler(fil, version) {
+    if (version === VERSION || document.getElementById('gamla-filer')) return;
+    const d = document.createElement('div');
+    d.id = 'gamla-filer'; d.className = 'gamla-filer'; d.setAttribute('role', 'alert');
+    d.textContent = `Sidan har gamla filer (${fil} är version ${version || 'okänd'}, sidan ${VERSION}), så allt fungerar inte. `;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'knapp liten'; b.textContent = 'Ladda om';
+    b.addEventListener('click', () => location.reload());
+    d.append(b);
+    document.body.prepend(d);
+  }
+  varnaGamlaFiler('app.js', FILVERSION);
   const T = window.Terrang;
   T.registreraZoner();
 
@@ -1049,7 +1068,7 @@
   function laddaSkript(src) {
     if (!laddade[src]) laddade[src] = new Promise((ok, fel) => {
       const el = document.createElement('script');
-      el.src = src; el.onload = ok;
+      el.src = src + '?v=' + encodeURIComponent(VERSION); el.onload = ok;
       el.onerror = () => { delete laddade[src]; fel(new Error('Kunde inte ladda ' + src)); };
       document.head.append(el);
     });
@@ -1566,6 +1585,11 @@
           if (ifcLokal.antal) {
             filer[`byggnader/${namn}_byggnader_lokal.ifc`] = ifcLokal.text;
             filer[`byggnader/${namn}_byggnader_sweref.ifc`] = Ifc.byggnader(bygg, Object.assign({ lokal: false, filnamn: `${namn}_byggnader_sweref.ifc` }, ifcOpt)).text;
+          }
+          else if (bygg.length) {
+            // Säg till direkt, inte bara i info-filen (0.8.1)
+            varningar.push('Byggnader: ingen IFC-fil skapades, eftersom ingen byggnad fick någon höjd. '
+              + (!val.byggnadshojd ? 'Kryssa i Höjd ur laserdatan och skapa underlaget igen.' : 'Det finns ingen laserdata för området.'));
           }
           const per = Byggnad.perTyp(bygg);
           extraInfo.push('', 'BEFINTLIGA BYGGNADER',
@@ -2620,6 +2644,7 @@
     document.body.classList.add('vy3d-oppen');
     try {
       await laddaSkript('js/vy3d.js');
+      varnaGamlaFiler('vy3d.js', Vy3D.version);
       if (vy3d) vy3d.stang();
       vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null,
         fotavtryck: s.byggnader ? s.byggnader.filter(b => b.hojd == null).map(b => b.fotavtryck) : null,
@@ -2631,6 +2656,8 @@
       const orto = vy3d.ortofoto();
       $('vy3d-orto').hidden = orto == null;
       $('vy3d-orto').setAttribute('aria-pressed', String(!!orto));
+      vy3d.dragLage(dragLage3d);
+      if (window.TERRANG_TEST) window.TERRANG_TEST.vy3d = vy3d;   // testkrok: kamerans läge i gränssnittstestet
       ritaLager3d();
       $('vy3d-kurvfarg-rad').hidden = vy3d.kurvfarg() == null;
       $('vy3d-kurvfarg').value = kurvfarg3d();
@@ -2682,6 +2709,13 @@
     lager.spara('localStorage', 'terrang-3d-kurvfarg', e.target.value);
   });
   $('vy3d-aterstall').addEventListener('click', () => { if (vy3d) vy3d.aterstall(); });
+  /** Flytta: vanlig dragning flyttar vyn i stället för att snurra. Valet gäller så länge sidan är öppen. */
+  let dragLage3d = 'snurra';
+  $('vy3d-flytta').addEventListener('click', () => {
+    dragLage3d = dragLage3d === 'flytta' ? 'snurra' : 'flytta';
+    if (vy3d) vy3d.dragLage(dragLage3d);
+    $('vy3d-flytta').setAttribute('aria-pressed', String(dragLage3d === 'flytta'));
+  });
   $('vy3d-overdriv').addEventListener('click', () => {
     if (!vy3d) return;
     const f = vy3d.overdriv() === 1 ? 2 : 1;

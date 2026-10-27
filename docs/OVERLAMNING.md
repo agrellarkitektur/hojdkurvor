@@ -1,43 +1,31 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.0 publicerad.
+överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.1 publicerad.
 
 ## Läget
 
-- **0.8.0 är klar** 27 oktober: byggd på grenen `v0.8.0`, sammanslagen med
-  `main` och publicerad med FTP. Carl August bad om "0.7.1 med de nya
-  synpunkterna"; eftersom IFC-exporten är en ny funktion blev numret 0.8.0.
-  Innehåll: IFC4 för befintliga byggnader (`js/ifc.js`), fri panorering i
-  3D-vyn, svarta höjdkurvor i 3D med valbar färg, träd vid byggnader bortrensade
-  (`Byggnad.tradVidByggnader`, marginal 1 m, `TRAD_VID_HUS` i `app.js`) och en
-  påminnelse när fastighetsgränser eller byggnader saknas i platsen till cad-apa.
-- **Fastighetsgränserna till cad-apa** fanns redan i platspaketet sedan 0.7.0,
-  och cad-apa läser dem (`src/core/siteImport.ts`, kontrollerat 27 oktober).
-  De kommer bara med om *Fastighetsgränser* är ikryssat; nu säger statusraden
-  till när de saknas.
+- **0.8.1 är klar** 27 oktober (gren `v0.8.1`, sammanslagen med `main`). Det är
+  en rättelse: Carl August testade 0.8.0 och fick ingen IFC, ingen panorering och
+  ingen Kurvfärg. Orsaken var att servern hade kvar `vy3d.js` (och troligen
+  `app.js`) från 0.7.0, medan `index.html` och `version.js` var nya. Han öppnade
+  `js/vy3d.js` på webbplatsen och den saknade "0.8". Varför FTP-Deploy-Action
+  hoppade över filerna är inte utrett (listan på servern kan ha varit fel).
+- **Rättat i 0.8.1**: ny lista `.ftp-deploy-sync-state-2.json`, så att allt
+  laddas upp en gång; steget Kontrollera webbplatsen i `publicera.yml`
+  (`.github/scripts/kontrollera-webbplatsen.sh`) hämtar varje fil från
+  webbplatsen, laddar upp avvikande med curl och misslyckas om de ändå inte
+  stämmer; `?v=<version>` på alla skript och stilmallar
+  (`node test/version.test.js --skriv`); `.htaccess` med no-cache och UTF-8
+  (tas bort automatiskt om sidan svarar 500); varning överst på sidan när
+  `app.js` eller `vy3d.js` har en annan version än `version.js`; knappen
+  *Flytta* i 3D (`vy3d.dragLage`); statusraden säger till när ingen IFC skapas.
 - **Synpunktsformuläret** fungerar: `synpunkter.php` svarar och provet kom
   fram till Gmail (Carl August, 27 oktober).
-- **Väntar på Carl August**: test på iPhone och Windows mot riktiga data av
-  0.6.0–0.8.0. Särskilt: att IFC-filen går att sammanfoga i Archicad och hamnar
-  rätt mot höjdkurvorna (lokal fil), panorering med två fingrar på iPhone (WebKit
-  saknas i testmiljön), och att formuläret når Gmail.
-
-## Test av 0.8.0 (27 oktober, Windows/Chrome, webbplatsdata rensad, 0.8.0 i hörnet)
-
-1. Ingen IFC i zip:en.
-2. Hjälptexten om att flytta syns, men skift-dra snurrar fortfarande; ingen
-   Kurvfärg i 3D-fönstret. Återställ vy-knappen syns.
-3. Synpunktsformuläret fungerar.
-
-Trolig gemensam orsak: index.html och version.js är nya men `app.js` och
-`vy3d.js` gamla (0.7.0) i webbläsaren eller på servern. Gammal app.js förklarar
-både saknad IFC och dold Kurvfärg-rad; gammal vy3d.js förklarar panoreringen.
-Skripten saknar versionsparameter och det finns ingen `.htaccess`. Plan för
-0.8.1: versionsparameter på alla skript och stilmallar, `.htaccess` med
-no-cache, varning när app.js och version.js inte stämmer, kontroll i
-publicera.yml att webbplatsens filer stämmer med repot, Flytta/Snurra-knapp
-i 3D och tydligare besked när ingen IFC skapas.
+- **Väntar på Carl August**: test av 0.8.1 på Windows och iPhone. Särskilt:
+  att zip:en har IFC (med Befintliga byggnader och Höjd ur laserdatan
+  ikryssade), att IFC-filen hamnar rätt i Archicad, Flytta och skift-dra i 3D,
+  Kurvfärg, och två fingrar på iPhone.
 
 ## IFC (`js/ifc.js`)
 
@@ -103,10 +91,9 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Kontrollera att sidan visar 0.8.0 (BETA-knappen) och fråga Carl August om
-   `synpunkter.php` svarar `"ok":true` och om ett prov kom fram till Gmail.
-2. Ta emot hans testresultat (IFC i Archicad, panorering på iPhone m.m.) och
-   rätta i 0.8.1, på en egen gren.
+1. Se efter i den senaste körningen av Publicera att steget Kontrollera
+   webbplatsen gick igenom, och vad det skrev (laddades något upp igen?).
+2. Ta emot Carl Augusts test av 0.8.1 och rätta i 0.8.2 på en egen gren.
 3. Sortera Inkorgen i `docs/SYNPUNKTER.md` efter version och stäm av med honom.
    Under 0.9.0 står skuggor med tidpunkt, konturer och färg på byggnader i 3D.
    Skuggorna kan ta solens läge ur `js/sol.js`.
