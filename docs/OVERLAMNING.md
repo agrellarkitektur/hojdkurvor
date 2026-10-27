@@ -16,13 +16,28 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   och cad-apa läser dem (`src/core/siteImport.ts`, kontrollerat 27 oktober).
   De kommer bara med om *Fastighetsgränser* är ikryssat; nu säger statusraden
   till när de saknas.
-- **Synpunktsformuläret** (0.7.0) kräver `feedback-config.php` på servern.
-  Kontroll: <https://agrellarkitektur.se/terrang/synpunkter.php> ska svara
-  `"ok":true`. Inte bekräftat än.
+- **Synpunktsformuläret** fungerar: `synpunkter.php` svarar och provet kom
+  fram till Gmail (Carl August, 27 oktober).
 - **Väntar på Carl August**: test på iPhone och Windows mot riktiga data av
   0.6.0–0.8.0. Särskilt: att IFC-filen går att sammanfoga i Archicad och hamnar
   rätt mot höjdkurvorna (lokal fil), panorering med två fingrar på iPhone (WebKit
   saknas i testmiljön), och att formuläret når Gmail.
+
+## Test av 0.8.0 (27 oktober, Windows/Chrome, webbplatsdata rensad, 0.8.0 i hörnet)
+
+1. Ingen IFC i zip:en.
+2. Hjälptexten om att flytta syns, men skift-dra snurrar fortfarande; ingen
+   Kurvfärg i 3D-fönstret. Återställ vy-knappen syns.
+3. Synpunktsformuläret fungerar.
+
+Trolig gemensam orsak: index.html och version.js är nya men `app.js` och
+`vy3d.js` gamla (0.7.0) i webbläsaren eller på servern. Gammal app.js förklarar
+både saknad IFC och dold Kurvfärg-rad; gammal vy3d.js förklarar panoreringen.
+Skripten saknar versionsparameter och det finns ingen `.htaccess`. Plan för
+0.8.1: versionsparameter på alla skript och stilmallar, `.htaccess` med
+no-cache, varning när app.js och version.js inte stämmer, kontroll i
+publicera.yml att webbplatsens filer stämmer med repot, Flytta/Snurra-knapp
+i 3D och tydligare besked när ingen IFC skapas.
 
 ## IFC (`js/ifc.js`)
 
