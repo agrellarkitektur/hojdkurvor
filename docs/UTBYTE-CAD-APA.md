@@ -130,6 +130,9 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
                 "ringar": [[[x, y], ...], [[x, y], ...]], "ankare": [x, y], "yta": 6400 } ],
     "varning": "Gränserna i fastighetsregistrets karta är inte rättsligt bindande …"
   },
+  "ortofoto": {           // ortofotot (Ortofoto Nedladdning), från 0.10.1
+    "bild": "data:image/jpeg;base64,…", "x0": 189620.25, "y1": 6430369.75, "s": 0.5, "W": 640, "H": 400, "ar": 2023
+  },
   "lankar": { "projekt": "https://…/terrang/#p=…" },
   "licens": "Höjddata och laserdata © Lantmäteriet (CC BY 4.0). Vägar © OpenStreetMap-bidragsgivare (ODbL)."
 }
@@ -160,6 +163,12 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   på (kan vara `null`) och `yta` arean inom utsnittet i m². En fastighet med
   flera områden har en post per område. `varning` ska visas för användaren:
   gränserna är inte inmätta och kan avvika flera meter.
+- `ortofoto` (från höjdkurvor 0.10.1, version 1 gäller fortfarande): bilden
+  som data-URL (JPEG, delar utan bild är vita), parallell med zonens axlar.
+  `x0`/`y1` är **mitten av övre vänstra pixeln**, som i en världsfil; `s` är
+  pixelstorleken i meter, `W` × `H` storleken i pixlar och `ar` flygåret.
+  Höjdkurvor skalar ned bilden till högst 4 096 pixlar på längsta sidan.
+  cad-apa läser fältet från 0.10.31 (`PaketOrtofoto` i `src/core/siteOrtho.ts`).
 
 ## Skiss (cad-apa → höjdkurvor)
 

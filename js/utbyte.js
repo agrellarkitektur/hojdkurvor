@@ -33,7 +33,8 @@
   /**
    * Bygger ett platspaket. o: { projekt, kommun, projektId, epsg, systemNamn, utsnitt, nollpunkt {x,y,z},
    *   vridning, sannNord, rutnat {W,H,s,x0,y1,z}, kurvor, trad, vagar, stompunkter, volymer, byggnader,
-   *   fastigheter { granser, punkter, ytor }, fastighetVarning, projektlank, kalla }
+   *   fastigheter { granser, punkter, ytor }, fastighetVarning, ortofoto { bild, x0, y1, s, W, H, ar },
+   *   projektlank, kalla }
    */
   function platspaket(o) {
     const p = {
@@ -74,6 +75,13 @@
         varning: o.fastighetVarning || '',
       };
       p.licens = p.licens.replace(/^(Höjddata[^©]*?) ©/, (m, a) => a.replace(/ och ([^,]+)$/, ', $1') + ' och fastighetsindelning ©');
+    }
+    // Ortofotot (0.10.1): data-URL och läget som i en världsfil (x0/y1 = mitten av övre vänstra pixeln).
+    const o2 = o.ortofoto;
+    if (o2 && typeof o2.bild === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(o2.bild) && o2.s > 0 && o2.W >= 1 && o2.H >= 1) {
+      p.ortofoto = { bild: o2.bild, x0: o2.x0, y1: o2.y1, s: o2.s, W: o2.W, H: o2.H };
+      if (o2.ar) p.ortofoto.ar = o2.ar;
+      p.licens = p.licens.replace(/^(Höjddata[^©]*?) ©/, (m, a) => a.replace(/ och ([^,]+)$/, ', $1') + ' och ortofoto ©');
     }
     return p;
   }

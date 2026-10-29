@@ -1,10 +1,18 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.10.0 publicerad (modellera i 3D, egen takform, nya träd).
+överlämning; historiken finns i git. Senast: 30 oktober 2026, 0.10.1 publicerad (ortofotot till cad-apa).
 
 ## Läget
 
+- **0.10.1** 30 oktober (gren `v0.10.1`): ortofotot följer med i platspaketet
+  (fältet `ortofoto`, samma fält som `senaste.ortofoto` och cad-apas
+  `PaketOrtofoto`), nedskalat till högst 4 096 px (`ortofotoTillCadApa` i
+  `app.js`, räknas en gång per underlag och sparas i `senaste.ortofoto.cadapa`).
+  cad-apa bad om det i sin överlämning (0.10.31). Enhetstest i
+  `test/utbyte.test.js`, låtsas-cad-apa loggar ortofotot; gränssnittstestet
+  godkänt i Blueprint. Nedskalningen är inte provad med en riktig bild över
+  4 096 px. Carl August har inte testat.
 - **0.10.0** 29 oktober (gren `v0.10.0`): modellera volymer i 3D-vyn, egen
   takform per befintligt hus och nya stiliserade träd. Carl August bad om det
   med sina synpunkter på 0.9.2 (taken bra i stort men vissa feltolkade; de
@@ -241,7 +249,7 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Be Carl August om test av 0.10.0 (listan under Att testa). Rättelser blir 0.10.1.
+1. Be Carl August om test av 0.10.0 och 0.10.1 (listan under Att testa). Rättelser blir 0.10.2.
 2. Därefter 0.10.x: urtag och egna takfotslinjer, när han har provat
    modelleringen.
 
@@ -264,7 +272,7 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Idéer som inte är beslutade
 
-- Ortofotot i platsanalysbladets kartor och som underlag i cad-apa.
+- Ortofotot i platsanalysbladets kartor. (Till cad-apa: klart i 0.10.1; 2D-underlag är cad-apas sak.)
 - Val av flygår eller upplösning för ortofotot (nu senaste och automatiskt).
 - Byggnader utan laserdata: höjd saknas (i 3D syns de som fotavtryck, i IFC
   saknas de); schablon per typ vore möjligt men osäkert.

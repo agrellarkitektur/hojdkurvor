@@ -14,7 +14,7 @@
     const d = e.data || {};
     if (d.typ === 'hojdkurvor:plats') {
       window.mottaget = d.data;
-      logg(`plats: ${d.data.projekt.namn || '(namnlöst)'}, ${d.data.koordinatsystem.plan.namn}, rutnät ${d.data.terrang.rutnat ? d.data.terrang.rutnat.W + '×' + d.data.terrang.rutnat.H : 'saknas'}, kurvor ${(d.data.terrang.kurvor || []).length} (första z ${d.data.terrang.kurvor && d.data.terrang.kurvor[0] ? d.data.terrang.kurvor[0].z : '–'}), byggnader ${(d.data.byggnader || []).length}, fastighetsgränser ${d.data.fastigheter ? d.data.fastigheter.granser.length : 0}`);
+      logg(`plats: ${d.data.projekt.namn || '(namnlöst)'}, ${d.data.koordinatsystem.plan.namn}, rutnät ${d.data.terrang.rutnat ? d.data.terrang.rutnat.W + '×' + d.data.terrang.rutnat.H : 'saknas'}, kurvor ${(d.data.terrang.kurvor || []).length} (första z ${d.data.terrang.kurvor && d.data.terrang.kurvor[0] ? d.data.terrang.kurvor[0].z : '–'}), byggnader ${(d.data.byggnader || []).length}, fastighetsgränser ${d.data.fastigheter ? d.data.fastigheter.granser.length : 0}, ortofoto ${d.data.ortofoto ? d.data.ortofoto.W + '×' + d.data.ortofoto.H + ' px, ' + d.data.ortofoto.s + ' m' : 'saknas'}`);
       e.source.postMessage({ typ: 'cad-apa:mottaget', ok: true }, e.origin);
     }
     if (d.typ === 'hojdkurvor:mottaget') logg('höjdkurvor tog emot skissen: ' + d.ok);
