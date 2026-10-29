@@ -1,7 +1,7 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 27 oktober 2026, 0.8.2 publicerad, 0.9.0 och 0.10.0 planerade.
+överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.8.2 publicerad, 0.9.0 och 0.10.0 planerade, skissfunktionen bestämd.
 
 ## Läget
 
@@ -42,6 +42,41 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
     kunna sänka takfotens linjer var för sig och få en egen takform, men
     platta volymer duger att börja med om det är krångligt.
 
+## Skissfunktionen och 3D-vyn (bestämt 29 oktober)
+
+Carl August valde Claudes förslag på alla punkter.
+
+**Grundidé:** volymerna byggs av primitiver med exakta mått, men analyserna
+(skuggor, horisont, skyfall, DXF, `branInVolymer`) får dem som i dag:
+fotavtryck + golv + takfot + takform. Primitiven och gruppen sparas som extra
+fält på volymen, så att gamla volymer från cad-apa och DXF fungerar som förut.
+
+**0.9.0 – 3D-vyn** (utöver skuggor, konturer och färg ovan):
+- Träd: 3–4 modeller (gran, tall, löv) skalade efter laserhöjd och kronbredd,
+  enklare på avstånd (iPhone). Ersätter klot och cylinder (`InstancedMesh`).
+- Ögonhöjd: knapp, klick på marken, kameran 1,6 m över marken. Dator: WASD
+  följer terrängen, musen tittar (pekarlås), skift springer, Esc tillbaka.
+  Mobil: pekskärmsspak att gå med och dra för att titta.
+- Spara bild: PNG i 2–4 × skärmen utan knappar. Bild för AI: zip med samma vy
+  som färgbild, vit lermodell, kantlinjer och djupkarta. Vad Visoid helst vill
+  ha ska provas med riktiga bilder.
+
+**0.10.0 – volymer i 3D-vyn:**
+- Modelleringen sker i 3D-vyn, med en ortografisk toppvy för exakt plan.
+  Bara på dator; mobilen visar.
+- Primitiver: rätblock (B × D × H), cylinder (Ø × H), prisma med
+  sadel/pulpet/valm. Skapas i en ruta med mått, placeras med klick.
+- Markera, flytta, rotera (15°-steg med skift), ändra mått numeriskt.
+- Snäpp: yta mot yta, hörn och kant, ovanpå en annan volym (golv = den
+  undres takfot), mot befintliga hus och fastighetsgränser. Avstånd kan skrivas
+  in efter snäppet.
+- Kedjeikon vid fogen när två volymer snäppt: klick gör en grupp som flyttas
+  och roteras ihop, klick igen löser upp.
+- I varandra: överlapp slås ihop (union) i 0.10.0.
+
+**0.10.x:** bortskärning (en volym gör urtag i en annan, kräver CSG och att
+analyserna får den nya formen) och egna takfotslinjer.
+
 ## Öppna frågor för 0.9.0 (ställda 27 oktober)
 
 1. Skuggor: reglage för tid på dagen och val av datum, med snabbval för
@@ -51,8 +86,8 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 3. En färg för alla befintliga byggnader, och skissvolymerna i en egen färg?
 4. Konturerna: svarta, eller samma som Kurvfärg?
 
-Föreslaget av Claude, inte beslutat: Spara bild (PNG) av 3D-vyn, vy i
-ögonhöjd från en punkt man klickar på, norrpil i 3D.
+Föreslaget av Claude, inte beslutat: norrpil i 3D. (Bild och ögonhöjd är
+bestämda, se ovan.)
 
 ## IFC (`js/ifc.js`)
 
