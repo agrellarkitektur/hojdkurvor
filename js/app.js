@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.9.1';
+  const FILVERSION = '0.9.2';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
