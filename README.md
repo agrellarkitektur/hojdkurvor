@@ -6,7 +6,7 @@ punktmoln ur Laserdata skog (LAS och XYZ), ortofoto (JPEG med världsfil),
 befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
 (DXF), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
 PDF med lutning, skyfall och skydd och risker. Skissade volymer kan prövas på
-platsen, och platsen kan skickas vidare till ritprogrammet
+platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
 [cad-apa](https://github.com/agrellarkitektur/cad-apa).
 
 Live: <https://agrellarkitektur.se/terrang/> (blir höjdkurvor.se).
@@ -161,7 +161,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   öppnas; lager som kan slås av och på, panorering, valbar kurvfärg, skuggor
   efter datum och tid, konturer, hus-, kontur-, gräns- och skissfärg, takformer
   ur laserdatan, ögonhöjd och bilder
-- `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd; enkla, detaljerade och realistiska med lövkort)
+- `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter)
+- `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
@@ -211,7 +212,8 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 ## Kommande
 
 - Ortofoto som bakgrund för hela kartan kräver Ortofoto Visning, en annan produkt.
-- Hydrografi, Topografi 10 som vektor och NVDB. Byggnader i 3D med takformer.
+- Hydrografi, Topografi 10 som vektor och NVDB.
+- Modelleringen i 3D (0.10.x): urtag (en volym skär bort en del av en annan) och egna takfotslinjer.
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
@@ -221,7 +223,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - IndexedDB: marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt. Appen frågar Lantmäteriet om
   filen ändrats innan den används igen. Under 02 Underlag, "Sparat i
   webbläsaren", kan man ta bort enstaka filer eller tömma allt.
-- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer, takformer och trädnivå,
+- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`),
   formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
   om användaren väljer det, inloggningen.
 - sessionStorage: aktivt steg, sektionslinjer, horisontens betraktelsepunkt,

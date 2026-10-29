@@ -3,6 +3,53 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.10.0 – 2026-10-29
+
+Volymer i 3D-vyn, egen takform på befintliga hus och nya träd.
+
+- **Modellera**: knappen *Modellera* i 3D-vyn (bara på dator) ritar volymer på
+  platsen. *Ny volym* skapar ett rätblock (B × D × H), en cylinder (Ø × H)
+  eller ett prisma med sadel-, pulpet- eller valmat tak (nocken längs bredden),
+  med mått i meter, och den placeras med ett klick. En volym väljs med ett
+  klick och flyttas genom att dra; handtaget ⟳ vrider den (skift: steg om 15°).
+  Måtten, höjden, taket, vridningen och golvet ändras i panelen. Volymer
+  snäpper yta mot yta (hörnen i linje när de är nära), hörn mot hörn och hörn
+  mot kant, mot andra volymer, befintliga hus och fastighetsgränser; Alt stänger
+  av snäppet. Efter ett snäpp mot en yta kan avståndet skrivas in. En volym vars
+  mitt står på en annan får golvet på den undres takfot, annars marken mitt
+  under (kan ändras till ett eget golv). Där två volymer möts visas en kedja:
+  ett klick sätter ihop dem så att de flyttas och vrids tillsammans, ett klick
+  till löser upp. Volymer som går in i varandra visas som en: konturerna inuti
+  och mitt på plana ytor tas bort och linjerna där de möts läggs till
+  (analyserna räknade redan överlapp som en union). Ångra och Gör om (Ctrl+Z,
+  Ctrl+Y), Kopiera och Ta bort (Delete). Volymer från cad-apa och DXF kan också
+  flyttas och vridas. Skissen går tillbaka till steg 04 och följer med nästa
+  gång man väljer Skapa; när 3D-vyn stängs påminner appen om det. Ny modul
+  `js/volym3d.js` (`Volym3D`): primitiver, exakta takytor (samma höjder som
+  `Platsanalys.takhojd`), snäpp, kontakter, länkar och konturerna. Volymerna
+  får fältet `primitiv`; fotavtryck, golv, takfot och takform är som förut, så
+  analyserna, DXF och cad-apa läser dem som vanligt.
+- **Toppvy**: ortografisk vy rakt uppifrån med norr uppåt, för att lägga ut
+  volymerna exakt. Dra flyttar, scrolla zoomar.
+- **Egen takform**: klicka på ett befintligt hus i 3D-vyn för att rätta ett
+  feltolkat tak: takform (sadeltak, valmat, pulpettak, platt), lutning, nock
+  längs eller tvärs huset, pulpettakets höga sida och nockhöjd. Det som lämnas
+  tomt tas ur laserdatan. Valet sparas per hus i webbläsaren
+  (`terrang-takval`, nyckel objektidentiteten). `Byggnad.takmodell(b, eget)`.
+- **Träd**: de detaljerade träden är ritade om i stiliserad low-poly: lätt
+  böjda stammar som smalnar av, kronor av många facetterade klumpar i dämpade
+  gröna toner och sju varianter (två granar, två tallar, två lövträd och björk)
+  som väljs ur trädets läge. De realistiska träden med lövkort är borttagna;
+  ett sparat val Realistiska blir Detaljerade.
+- **Rättelse**: 3D-vyns bild följer nu ytans storlek också när raderna med
+  knappar bryts om (canvasen kunde bli högre än ytan, så att klick och bilder
+  hamnade fel).
+- **Rättelse**: tyngdpunkt och yta räknas relativt första hörnet
+  (`Platsanalys.tyngdpunkt`, `Platsanalys.area`, `Byggnad.tyngdpunkt`). Med
+  zonens stora koordinater blev tyngdpunkten för små fotavtryck fel på upp till
+  flera meter, vilket bland annat påverkade golvet för en DXF-volym utan
+  golvnivå och var texterna hamnade.
+
 ## 0.9.2 – 2026-10-29
 
 - **Takformer förenklade**: taken följde laserpunkterna och blev bulliga. Nu får

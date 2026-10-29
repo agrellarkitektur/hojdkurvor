@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.9.2';
+  const FILVERSION = '0.10.0';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -2646,7 +2646,7 @@
     $('vy3d').hidden = false;
     document.body.classList.add('vy3d-oppen');
     try {
-      await Promise.all(['js/trad3d.js', 'js/bild3d.js'].map(laddaSkript));
+      await Promise.all(['js/trad3d.js', 'js/bild3d.js', 'js/volym3d.js'].map(laddaSkript));
       await laddaSkript('js/vy3d.js');
       varnaGamlaFiler('vy3d.js', Vy3D.version);
       if (vy3d) vy3d.stang();
@@ -2660,7 +2660,7 @@
         befintlig: sparadFarg('terrang-3d-husfarg', '#b9b3aa'), skissfarg: sparadFarg('terrang-3d-skissfarg', farg('annot')),
         konturfarg: sparadFarg('terrang-3d-konturfarg', '#000000'), gransfarg: sparadFarg('terrang-3d-gransfarg', farg('fastighet')),
         takmodeller: takmodeller3d(s.byggnader),
-        tradniva: ['detaljerad', 'realistisk'].includes(lager.las('localStorage', 'terrang-3d-trad')) ? lager.las('localStorage', 'terrang-3d-trad') : 'enkel',
+        tradniva: ['detaljerad', 'realistisk'].includes(lager.las('localStorage', 'terrang-3d-trad')) ? 'detaljerad' : 'enkel',
         konturer: lager.las('localStorage', 'terrang-3d-konturer') === true, sol,
         bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
         ortofoto: s.ortofoto ? { canvas: s.ortofoto.canvas, x0: s.ortofoto.x0 - s.ortofoto.s / 2, y1: s.ortofoto.y1 + s.ortofoto.s / 2, bredd: s.ortofoto.W * s.ortofoto.s, hojd: s.ortofoto.H * s.ortofoto.s } : null });
@@ -2670,6 +2670,11 @@
       $('vy3d-orto').setAttribute('aria-pressed', String(!!orto));
       vy3d.dragLage(dragLage3d);
       vy3d.lyssna(visaLage3d);
+      vy3d.lyssnaSkiss(skissFran3d);
+      vy3d.lyssnaHus(visaTakpanel);
+      stangTakpanel();
+      $('vy3d-nyform').hidden = true; vantarPlacering = false;
+      skissFran3d({ typ: 'start', redigera: false, toppvy: false, vald: null, kanAngra: false, kanGoraOm: false });
       visaLage3d({ lage: 'oversikt' });
       if (window.TERRANG_TEST) { window.TERRANG_TEST.vy3d = vy3d; window.TERRANG_TEST.byggnader = s.byggnader; }   // testkrokar: kamerans läge och takformerna i gränssnittstestet
       ritaLager3d();
@@ -2695,10 +2700,24 @@
     }
     $('vy3d-stang').focus();
   });
-  const stang3d = () => { stoppaUppspelning(); $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen'); if (vy3d) { vy3d.stang(); vy3d = null; } $('visa-3d').focus(); };
+  const stang3d = () => {
+    stoppaUppspelning(); $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen');
+    const andrad = vy3d && vy3d.skissAndrad();
+    stangTakpanel(); $('vy3d-modell').hidden = true;
+    if (vy3d) { vy3d.stang(); vy3d = null; }
+    if (andrad) {
+      // underlaget i zip:en och PDF:en har den gamla skissen tills man skapar igen
+      $('skapa').classList.remove('gjord');
+      visaStatus('Skissen är ändrad i 3D-vyn. Välj Skapa igen för att räkna om skuggor, horisont och filer med den.');
+    }
+    $('visa-3d').focus();
+  };
   $('vy3d-stang').addEventListener('click', stang3d);
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || $('vy3d').hidden) return;
+    // Esc avbryter först en placering eller ett val i modelleringen, och stänger takpanelen
+    if (vy3d && vy3d.avbryt()) return;
+    if (!$('vy3d-tak').hidden) { stangTakpanel(); return; }
     // i ögonhöjd går Esc tillbaka till översikten, annars stänger den vyn
     if (vy3d && vy3d.lage() !== 'oversikt') { vy3d.oversikt(); return; }
     stang3d();
@@ -2770,12 +2789,160 @@
    * så att 3D-vyn kan byta lådan mot huset med tak. Tomt om laserdatan inte finns kvar.
    */
   function takmodeller3d(byggnader) {
+    hus3d = new Map();
     if (!byggnader) return null;
+    const val = takval();
     return byggnader.filter(b => b.mark != null && b.hojd != null).map((b, i) => {
-      const t = Byggnad.takmodell(b);
-      return t && Object.assign(t, { id: 'befintlig-' + (b.id || i) });
+      const id = 'befintlig-' + (b.id || i);
+      hus3d.set(id, b);
+      const t = Byggnad.takmodell(b, val[husNyckel(b)]);
+      return t && Object.assign(t, { id });
     }).filter(Boolean);
   }
+  // ------------------------------------------------------------------
+  // Egen takform på befintliga hus (0.10.0): klicka på ett hus i 3D-vyn
+  // ------------------------------------------------------------------
+  const TAKVAL = 'terrang-takval';
+  const TAKNAMN = { sadeltak: 'Sadeltak', valmat: 'Valmat', pulpettak: 'Pulpettak', platt: 'Platt' };
+  /** Valen per hus (nyckel: objektidentiteten), sparade i webbläsaren. */
+  const takval = () => { const v = lager.las('localStorage', TAKVAL); return v && typeof v === 'object' ? v : {}; };
+  const husNyckel = b => (b && b.id ? String(b.id) : null);
+  let hus3d = new Map(), husVal = null;
+  const decimal = (v, d = 2) => (v == null || !isFinite(v) ? '' : String(Math.round(v * 10 ** d) / 10 ** d).replace('.', ','));
+  function stangTakpanel() {
+    $('vy3d-tak').hidden = true; husVal = null;
+    if (vy3d) vy3d.markeraHus(null);
+  }
+  function visaTakpanel(id) {
+    const b = id && hus3d.get(id);
+    if (!b || !vy3d || vy3d.modellera()) { stangTakpanel(); return; }
+    husVal = { id, b };
+    vy3d.markeraHus(id);
+    $('tak-namn').textContent = Byggnad.beteckning(b) || 'Hus';
+    const e = takval()[husNyckel(b)] || {};
+    $('tak-form').value = e.form || '';
+    $('tak-lutning').value = decimal(e.lutning, 1);
+    $('tak-riktning').value = e.tvars ? 'tvars' : '';
+    $('tak-nock').value = decimal(e.nock);
+    $('tak-vand').checked = !!e.vand;
+    uppdateraTak(false);
+    $('vy3d-tak').hidden = false;
+  }
+  /** Räknar om taket med valen i panelen; spara = valen sparas och taket byts i vyn. */
+  function uppdateraTak(spara) {
+    if (!husVal) return;
+    const e = {};
+    if ($('tak-form').value) e.form = $('tak-form').value;
+    const lut = tal($('tak-lutning').value), nock = tal($('tak-nock').value);
+    if (lut > 0) e.lutning = lut;
+    if (nock > 0) e.nock = nock;
+    if ($('tak-riktning').value === 'tvars') e.tvars = true;
+    if (e.form === 'pulpettak' && $('tak-vand').checked) e.vand = true;
+    $('tak-vand-rad').hidden = e.form !== 'pulpettak';
+    const t = Byggnad.takmodell(husVal.b, e), nyckel = husNyckel(husVal.b);
+    if (spara) {
+      const alla = takval();
+      if (nyckel) { if (Object.keys(e).length) alla[nyckel] = e; else delete alla[nyckel]; lager.spara('localStorage', TAKVAL, alla); }
+      vy3d.bytTak(husVal.id, t && Object.assign(t, { id: husVal.id }));
+      $('vy3d-takformer').hidden = false; $('vy3d-takformer').setAttribute('aria-pressed', 'true');
+      lager.spara('localStorage', 'terrang-3d-takformer', true);
+    }
+    $('tak-info').textContent = !t ? 'Huset har ingen laserdata för taket, så formen kan inte ritas.'
+      : `${TAKNAMN[t.form]}${t.form !== 'platt' ? ` ${t.lutning}°` : ''}, nock ${decimal(t.nock)} och takfot ${decimal(t.takfot)} (RH 2000).`
+        + (Object.keys(e).length ? '' : ' Allt ur laserdatan.') + (nyckel ? '' : ' Valet sparas inte, huset saknar id.');
+  }
+  ['tak-form', 'tak-lutning', 'tak-riktning', 'tak-nock', 'tak-vand'].forEach(id => $(id).addEventListener('change', () => uppdateraTak(true)));
+  $('tak-aterstall').addEventListener('click', () => {
+    ['tak-form', 'tak-lutning', 'tak-riktning', 'tak-nock'].forEach(id => { $(id).value = ''; });
+    $('tak-vand').checked = false;
+    uppdateraTak(true);
+  });
+  $('tak-stang').addEventListener('click', stangTakpanel);
+
+  // ------------------------------------------------------------------
+  // Modellera i 3D-vyn (0.10.0): volymer med mått, snäpp och länkar. Skissen går tillbaka till
+  // state.volymer (och listan under 04 Skiss) och följer med i analyserna nästa gång man skapar.
+  // ------------------------------------------------------------------
+  const TYPNAMN = { block: 'Rätblock', cylinder: 'Cylinder', prisma: 'Prisma med tak', polygon: 'Fotavtryck från cad-apa eller DXF' };
+  /** Visar fält som gäller formen (data-for="block prisma …"), döljer de andra. */
+  const visaFor = (rot, typ) => rot.querySelectorAll('[data-for]').forEach(el => { el.hidden = !el.dataset.for.split(' ').includes(typ); });
+  let vantarPlacering = false;
+  function skissFran3d(ut) {
+    if (ut.typ === 'andrad') {
+      state.volymer = ut.volymer.map(v => Object.assign({}, v));
+      if (state.senaste) state.senaste.volymer = ut.volymer.map(v => Object.assign({}, v));
+      sparaVolymer(); ritaVolymer();
+    }
+    $('vy3d-modellera').setAttribute('aria-pressed', String(ut.redigera));
+    $('vy3d-toppvy').setAttribute('aria-pressed', String(ut.toppvy));
+    $('vy3d-modell').hidden = !ut.redigera;
+    if (ut.redigera) stangTakpanel();
+    $('vy3d-angra').disabled = !ut.kanAngra; $('vy3d-gorom').disabled = !ut.kanGoraOm;
+    if (vantarPlacering && !ut.placerar) { vantarPlacering = false; $('vy3d-nyform').hidden = true; visaLage3d({ lage: vy3d ? vy3d.lage() : 'oversikt' }); }
+    const v = ut.vald, f = $('vy3d-valdform');
+    f.hidden = !v || !$('vy3d-nyform').hidden;
+    $('vy3d-modellhjalp').hidden = !!v || !$('vy3d-nyform').hidden;
+    if (!v) return;
+    const p = v.primitiv || { typ: 'polygon' }, aktiv = document.activeElement;
+    visaFor(f, p.typ);
+    const satt = (id, varde) => { if ($(id) !== aktiv) $(id).value = varde; };
+    satt('vald-namn', v.namn || '');
+    $('vald-typ').textContent = `${TYPNAMN[p.typ] || ''}, ${fmt(Math.abs(Platsanalys.area(v.fotavtryck)))} m².`;
+    satt('vald-b', decimal(p.b)); satt('vald-d', decimal(p.d)); satt('vald-diam', decimal(p.diam)); satt('vald-h', decimal(v.takfot));
+    satt('vald-tak', v.takform || 'platt'); satt('vald-lutning', decimal(v.taklutning, 1));
+    satt('vald-vrid', decimal(p.vrid, 1)); satt('vald-golv', decimal(v.golv));
+    $('vald-golvauto').checked = !!p.golvAuto;
+    $('vald-golvtext').textContent = p.golvAuto ? (ut.under ? `Står på ${ut.under}` : 'Står på marken') : 'Ställ på marken eller volymen under';
+    const sn = ut.snapp && ut.snapp.typ === 'yta' && ut.snapp.avstand != null ? ut.snapp : null;
+    $('vald-snapp').hidden = !sn;
+    if (sn) { $('vald-snapptext').textContent = `Avstånd till ${sn.mot}, m`; satt('vald-avstand', decimal(sn.avstand)); }
+    $('vald-grupp').hidden = ut.grupp < 2;
+    $('vald-grupp').textContent = ut.grupp === 2 ? 'Sitter ihop med en annan volym. De flyttas och vrids tillsammans.' : `Sitter ihop med ${ut.grupp - 1} andra volymer. De flyttas och vrids tillsammans.`;
+  }
+  $('vy3d-modellera').addEventListener('click', () => {
+    if (!vy3d) return;
+    const pa = vy3d.modellera(!vy3d.modellera());
+    if (pa) {
+      // skissen ska synas när man modellerar
+      const b = document.querySelector('[data-lager3d=skiss]');
+      if (b) b.setAttribute('aria-pressed', 'true');
+      lager.spara('sessionStorage', 'terrang-3d-dolda', (lager.las('sessionStorage', 'terrang-3d-dolda') || []).filter(n => n !== 'skiss'));
+      if (!vy3d.volymer().length) { $('vy3d-nyform').hidden = false; visaFor($('vy3d-nyform'), $('ny-typ').value); $('vy3d-modellhjalp').hidden = true; }
+    }
+  });
+  $('vy3d-toppvy').addEventListener('click', () => { if (vy3d) vy3d.toppvy(!vy3d.toppvy()); });
+  $('vy3d-ny').addEventListener('click', () => {
+    const f = $('vy3d-nyform');
+    f.hidden = !f.hidden;
+    if (vy3d) vy3d.avbryt(false);
+    visaFor(f, $('ny-typ').value);
+    $('vy3d-valdform').hidden = true; $('vy3d-modellhjalp').hidden = !f.hidden;
+  });
+  $('ny-typ').addEventListener('change', () => visaFor($('vy3d-nyform'), $('ny-typ').value));
+  $('vy3d-nyform').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!vy3d) return;
+    vantarPlacering = true;
+    vy3d.nyVolym({ typ: $('ny-typ').value, b: tal($('ny-b').value), d: tal($('ny-d').value), diam: tal($('ny-diam').value), hojd: tal($('ny-h').value), takform: $('ny-tak').value, taklutning: tal($('ny-lutning').value) });
+    $('vy3d-hjalp').textContent = 'Klicka i vyn där volymen ska stå. Esc avbryter.';
+  });
+  $('ny-avbryt').addEventListener('click', () => { vantarPlacering = false; $('vy3d-nyform').hidden = true; if (vy3d) vy3d.avbryt(false); $('vy3d-modellhjalp').hidden = false; });
+  $('vy3d-angra').addEventListener('click', () => vy3d && vy3d.angra());
+  $('vy3d-gorom').addEventListener('click', () => vy3d && vy3d.gorOm());
+  const VALDFALT = { 'vald-namn': 'namn', 'vald-b': 'b', 'vald-d': 'd', 'vald-diam': 'diam', 'vald-h': 'hojd', 'vald-tak': 'takform', 'vald-lutning': 'taklutning', 'vald-vrid': 'vrid', 'vald-golv': 'golv' };
+  Object.entries(VALDFALT).forEach(([id, falt]) => $(id).addEventListener('change', () => {
+    if (!vy3d) return;
+    const el = $(id), varde = falt === 'namn' || falt === 'takform' ? el.value : tal(el.value);
+    if (typeof varde === 'number' && !isFinite(varde)) return;
+    vy3d.andraVald({ [falt]: varde });
+  }));
+  $('vald-golvauto').addEventListener('change', e => { if (vy3d && e.target.checked) vy3d.andraVald({ golvAuto: true }); else if (vy3d) vy3d.andraVald({ golv: tal($('vald-golv').value) }); });
+  $('vald-avstand').addEventListener('change', e => { const m = tal(e.target.value); if (vy3d && isFinite(m)) vy3d.avstand(m); });
+  $('vald-kopiera').addEventListener('click', () => vy3d && vy3d.kopieraVald());
+  $('vald-tabort').addEventListener('click', () => vy3d && vy3d.taBortVald());
+  // Enter i ett fält ändrar direkt utan att skicka formuläret
+  $('vy3d-valdform').addEventListener('submit', e => e.preventDefault());
+
   $('vy3d-konturer').addEventListener('click', () => {
     if (!vy3d) return;
     const pa = vy3d.konturer(!vy3d.konturer());

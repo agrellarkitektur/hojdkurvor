@@ -7,23 +7,18 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-- (2026-10-29) Takformerna i 0.9.1 blev för bulliga; förenkla med nockhöjd och ungefärlig takvinkel eller 35°. Gjort i 0.9.2.
-
 ## Att testa
 
 - iPhone: dra med två fingrar i 3D-vyn (0.8.0/0.8.1). Windows godkänt 2026-10-27.
-- 0.9.0 på Windows: skuggor (datum, tid, snabbval, Spela dagen), Konturer, Husfärg och Skissfärg, Detaljerade träd, Ögonhöjd (W A S D, skift, pekarlås, Esc), Spara bild och Bild för AI (prova bilderna i Visoid).
-- 0.9.1 på Windows: Konturfärg och Gränsfärg, Takformer på riktiga hus (0.9.2: rätt form, sadel/valm/platt, och rimlig vinkel?), Träd: Realistiska (utseende och om vyn blir seg), att ett klick i Ögonhöjd inte gömmer muspekaren.
-- 0.9.1 på iPhone: Realistiska träd (fart), Takformer.
-- 0.9.0 på iPhone: knappen Val, skuggor och tidsreglaget, ögonhöjd med spaken, att vyn inte blir för seg med skuggor och detaljerade träd (annars Trädskuggor av), Spara bild.
+- 0.9.0 på Windows: skuggor (datum, tid, snabbval, Spela dagen), Konturer, Husfärg och Skissfärg, Ögonhöjd (W A S D, skift, Esc), Spara bild och Bild för AI (prova bilderna i Visoid).
+- 0.9.0–0.9.2 på iPhone: knappen Val, skuggor och tidsreglaget, ögonhöjd med spaken, Takformer, att vyn inte blir för seg med skuggor och detaljerade träd (annars Trädskuggor av), Spara bild.
+- 0.10.0 på Windows: de nya träden (Detaljerade) – ser de bättre ut, och blir vyn seg? Klicka på ett feltolkat hus och rätta taket (form, lutning, nock tvärs, nockhöjd); sparas valet till nästa gång? Modellera: Ny volym (rätblock, cylinder, prisma), flytta, vrida med ⟳ och skift, snäpp mot volym, hus och fastighetsgräns, avstånd efter snäpp, ovanpå, kedjan, volymer in i varandra, Toppvy, Ångra, Delete. Stäng vyn, välj Skapa igen och se att skuggstudien och DXF:en har med volymerna.
+- 0.10.0 på iPhone: de nya träden (fart), att knappen Modellera inte syns och att skissen ändå visas.
 
-## 0.10.0 – rita volymer i Höjdkurvor
+## 0.10.x – modellera vidare
 
-- (2026-10-26) Preliminärt kommer vi inte att behöva ta emot modell från cad-apa, de sköter analyserna själva. Så därför kanske vi skulle titta på att ha en enkel skissmodellsbyggare i Höjdkurvor. Där man kan rita former i 2D och extrudera upp typ, på enklaste sätt och se hur det påverkar siten.
-- (2026-10-27) Bästa hade varit om man kunde sänka linjer individuellt runt takfoten för att skapa sin egen takform. Men platta volymer funkar kanske tills vidare om det är krångligt.
-- (2026-10-29) Enkla volymer som skapas med numeriska mått som i CAD och snäpps mot varandra för att bygga mer komplexa geometrier.
-- (2026-10-29) När två volymer har snäppts ska man kunna klicka på en kedjeikon så att de sitter ihop och flyttas samtidigt.
-- (2026-10-29) Volymer ska kunna läggas i varandra för att skapa mer specifika geometrier. Union i 0.10.0, bortskärning (urtag) i 0.10.x.
+- (2026-10-27) Bästa hade varit om man kunde sänka linjer individuellt runt takfoten för att skapa sin egen takform. (Egna takfotslinjer.)
+- (2026-10-29) Volymer ska kunna läggas i varandra för att skapa mer specifika geometrier. Union kom i 0.10.0; bortskärning (urtag) återstår.
 
 ## Senare / avvaktar
 

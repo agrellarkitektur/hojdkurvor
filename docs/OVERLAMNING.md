@@ -1,62 +1,91 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.9.2 publicerad (förenklade takformer), 0.10.0 nästa.
+överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.10.0 byggd (modellera i 3D, egen takform, nya träd).
 
 ## Läget
 
-- **0.9.2 är klar** 29 oktober (gren `v0.9.2`): Carl August tyckte att takformerna
-  i 0.9.1 blev för bulliga och föreslog nockhöjd + ungefärlig takvinkel eller 35°.
-  Nu passas sadeltak, valmat eller platt tak till laserdatan, se *Takformer i
-  0.9.2*. Inte testad av honom än.
-- **0.9.1** 29 oktober (gren `v0.9.1`, sammanslagen med `main`), efter
-  Carl Augusts första prov av 0.9.0: Konturfärg och Gränsfärg, Takformer ur
-  laserdatan, ögonhöjd utan pekarlås och realistiska träd. Se *3D-vyn i 0.9.1*.
-  Inte testad av honom än.
-- **0.9.0** (29 oktober): skuggor, konturer, hus- och skissfärg, trädmodeller,
-  ögonhöjd och bilder i 3D-vyn. Se *3D-vyn i 0.9.0* nedan.
-- **0.8.2** (27 oktober) bytte bara publiceringen till Node 24. **0.8.1** godkänd
-  på Windows 27 oktober (IFC i Archicad i lokal nolla, Flytta, skift-dra,
-  Kurvfärg). iPhone (två fingrar i 3D) är fortfarande inte testad.
-- **Synpunktsformuläret** fungerar (provet kom fram till Gmail 27 oktober).
-- **Planen**: 0.10.0 är att rita volymer i 3D-vyn, se nästa avsnitt. Allt är
-  bestämt; vänta ändå på Carl Augusts test av 0.9.0 innan bygget börjar, så att
-  rättelser kan komma först som 0.9.1.
+- **0.10.0** 29 oktober (gren `v0.10.0`): modellera volymer i 3D-vyn, egen
+  takform per befintligt hus och nya stiliserade träd. Carl August bad om det
+  med sina synpunkter på 0.9.2 (taken bra i stort men vissa feltolkade; de
+  detaljerade träden såg inte bra ut, han skickade ett low-poly-paket från
+  Sketchfab som förebild). Se avsnitten nedan. Inte testad av honom än; listan
+  står under *Att testa* i `docs/SYNPUNKTER.md`.
+- Publiceringen: se *Nästa session* – sessionen fick inte skrivrätt till repot,
+  så grenen kan behöva pushas därifrån.
+- **0.9.0–0.9.2** (29 oktober): skuggor, konturer, färger, ögonhöjd, bilder,
+  takformer ur laserdatan (förenklade i 0.9.2). Carl August har provat 0.9.2 på
+  Windows: taken ser generellt bra ut.
+- **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
+  fortfarande inte testad.
 
-## Skissfunktionen och 3D-vyn (bestämt 29 oktober)
+## Modellera i 3D-vyn (0.10.0)
 
-Carl August valde Claudes förslag på alla punkter.
+Beslutat 29 oktober (Carl August valde Claudes förslag): primitiver med exakta
+mått, modelleras i 3D-vyn med en ortografisk toppvy, bara på dator. Analyserna
+får volymerna som förut: fotavtryck + golv + takfot + takform.
 
-**Grundidé:** volymerna byggs av primitiver med exakta mått, men analyserna
-(skuggor, horisont, skyfall, DXF, `branInVolymer`) får dem som i dag:
-fotavtryck + golv + takfot + takform. Primitiven och gruppen sparas som extra
-fält på volymen, så att gamla volymer från cad-apa och DXF fungerar som förut.
+- **`js/volym3d.js` (`Volym3D`)**, ren geometri, testad i `test/volym3d.test.js`.
+  `v.primitiv = { typ: 'block'|'cylinder'|'prisma'|'polygon', x, y, vrid (grader
+  moturs från öster), b, d | diam | pts, nock0, lankar, golvAuto, pa }`.
+  `uppdatera(v)` räknar fotavtrycket (cylinder 32 hörn) och nockriktningen
+  (prisma: = vrid, nocken längs bredden). `franVolym(v)` gör en polygon av en
+  volym från cad-apa/DXF (golvAuto om golvet ligger på marken). `plan(v)` ger
+  takfallen som plan med samma höjder som `Platsanalys.takhojd` (lägsta
+  planet), `takytor(v)` exakta takfall och gavlar för konvexa fotavtryck
+  (annars ritar vyn taket i rutnätet som förut). `snapp(fot, mal, tol)`: yta mot
+  yta med hörnen i linje, sedan hörn mot hörn, sist hörn mot kant; `mal.prio`
+  (volymer 0, hus 1, gränser 2). `kontakter` (sida mot sida, ovanpå, in i
+  varandra) ger punkterna för kedjorna. `komponent`/`vaxlaLank`: grupper är
+  sammanhängande länkar. `underlag`: volymen vars fotavtryck har mitten under.
+  `synligaKanter` + `skarningar`: konturerna som union – varje kant delas i
+  bitar om 0,5 m, och 16 provpunkter runt biten avgör om den ligger inuti, på
+  en plan yta (8 av 16 inne) eller är en verklig kant; skärningslinjer där
+  väggar korsar varandra och där tak/golv möter en vägg läggs till.
+- **`js/vy3d.js`**: skissen ritas om med `ritaSkiss()` (väggar, sockel ner till
+  lägsta marken, tak; konturerna som union utom medan man drar). Modelleringen
+  ligger i blocket *Modellera* före `storleksandring`: pekarkrokar
+  (`skissNed/Flytt/Upp/Klick`) körs före snurra/flytta. Flytta = dra i ett
+  vågrätt plan på greppunktens höjd, hela gruppen följer, snäpp med tio pixlar
+  i meter (Alt stänger av), golvet följer underlaget (`golvFor`, `foljUnderlag`,
+  `ovanpa` hindrar att två volymer står på varandra). Kedjor och vridhandtaget
+  är HTML-knappar i `.vy3d-overlagg` som projiceras i `uppdateraOverlagg`
+  (anropas från `placera`). Historik: JSON av hela listan, högst 80 steg.
+  Toppvy: `orto` (OrthographicCamera, upp = −z), `aktivKam()` används överallt
+  där kameran behövs. API: `modellera`, `toppvy`, `nyVolym(mall, punkt?)`,
+  `vald(id)`, `andraVald`, `taBortVald`, `kopieraVald`, `avstand(m)`, `angra`,
+  `gorOm`, `avbryt(urModell)`, `lyssnaSkiss`, testkrokar `dra`, `vrida`,
+  `lanka`, `kedjor`, `skarmpunkt`, `tittaPa`.
+- **`app.js`**: panelen `#vy3d-modell` (Ny volym, Ångra, Gör om, fält för den
+  valda), `skissFran3d` skriver tillbaka till `state.volymer` och
+  `state.senaste.volymer`, sparar och ritar listan under 04 Skiss. När vyn
+  stängs med en ändrad skiss: statusraden ber om Skapa igen (zip och PDF har
+  den gamla skissen tills dess). Esc: avbryter placering, tar bort valet, går
+  ur modelleringen, och först sedan stänger vyn.
+- Kvar till **0.10.x**: bortskärning (urtag, kräver CSG och att analyserna
+  får formen) och egna takfotslinjer. Takkonturer där två lutande tak möter
+  varandra (vinkelrännor) ritas inte; tak mot vägg och vägg mot vägg gör det.
 
-**0.9.0 – 3D-vyn** (byggd, se *3D-vyn i 0.9.0*):
-- Träd: 3–4 modeller (gran, tall, löv) skalade efter laserhöjd och kronbredd,
-  enklare på avstånd (iPhone). Ersätter klot och cylinder (`InstancedMesh`).
-- Ögonhöjd: knapp, klick på marken, kameran 1,6 m över marken. Dator: WASD
-  följer terrängen, musen tittar (pekarlås), skift springer, Esc tillbaka.
-  Mobil: pekskärmsspak att gå med och dra för att titta.
-- Spara bild: PNG i 2–4 × skärmen utan knappar. Bild för AI: zip med samma vy
-  som färgbild, vit lermodell, kantlinjer och djupkarta. Vad Visoid helst vill
-  ha ska provas med riktiga bilder.
+## Egen takform (0.10.0)
 
-**0.10.0 – volymer i 3D-vyn:**
-- Modelleringen sker i 3D-vyn, med en ortografisk toppvy för exakt plan.
-  Bara på dator; mobilen visar.
-- Primitiver: rätblock (B × D × H), cylinder (Ø × H), prisma med
-  sadel/pulpet/valm. Skapas i en ruta med mått, placeras med klick.
-- Markera, flytta, rotera (15°-steg med skift), ändra mått numeriskt.
-- Snäpp: yta mot yta, hörn och kant, ovanpå en annan volym (golv = den
-  undres takfot), mot befintliga hus och fastighetsgränser. Avstånd kan skrivas
-  in efter snäppet.
-- Kedjeikon vid fogen när två volymer snäppt: klick gör en grupp som flyttas
-  och roteras ihop, klick igen löser upp.
-- I varandra: överlapp slås ihop (union) i 0.10.0.
+`Byggnad.takmodell(b, eget)`: `eget = { form: 'sadeltak'|'valmat'|'pulpettak'|'platt',
+lutning, tvars, vand, nock }`. Det som inte anges passas till laserdatan. `tvars`
+byter rektangelns axlar. Med egen vinkel tas nocken ur 90:e percentilen av
+cellerna närmast nocken (en passning med fel vinkel drar annars nocken), och
+takfoten får gå ner till 1 m över marken. Pulpettak: d = B ± v, D = 2B, ett
+enda takfall. Inbuktade hus får den valda formen över rektangeln, ritad i
+rutnätet. I 3D-vyn: klick på ett hus utanför modelleringen → `lyssnaHus` →
+panelen `#vy3d-tak`; `bytTak(id, t)` byter taket och slår på Takformer. Valen
+sparas i localStorage `terrang-takval` med objektidentiteten som nyckel.
 
-**0.10.x:** bortskärning (en volym gör urtag i en annan, kräver CSG och att
-analyserna får den nya formen) och egna takfotslinjer.
+## Träd (0.10.0)
+
+Stiliserad low-poly: `Trad3D.typ(t)` väljer variant ur läget (gran, gran2,
+tall, tall2, lov, lov2, bjork; ungefär var tredje lövträd björk), `modell(typ,
+niva)`; de enkla är per art. En InstancedMesh per typ (detaljerade) och per art
+(enkla). Högst 4 000 detaljerade på datorn, 600 inom 250 m på mobilen.
+Realistiska träd (lövkort) är borttagna, och med dem LOV-varianterna av
+materialen i *Bild för AI*. Ytor: 200–700 per detaljerat träd.
 
 ## Takformer i 0.9.2
 
@@ -96,15 +125,7 @@ laserdata; vinkelhus med sadeltak i båda flyglarna blir valmade.
   på riktig laserdata. Finns inte efter att ett projekt öppnats utan laserdata.
 - **Ögonhöjd**: `requestPointerLock` togs bort. Pekarlåset hanteras fortfarande
   om det ändå släpps, men vyn ber inte om det.
-- **Realistiska träd** (`Trad3D.realistisk(art)`, `Trad3D.ritaLovbild`):
-  `{ stam, lov }`; lövkort med uv i en bild 3 × 1 (gran, tall, löv) som ritas på
-  en canvas när nivån väljs (`byggRealistiska`). `lovMat` är DoubleSide med
-  `alphaTest` och `alphaToCoverage`, och `sammaNormal` vänder tillbaka normalen
-  på baksidan (patch av `normal_fragment_begin`, three r170). Skuggor med
-  `customDepthMaterial` med samma bild. `tradniva` tar 'realistisk'; nivåerna är
-  listor av InstancedMesh. *Bild för AI* byter material per yta (`medMaterial`)
-  i stället för `overrideMaterial`, så att lövkorten har hål i lera, djup och
-  normaler. Högst 3 000 nära på datorn, 400 inom 200 m på mobilen.
+- **Realistiska träd** med lövkort fanns i 0.9.1–0.9.2, borttagna i 0.10.0.
 - Testkrok: `TERRANG_TEST.byggnader` (husen med `tak`) bredvid `vy3d`.
 
 ## 3D-vyn i 0.9.0
@@ -220,14 +241,12 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Kontrollera att publiceringen av 0.9.2 gick igenom (steget Kontrollera
-   webbplatsen).
-2. Be Carl August om test av 0.9.2 (listan under Att testa i
-   `docs/SYNPUNKTER.md`): de förenklade takformerna på riktiga hus, de realistiska trädens
-   tyngd på dator och iPhone, och iPhone med två fingrar. Fel blir 0.9.3.
-3. Därefter 0.10.0, volymer i 3D-vyn, på en egen gren (se *Skissfunktionen och
-   3D-vyn* ovan). Toppvyn kan byggas med en `OrthographicCamera` bredvid
-   perspektivkameran; `traffMark` finns redan för klick på marken.
+1. Om grenen `v0.10.0` inte är sammanslagen och publicerad: slå ihop med
+   `main`, pusha, och kontrollera körningen (steget Kontrollera webbplatsen) och
+   att <https://agrellarkitektur.se/terrang/> visar 0.10.0.
+2. Be Carl August om test av 0.10.0 (listan under Att testa). Rättelser blir 0.10.1.
+3. Därefter 0.10.x: urtag och egna takfotslinjer, när han har provat
+   modelleringen.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
