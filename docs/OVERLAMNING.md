@@ -1,7 +1,7 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.10.0 byggd (modellera i 3D, egen takform, nya träd).
+överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.10.0 publicerad (modellera i 3D, egen takform, nya träd).
 
 ## Läget
 
@@ -11,8 +11,8 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   detaljerade träden såg inte bra ut, han skickade ett low-poly-paket från
   Sketchfab som förebild). Se avsnitten nedan. Inte testad av honom än; listan
   står under *Att testa* i `docs/SYNPUNKTER.md`.
-- Publiceringen: se *Nästa session* – sessionen fick inte skrivrätt till repot,
-  så grenen kan behöva pushas därifrån.
+- Publicerad 29 oktober (sammanslagen med `main`, körningen och Kontrollera
+  webbplatsen gick igenom). Gränssnittstestet godkänt i alla tre teman, mobiltestet också.
 - **0.9.0–0.9.2** (29 oktober): skuggor, konturer, färger, ögonhöjd, bilder,
   takformer ur laserdatan (förenklade i 0.9.2). Carl August har provat 0.9.2 på
   Windows: taken ser generellt bra ut.
@@ -241,11 +241,8 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Om grenen `v0.10.0` inte är sammanslagen och publicerad: slå ihop med
-   `main`, pusha, och kontrollera körningen (steget Kontrollera webbplatsen) och
-   att <https://agrellarkitektur.se/terrang/> visar 0.10.0.
-2. Be Carl August om test av 0.10.0 (listan under Att testa). Rättelser blir 0.10.1.
-3. Därefter 0.10.x: urtag och egna takfotslinjer, när han har provat
+1. Be Carl August om test av 0.10.0 (listan under Att testa). Rättelser blir 0.10.1.
+2. Därefter 0.10.x: urtag och egna takfotslinjer, när han har provat
    modelleringen.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
