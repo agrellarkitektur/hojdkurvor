@@ -38,10 +38,17 @@ node test/ifc.test.js
 node test/version.test.js
 ```
 
+```
+node test/vy3d.test.js
+```
+
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
 `TERRANG_TEST.vy3d`, så att testet kan läsa kamerans läge.
+
+3D-testet prövar trädmodellerna (storlek, ytornas riktning, artgissningen) och
+beräkningarna för bilderna: djupet, djupkartan, kantlinjerna och storleken.
 
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
 på syntetiska rutnät, och byggnader och fastighetsindelning ur låtsasfilerna.
@@ -59,7 +66,10 @@ sparas filerna, så att de kan kontrolleras med IfcOpenShell
 (`python3.12 -m pip install --break-system-packages ifcopenshell pytest`, sedan
 `ifcopenshell.validate.validate(f, logger, express_rules=True)`). `ui_test.py`
 kontrollerar också att IFC-filerna kommer med i zip:en, att 3D-vyn flyttas vid
-högerdrag och att dubbelklick återställer den.
+högerdrag och att dubbelklick återställer den, och 3D-vyns konturer, färger,
+detaljerade träd, skuggor med snabbval och uppspelning, Spara bild (2 ×
+skärmen), Bild för AI (fyra bilder i zip:en) och ögonhöjd (W går framåt, Esc
+går tillbaka utan att stänga vyn).
 Tar några sekunder. Med `BYGGNAD_GPKG=…/byggnad_knKKKK.gpkg` och
 `FASTIGHET_GPKG=…/fastighetsindelning_knKKKK.gpkg` körs samma kontroller
 också på riktiga filer från Lantmäteriet (för Vimmerby centrum, kommun 0884).

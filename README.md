@@ -158,7 +158,10 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/platsanalysblad.js` – platsanalysens A3-häfte (PDF)
 - `js/utbyte.js` (`Utbyte`) – utbytet med cad-apa, se `docs/UTBYTE-CAD-APA.md`
 - `js/vy3d.js` (`Vy3D`) – 3D-förhandsvisning med three.js, laddas först när den
-  öppnas; lager som kan slås av och på, panorering, valbar kurvfärg
+  öppnas; lager som kan slås av och på, panorering, valbar kurvfärg, skuggor
+  efter datum och tid, konturer, hus- och skissfärg, ögonhöjd och bilder
+- `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd; enkla och detaljerade)
+- `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
 - `js/dxf.js` – DXF-skrivare
@@ -217,11 +220,11 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - IndexedDB: marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt. Appen frågar Lantmäteriet om
   filen ändrats innan den används igen. Under 02 Underlag, "Sparat i
   webbläsaren", kan man ta bort enstaka filer eller tömma allt.
-- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar,
+- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer och trädnivå,
   formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
   om användaren väljer det, inloggningen.
 - sessionStorage: aktivt steg, sektionslinjer, horisontens betraktelsepunkt,
-  skissens volymer, projekt-id och dolda lager i 3D-vyn, bara så länge fliken är öppen.
+  skissens volymer, projekt-id, dolda lager, skuggor och soltid i 3D-vyn, bara så länge fliken är öppen.
 
 ## Licenser för datan
 

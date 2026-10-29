@@ -213,6 +213,80 @@ with sync_playwright() as p:
         pg.eval_on_selector('#vy3d-kurvfarg', "e => { e.value = '#e02020'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
         pg.wait_for_timeout(500); pg.screenshot(path=f'{UT}/06e_3d_roda_kurvor.png')
         pg.eval_on_selector('#vy3d-kurvfarg', "e => { e.value = '#000000'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
+
+    # 0.9.0: konturer, färger, träd, skuggor, ögonhöjd och bilder
+    v3 = 'TERRANG_TEST.vy3d'
+    print('  0.9.0 knappar:', {i: pg.locator('#' + i).is_visible() for i in ('vy3d-konturer', 'vy3d-tradniva', 'vy3d-skuggor', 'vy3d-husfarg-rad', 'vy3d-skissfarg-rad', 'vy3d-ogon', 'vy3d-bild', 'vy3d-ai')})
+    if pg.locator('#vy3d-konturer').is_visible():
+        pg.click('#vy3d-konturer'); assert pg.evaluate(f'{v3}.konturer()') is True
+    if pg.locator('#vy3d-husfarg-rad').is_visible():
+        pg.eval_on_selector('#vy3d-husfarg', "e => { e.value = '#d8c3a0'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
+        assert pg.evaluate(f'{v3}.byggnadsfarg()') == '#d8c3a0'
+    if pg.locator('#vy3d-tradniva').is_visible():
+        print('  träd enkla:', pg.evaluate(f'{v3}.tradantal()'))
+        pg.click('#vy3d-tradniva'); pg.wait_for_timeout(300)
+        antal = pg.evaluate(f'{v3}.tradantal()')
+        print('  träd detaljerade:', antal)
+        assert sum(a['detaljerad'] for a in antal.values()) > 0, 'detaljerade träd visas'
+    pg.wait_for_timeout(500); pg.screenshot(path=f'{UT}/06g_3d_konturer_trad.png')
+    if pg.locator('#vy3d-skuggor').is_visible():
+        pg.click('#vy3d-skuggor'); pg.wait_for_timeout(300)
+        assert pg.locator('#vy3d-sol').is_visible(), 'solraden syns med skuggor'
+        pg.click('[data-solhandelse=mars]')
+        pg.fill('#vy3d-tid', '600'); pg.dispatch_event('#vy3d-tid', 'input'); pg.wait_for_timeout(800)
+        print('  sol vårdagjämning 10:00:', pg.input_value('#vy3d-datum'), pg.inner_text('#vy3d-solinfo'))
+        pg.screenshot(path=f'{UT}/06h_3d_skuggor_mars_10.png')
+        pg.click('[data-solhandelse=juni]'); pg.fill('#vy3d-tid', '1080'); pg.dispatch_event('#vy3d-tid', 'input'); pg.wait_for_timeout(800)
+        print('  sol midsommar 18:00:', pg.input_value('#vy3d-datum'), pg.inner_text('#vy3d-solinfo'))
+        pg.screenshot(path=f'{UT}/06i_3d_skuggor_juni_18.png')
+        pg.click('#vy3d-spela'); pg.wait_for_timeout(1500)
+        t1 = pg.input_value('#vy3d-tid'); pg.wait_for_timeout(1000); t2 = pg.input_value('#vy3d-tid')
+        pg.click('#vy3d-spela')
+        print('  uppspelning:', t1, '→', t2); assert t1 != t2, 'tiden går vid uppspelning'
+        pg.click('[data-solhandelse=dec]'); pg.fill('#vy3d-tid', '1320'); pg.dispatch_event('#vy3d-tid', 'input'); pg.wait_for_timeout(300)
+        assert 'under horisonten' in pg.inner_text('#vy3d-solinfo'), 'solen nere en decemberkväll'
+        pg.fill('#vy3d-tid', '720'); pg.dispatch_event('#vy3d-tid', 'input'); pg.wait_for_timeout(300)
+    # bilder: en PNG, och för AI en zip med fyra bilder
+    pg.select_option('#vy3d-skala', '2')
+    with pg.expect_download(timeout=60000) as d:
+        pg.click('#vy3d-bild')
+    open(f'{UT}/3d_bild.png', 'wb').write(open(d.value.path(), 'rb').read())
+    from PIL import Image
+    bild = Image.open(f'{UT}/3d_bild.png'); yb = pg.locator('#vy3d-yta').bounding_box()
+    print('  spara bild:', d.value.suggested_filename, bild.size, 'skärmen', round(yb['width']), '×', round(yb['height']))
+    assert abs(bild.size[0] - 2 * round(yb['width'])) <= 2, 'bilden är 2 × skärmen'
+    with pg.expect_download(timeout=120000) as d:
+        pg.click('#vy3d-ai')
+    open(f'{UT}/3d_ai.zip', 'wb').write(open(d.value.path(), 'rb').read())
+    import zipfile
+    z = zipfile.ZipFile(f'{UT}/3d_ai.zip'); print('  bild för AI:', d.value.suggested_filename, sorted(z.namelist()))
+    for n in z.namelist():
+        z.extract(n, f'{UT}/3d_ai')
+    assert len([n for n in z.namelist() if n.endswith('.png')]) == 4
+    # ögonhöjd: knappen väntar på ett klick på marken, WASD går, Esc tillbaka
+    yta = pg.locator('#vy3d-yta canvas').bounding_box()
+    mx, my = yta['x'] + yta['width'] / 2, yta['y'] + yta['height'] / 2
+    pg.mouse.dblclick(mx, my); pg.wait_for_timeout(200)
+    pg.click('#vy3d-ogon'); assert pg.evaluate(f'{v3}.lage()') == 'valj'
+    print('  välj punkt, hjälp:', pg.inner_text('#vy3d-hjalp'))
+    pg.mouse.click(mx, my + 40); pg.wait_for_timeout(400)
+    kam0 = pg.evaluate(f'{v3}.kameralage()')
+    print('  ögonhöjd:', kam0['lage'], [round(v, 1) for v in kam0['position']])
+    assert kam0['lage'] == 'ogon'
+    pg.screenshot(path=f'{UT}/06j_3d_ogonhojd.png')
+    pg.keyboard.down('KeyW'); pg.wait_for_timeout(1000); pg.keyboard.up('KeyW')
+    kam1 = pg.evaluate(f'{v3}.kameralage()')
+    gatt = ((kam1['position'][0] - kam0['position'][0]) ** 2 + (kam1['position'][2] - kam0['position'][2]) ** 2) ** 0.5
+    print('  gick med W i 1 s:', round(gatt, 1), 'm')
+    assert gatt > 1, 'W går framåt'
+    pg.mouse.move(mx, my); pg.mouse.down(); pg.mouse.move(mx + 200, my, steps=5); pg.mouse.up(); pg.wait_for_timeout(300)
+    pg.screenshot(path=f'{UT}/06k_3d_ogonhojd_vriden.png')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
+    assert pg.evaluate(f'{v3}.lage()') == 'oversikt' and pg.locator('#vy3d').is_visible(), 'Esc tillbaka utan att stänga'
+    pg.click('#vy3d-ogon'); pg.keyboard.press('Escape'); assert pg.evaluate(f'{v3}.lage()') == 'oversikt', 'Esc avbryter valet'
+    if pg.locator('#vy3d-skuggor').is_visible(): pg.click('#vy3d-skuggor')
+    if pg.locator('#vy3d-konturer').is_visible(): pg.click('#vy3d-konturer')
+    if pg.locator('#vy3d-tradniva').is_visible(): pg.click('#vy3d-tradniva')
     pg.click('#vy3d-stang')
 
     # projektlänk

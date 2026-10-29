@@ -3,6 +3,38 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.9.0 – 2026-10-29
+
+3D-vyn som studieverktyg.
+
+- **Skuggor**: knappen *Skuggor* tänder solen efter datum och tid, med reglage,
+  snabbval för vårdagjämning, midsommar och vintersolstånd och *Spela dagen*
+  (från soluppgång till solnedgång på 20 sekunder). Solens läge räknas med
+  `Sol.solensLage` som soldiagrammet och skuggstudien, och azimuten vrids med
+  meridiankonvergensen som i `Analys.skuggor`. Terrängen, byggnaderna, skissen
+  och träden kastar skugga; *Trädskuggor* stänger av trädens om det blir tungt.
+  Skuggkartan räknas bara om när solen, lagren eller träden ändras.
+- **Konturer**: svarta kanter på befintliga byggnader och skissen.
+- **Färger**: *Husfärg* för alla befintliga byggnader och *Skissfärg* för
+  skissens volymer (väggar och tak). Valen sparas i webbläsaren.
+- **Träd**: gran, tall och lövträd i stället för klot och cylinder, skalade
+  efter laserns höjd och kronbredd och lite vridna och olika ljusa. Arten
+  gissas ur formen (höjd mot kronbredd). *Detaljerade träd* visar mer
+  detaljerade modeller närmast kameran (högst 6 000 på datorn, 600 inom 250 m på
+  mobilen) och enkla längre bort. Low-poly är förval. Ny `js/trad3d.js`.
+- **Ögonhöjd**: klicka på marken och stå där 1,6 m över marken. På datorn går
+  man med W A S D eller pilarna (skift springer), drar eller klickar för att
+  titta med musen (pekarlås). På mobilen går man med en spak och drar för att
+  titta. Esc eller *Tillbaka* går upp igen, utan att stänga vyn.
+- **Spara bild**: PNG i 2, 3 eller 4 gånger skärmens storlek, utan knappar.
+  **Bild för AI**: en zip med samma vy som färgbild, vit lermodell, kantlinjer
+  och djupkarta (nära ljust), för till exempel Visoid. Bilderna ritas i en egen
+  buffert, högst 8 192 px per sida och 40 Mpx (16 Mpx på mobilen). Ny
+  `js/bild3d.js`.
+- På smala skärmar ligger valen i 3D-vyn bakom knappen *Val*; datum och tid
+  syns när skuggorna är på.
+- Nytt test `test/vy3d.test.js`; `ui_test.py` provar alla de nya funktionerna.
+
 ## 0.8.2 – 2026-10-27
 
 - Publiceringen: `actions/checkout@v7`, `actions/setup-node@v7`,

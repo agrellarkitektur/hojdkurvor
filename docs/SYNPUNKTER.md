@@ -10,16 +10,8 @@ flyttas till CHANGELOG.md.
 ## Att testa
 
 - iPhone: dra med två fingrar i 3D-vyn (0.8.0/0.8.1). Windows godkänt 2026-10-27.
-
-## 0.9.0 – 3D-vyn som studieverktyg
-
-- (2026-10-26) Slå på skuggor och ange tidpunkt för att se hur de faller i 3D-preview.
-- (2026-10-26) Möjlighet att slå på konturer på 3D-byggnaderna i 3D-preview.
-- (2026-10-26) Välja färg på befintliga byggnaders ytor.
-- (2026-10-26) Går det att växla mellan low-poly och mer realistiska träd i 3D-preview? (Flyttad hit 2026-10-27.)
-- (2026-10-29) Mer detaljerade träd.
-- (2026-10-29) Klicka på en punkt för att få ögonhöjdsperspektiv, gå vidare med WASD och titta runt med musen.
-- (2026-10-29) Exportera bild av 3D-vyn, både som den är och för vidarebearbetning med AI (t.ex. Visoid).
+- 0.9.0 på Windows: skuggor (datum, tid, snabbval, Spela dagen), Konturer, Husfärg och Skissfärg, Detaljerade träd, Ögonhöjd (W A S D, skift, pekarlås, Esc), Spara bild och Bild för AI (prova bilderna i Visoid).
+- 0.9.0 på iPhone: knappen Val, skuggor och tidsreglaget, ögonhöjd med spaken, att vyn inte blir för seg med skuggor och detaljerade träd (annars Trädskuggor av), Spara bild.
 
 ## 0.10.0 – rita volymer i Höjdkurvor
 

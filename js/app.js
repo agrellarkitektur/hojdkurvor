@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.8.2';
+  const FILVERSION = '0.9.0';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -2637,19 +2637,29 @@
   // 3D-förhandsvisning (three.js laddas först när den öppnas)
   // ------------------------------------------------------------------
   let vy3d = null;
+  const HJALP3D = $('vy3d-hjalp').innerHTML;
+  /** Sparade val i 3D-vyn: en färg (#rrggbb) ur localStorage, annars förvalet. */
+  const sparadFarg = (nyckel, forval) => { const c = lager.las('localStorage', nyckel); return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : forval; };
   $('visa-3d').addEventListener('click', async () => {
     const s = state.senaste;
     if (!s || !s.rutnat) return;
     $('vy3d').hidden = false;
     document.body.classList.add('vy3d-oppen');
     try {
+      await Promise.all(['js/trad3d.js', 'js/bild3d.js'].map(laddaSkript));
       await laddaSkript('js/vy3d.js');
       varnaGamlaFiler('vy3d.js', Vy3D.version);
       if (vy3d) vy3d.stang();
+      stoppaUppspelning();
+      let sol = null;
+      try { const m = utsnittsMitt(); sol = { lat: m.lat, lon: m.lon, konvergens: m.konvergens, tid: soltid3d() }; } catch (e) { console.error(e); }
       vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null,
         fotavtryck: s.byggnader ? s.byggnader.filter(b => b.hojd == null).map(b => b.fotavtryck) : null,
         kurvor: s.kurvor, fastigheter: s.fastigheter ? s.fastigheter.granser.map(g => g.pts) : null, vagar: s.vagar ? s.vagar.linjer.map(l => l.pts) : null,
         kurva: kurvfarg3d(), fastighet: farg('fastighet'), vag: farg('vag'), byggnad: farg('byggnad'),
+        befintlig: sparadFarg('terrang-3d-husfarg', '#b9b3aa'), skissfarg: sparadFarg('terrang-3d-skissfarg', farg('annot')),
+        tradniva: lager.las('localStorage', 'terrang-3d-trad') === 'detaljerad' ? 'detaljerad' : 'enkel',
+        konturer: lager.las('localStorage', 'terrang-3d-konturer') === true, sol,
         bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
         ortofoto: s.ortofoto ? { canvas: s.ortofoto.canvas, x0: s.ortofoto.x0 - s.ortofoto.s / 2, y1: s.ortofoto.y1 + s.ortofoto.s / 2, bredd: s.ortofoto.W * s.ortofoto.s, hojd: s.ortofoto.H * s.ortofoto.s } : null });
       $('vy3d-faktor').textContent = '1';
@@ -2657,19 +2667,35 @@
       $('vy3d-orto').hidden = orto == null;
       $('vy3d-orto').setAttribute('aria-pressed', String(!!orto));
       vy3d.dragLage(dragLage3d);
+      vy3d.lyssna(visaLage3d);
+      visaLage3d({ lage: 'oversikt' });
       if (window.TERRANG_TEST) window.TERRANG_TEST.vy3d = vy3d;   // testkrok: kamerans läge i gränssnittstestet
       ritaLager3d();
       $('vy3d-kurvfarg-rad').hidden = vy3d.kurvfarg() == null;
       $('vy3d-kurvfarg').value = kurvfarg3d();
+      const hus = vy3d.byggnadsfarg(), skiss = vy3d.skissfarg(), kont = vy3d.konturer(), tn = vy3d.tradniva();
+      $('vy3d-husfarg-rad').hidden = hus == null; if (hus) $('vy3d-husfarg').value = hus;
+      $('vy3d-skissfarg-rad').hidden = skiss == null; if (skiss) $('vy3d-skissfarg').value = skiss;
+      $('vy3d-konturer').hidden = kont == null; $('vy3d-konturer').setAttribute('aria-pressed', String(!!kont));
+      $('vy3d-tradniva').hidden = tn == null; $('vy3d-tradniva').setAttribute('aria-pressed', String(tn === 'detaljerad'));
+      $('vy3d-tradskuggor').hidden = vy3d.tradskuggor() == null; $('vy3d-tradskuggor').setAttribute('aria-pressed', 'true');
+      const kan = vy3d.skuggor() != null;
+      $('vy3d-skuggor').hidden = !kan;
+      satSkuggor3d(kan && lager.las('sessionStorage', 'terrang-3d-skuggor') === true);
     } catch (e) {
       console.error(e);
       $('vy3d-yta').textContent = '3D-vyn kunde inte öppnas: ' + e.message;
     }
     $('vy3d-stang').focus();
   });
-  const stang3d = () => { $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen'); if (vy3d) { vy3d.stang(); vy3d = null; } $('visa-3d').focus(); };
+  const stang3d = () => { stoppaUppspelning(); $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen'); if (vy3d) { vy3d.stang(); vy3d = null; } $('visa-3d').focus(); };
   $('vy3d-stang').addEventListener('click', stang3d);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('vy3d').hidden) stang3d(); });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || $('vy3d').hidden) return;
+    // i ögonhöjd går Esc tillbaka till översikten, annars stänger den vyn
+    if (vy3d && vy3d.lage() !== 'oversikt') { vy3d.oversikt(); return; }
+    stang3d();
+  });
   /** En knapp per lager som finns i 3D-vyn, i samma ordning varje gång. Valen sparas så länge fliken är öppen. */
   const LAGER3D = [['kurvor', 'Höjdkurvor'], ['trad', 'Träd'], ['byggnader', 'Byggnader'], ['fastigheter', 'Fastighetsgränser'], ['vagar', 'Vägar'], ['skiss', 'Skiss']];
   function ritaLager3d() {
@@ -2691,7 +2717,8 @@
       });
       rad.append(b);
     }
-    rad.append($('vy3d-kurvfarg-rad'));   // färgvalet sist i raden
+    // övriga val sist i raden, i samma ordning varje gång
+    rad.append($('vy3d-orto'), $('vy3d-konturer'), $('vy3d-tradniva'), $('vy3d-skuggor'), $('vy3d-kurvfarg-rad'), $('vy3d-husfarg-rad'), $('vy3d-skissfarg-rad'));
   }
   $('vy3d-orto').addEventListener('click', () => {
     if (!vy3d) return;
@@ -2699,14 +2726,33 @@
     $('vy3d-orto').setAttribute('aria-pressed', String(!!pa));
   });
   /** Höjdkurvornas färg i 3D-vyn: svart om inget annat är valt. Valet sparas i webbläsaren. */
-  function kurvfarg3d() {
-    const c = lager.las('localStorage', 'terrang-3d-kurvfarg');
-    return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : '#000000';
-  }
+  function kurvfarg3d() { return sparadFarg('terrang-3d-kurvfarg', '#000000'); }
   $('vy3d-kurvfarg').addEventListener('input', e => {
     if (!vy3d) return;
     vy3d.kurvfarg(e.target.value);
     lager.spara('localStorage', 'terrang-3d-kurvfarg', e.target.value);
+  });
+  $('vy3d-husfarg').addEventListener('input', e => {
+    if (!vy3d) return;
+    vy3d.byggnadsfarg(e.target.value);
+    lager.spara('localStorage', 'terrang-3d-husfarg', e.target.value);
+  });
+  $('vy3d-skissfarg').addEventListener('input', e => {
+    if (!vy3d) return;
+    vy3d.skissfarg(e.target.value);
+    lager.spara('localStorage', 'terrang-3d-skissfarg', e.target.value);
+  });
+  $('vy3d-konturer').addEventListener('click', () => {
+    if (!vy3d) return;
+    const pa = vy3d.konturer(!vy3d.konturer());
+    $('vy3d-konturer').setAttribute('aria-pressed', String(!!pa));
+    lager.spara('localStorage', 'terrang-3d-konturer', !!pa);
+  });
+  $('vy3d-tradniva').addEventListener('click', () => {
+    if (!vy3d) return;
+    const n = vy3d.tradniva(vy3d.tradniva() === 'detaljerad' ? 'enkel' : 'detaljerad');
+    $('vy3d-tradniva').setAttribute('aria-pressed', String(n === 'detaljerad'));
+    lager.spara('localStorage', 'terrang-3d-trad', n);
   });
   $('vy3d-aterstall').addEventListener('click', () => { if (vy3d) vy3d.aterstall(); });
   /** Flytta: vanlig dragning flyttar vyn i stället för att snurra. Valet gäller så länge sidan är öppen. */
@@ -2721,6 +2767,143 @@
     const f = vy3d.overdriv() === 1 ? 2 : 1;
     vy3d.overdriv(f); $('vy3d-faktor').textContent = String(f);
   });
+
+  // Ögonhöjd (0.9.0): klicka på marken, gå med tangenterna eller spaken
+  const pekskarm = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  $('vy3d-val').addEventListener('click', () => {
+    const ut = $('vy3d-huvud').classList.toggle('utfalld');
+    $('vy3d-val').setAttribute('aria-expanded', String(ut));
+    $('vy3d-val').textContent = ut ? 'Dölj val' : 'Val';
+  });
+  function visaLage3d({ lage, last }) {
+    $('vy3d-huvud').dataset.lage = lage;
+    $('vy3d-ogon').setAttribute('aria-pressed', String(lage !== 'oversikt'));
+    $('vy3d-ogon').textContent = lage === 'oversikt' ? 'Ögonhöjd' : 'Tillbaka';
+    $('vy3d-flytta').hidden = lage === 'ogon';
+    $('vy3d-overdriv').hidden = lage === 'ogon';
+    const h = $('vy3d-hjalp');
+    if (lage === 'valj') h.textContent = pekskarm() ? 'Tryck på marken där du vill stå.' : 'Klicka på marken där du vill stå. Esc avbryter.';
+    else if (lage === 'ogon') h.textContent = pekskarm()
+      ? 'Gå med spaken, längst ut springer du. Dra för att titta runt. Tillbaka tar dig upp igen.'
+      : last ? 'Gå med W A S D eller pilarna, skift springer. Musen tittar. Esc går tillbaka.'
+        : 'Gå med W A S D eller pilarna, skift springer. Dra för att titta, eller klicka så tittar musen. Esc går tillbaka.';
+    else h.innerHTML = HJALP3D.replace(/(<span id="vy3d-faktor">)\d+/, `$1${vy3d ? vy3d.overdriv() : 1}`);
+  }
+  $('vy3d-ogon').addEventListener('click', () => { if (vy3d) vy3d.ogonhojd(); });
+
+  // Skuggor (0.9.0): datum och tid, snabbval och uppspelning över dagen
+  const tvaSiffror = n => String(n).padStart(2, '0');
+  /** Tidpunkten (ms) som datumet och reglaget visar. Förval: i dag kl. 12, sparat så länge fliken är öppen. */
+  function soltid3d() {
+    if (!$('vy3d-datum').value) {
+      const sparad = lager.las('sessionStorage', 'terrang-3d-soltid');
+      const l = Sol.lokal(typeof sparad === 'number' ? sparad : Date.now());
+      $('vy3d-datum').value = `${l.ar}-${tvaSiffror(l.man)}-${tvaSiffror(l.dag)}`;
+      if (typeof sparad === 'number') $('vy3d-tid').value = String(l.tim * 60 + l.min);
+    }
+    const [ar, man, dag] = $('vy3d-datum').value.split('-').map(Number), min = +$('vy3d-tid').value;
+    $('vy3d-tidtext').textContent = `${tvaSiffror(Math.floor(min / 60))}:${tvaSiffror(min % 60)}`;
+    return Sol.lokalTillMs(ar, man, dag, Math.floor(min / 60), min % 60);
+  }
+  function uppdateraSol3d() {
+    const ms = soltid3d();
+    lager.spara('sessionStorage', 'terrang-3d-soltid', ms);
+    if (!vy3d) return;
+    const p = vy3d.soltid(ms);
+    if (!p) return;
+    $('vy3d-solinfo').textContent = p.h > 0
+      ? `Solhöjd ${Math.round(p.h)}°, azimut ${Math.round(p.az)}°`
+      : 'Solen är under horisonten.';
+  }
+  function satSkuggor3d(pa) {
+    if (!vy3d || vy3d.skuggor() == null) return;
+    vy3d.skuggor(pa);
+    $('vy3d-skuggor').setAttribute('aria-pressed', String(pa));
+    $('vy3d-sol').hidden = !pa;
+    lager.spara('sessionStorage', 'terrang-3d-skuggor', pa);
+    if (pa) uppdateraSol3d(); else stoppaUppspelning();
+  }
+  $('vy3d-skuggor').addEventListener('click', () => satSkuggor3d(!vy3d.skuggor()));
+  $('vy3d-datum').addEventListener('change', uppdateraSol3d);
+  $('vy3d-tid').addEventListener('input', uppdateraSol3d);
+  document.querySelectorAll('[data-solhandelse]').forEach(b => b.addEventListener('click', () => {
+    const ar = +($('vy3d-datum').value.split('-')[0]) || new Date().getFullYear();
+    const l = Sol.lokal(Sol.solhandelse(ar, b.dataset.solhandelse));
+    $('vy3d-datum').value = `${l.ar}-${tvaSiffror(l.man)}-${tvaSiffror(l.dag)}`;
+    uppdateraSol3d();
+  }));
+  $('vy3d-tradskuggor').addEventListener('click', () => {
+    if (!vy3d) return;
+    const pa = vy3d.tradskuggor(!vy3d.tradskuggor());
+    $('vy3d-tradskuggor').setAttribute('aria-pressed', String(!!pa));
+  });
+  /** Spela dagen: från soluppgång till solnedgång på 20 sekunder, om och om igen. */
+  let spelar = null;
+  function stoppaUppspelning() {
+    if (spelar) cancelAnimationFrame(spelar.id);
+    spelar = null;
+    $('vy3d-spela').setAttribute('aria-pressed', 'false');
+    $('vy3d-spela').textContent = 'Spela dagen';
+  }
+  $('vy3d-spela').addEventListener('click', () => {
+    if (spelar) { stoppaUppspelning(); return; }
+    const [ar, man, dag] = $('vy3d-datum').value.split('-').map(Number);
+    let start = 0, slut = 1435;
+    try {
+      const m = utsnittsMitt(), d = Sol.dagdata(ar, man, dag, m.lat, m.lon), l = ms => { const t = Sol.lokal(ms); return t.tim * 60 + t.min; };
+      if (d.upp && d.ned) { start = Math.floor(l(d.upp) / 5) * 5; slut = Math.ceil(l(d.ned) / 5) * 5; }
+    } catch (e) { console.error(e); }
+    let min = +$('vy3d-tid').value;
+    if (min < start || min >= slut) min = start;
+    const minPerSek = (slut - start) / 20;
+    let forra = performance.now();
+    spelar = { id: 0 };
+    $('vy3d-spela').setAttribute('aria-pressed', 'true');
+    $('vy3d-spela').textContent = 'Pausa';
+    const steg = nu => {
+      if (!spelar) return;
+      min += (nu - forra) / 1000 * minPerSek; forra = nu;
+      if (min > slut) min = start;
+      $('vy3d-tid').value = String(Math.round(min / 5) * 5);
+      uppdateraSol3d();
+      spelar.id = requestAnimationFrame(steg);
+    };
+    spelar.id = requestAnimationFrame(steg);
+  });
+
+  // Spara bild (0.9.0): PNG i flera gånger skärmens storlek, eller fyra bilder för AI i en zip
+  async function sparaBild3d(ai) {
+    if (!vy3d) return;
+    const knapp = $(ai ? 'vy3d-ai' : 'vy3d-bild'), text = knapp.textContent;
+    knapp.disabled = true; knapp.textContent = 'Sparar …';
+    try {
+      await new Promise(ok => setTimeout(ok, 30));   // låt knappen visa att det arbetar
+      const b = await vy3d.bilder({ skala: +$('vy3d-skala').value || 3, ai });
+      const namn = slug($('projekt').value) || 'hojdkurvor';
+      if (!ai) { laddaNer(b.farg, `${namn}_3d.png`); return; }
+      const zip = new JSZip();
+      zip.file(`${namn}_3d_farg.png`, b.farg);
+      zip.file(`${namn}_3d_lera.png`, b.lera);
+      zip.file(`${namn}_3d_kanter.png`, b.kanter);
+      zip.file(`${namn}_3d_djup.png`, b.djup);
+      const sol = vy3d.skuggor() ? vy3d.soltid() : null;
+      zip.file(`${namn}_3d_las_mig.txt`, [
+        `Bilder ur 3D-vyn i höjdkurvor.se ${window.HOJDKURVOR.version}, ${b.bredd} × ${b.hojd} px.`,
+        'Alla fyra visar samma vy och kan läggas på varandra.', '',
+        '_farg.png    Vyn som på skärmen, utan knappar.',
+        '_lera.png    Lermodell: allt vitt, utan linjer' + (sol ? ', med skuggorna.' : '.'),
+        '_kanter.png  Kantlinjer, svart på vitt, där djupet hoppar eller ytan byter riktning.',
+        '_djup.png    Djupkarta: nära är ljust, långt bort mörkt, himlen svart (skala efter 1/avstånd).', '',
+        sol && sol.h > 0 ? `Skuggor: ${$('vy3d-datum').value} kl. ${$('vy3d-tidtext').textContent}, solhöjd ${Math.round(sol.h)}°, azimut ${Math.round(sol.az)}°.` : 'Skuggor: av.',
+        '', 'Underlag: Lantmäteriet (CC BY 4.0).', ''].join('\r\n'));
+      laddaNer(await zip.generateAsync({ type: 'blob' }), `${namn}_3d_ai.zip`);
+    } catch (e) {
+      console.error(e);
+      $('vy3d-hjalp').textContent = 'Bilden kunde inte sparas: ' + e.message;
+    } finally { knapp.disabled = false; knapp.textContent = text; }
+  }
+  $('vy3d-bild').addEventListener('click', () => sparaBild3d(false));
+  $('vy3d-ai').addEventListener('click', () => sparaBild3d(true));
 
   // ------------------------------------------------------------------
   // Start
