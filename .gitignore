@@ -6,6 +6,7 @@ config.local.js
 # Testresultat och stora testfiler (skapas av test/data/make_landskap.py)
 test/ut/
 test/ut-*/
+test/ut_*/
 test/ut-*.log
 test/data/*.tif
 test/data/*.laz
