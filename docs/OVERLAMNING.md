@@ -77,17 +77,16 @@ fält på volymen, så att gamla volymer från cad-apa och DXF fungerar som för
 **0.10.x:** bortskärning (en volym gör urtag i en annan, kräver CSG och att
 analyserna får den nya formen) och egna takfotslinjer.
 
-## Öppna frågor för 0.9.0 (ställda 27 oktober)
+## Svar för 0.9.0 (29 oktober)
 
-1. Skuggor: reglage för tid på dagen och val av datum, med snabbval för
-   vårdagjämning, midsommar och vintersolstånd som i skuggstudien? Uppspelning
-   över dagen?
-2. Ska terrängen och träden också kasta skugga, eller bara byggnaderna?
-3. En färg för alla befintliga byggnader, och skissvolymerna i en egen färg?
-4. Konturerna: svarta, eller samma som Kurvfärg?
+1. Skuggor: reglage för tid och datum, snabbval för vårdagjämning, midsommar
+   och vintersolstånd, och uppspelning över dagen.
+2. Terrängen, byggnaderna och träden kastar skugga (trädskuggor får stängas
+   av på iPhone om det blir för tungt).
+3. En valbar färg för alla befintliga byggnader, skissvolymerna i en egen färg.
+4. Konturerna är svarta.
 
-Föreslaget av Claude, inte beslutat: norrpil i 3D. (Bild och ögonhöjd är
-bestämda, se ovan.)
+0.9.0 är klar att byggas.
 
 ## IFC (`js/ifc.js`)
 
@@ -157,7 +156,7 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
    varningen om Node 20 är borta (0.8.2 var första körningen med
    FTP-Deploy-Action 4.4.0).
 2. Be Carl August testa två fingrar i 3D på iPhone när han hinner.
-3. 0.9.0 på en egen gren när Carl August har svarat på de öppna frågorna.
+3. 0.9.0 på en egen gren; frågorna är besvarade (se Svar för 0.9.0).
    Skuggorna tar solens läge ur `js/sol.js`, så att 3D-vyn och skuggstudien i
    PDF:en räknar likadant. Träden är i dag klot och cylindrar
    (`InstancedMesh` i `vy3d.js`).
