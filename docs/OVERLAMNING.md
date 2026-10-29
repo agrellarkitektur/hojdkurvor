@@ -1,46 +1,21 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.8.2 publicerad, 0.9.0 och 0.10.0 planerade, skissfunktionen bestämd.
+överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.9.0 publicerad (3D-vyn som studieverktyg), 0.10.0 nästa.
 
 ## Läget
 
-- **0.8.1 är klar** 27 oktober (gren `v0.8.1`, sammanslagen med `main`). Det är
-  en rättelse: Carl August testade 0.8.0 och fick ingen IFC, ingen panorering och
-  ingen Kurvfärg. Orsaken var att servern hade kvar `vy3d.js` (och troligen
-  `app.js`) från 0.7.0, medan `index.html` och `version.js` var nya. Han öppnade
-  `js/vy3d.js` på webbplatsen och den saknade "0.8". Varför FTP-Deploy-Action
-  hoppade över filerna är inte utrett (listan på servern kan ha varit fel).
-- **Rättat i 0.8.1**: ny lista `.ftp-deploy-sync-state-2.json`, så att allt
-  laddas upp en gång; steget Kontrollera webbplatsen i `publicera.yml`
-  (`.github/scripts/kontrollera-webbplatsen.sh`) hämtar varje fil från
-  webbplatsen, laddar upp avvikande med curl och misslyckas om de ändå inte
-  stämmer; `?v=<version>` på alla skript och stilmallar
-  (`node test/version.test.js --skriv`); `.htaccess` med no-cache och UTF-8
-  (tas bort automatiskt om sidan svarar 500); varning överst på sidan när
-  `app.js` eller `vy3d.js` har en annan version än `version.js`; knappen
-  *Flytta* i 3D (`vy3d.dragLage`); statusraden säger till när ingen IFC skapas.
-- **Synpunktsformuläret** fungerar: `synpunkter.php` svarar och provet kom
-  fram till Gmail (Carl August, 27 oktober).
-- **0.8.1 godkänd på Windows** (Carl August, 27 oktober): IFC importeras i
-  Archicad och hamnar rätt i lokal nolla (SWEREF-filen inte provad), Flytta och
-  skift-dra i 3D fungerar, Kurvfärg fungerar. iPhone inte testad än.
-- **0.8.2 är klar** 27 oktober (gren `v0.8.2`, sammanslagen med `main`). Bara
-  publiceringen: `actions/checkout@v7`, `setup-node@v7`, `upload-artifact@v7`
-  och `FTP-Deploy-Action@v4.4.0`, alla med Node 24 (varningen om Node 20 i
-  0.8.1). Steget Kontrollera koden installerar PHP om det saknas, eftersom
-  `ubuntu-latest` blir Ubuntu 26 från hösten 2026. Appen är oförändrad utöver
-  versionsnumret. iPhone (två fingrar i 3D) är fortfarande inte testad.
-- **Planen** (stämd av 27 oktober, se `docs/SYNPUNKTER.md`):
-  - 0.8.2: klar (se nedan).
-  - 0.9.0: 3D-vyn som studieverktyg. Skuggor med dag och tid, konturer på
-    byggnaderna, färg på befintliga byggnader, low-poly eller realistiska träd
-    (low-poly som standard, för iPhone). Öppna frågor nedan.
-  - 0.10.0: rita volymer i Höjdkurvor i steg 04 Skiss. Steget finns redan
-    (volymer från cad-apa eller DXF räknas med i skuggor, horisont och skyfall
-    och syns i 3D); det som saknas är att rita dem. Carl August vill helst
-    kunna sänka takfotens linjer var för sig och få en egen takform, men
-    platta volymer duger att börja med om det är krångligt.
+- **0.9.0 är klar** 29 oktober (gren `v0.9.0`, sammanslagen med `main`): skuggor,
+  konturer, hus- och skissfärg, trädmodeller, ögonhöjd och bilder i 3D-vyn.
+  Se *3D-vyn i 0.9.0* nedan. Inte testad av Carl August än, varken på Windows
+  eller iPhone (se Att testa i `docs/SYNPUNKTER.md`).
+- **0.8.2** (27 oktober) bytte bara publiceringen till Node 24. **0.8.1** godkänd
+  på Windows 27 oktober (IFC i Archicad i lokal nolla, Flytta, skift-dra,
+  Kurvfärg). iPhone (två fingrar i 3D) är fortfarande inte testad.
+- **Synpunktsformuläret** fungerar (provet kom fram till Gmail 27 oktober).
+- **Planen**: 0.10.0 är att rita volymer i 3D-vyn, se nästa avsnitt. Allt är
+  bestämt; vänta ändå på Carl Augusts test av 0.9.0 innan bygget börjar, så att
+  rättelser kan komma först som 0.9.1.
 
 ## Skissfunktionen och 3D-vyn (bestämt 29 oktober)
 
@@ -51,7 +26,7 @@ Carl August valde Claudes förslag på alla punkter.
 fotavtryck + golv + takfot + takform. Primitiven och gruppen sparas som extra
 fält på volymen, så att gamla volymer från cad-apa och DXF fungerar som förut.
 
-**0.9.0 – 3D-vyn** (utöver skuggor, konturer och färg ovan):
+**0.9.0 – 3D-vyn** (byggd, se *3D-vyn i 0.9.0*):
 - Träd: 3–4 modeller (gran, tall, löv) skalade efter laserhöjd och kronbredd,
   enklare på avstånd (iPhone). Ersätter klot och cylinder (`InstancedMesh`).
 - Ögonhöjd: knapp, klick på marken, kameran 1,6 m över marken. Dator: WASD
@@ -77,16 +52,54 @@ fält på volymen, så att gamla volymer från cad-apa och DXF fungerar som för
 **0.10.x:** bortskärning (en volym gör urtag i en annan, kräver CSG och att
 analyserna får den nya formen) och egna takfotslinjer.
 
-## Svar för 0.9.0 (29 oktober)
+## 3D-vyn i 0.9.0
 
-1. Skuggor: reglage för tid och datum, snabbval för vårdagjämning, midsommar
-   och vintersolstånd, och uppspelning över dagen.
-2. Terrängen, byggnaderna och träden kastar skugga (trädskuggor får stängas
-   av på iPhone om det blir för tungt).
-3. En valbar färg för alla befintliga byggnader, skissvolymerna i en egen färg.
-4. Konturerna är svarta.
+Svaren som styrde (29 oktober): reglage för tid och datum, snabbval och
+uppspelning; terrängen, husen och träden kastar skugga (trädskuggor kan stängas
+av); en färg för alla befintliga hus och en egen för skissen; svarta konturer.
 
-0.9.0 är klar att byggas.
+- **Skuggor**: `vy3d.skuggor(på)` och `vy3d.soltid(ms)`. Solen ur
+  `Sol.solensLage(ms, lat, lon)`, azimuten minus meridiankonvergensen
+  (`utsnittsMitt().konvergens`, som i `Analys.skuggor`). En DirectionalLight
+  med ortografisk skuggkamera över utsnittet ± 0,75 × storleken, skuggkarta
+  4096 (2048 på mobilen), PCF-mjuk. `shadowMap.autoUpdate = false`: skuggorna
+  räknas om (`skuggaOm`) när solen, lagren, överdriften eller träden ändras.
+  Terrängen och skissen är DoubleSide med `shadowSide = FrontSide`. Under
+  horisonten: inget solljus. Datum, tid och uppspelning sköts i `app.js`
+  (`soltid3d`, `uppdateraSol3d`, *Spela dagen* = upp till ned på 20 s).
+  Riktningarna kontrollerade: lunch i mars ger skuggor mot norr, kväll i juni
+  mot öster.
+- **Konturer**: `EdgesGeometry` (20°, taken 30°) som barn till varje hus och
+  skissvolym, av från början, valet i localStorage `terrang-3d-konturer`.
+- **Färger**: `byggnadsfarg(hex)` och `skissfarg(hex)`; skissen har nu ett
+  material för väggar och tak. localStorage `terrang-3d-husfarg` och
+  `terrang-3d-skissfarg` (förval `#b9b3aa` och temats `annot`).
+- **Träd** (`js/trad3d.js`): `Trad3D.art(t)` gissar gran (höjd/krona ≥ 2,4),
+  tall (≥ 12 m och ≥ 1,6) eller löv; `modell(art, nivå)` ger trianglar 1 × 1 m
+  med en normal per yta och färg per hörn; `variation(t)` vrider och ljusar efter
+  läget. En `InstancedMesh` per art och nivå; `placeraTrad` delar upp efter
+  avståndet till kameran (detaljerade: högst 6 000 närmast på datorn, 600 inom
+  250 m på mobilen) och körs igen när kameran flyttat sig en bit.
+  localStorage `terrang-3d-trad`.
+- **Ögonhöjd**: `vy3d.ogonhojd()` växlar `lage` mellan `oversikt`, `valj` och
+  `ogon`. Klick på marken (`traffMark`: går längs strålen i rutnätet och
+  halverar), kameran 1,6 m över `markScen`, fov 60. Gå 4 m/s, springa 14 m/s,
+  inom utsnittet. Pekarlås vid klick; när låset släpps (Esc) går den tillbaka.
+  Spaken (`.vy3d-spak`) visas på pekskärmar. Esc i `app.js` går tillbaka i
+  stället för att stänga när `lage() !== 'oversikt'`. Ingen krock med husen.
+- **Bilder** (`vy3d.bilder({ skala, ai })`, `js/bild3d.js`): egen
+  `WebGLRenderTarget` (MSAA 4, sRGB), `readRenderTargetPixels`, vänds och blir
+  PNG. För AI: lera (alla ytor `leraMat`, linjerna dolda, vit bakgrund), djup och
+  normaler med ShaderMaterial som `overrideMaterial` (utan MSAA, himlen
+  genomskinlig), djupet kodat i 24 bitar. `Bild3D.djupbild` skalar 1/avstånd
+  mellan 1:a och 99:e percentilen; `Bild3D.kanter` sätter linje vid djuphopp
+  > 4 % och vikning > 35°. Zip:en byggs i `app.js` med en `_las_mig.txt`.
+  Inte provat i Visoid.
+- **Mobilen**: knappen *Val* (bara under 700 px) fäller ut lager, färger,
+  bilder och knapparna i solraden; datum och tid syns ändå när skuggorna är på.
+- Testas i `test/vy3d.test.js` och i 3D-delen av `ui_test.py`. Swiftshader i
+  testmiljön ger låg bildfrekvens, så gånghastigheten i testet blir lägre än
+  på riktigt (dt tak 0,25 s).
 
 ## IFC (`js/ifc.js`)
 
@@ -103,7 +116,7 @@ analyserna får den nya formen) och egna takfotslinjer.
 - Kontrollerat med IfcOpenShell 0.8 (`validate` med EXPRESS-regler: 0 fel,
   geometrin skapas). Inte provat i Archicad.
 
-## 3D-vyn
+## 3D-vyn, grunden (0.7.0–0.8.1)
 
 `Vy3D.visa` får kurvor, fastighetsgränsernas linjer, vägarnas linjer och
 fotavtryck för byggnader utan höjd. Linjerna draperas på marken med bilinjär
@@ -152,14 +165,13 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Se efter att steget Kontrollera webbplatsen fortsätter gå igenom och att
-   varningen om Node 20 är borta (0.8.2 var första körningen med
-   FTP-Deploy-Action 4.4.0).
-2. Be Carl August testa två fingrar i 3D på iPhone när han hinner.
-3. 0.9.0 på en egen gren; frågorna är besvarade (se Svar för 0.9.0).
-   Skuggorna tar solens läge ur `js/sol.js`, så att 3D-vyn och skuggstudien i
-   PDF:en räknar likadant. Träden är i dag klot och cylindrar
-   (`InstancedMesh` i `vy3d.js`).
+1. Kontrollera att publiceringen av 0.9.0 gick igenom (steget Kontrollera
+   webbplatsen).
+2. Be Carl August om test av 0.9.0 (listan under Att testa i
+   `docs/SYNPUNKTER.md`), och om iPhone med två fingrar. Fel blir 0.9.1.
+3. Därefter 0.10.0, volymer i 3D-vyn, på en egen gren (se *Skissfunktionen och
+   3D-vyn* ovan). Toppvyn kan byggas med en `OrthographicCamera` bredvid
+   perspektivkameran; `traffMark` finns redan för klick på marken.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
@@ -186,9 +198,6 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
   saknas de); schablon per typ vore möjligt men osäkert.
 - IfcMapConversion i IFC-filen, så att den lokala filen också bär sin placering
   i SWEREF.
-- En enkel skissmodellsbyggare i höjdkurvor (rita i 2D och extrudera), om
-  cad-apa inte behöver skicka tillbaka modeller. Står under Senare i
-  synpunktsfilen.
 - Byggnader i skuggstudien utan laserdata.
 
 ## Kvar sedan tidigare
