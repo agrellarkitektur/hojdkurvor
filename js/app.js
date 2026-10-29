@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.10.0';
+  const FILVERSION = '0.10.1';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -2453,15 +2453,35 @@
       vridning: $('vrid').value === 'sann' ? m.konvergens : $('vrid').value === 'egen' ? (tal($('vrid-grader').value) || 0) : 0,
       sannNord: m.konvergens,
       rutnat: s && s.rutnat, kurvor: s && s.kurvor, trad: s && s.trad, vagar: s && s.vagar, stompunkter: s && s.stompunkter,
-      volymer: state.volymer, byggnader: s && s.byggnader, fastigheter: s && s.fastigheter, fastighetVarning: Fastighet.VARNING, projektlank: projektlank(), kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
+      volymer: state.volymer, byggnader: s && s.byggnader, fastigheter: s && s.fastigheter, fastighetVarning: Fastighet.VARNING,
+      ortofoto: ortofotoTillCadApa(s), projektlank: projektlank(), kalla: `höjdkurvor.se ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
     });
+  }
+  /**
+   * Ortofotot till cad-apa (0.10.1), nedskalat till högst ORTO_CADAPA_PX pixlar på längsta sidan
+   * (cad-apa skalar sina egna ortofoton likadant). Räknas en gång per underlag.
+   */
+  const ORTO_CADAPA_PX = 4096;
+  function ortofotoTillCadApa(s) {
+    const o = s && s.ortofoto;
+    if (!o) return null;
+    if (o.cadapa) return o.cadapa;
+    const f = Math.ceil(Math.max(o.W, o.H) / ORTO_CADAPA_PX);
+    if (f <= 1 || !o.canvas) return (o.cadapa = { bild: o.bild, x0: o.x0, y1: o.y1, s: o.s, W: o.W, H: o.H, ar: o.ar });
+    const W = Math.ceil(o.W / f), H = Math.ceil(o.H / f), s2 = o.s * f;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const cx = c.getContext('2d'); cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, W, H);
+    cx.imageSmoothingQuality = 'high';
+    cx.drawImage(o.canvas, 0, 0, o.W, o.H, 0, 0, o.W / f, o.H / f);
+    const kx = o.x0 - o.s / 2, ky = o.y1 + o.s / 2;     // bildens övre vänstra hörn
+    return (o.cadapa = { bild: c.toDataURL('image/jpeg', 0.88), x0: kx + s2 / 2, y1: ky - s2 / 2, s: s2, W, H, ar: o.ar });
   }
   /** Påminnelse om fastighetsgränser och byggnader som inte kom med, eftersom de inte var ikryssade (0.8.0). */
   function saknasTillCadApa() {
     const s = state.senaste;
     if (!s) return '';
-    const saknas = [!s.fastigheter && 'Fastighetsgränser', !s.byggnader && 'Befintliga byggnader'].filter(Boolean);
-    return saknas.length ? ` ${saknas.join(' och ')} kom inte med. Kryssa i dem och skapa underlaget igen om du vill ha med dem.` : '';
+    const saknas = [!s.fastigheter && 'Fastighetsgränser', !s.byggnader && 'Befintliga byggnader', !s.ortofoto && 'Ortofotot'].filter(Boolean);
+    return saknas.length ? ` ${saknas.length > 1 ? saknas.slice(0, -1).join(', ') + ' och ' + saknas[saknas.length - 1].toLowerCase() : saknas[0]} kom inte med. Kryssa i dem och skapa underlaget igen om du vill ha med dem.` : '';
   }
   async function tillCadApa(statusEl) {
     if (!state.utsnitt) { statusEl.textContent = 'Välj ett område först.'; return; }

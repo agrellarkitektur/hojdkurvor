@@ -3,6 +3,18 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.10.1 – 2026-10-30
+
+Ortofotot följer med till cad-apa.
+
+- **Ortofotot i platspaketet**: när Ortofoto är ikryssat skickas bilden med
+  till cad-apa (fältet `ortofoto`: `bild` som data-URL, `x0`/`y1` mitten av
+  övre vänstra pixeln, `s`, `W`, `H`, `ar`), också i platsfilen. cad-apa
+  (från 0.10.31) lägger det på marken i 3D. Bilden skalas ned till högst
+  4 096 pixlar på längsta sidan, som cad-apa gör med egna ortofoton; zip-filen
+  har full upplösning. Licensraden nämner ortofotot. Appen säger till om
+  ortofotot inte kom med. Tidigare fick det läggas in för hand ur zip-filen.
+
 ## 0.10.0 – 2026-10-29
 
 Volymer i 3D-vyn, egen takform på befintliga hus och nya träd.

@@ -51,5 +51,15 @@ Terrang.registreraZoner();
   assert.strictEqual(Math.round(f.ytor.find(y => y.beteckning === 'Staren 1:2').yta), 6400);
   assert.ok(/inte rättsligt bindande/.test(f.varning));
   assert.ok(/fastighetsindelning © Lantmäteriet/.test(p.licens), p.licens);
+  assert.ok(!('ortofoto' in p0), 'inget ortofoto utan tillvalet');
+
+  // ortofotot (0.10.1): fälten som cad-apa läser (PaketOrtofoto i cad-apa/src/core/siteOrtho.ts)
+  const bild = 'data:image/jpeg;base64,/9j/AA==';
+  const po = JSON.parse(JSON.stringify(U.platspaket(Object.assign({ ortofoto: { bild, x0: r.xmin + 0.08, y1: r.ymax - 0.08, s: 0.16, W: 1250, H: 1250, ar: 2023, canvas: {} } }, bas))));
+  assert.deepStrictEqual(po.ortofoto, { bild, x0: r.xmin + 0.08, y1: r.ymax - 0.08, s: 0.16, W: 1250, H: 1250, ar: 2023 });
+  assert.ok(/laserdata och ortofoto © Lantmäteriet/.test(po.licens), po.licens);
+  const pof = U.platspaket(Object.assign({ fastigheter: fi, ortofoto: { bild, x0: 0, y1: 0, s: 1, W: 2, H: 2 } }, bas));
+  assert.ok(/laserdata, fastighetsindelning och ortofoto © Lantmäteriet/.test(pof.licens), pof.licens);
+  assert.ok(!('ortofoto' in U.platspaket(Object.assign({ ortofoto: { bild: 'inte en bild', x0: 0, y1: 0, s: 1, W: 2, H: 2 } }, bas))), 'trasigt ortofoto hoppas över');
   console.log('utbyte: alla test godkända');
 })().catch(e => { console.error(e); process.exit(1); });
