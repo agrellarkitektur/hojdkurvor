@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>höjdkurvor.se – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.9.0"></script>
-  <script src="js/tema.js?v=0.9.0"></script>
-  <script src="js/synpunkter.js?v=0.9.0" defer></script>
+  <script src="js/version.js?v=0.9.1"></script>
+  <script src="js/tema.js?v=0.9.1"></script>
+  <script src="js/synpunkter.js?v=0.9.1" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.9.0">
-  <link rel="stylesheet" href="app.css?v=0.9.0">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.9.1">
+  <link rel="stylesheet" href="app.css?v=0.9.1">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -433,35 +433,35 @@
 
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
     <div class="vy3d-huvud" id="vy3d-huvud" data-lage="oversikt"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, eller välj Flytta och dra för att flytta vyn. Högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-flytta" aria-pressed="false">Flytta</button><button type="button" class="knapp liten" id="vy3d-ogon" aria-pressed="false">Ögonhöjd</button><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-aterstall">Återställ vy</button><span class="vy3d-bild" role="group" aria-label="Spara bild"><button type="button" class="knapp liten" id="vy3d-bild">Spara bild</button><button type="button" class="knapp liten" id="vy3d-ai">Bild för AI</button><label class="vy3d-farg">Storlek <select id="vy3d-skala"><option value="2">2 ×</option><option value="3" selected>3 ×</option><option value="4">4 ×</option></select></label></span><button type="button" class="knapp liten" id="vy3d-val" aria-expanded="false" aria-controls="vy3d-lager vy3d-sol">Val</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
-      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-konturer" aria-pressed="false" hidden>Konturer</button><button type="button" class="knapp liten" id="vy3d-tradniva" aria-pressed="false" hidden>Detaljerade träd</button><button type="button" class="knapp liten" id="vy3d-skuggor" aria-pressed="false" hidden>Skuggor</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-husfarg-rad" hidden>Husfärg <input type="color" id="vy3d-husfarg" value="#b9b3aa"></label><label class="vy3d-farg" id="vy3d-skissfarg-rad" hidden>Skissfärg <input type="color" id="vy3d-skissfarg" value="#e85528"></label></div>
+      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-konturer" aria-pressed="false" hidden>Konturer</button><button type="button" class="knapp liten" id="vy3d-takformer" aria-pressed="false" hidden title="Taken ur laserdatan i stället för platta tak. Ungefärliga, inte inmätta.">Takformer</button><label class="vy3d-farg" id="vy3d-tradniva-rad" hidden>Träd <select id="vy3d-tradniva"><option value="enkel">Enkla</option><option value="detaljerad">Detaljerade</option><option value="realistisk">Realistiska</option></select></label><button type="button" class="knapp liten" id="vy3d-skuggor" aria-pressed="false" hidden>Skuggor</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-husfarg-rad" hidden>Husfärg <input type="color" id="vy3d-husfarg" value="#b9b3aa"></label><label class="vy3d-farg" id="vy3d-konturfarg-rad" hidden>Konturfärg <input type="color" id="vy3d-konturfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-gransfarg-rad" hidden>Gränsfärg <input type="color" id="vy3d-gransfarg" value="#b0306a"></label><label class="vy3d-farg" id="vy3d-skissfarg-rad" hidden>Skissfärg <input type="color" id="vy3d-skissfarg" value="#e85528"></label></div>
       <div class="vy3d-sol" id="vy3d-sol" role="group" aria-label="Solen" hidden><label class="vy3d-farg">Datum <input type="date" id="vy3d-datum"></label><label class="vy3d-farg vy3d-tid">Tid <input type="range" id="vy3d-tid" min="0" max="1435" step="5" value="720"><output id="vy3d-tidtext" for="vy3d-tid">12:00</output></label><button type="button" class="knapp liten" id="vy3d-spela" aria-pressed="false">Spela dagen</button><button type="button" class="knapp liten" data-solhandelse="mars">Vårdagjämning</button><button type="button" class="knapp liten" data-solhandelse="juni">Midsommar</button><button type="button" class="knapp liten" data-solhandelse="dec">Vintersolstånd</button><button type="button" class="knapp liten" id="vy3d-tradskuggor" aria-pressed="true" hidden>Trädskuggor</button><span class="vy3d-solinfo" id="vy3d-solinfo" aria-live="polite"></span></div></div>
     <div class="vy3d-yta" id="vy3d-yta"></div>
   </div>
 
-  <script src="config.js?v=0.9.0"></script>
-  <script src="vendor/leaflet/leaflet.js?v=0.9.0"></script>
-  <script src="vendor/proj4.js?v=0.9.0"></script>
-  <script src="vendor/geotiff.js?v=0.9.0"></script>
-  <script src="vendor/jszip.min.js?v=0.9.0"></script>
-  <script src="js/karna.js?v=0.9.0"></script>
-  <script src="js/dxf.js?v=0.9.0"></script>
-  <script src="js/sol.js?v=0.9.0"></script>
-  <script src="js/laser.js?v=0.9.0"></script>
-  <script src="js/ortofoto.js?v=0.9.0"></script>
-  <script src="js/kommunfil.js?v=0.9.0"></script>
-  <script src="js/marktacke.js?v=0.9.0"></script>
-  <script src="js/byggnad.js?v=0.9.0"></script>
-  <script src="js/ifc.js?v=0.9.0"></script>
-  <script src="js/fastighet.js?v=0.9.0"></script>
-  <script src="js/stompunkt.js?v=0.9.0"></script>
-  <script src="js/analys.js?v=0.9.0"></script>
-  <script src="js/vagar.js?v=0.9.0"></script>
-  <script src="js/platsanalys.js?v=0.9.0"></script>
-  <script src="js/geodata.js?v=0.9.0"></script>
-  <script src="js/utbyte.js?v=0.9.0"></script>
-  <script src="js/topowebb.js?v=0.9.0"></script>
-  <script src="js/utskrift.js?v=0.9.0"></script>
-  <script src="js/platsanalysblad.js?v=0.9.0"></script>
-  <script src="js/app.js?v=0.9.0"></script>
+  <script src="config.js?v=0.9.1"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.9.1"></script>
+  <script src="vendor/proj4.js?v=0.9.1"></script>
+  <script src="vendor/geotiff.js?v=0.9.1"></script>
+  <script src="vendor/jszip.min.js?v=0.9.1"></script>
+  <script src="js/karna.js?v=0.9.1"></script>
+  <script src="js/dxf.js?v=0.9.1"></script>
+  <script src="js/sol.js?v=0.9.1"></script>
+  <script src="js/laser.js?v=0.9.1"></script>
+  <script src="js/ortofoto.js?v=0.9.1"></script>
+  <script src="js/kommunfil.js?v=0.9.1"></script>
+  <script src="js/marktacke.js?v=0.9.1"></script>
+  <script src="js/byggnad.js?v=0.9.1"></script>
+  <script src="js/ifc.js?v=0.9.1"></script>
+  <script src="js/fastighet.js?v=0.9.1"></script>
+  <script src="js/stompunkt.js?v=0.9.1"></script>
+  <script src="js/analys.js?v=0.9.1"></script>
+  <script src="js/vagar.js?v=0.9.1"></script>
+  <script src="js/platsanalys.js?v=0.9.1"></script>
+  <script src="js/geodata.js?v=0.9.1"></script>
+  <script src="js/utbyte.js?v=0.9.1"></script>
+  <script src="js/topowebb.js?v=0.9.1"></script>
+  <script src="js/utskrift.js?v=0.9.1"></script>
+  <script src="js/platsanalysblad.js?v=0.9.1"></script>
+  <script src="js/app.js?v=0.9.1"></script>
 </body>
 </html>

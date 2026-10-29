@@ -101,4 +101,23 @@ prov('storleken följer skalan och håller sig inom gränserna', () => {
   assert(m.bredd * m.hojd <= 16e6);
 });
 
+prov('realistiska träd: stam och lövkort i 1 × 1 m, bilden har en ruta per art', () => {
+  for (const art of Trad3D.ARTER) {
+    const m = Trad3D.realistisk(art);
+    assert.strictEqual(m.stam.pos.length % 9, 0);
+    assert.strictEqual(m.lov.pos.length % 9, 0);
+    assert.strictEqual(m.lov.uv.length / 2, m.lov.pos.length / 3);
+    let ymin = Infinity, ymax = -Infinity, rmax = 0;
+    for (const P of [m.stam.pos, m.lov.pos]) for (let i = 0; i < P.length; i += 3) {
+      ymin = Math.min(ymin, P[i + 1]); ymax = Math.max(ymax, P[i + 1]); rmax = Math.max(rmax, Math.abs(P[i]), Math.abs(P[i + 2]));
+    }
+    assert(ymin >= -1e-6 && Math.abs(ymax - 1) < 1e-6 && Math.abs(rmax - 0.5) < 1e-6, `${art}: ${ymin} ${ymax} ${rmax}`);
+    const kort = m.lov.pos.length / 18;
+    assert(kort >= 60 && kort <= 150, `${art}: ${kort} kort`);
+    // alla kort i artens ruta i lövbilden
+    const ruta = { gran: 0, tall: 1, lov: 2 }[art];
+    for (let i = 0; i < m.lov.uv.length; i += 2) assert(m.lov.uv[i] * 3 >= ruta && m.lov.uv[i] * 3 <= ruta + 1);
+  }
+});
+
 console.log(`${antal} prov gick igenom`);

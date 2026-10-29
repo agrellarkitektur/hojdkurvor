@@ -11,6 +11,8 @@ flyttas till CHANGELOG.md.
 
 - iPhone: dra med två fingrar i 3D-vyn (0.8.0/0.8.1). Windows godkänt 2026-10-27.
 - 0.9.0 på Windows: skuggor (datum, tid, snabbval, Spela dagen), Konturer, Husfärg och Skissfärg, Detaljerade träd, Ögonhöjd (W A S D, skift, pekarlås, Esc), Spara bild och Bild för AI (prova bilderna i Visoid).
+- 0.9.1 på Windows: Konturfärg och Gränsfärg, Takformer på riktiga hus (ser taken rimliga ut?), Träd: Realistiska (utseende och om vyn blir seg), att ett klick i Ögonhöjd inte gömmer muspekaren.
+- 0.9.1 på iPhone: Realistiska träd (fart), Takformer.
 - 0.9.0 på iPhone: knappen Val, skuggor och tidsreglaget, ögonhöjd med spaken, att vyn inte blir för seg med skuggor och detaljerade träd (annars Trädskuggor av), Spara bild.
 
 ## 0.10.0 – rita volymer i Höjdkurvor

@@ -74,5 +74,34 @@ Terrang.registreraZoner();
     assert.ok(bv.length > 20, 'Vimmerby centrum har byggnader');
     assert.ok(bv.every(b => b.fotavtryck.length >= 3 && b.typ));
   }
+  // takformer ur laserdatan (0.9.1): sadeltak, takfot 6 m, nock 10 m, en skorsten
+  {
+    const W = 60, H = 40, dtm = new Float32Array(W * H).fill(100), ndsm = new Float32Array(W * H);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const x = i, y = 40 - j;
+      if (Math.abs(x - 30) < 10 && Math.abs(y - 20) < 6) ndsm[j * W + i] = 10 - 4 * Math.abs(y - 20) / 6;
+    }
+    ndsm[(40 - 22) * W + 25] = 14;
+    const b = { fotavtryck: [[20, 14], [40, 14], [40, 26], [20, 26]], hal: [] };
+    B.hojder([b], { W, H, s: 1, x0: 0, y1: 40, dtm, ndsm });
+    assert.ok(b.tak && !Object.keys(b).includes('tak'), 'takets höjder följer inte med när byggnaden sparas');
+    const t = B.takmodell(b);
+    assert.ok(t, 'takform');
+    assert.ok(Math.abs(t.nock - 110) < 0.01, `nocken utan skorstenen: ${t.nock}`);
+    assert.ok(t.takfot > 105.5 && t.takfot < 107.5, `takfoten nära 6 m: ${t.takfot}`);
+    let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+    for (let i = 0; i < t.pos.length; i += 3) {
+      xmin = Math.min(xmin, t.pos[i]); xmax = Math.max(xmax, t.pos[i]); ymin = Math.min(ymin, t.pos[i + 1]); ymax = Math.max(ymax, t.pos[i + 1]);
+      assert.ok(t.pos[i + 2] >= t.takfot - 0.01 && t.pos[i + 2] <= t.nock + 0.01);
+    }
+    assert.deepStrictEqual([xmin, xmax, ymin, ymax].map(Math.round), [20, 40, 14, 26], 'taket går ut till fotavtryckets kanter');
+    // trianglarna vänder uppåt (moturs ovanifrån)
+    for (let k = 0; k < t.index.length; k += 3) {
+      const [a, c, d] = [t.index[k], t.index[k + 1], t.index[k + 2]].map(q => [t.pos[q * 3], t.pos[q * 3 + 1]]);
+      assert.ok((c[0] - a[0]) * (d[1] - a[1]) - (c[1] - a[1]) * (d[0] - a[0]) > 0);
+    }
+    assert.strictEqual(B.takmodell({ fotavtryck: b.fotavtryck, hal: [], mark: 100, hojd: 9 }), null, 'utan laserdata ingen takform');
+    console.log('ok takform ur laserdatan');
+  }
   console.log('byggnad: alla test godkända');
 })().catch(e => { console.error(e); process.exit(1); });

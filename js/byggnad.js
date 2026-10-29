@@ -128,15 +128,159 @@
         const v = h[Math.min(h.length - 1, Math.floor(h.length * 0.9))];
         if (v >= 1.5) b.hojd = Math.round(v * 10) / 10;
       }
+      // takets höjder (RH 2000) i en ruta runt fotavtrycket, för takformerna i 3D (0.9.1).
+      // Inte uppräkningsbar, så att den inte följer med när byggnaderna sparas eller skickas.
+      let tak = null;
+      if (b.hojd != null && b.mark != null) {
+        const a0 = Math.max(0, i0 - 1), a1 = Math.min(y.W - 1, i1 + 1), c0 = Math.max(0, j0 - 1), c1 = Math.min(y.H - 1, j1 + 1);
+        // z: den stängda ytmodellen, punkt: cellens egna laserpunkter (NaN där inga punkter föll)
+        const W = a1 - a0 + 1, H = c1 - c0 + 1, z = new Float32Array(W * H), punkt = y.ra ? new Float32Array(W * H).fill(NaN) : null;
+        for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+          const q = (c0 + j) * y.W + a0 + i, d = y.dtm[q], n = y.ndsm[q];
+          z[j * W + i] = d === d && n === n ? d + n : NaN;
+          if (punkt && d === d && y.ra[q] > 0) punkt[j * W + i] = d + y.ra[q];
+        }
+        tak = { W, H, s: y.s, x0: y.x0 + a0 * y.s, y1: y.y1 - c0 * y.s, z, punkt };
+      }
+      Object.defineProperty(b, 'tak', { value: tak, writable: true, configurable: true, enumerable: false });
     }
     return byggnader;
+  }
+
+  /** Närmaste punkten på någon av ringarna till (x, y). */
+  function narmastPaRing(ringar, x, y) {
+    let bast = null, d = Infinity;
+    for (const ring of ringar) for (let i = 0; i < ring.length; i++) {
+      const [ax, ay] = ring[i], [bx, by] = ring[(i + 1) % ring.length];
+      const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / l2)) : 0;
+      const px = ax + t * vx, py = ay + t * vy, dd = Math.hypot(x - px, y - py);
+      if (dd < d) { d = dd; bast = [px, py]; }
+    }
+    return bast;
+  }
+
+  /**
+   * Takform ur laserdatan (0.9.1), för 3D-vyn: en ungefärlig bild av taket, inte en inmätning.
+   * Väggarna går till takfoten (en låg percentil av höjderna längs fotavtryckets kant) och taket
+   * är ytmodellen inom fotavtrycket. Ett värde som skiljer mer än 1,5 m från medianen av sina
+   * grannar (3 × 3) byts mot medianen (skorstenar, brus) och ytan jämnas ut i den riktning där den
+   * varierar minst. Helst cellens egna laserpunkter (y.ra). Hörn utanför fotavtrycket flyttas till kanten på takfotens höjd, så att taket
+   * sluter mot väggarna.
+   * Returnerar { takfot, nock, pos (x, y, z i zonen), index } eller null om det inte går.
+   */
+  function takmodell(b) {
+    const t = b && b.tak;
+    if (!t || b.mark == null || b.hojd == null) return null;
+    const { W, H, s, x0, y1 } = t, hal = b.hal || [], ringar = [b.fotavtryck].concat(hal);
+    const inne = new Uint8Array(W * H);
+    let antal = 0, z = t.z;
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const x = x0 + i * s, y = y1 - j * s, n = j * W + i;
+      if (z[n] === z[n] && inuti(b.fotavtryck, x, y) && !hal.some(h => inuti(h, x, y))) { inne[n] = 1; antal++; }
+    }
+    if (antal < 4) return null;
+    // helst laserpunkterna i cellen, annars medlet av grannarnas punkter, sist den stängda ytmodellen
+    // (stängningen tar största värdet runt omkring och lyfter därför tomma celler nära nocken)
+    if (t.punkt) {
+      z = new Float32Array(W * H);
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+        const n = j * W + i;
+        if (t.punkt[n] === t.punkt[n]) { z[n] = t.punkt[n]; continue; }
+        let sum = 0, st = 0;
+        for (let r = 1; r <= 2 && !st; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+          const ii = i + di, jj = j + dj;
+          if (ii < 0 || jj < 0 || ii >= W || jj >= H) continue;
+          const v = inne[jj * W + ii] ? t.punkt[jj * W + ii] : NaN;
+          if (v === v) { sum += v; st++; }
+        }
+        z[n] = st ? sum / st : t.z[n];
+      }
+    }
+    // enstaka avvikande värden byts mot medianen av grannarna inom fotavtrycket
+    const hz = new Float32Array(W * H).fill(NaN), alla = [];
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const n = j * W + i;
+      if (!inne[n]) continue;
+      const v = [];
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const ii = i + di, jj = j + dj;
+        if (ii >= 0 && jj >= 0 && ii < W && jj < H && inne[jj * W + ii]) v.push(z[jj * W + ii]);
+      }
+      v.sort((a, c) => a - c);
+      const med = v[v.length >> 1];
+      hz[n] = Math.abs(z[n] - med) > 1.5 ? med : z[n];
+    }
+    // utjämning längs den riktning där taket varierar minst (öst–väst, nord–syd eller en diagonal,
+    // fem celler): längs nocken och längs takfallens höjdlinjer, aldrig tvärs över ett takbrott.
+    // Bruset försvinner medan nock, takfot och lutning står kvar.
+    const RIKTNINGAR = [[1, 0], [0, 1], [1, 1], [1, -1]];
+    for (let varv = 0; varv < 2; varv++) {
+      const forra = Float32Array.from(hz);
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+        const n = j * W + i;
+        if (!inne[n]) continue;
+        let bast = null, bastVar = Infinity;
+        for (const [di, dj] of RIKTNINGAR) {
+          const v = [];
+          for (let k = -2; k <= 2; k++) {
+            const ii = i + di * k, jj = j + dj * k, q = jj * W + ii;
+            if (ii >= 0 && jj >= 0 && ii < W && jj < H && inne[q]) v.push(forra[q]);
+          }
+          if (v.length < 3) continue;
+          const m = v.reduce((x, y) => x + y, 0) / v.length, va = v.reduce((x, y) => x + (y - m) ** 2, 0) / v.length;
+          if (va < bastVar) { bastVar = va; bast = m; }
+        }
+        if (bast != null) hz[n] = bast;
+      }
+    }
+    for (let n = 0; n < W * H; n++) if (inne[n]) alla.push(hz[n]);
+    alla.sort((a, c) => a - c);
+    const pct = (lista, p) => lista[Math.min(lista.length - 1, Math.max(0, Math.floor(lista.length * p)))];
+    const tak = alla[alla.length - 1];
+    // takfoten: höjderna i cellerna längs kanten (en granne utanför)
+    const kant = [];
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const n = j * W + i;
+      if (!inne[n]) continue;
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([di, dj]) => { const ii = i + di, jj = j + dj; return ii < 0 || jj < 0 || ii >= W || jj >= H || !inne[jj * W + ii]; })) kant.push(hz[n]);
+    }
+    kant.sort((a, c) => a - c);
+    let takfot = pct(kant.length ? kant : alla, 0.3);
+    takfot = Math.max(b.mark + 1.5, Math.min(takfot, tak));
+    const nod = new Int32Array(W * H).fill(-1), pos = [];
+    const hornet = n => {
+      if (nod[n] >= 0) return nod[n];
+      const i = n % W, j = (n / W) | 0;
+      let x = x0 + i * s, y = y1 - j * s, zz;
+      if (inne[n]) zz = Math.max(takfot, Math.min(tak, hz[n]));
+      else { const p = narmastPaRing(ringar, x, y); x = p[0]; y = p[1]; zz = takfot; }
+      nod[n] = pos.length / 3; pos.push(x, y, zz);
+      return nod[n];
+    };
+    const index = [];
+    const triangel = (a, c, d) => {
+      const A = hornet(a), C = hornet(c), D = hornet(d);
+      const ux = pos[C * 3] - pos[A * 3], uy = pos[C * 3 + 1] - pos[A * 3 + 1], vx = pos[D * 3] - pos[A * 3], vy = pos[D * 3 + 1] - pos[A * 3 + 1];
+      if (Math.abs(ux * vy - uy * vx) < 1e-4) return;   // hopfallen vid kanten
+      // moturs sett ovanifrån (normalen uppåt)
+      if (ux * vy - uy * vx > 0) index.push(A, C, D); else index.push(A, D, C);
+    };
+    for (let j = 0; j < H - 1; j++) for (let i = 0; i < W - 1; i++) {
+      const a = j * W + i, bb = a + 1, c = a + W, d = c + 1;
+      if (!(inne[a] || inne[bb] || inne[c] || inne[d])) continue;
+      if (inne[a] || inne[bb] || inne[c]) triangel(a, c, bb);
+      if (inne[bb] || inne[c] || inne[d]) triangel(bb, c, d);
+    }
+    if (!index.length) return null;
+    return { takfot: Math.round(takfot * 100) / 100, nock: Math.round(tak * 100) / 100, pos: new Float32Array(pos), index: new Uint32Array(index) };
   }
 
   /** Byggnaderna som volymer (platta tak) för skyfall och 3D. utanHojd = höjd när laser saknas. */
   function somVolymer(byggnader, { utanHojd = null } = {}) {
     return byggnader.filter(b => b.mark != null && (b.hojd != null || utanHojd != null)).map((b, i) => ({
       id: 'befintlig-' + (b.id || i), namn: beteckning(b), fotavtryck: b.fotavtryck,
-      golv: b.mark, takfot: b.hojd != null ? b.hojd : utanHojd, takform: 'platt', befintlig: true,
+      golv: b.mark, takfot: b.hojd != null ? b.hojd : utanHojd, takform: 'platt', befintlig: true, hal: b.hal || [],
     }));
   }
 
@@ -228,5 +372,5 @@
     return ut;
   }
 
-  return { hamta, franObjekt, hojder, somVolymer, dxf, csv, perTyp, lagerFor, typInfo, beteckning, andamalText, tyngdpunkt, inuti, avstandTillRing, tradVidByggnader, FALT, arByggnadsyta };
+  return { hamta, franObjekt, hojder, takmodell, somVolymer, dxf, csv, perTyp, lagerFor, typInfo, beteckning, andamalText, tyngdpunkt, inuti, avstandTillRing, tradVidByggnader, FALT, arByggnadsyta };
 }));
