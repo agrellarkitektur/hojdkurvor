@@ -11,7 +11,7 @@ let antal = 0;
 const prov = (namn, f) => { f(); antal++; console.log('ok', namn); };
 
 prov('trädmodellerna är 1 m höga och breda, med foten i origo', () => {
-  for (const art of Trad3D.ARTER) for (const niva of ['enkel', 'detaljerad']) {
+  for (const art of Trad3D.TYPER) for (const niva of ['enkel', 'detaljerad']) {
     const m = Trad3D.modell(art, niva);
     assert.strictEqual(m.pos.length % 9, 0);
     assert.strictEqual(m.pos.length, m.norm.length);
@@ -29,7 +29,7 @@ prov('trädmodellerna är 1 m höga och breda, med foten i origo', () => {
 });
 
 prov('de enkla modellerna har få ytor, de detaljerade fler', () => {
-  for (const art of Trad3D.ARTER) {
+  for (const art of Trad3D.TYPER) {
     const e = Trad3D.modell(art, 'enkel').pos.length / 9, d = Trad3D.modell(art, 'detaljerad').pos.length / 9;
     assert(e <= 40, `${art}: ${e} ytor enkel`);
     assert(d > 3 * e && d < 800, `${art}: ${d} ytor detaljerad`);
@@ -101,23 +101,19 @@ prov('storleken följer skalan och håller sig inom gränserna', () => {
   assert(m.bredd * m.hojd <= 16e6);
 });
 
-prov('realistiska träd: stam och lövkort i 1 × 1 m, bilden har en ruta per art', () => {
-  for (const art of Trad3D.ARTER) {
-    const m = Trad3D.realistisk(art);
-    assert.strictEqual(m.stam.pos.length % 9, 0);
-    assert.strictEqual(m.lov.pos.length % 9, 0);
-    assert.strictEqual(m.lov.uv.length / 2, m.lov.pos.length / 3);
-    let ymin = Infinity, ymax = -Infinity, rmax = 0;
-    for (const P of [m.stam.pos, m.lov.pos]) for (let i = 0; i < P.length; i += 3) {
-      ymin = Math.min(ymin, P[i + 1]); ymax = Math.max(ymax, P[i + 1]); rmax = Math.max(rmax, Math.abs(P[i]), Math.abs(P[i + 2]));
-    }
-    assert(ymin >= -1e-6 && Math.abs(ymax - 1) < 1e-6 && Math.abs(rmax - 0.5) < 1e-6, `${art}: ${ymin} ${ymax} ${rmax}`);
-    const kort = m.lov.pos.length / 18;
-    assert(kort >= 60 && kort <= 150, `${art}: ${kort} kort`);
-    // alla kort i artens ruta i lövbilden
-    const ruta = { gran: 0, tall: 1, lov: 2 }[art];
-    for (let i = 0; i < m.lov.uv.length; i += 2) assert(m.lov.uv[i] * 3 >= ruta && m.lov.uv[i] * 3 <= ruta + 1);
+prov('varianterna (0.10.0): typen följer arten, blandas över skogen och är densamma för samma läge', () => {
+  const rakna = {};
+  for (let i = 0; i < 600; i++) {
+    const t = { x: 540000 + i * 3.7, y: 6428000 + i * 1.3, hojd: 10, krona: 7 }, typ = Trad3D.typ(t);
+    assert.strictEqual(Trad3D.artFor(typ), 'lov');
+    assert.strictEqual(Trad3D.typ({ ...t }), typ);
+    rakna[typ] = (rakna[typ] || 0) + 1;
   }
+  for (const typ of Trad3D.VARIANTER.lov) assert(rakna[typ] > 60, `${typ}: ${rakna[typ]}`);
+  assert(Trad3D.VARIANTER.gran.includes(Trad3D.typ({ x: 1, y: 2, hojd: 22, krona: 4 })));
+  // de detaljerade varianterna är olika modeller, de enkla är artens
+  assert.notStrictEqual(Trad3D.modell('lov', 'detaljerad').pos.length, Trad3D.modell('bjork', 'detaljerad').pos.length);
+  assert.strictEqual(Trad3D.modell('bjork', 'enkel'), Trad3D.modell('lov', 'enkel'));
 });
 
 console.log(`${antal} prov gick igenom`);

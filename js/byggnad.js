@@ -43,13 +43,15 @@
     return Math.abs(a / 2);
   }
   function tyngdpunkt(p) {
+    // relativt första hörnet: zonens stora koordinater ger annars avrundningsfel på metern (0.10.0)
+    const [ox, oy] = p[0];
     let a = 0, cx = 0, cy = 0;
     for (let i = 0; i < p.length; i++) {
-      const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length], k = x0 * y1 - x1 * y0;
+      const x0 = p[i][0] - ox, y0 = p[i][1] - oy, x1 = p[(i + 1) % p.length][0] - ox, y1 = p[(i + 1) % p.length][1] - oy, k = x0 * y1 - x1 * y0;
       a += k; cx += (x0 + x1) * k; cy += (y0 + y1) * k;
     }
     if (Math.abs(a) < 1e-9) return [p.reduce((s, q) => s + q[0], 0) / p.length, p.reduce((s, q) => s + q[1], 0) / p.length];
-    return [cx / (3 * a), cy / (3 * a)];
+    return [ox + cx / (3 * a), oy + cy / (3 * a)];
   }
   function inuti(poly, x, y) {
     let inne = false;
@@ -203,7 +205,7 @@
     }
     return ut;
   }
-  const ytaAv = p => { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; a += p[i][0] * q[1] - q[0] * p[i][1]; } return a / 2; };
+  const ytaAv = p => { let a = 0; const o = p[0] || [0, 0]; for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; a += (p[i][0] - o[0]) * (q[1] - o[1]) - (q[0] - o[0]) * (p[i][1] - o[1]); } return a / 2; };
 
   /**
    * Takform för 3D-vyn: en förenklad form som passas till laserdatan, inte en inmätning.
@@ -217,8 +219,14 @@
    * Laserdatan förbehandlas: helst cellens egna laserpunkter (y.ra), värden som skiljer mer än
    * 1,5 m från grannarnas median byts (skorstenar) och ytan jämnas ut längs takfallen.
    * Returnerar { form, lutning (grader), takfot, nock, pos (x, y, z i zonen), index } eller null.
+   *
+   * eget (0.10.0) styr formen för hus som tolkats fel: { form: 'sadeltak'|'valmat'|'pulpettak'|'platt',
+   * lutning (grader), tvars (nocken tvärs huset), vand (pulpettakets höga sida åt andra hållet),
+   * nock (RH 2000) }. Det som inte anges passas till laserdatan som vanligt. Med en egen vinkel
+   * behålls vinkeln och takfoten får gå ner till 1 m över marken.
    */
-  function takmodell(b) {
+  function takmodell(b, eget) {
+    eget = eget || {};
     const t = b && b.tak;
     if (!t || b.mark == null || b.hojd == null) return null;
     const { W, H, s, x0, y1 } = t, hal = b.hal || [], ringar = [b.fotavtryck].concat(hal);
@@ -284,23 +292,31 @@
       }
     }
     // --- form, vinkel och nock ur laserdatan
-    const fot = b.fotavtryck, hol = holje(fot), R = rektangel(hol);
+    const fot = b.fotavtryck, hol = holje(fot), R0 = rektangel(hol);
+    // nocken tvärs huset: rektangelns axlar byter plats
+    const R = eget.tvars ? { cx: R0.cx, cy: R0.cy, ux: -R0.uy, uy: R0.ux, L: R0.B, B: R0.L } : R0;
+    const ettForm = ['sadeltak', 'valmat', 'pulpettak', 'platt'].includes(eget.form) ? eget.form : null;
+    const egenVinkel = eget.lutning > 0 && eget.lutning <= 75 ? +eget.lutning : null;
+    // ett inbuktat hus får ett valmat tak som följer fotavtrycket, om inte en annan form är vald
     const inbuktat = Math.abs(ytaAv(fot)) / Math.abs(ytaAv(hol)) < 0.85;
+    const foljer = inbuktat && (!ettForm || ettForm === 'valmat');
     const lokal = (x, y) => { const dx = x - R.cx, dy = y - R.cy; return [dx * R.ux + dy * R.uy, -dx * R.uy + dy * R.ux]; };
+    const vand = eget.vand ? -1 : 1;
     // avståndet in från takfoten för varje form; D = störst möjliga (vid nocken)
-    const FORMER = inbuktat
+    const FORMER = foljer
       ? { valmat: { d: (x, y) => { const p = narmastPaRing(ringar, x, y); return Math.hypot(x - p[0], y - p[1]); } } }
       : {
         sadeltak: { d: (x, y) => R.B - Math.abs(lokal(x, y)[1]) },
         valmat: { d: (x, y) => { const [u, v] = lokal(x, y); return Math.min(R.B - Math.abs(v), R.L - Math.abs(u)); } },
       };
+    if (ettForm === 'pulpettak') FORMER.pulpettak = { d: (x, y) => R.B + vand * lokal(x, y)[1], D: 2 * R.B };
     const celler = [];
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const n = j * W + i; if (inne[n]) celler.push([x0 + i * s, y1 - j * s, hz[n]]); }
     let D = 0;
     for (const namn in FORMER) {
       const F = FORMER[namn];
       F.dv = celler.map(([x, y]) => Math.max(0, F.d(x, y)));
-      F.D = inbuktat ? Math.max(...F.dv, 0.5) : R.B;
+      F.D = F.D || (foljer ? Math.max(...F.dv, 0.5) : R.B);
     }
     const median = a => { const c = a.slice().sort((p, q) => p - q); return c[c.length >> 1]; };
     /** Medianen och avvikelsen (medel av de 85 % minsta) för höjderna som formen skulle ge. */
@@ -310,30 +326,42 @@
       return { nock: m, fel: fel.slice(0, k).reduce((p, q) => p + q, 0) / k };
     };
     let val;
-    if (celler.length < 8) {
-      const F = FORMER.sadeltak || FORMER.valmat;
-      val = { form: FORMER.sadeltak ? 'sadeltak' : 'valmat', grader: 35, nock: Math.max(...celler.map(c => c[2])), F };
+    const former = ettForm && ettForm !== 'platt' ? [ettForm] : Object.keys(FORMER).filter(n => n !== 'pulpettak');
+    const vinklar = egenVinkel ? [egenVinkel] : Array.from({ length: 56 }, (_, i) => i + 5);
+    if (ettForm === 'platt') {
+      val = { form: 'platt', grader: 0, nock: celler.length < 8 ? Math.max(...celler.map(c => c[2])) : prova(() => 0).nock };
+    } else if (celler.length < 8) {
+      const namn = ettForm || (FORMER.sadeltak ? 'sadeltak' : 'valmat');
+      val = { form: namn, grader: egenVinkel || 35, nock: Math.max(...celler.map(c => c[2])), F: FORMER[namn] };
     } else {
       const platt = prova(() => 0);
       let bast = null;
-      for (const namn in FORMER) {
+      for (const namn of former) {
         const F = FORMER[namn];
-        for (let g = 5; g <= 60; g++) {
+        for (const g of vinklar) {
           const k = Math.tan(g * Math.PI / 180), r = prova(i => k * (F.D - F.dv[i]));
           // sadeltak går före valm om skillnaden är liten
           const poang = r.fel - (namn === 'sadeltak' ? 0.05 : 0);
           if (!bast || poang < bast.poang) bast = { poang, fel: r.fel, form: namn, grader: g, nock: r.nock, F };
         }
       }
-      val = bast.grader < 10 || platt.fel <= bast.fel + 0.1 ? { form: 'platt', grader: 0, nock: platt.nock } : bast;
+      val = !ettForm && !egenVinkel && (bast.grader < 10 || platt.fel <= bast.fel + 0.1) ? { form: 'platt', grader: 0, nock: platt.nock } : bast;
     }
-    let nock = Math.max(val.nock, b.mark + 2), grader = val.grader, takfot = nock;
+    if (egenVinkel && val.F && celler.length >= 8) {
+      // med en egen vinkel passar inte lutningen datan; nocken tas då ur cellerna närmast nocken
+      const F = val.F, nara = celler.filter((c, i) => F.dv[i] >= F.D - Math.max(1, 0.15 * F.D)).map(c => c[2]);
+      if (nara.length >= 3) { nara.sort((p, q) => p - q); val.nock = nara[Math.floor((nara.length - 1) * 0.9)]; }
+    }
+    const egenNock = eget.nock > b.mark + 1 ? +eget.nock : null;
+    let nock = egenNock || Math.max(val.nock, b.mark + 2), grader = val.grader, takfot = nock;
+    // med egen vinkel får takfoten gå lägre innan vinkeln flackas av
+    const lagst = b.mark + (egenVinkel ? 1 : 2);
     if (val.form !== 'platt') {
       D = val.F.D;
       takfot = nock - Math.tan(grader * Math.PI / 180) * D;
-      if (takfot < b.mark + 2) {
-        // för brant för husets höjd: flacka av så att takfoten hamnar 2 m över marken
-        takfot = b.mark + 2;
+      if (takfot < lagst) {
+        // för brant för husets höjd: flacka av så att takfoten hamnar över marken
+        takfot = lagst;
         grader = Math.atan((nock - takfot) / D) * 180 / Math.PI;
         if (grader < 5) { val = { form: 'platt' }; takfot = nock; grader = 0; }
       }
@@ -355,7 +383,7 @@
       // taket över höljet (lite utanför fotavtrycket där det buktar in), uppdelat i takfall
       const P = ytaAv(hol) > 0 ? hol : hol.slice().reverse();
       const sidor = { n: (x, y) => R.B - lokal(x, y)[1], s: (x, y) => R.B + lokal(x, y)[1], o: (x, y) => R.L - lokal(x, y)[0], v: (x, y) => R.L + lokal(x, y)[0] };
-      const aktiva = val.form === 'platt' ? [] : val.form === 'sadeltak' ? ['n', 's'] : ['n', 's', 'o', 'v'];
+      const aktiva = val.form === 'platt' || val.form === 'pulpettak' ? [] : val.form === 'sadeltak' ? ['n', 's'] : ['n', 's', 'o', 'v'];
       const fall = [];
       if (!aktiva.length) fall.push(P);
       for (const a of aktiva) {
@@ -386,7 +414,7 @@
         }
       }
     } else if (val.form !== 'platt') {
-      // inbuktat hus: valmat tak som följer fotavtrycket, i ett rutnät på 0,5 m
+      // inbuktat hus: taket i ett rutnät på 0,5 m som följer fotavtrycket
       // (platt tak behöver ingen egen yta: väggarnas lock ligger redan på takfoten)
       const xs = fot.map(p => p[0]), ys = fot.map(p => p[1]), st = 0.5;
       const gx0 = Math.min(...xs) - st, gy1 = Math.max(...ys) + st;
@@ -416,7 +444,8 @@
     }
     if (!index.length && val.form !== 'platt') return null;
     const r2 = v => Math.round(v * 100) / 100;
-    return { form: val.form, lutning: Math.round(grader), takfot: r2(takfot), nock: r2(nock), pos: new Float32Array(pos), index: new Uint32Array(index) };
+    return { form: val.form, lutning: Math.round(grader), takfot: r2(takfot), nock: r2(nock), pos: new Float32Array(pos), index: new Uint32Array(index),
+      eget: !!(ettForm || egenVinkel || eget.tvars || egenNock) };
   }
 
   /** Byggnaderna som volymer (platta tak) för skyfall och 3D. utanHojd = höjd när laser saknas. */

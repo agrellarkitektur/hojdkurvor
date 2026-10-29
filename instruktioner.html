@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – höjdkurvor.se</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.9.2"></script>
-  <script src="js/tema.js?v=0.9.2"></script>
-  <script src="js/synpunkter.js?v=0.9.2" defer></script>
+  <script src="js/version.js?v=0.10.0"></script>
+  <script src="js/tema.js?v=0.10.0"></script>
+  <script src="js/synpunkter.js?v=0.10.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.9.2">
+  <link rel="stylesheet" href="app.css?v=0.10.0">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -143,11 +143,22 @@
           <li><strong>Rita i cad-apa.</strong> Öppnar ritprogrammet cad-apa i en ny flik med platsen, terrängen och kurvorna. När huset är skissat skickar du det tillbaka från cad-apa, och volymerna dyker upp i steg 04. Samma sak gör <em>Fortsätt rita i cad-apa</em> under resultatet.</li>
           <li><strong>Importera fil.</strong> En skiss sparad från cad-apa, eller en DXF där varje sluten polylinje blir en volym. Ange om DXF-filen är ritad i lokala koordinater eller i SWEREF 99.</li>
           <li><strong>Ändra i listan.</strong> Golvnivå i RH 2000 (tomt betyder marken vid husets mitt), höjd till takfot, takform och taklutning.</li>
+          <li><strong>Modellera i 3D.</strong> Rita volymer direkt i 3D-vyn, se nedan.</li>
         </ul>
         <p>Stoppar webbläsaren den nya fliken: tillåt popup-fönster för sidan, eller välj <em>Spara platsfil för cad-apa</em> och öppna filen i cad-apa.</p>
         <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen med det du har skapat: höjdkurvor, träd, byggnader, fastighetsgränser, vägar och volymerna. Byggnader utan höjd ur laserdatan visas som fotavtryck på marken. Har du valt ortofoto ligger det på terrängen. Knapparna överst slår av och på varje lager, och <em>Kurvfärg</em> byter färg på höjdkurvorna. Dra för att snurra. Välj <em>Flytta</em> om du hellre vill att dragningen flyttar vyn; högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Dubbelklicka eller välj <em>Återställ vy</em> för att komma tillbaka till början.</p>
         <p><em>Skuggor</em> tänder solen. Välj datum och dra i tiden, eller välj <em>Vårdagjämning</em>, <em>Midsommar</em> eller <em>Vintersolstånd</em>. <em>Spela dagen</em> går från soluppgång till solnedgång. Terrängen, husen, volymerna och träden kastar skugga; <em>Trädskuggor</em> stänger av trädens om vyn blir seg. Solen räknas som i soldiagrammet.</p>
-        <p><em>Konturer</em> ritar kanter på husen och volymerna. <em>Husfärg</em> och <em>Skissfärg</em> byter färg på befintliga byggnader och på dina volymer, <em>Konturfärg</em> på kanterna och <em>Gränsfärg</em> på fastighetsgränserna. <em>Takformer</em> ger husen ett enkelt tak, sadeltak, valmat eller platt, med nockhöjd och takvinkel ur laserdatan. Det visar ungefär hur taken ser ut; de är inte inmätta. Träden visas som granar, tallar och lövträd efter formen i laserdatan. Under <em>Träd</em> väljer du Enkla, Detaljerade eller Realistiska; de två senare gäller träden närmast dig. De realistiska har lövverk som går att se igenom och är tyngst för datorn.</p>
+        <p><em>Konturer</em> ritar kanter på husen och volymerna. <em>Husfärg</em> och <em>Skissfärg</em> byter färg på befintliga byggnader och på dina volymer, <em>Konturfärg</em> på kanterna och <em>Gränsfärg</em> på fastighetsgränserna. <em>Takformer</em> ger husen ett enkelt tak, sadeltak, valmat eller platt, med nockhöjd och takvinkel ur laserdatan. Det visar ungefär hur taken ser ut; de är inte inmätta. Träden visas som granar, tallar, lövträd och björkar efter formen i laserdatan. Under <em>Träd</em> väljer du Enkla eller Detaljerade; de detaljerade gäller träden närmast dig.</p>
+        <p><strong>Rätta ett tak.</strong> Klicka på ett befintligt hus i 3D-vyn. I rutan som öppnas väljer du takform (sadeltak, valmat, pulpettak eller platt), lutning, om nocken går längs eller tvärs huset och nockhöjden. Det du lämnar tomt tas ur laserdatan, och <em>Ur laserdatan</em> tar bort dina val. Valen sparas i webbläsaren och gäller nästa gång du öppnar samma hus.</p>
+        <p><strong>Modellera.</strong> På datorn kan du rita volymer direkt i 3D-vyn. Välj <em>Modellera</em> och <em>Ny volym</em>: ett rätblock, en cylinder eller ett prisma med tak, med mått i meter. Klicka där volymen ska stå. Klicka på en volym för att välja den och dra för att flytta den; dra i <span aria-hidden="true">⟳</span> för att vrida, och håll ned skift för steg om 15°. Mått, höjd, tak, vridning och golv ändrar du i rutan. <em>Toppvy</em> visar platsen rakt uppifrån med norr uppåt, så att du kan lägga ut volymerna exakt.</p>
+        <ul>
+          <li><strong>Snäpp.</strong> En volym som dras nära en annan volym, ett hus eller en fastighetsgräns lägger sig an mot den, sida mot sida, och hörnen ställer sig i linje. Därefter kan du skriva in avståndet till det den snäppte mot. Håll ned Alt för att slippa snäppet.</li>
+          <li><strong>Ovanpå.</strong> Står volymens mitt på en annan volym hamnar golvet på den volymens takfot. Annars står den på marken. Du kan också skriva in ett eget golv.</li>
+          <li><strong>Sätt ihop.</strong> Där två volymer möts visas en kedja. Klicka på den så sitter volymerna ihop och flyttas och vrids tillsammans; klicka igen för att lösa upp dem.</li>
+          <li><strong>In i varandra.</strong> Volymer som överlappar visas som en enda form, och räknas så i skuggorna och de andra analyserna.</li>
+          <li><strong>Ångra.</strong> Ctrl+Z ångrar och Ctrl+Y gör om. Delete tar bort den valda volymen.</li>
+        </ul>
+        <p>Volymerna hamnar i listan under 04 Skiss. Välj <em>Skapa</em> igen när du har stängt 3D-vyn, så räknas skuggstudien, horisonten och filerna om med dem.</p>
         <p><em>Ögonhöjd</em>: klicka på marken där du vill stå. På datorn går du med W A S D eller pilarna och springer med skift, och drar med musen för att titta runt. På mobilen går du med spaken nere till vänster och drar för att titta. Esc eller <em>Tillbaka</em> tar dig upp igen.</p>
         <p><em>Spara bild</em> sparar vyn som PNG i 2, 3 eller 4 gånger skärmens storlek, utan knappar. <em>Bild för AI</em> sparar en zip med samma vy fyra gånger: som den är, som vit lermodell, som kantlinjer och som djupkarta. Det är vad program som Visoid brukar vilja ha för att göra en visualisering. På mobilen ligger valen bakom <em>Val</em>.</p>
         <p>Till cad-apa följer terrängen, kurvorna, träden, vägarna, stompunkterna, de befintliga byggnaderna och fastighetsgränserna med, om du har valt dem. Saknas fastighetsgränserna eller byggnaderna säger appen till när du skickar.</p>

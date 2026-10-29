@@ -85,6 +85,10 @@ node test/vy3d.test.js
 ```
 
 ```
+node test/volym3d.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 

@@ -42,14 +42,24 @@ node test/version.test.js
 node test/vy3d.test.js
 ```
 
+```
+node test/volym3d.test.js
+```
+
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
 `TERRANG_TEST.vy3d`, så att testet kan läsa kamerans läge.
 
-3D-testet prövar trädmodellerna (storlek, ytornas riktning, artgissningen, de
-realistiska trädens lövkort) och
+3D-testet prövar trädmodellerna (storlek, ytornas riktning, artgissningen och
+varianterna) och
 beräkningarna för bilderna: djupet, djupkartan, kantlinjerna och storleken.
+
+Volymtestet (0.10.0) prövar volymerna att modellera: fotavtrycken för rätblock,
+cylinder och prisma, att takets höjd är densamma som `Platsanalys.takhojd`, de
+exakta takytorna, snäpp yta mot yta, mot en gräns och hörn mot kant, kontakter
+(sida mot sida, ovanpå, in i varandra), länkar och grupper, underlaget och
+konturerna när volymer möts eller går in i varandra.
 
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
 på syntetiska rutnät, och byggnader och fastighetsindelning ur låtsasfilerna.
@@ -68,11 +78,17 @@ sparas filerna, så att de kan kontrolleras med IfcOpenShell
 `ifcopenshell.validate.validate(f, logger, express_rules=True)`). `ui_test.py`
 kontrollerar också att IFC-filerna kommer med i zip:en, att 3D-vyn flyttas vid
 högerdrag och att dubbelklick återställer den, och 3D-vyns konturer, färger,
-konturfärg och gränsfärg, takformer, detaljerade och realistiska träd, skuggor
+konturfärg och gränsfärg, takformer, detaljerade träd, egen takform (klick på
+huset, valmat 40°, pulpettak tvärs, Ur laserdatan), modelleringen (ny volym med
+klick, snäpp och avstånd, ångra, kedjan, dra med musen i toppvyn så att gruppen
+följer med, vrida med skift i steg om 15°, ovanpå, ändra bredd, Delete och
+Ctrl+Z, att listan under 04 Skiss följer med och påminnelsen när vyn stängs), skuggor
 med snabbval och uppspelning, Spara bild (2 × skärmen), Bild för AI (fyra
 bilder i zip:en) och ögonhöjd (W går framåt, ett klick låser inte musen, Esc
 går tillbaka utan att stänga vyn). Byggnadstestet prövar också takformen på ett
-sadeltak med en skorsten (nock, takfot och att taket går ut till kanterna).
+sadeltak med en skorsten (nock, takfot och att taket går ut till kanterna), och
+egen takform: valm, sadeltak 45° med nocken ur laserdatan, nock tvärs, pulpettak
+åt båda hållen, platt med egen nockhöjd och sadeltak på ett vinkelhus.
 Tar några sekunder. Med `BYGGNAD_GPKG=…/byggnad_knKKKK.gpkg` och
 `FASTIGHET_GPKG=…/fastighetsindelning_knKKKK.gpkg` körs samma kontroller
 också på riktiga filer från Lantmäteriet (för Vimmerby centrum, kommun 0884).

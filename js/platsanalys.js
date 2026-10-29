@@ -356,15 +356,17 @@
     return D().skriv({ SKISS_FOTAVTRYCK: 6, SKISS_TAKFOT: 6, SKISS_TEXT: 6, UTSNITT: 3 }, o, { dx, dy, dz, ext: r });
   }
   function tyngdpunkt(p) {
+    // relativt första hörnet: zonens stora koordinater ger annars avrundningsfel på metern (0.10.0)
+    const [ox, oy] = p[0];
     let a = 0, cx = 0, cy = 0;
     for (let i = 0; i < p.length; i++) {
-      const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length], k = x0 * y1 - x1 * y0;
+      const x0 = p[i][0] - ox, y0 = p[i][1] - oy, x1 = p[(i + 1) % p.length][0] - ox, y1 = p[(i + 1) % p.length][1] - oy, k = x0 * y1 - x1 * y0;
       a += k; cx += (x0 + x1) * k; cy += (y0 + y1) * k;
     }
     if (Math.abs(a) < 1e-9) return [p.reduce((s, q) => s + q[0], 0) / p.length, p.reduce((s, q) => s + q[1], 0) / p.length];
-    return [cx / (3 * a), cy / (3 * a)];
+    return [ox + cx / (3 * a), oy + cy / (3 * a)];
   }
-  const area = p => Math.abs(p.reduce((s, q, i) => { const b = p[(i + 1) % p.length]; return s + q[0] * b[1] - b[0] * q[1]; }, 0) / 2);
+  const area = p => Math.abs(p.reduce((s, q, i) => { const b = p[(i + 1) % p.length], o = p[0]; return s + (q[0] - o[0]) * (b[1] - o[1]) - (b[0] - o[0]) * (q[1] - o[1]); }, 0) / 2);
 
   /** Slutna polylinjer ur en DXF (LWPOLYLINE och POLYLINE) som fotavtryck. */
   function lasDxfFotavtryck(text) {

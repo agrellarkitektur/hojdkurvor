@@ -122,6 +122,36 @@ Terrang.registreraZoner();
     assert.ok(litet && ['sadeltak', 'platt'].includes(litet.form), 'litet hus');
     assert.strictEqual(B.takmodell({ fotavtryck: rekt, hal: [], mark: 100, hojd: 9 }), null, 'utan laserdata ingen takform');
     console.log('ok takform ur laserdatan');
+    // egen takform (0.10.0): huset tolkat fel, rättas med form, vinkel och nockriktning
+    {
+      const egen = B.takmodell(b, { form: 'valmat' });
+      assert.strictEqual(egen.form, 'valmat'); assert.ok(egen.eget);
+      const brant = B.takmodell(b, { form: 'sadeltak', lutning: 45 });
+      assert.strictEqual(brant.lutning, 45);
+      assert.ok(Math.abs(brant.nock - t.nock) < 0.4, `nocken ur laserdatan ${brant.nock}`);
+      assert.ok(Math.abs(brant.nock - brant.takfot - 6) < 0.1, `45° över halva bredden 6 m: ${brant.nock - brant.takfot}`);
+      // nock tvärs huset: takfallen lutar längs x i stället för y
+      const tv = B.takmodell(b, { form: 'sadeltak', lutning: 30, tvars: true });
+      let vidMitt = -Infinity, vidKant = -Infinity;
+      for (let i = 0; i < tv.pos.length; i += 3) {
+        if (Math.abs(tv.pos[i] - 30) < 0.01) vidMitt = Math.max(vidMitt, tv.pos[i + 2]);
+        if (Math.abs(tv.pos[i] - 20) < 0.01) vidKant = Math.max(vidKant, tv.pos[i + 2]);
+      }
+      assert.ok(vidMitt - vidKant > 3, `nocken mitt på långsidan: ${vidMitt} ${vidKant}`);
+      // pulpettak: högst på ena långsidan, vänd åt andra hållet
+      const pulp = B.takmodell(b, { form: 'pulpettak', lutning: 15 });
+      assert.strictEqual(pulp.form, 'pulpettak');
+      const hojdVid = (m, y) => { let h = -Infinity; for (let i = 0; i < m.pos.length; i += 3) if (Math.abs(m.pos[i + 1] - y) < 0.01) h = Math.max(h, m.pos[i + 2]); return h; };
+      const vand = B.takmodell(b, { form: 'pulpettak', lutning: 15, vand: true });
+      assert.ok((hojdVid(pulp, 26) - hojdVid(pulp, 14)) * (hojdVid(vand, 26) - hojdVid(vand, 14)) < 0, 'vänt pulpettak');
+      assert.ok(Math.abs(Math.abs(hojdVid(pulp, 26) - hojdVid(pulp, 14)) - 12 * Math.tan(15 * Math.PI / 180)) < 0.1);
+      const pl = B.takmodell(b, { form: 'platt', nock: 112 });
+      assert.strictEqual(pl.form, 'platt'); assert.strictEqual(pl.nock, 112);
+      // sadeltak på vinkelhuset (valmat ur laserdatan) går också
+      const vs = B.takmodell(hus(L, (x, y) => 6 + 0.7 * Math.min(5, B.avstandTillRing(L, x, y))).b, { form: 'sadeltak', lutning: 30 });
+      assert.strictEqual(vs.form, 'sadeltak'); assert.ok(vs.index.length > 0);
+      console.log('ok egen takform');
+    }
   }
 
   console.log('byggnad: alla test godkända');

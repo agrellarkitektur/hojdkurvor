@@ -237,14 +237,11 @@ with sync_playwright() as p:
         print('  träd enkla:', pg.evaluate(f'{v3}.tradantal()'))
         pg.select_option('#vy3d-tradniva', 'detaljerad'); pg.wait_for_timeout(300)
         antal = pg.evaluate(f'{v3}.tradantal()')
-        print('  träd detaljerade:', antal)
-        assert sum(a['detaljerad'] for a in antal.values()) > 0, 'detaljerade träd visas'
-        pg.select_option('#vy3d-tradniva', 'realistisk'); pg.wait_for_timeout(1500)
-        antal = pg.evaluate(f'{v3}.tradantal()')
-        print('  träd realistiska:', antal)
-        assert sum(a['realistisk'] for a in antal.values()) > 0, 'realistiska träd visas'
+        print('  träd detaljerade (0.10.0, typer):', antal)
+        assert sum(antal['detaljerad'].values()) > 0, 'detaljerade träd visas'
+        assert pg.locator('#vy3d-tradniva option[value=realistisk]').count() == 0, 'Realistiska är borttaget'
     pg.wait_for_timeout(500); pg.screenshot(path=f'{UT}/06g_3d_konturer_trad.png')
-    # närbild på huset med takform och de realistiska träden: zooma in mot mitten, sedan ögonhöjd framför huset
+    # närbild på huset med takform och de detaljerade träden: zooma in mot mitten, sedan ögonhöjd framför huset
     yta = pg.locator('#vy3d-yta canvas').bounding_box()
     cx3, cy3 = yta['x'] + yta['width'] / 2, yta['y'] + yta['height'] / 2
     for _ in range(6): pg.mouse.move(cx3, cy3); pg.mouse.wheel(0, -500); pg.wait_for_timeout(80)
@@ -311,11 +308,132 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
     assert pg.evaluate(f'{v3}.lage()') == 'oversikt' and pg.locator('#vy3d').is_visible(), 'Esc tillbaka utan att stänga'
     pg.click('#vy3d-ogon'); pg.keyboard.press('Escape'); assert pg.evaluate(f'{v3}.lage()') == 'oversikt', 'Esc avbryter valet'
-    if pg.locator('#vy3d-skuggor').is_visible(): pg.click('#vy3d-skuggor')
-    if pg.locator('#vy3d-konturer').is_visible(): pg.click('#vy3d-konturer')
+
+    # 0.10.0: egen takform på ett befintligt hus, klicka på huset
+    hus3 = pg.evaluate("(() => { const b = TERRANG_TEST.byggnader.find(b => b.tak); return b ? Byggnad.tyngdpunkt(b.fotavtryck) : null; })()")
+    if hus3:
+        pg.evaluate(f'{v3}.aterstall()'); pg.wait_for_timeout(200)
+        hid = pg.evaluate(f'{v3}.klickaHus({hus3[0]}, {hus3[1]})')
+        pg.wait_for_timeout(300)
+        print('  takpanel:', hid, pg.inner_text('#tak-namn'), '|', pg.inner_text('#tak-info'))
+        assert hid and pg.locator('#vy3d-tak').is_visible(), 'klick på huset öppnar takpanelen'
+        pg.select_option('#tak-form', 'valmat'); pg.fill('#tak-lutning', '40'); pg.dispatch_event('#tak-lutning', 'change'); pg.wait_for_timeout(300)
+        info = pg.inner_text('#tak-info'); print('  valmat 40°:', info)
+        assert 'Valmat 40°' in info
+        sparat = pg.evaluate("JSON.parse(localStorage.getItem('terrang-takval') || '{}')")
+        assert any(v.get('form') == 'valmat' for v in sparat.values()), 'valet sparas'
+        assert pg.evaluate(f'{v3}.takformer()') is True
+        for _ in range(4): pg.mouse.move(cx3, cy3); pg.mouse.wheel(0, -500); pg.wait_for_timeout(60)
+        pg.wait_for_timeout(500); pg.screenshot(path=f'{UT}/06n_3d_egen_takform.png')
+        pg.select_option('#tak-riktning', 'tvars'); pg.select_option('#tak-form', 'pulpettak'); pg.wait_for_timeout(300)
+        print('  pulpet tvärs:', pg.inner_text('#tak-info')); assert 'Pulpettak' in pg.inner_text('#tak-info') and pg.locator('#tak-vand-rad').is_visible()
+        pg.click('#tak-aterstall'); pg.wait_for_timeout(200)
+        assert pg.evaluate("Object.keys(JSON.parse(localStorage.getItem('terrang-takval') || '{}')).length") == 0, 'Ur laserdatan tar bort valet'
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+        assert not pg.locator('#vy3d-tak').is_visible() and pg.locator('#vy3d').is_visible(), 'Esc stänger takpanelen, inte vyn'
+        pg.evaluate(f'{v3}.aterstall()')
+
+    # 0.10.0: modellera volymer i 3D-vyn
+    pg.click('#vy3d-modellera'); pg.wait_for_timeout(300)
+    assert pg.evaluate(f'{v3}.modellera()') is True and pg.locator('#vy3d-modell').is_visible()
+    fore = pg.evaluate(f'{v3}.volymer().length')
+    mitt3 = pg.evaluate("(() => { const r = TERRANG_TEST.vy3d.kameralage(); return r; })()")
+    # ny volym ur panelen, placerad med ett klick mitt i vyn
+    pg.click('#vy3d-ny'); pg.wait_for_timeout(100)
+    pg.select_option('#ny-typ', 'block'); pg.fill('#ny-b', '12'); pg.fill('#ny-d', '8'); pg.fill('#ny-h', '6')
+    pg.click('#vy3d-nyform button[type=submit]'); pg.wait_for_timeout(200)
+    yta = pg.locator('#vy3d-yta canvas').bounding_box(); mx, my = yta['x'] + yta['width'] / 2, yta['y'] + yta['height'] * 0.55
+    pg.mouse.move(mx - 10, my); pg.mouse.move(mx, my, steps=3); pg.wait_for_timeout(200)
+    pg.screenshot(path=f'{UT}/07a_modell_placera.png')
+    pg.mouse.click(mx, my); pg.wait_for_timeout(400)
+    vol = pg.evaluate(f'{v3}.volymer()'); a = pg.evaluate(f'{v3}.vald()')
+    print('  ny volym:', len(vol) - fore, a and a['namn'], a and [round(q, 1) for q in a['fotavtryck'][0]], 'golv', a and a['golv'])
+    assert len(vol) == fore + 1 and a and a['primitiv']['typ'] == 'block' and pg.locator('#vy3d-valdform').is_visible()
+    ax, ay = a['primitiv']['x'], a['primitiv']['y']
+    # ett prisma 0,3 m bredvid snäpper an mot blockets sida
+    pv = pg.evaluate(f"{v3}.nyVolym({{ typ: 'prisma', b: 10, d: 8, hojd: 4, takform: 'sadel', taklutning: 30 }}, {{ x: {ax + 11.3}, y: {ay + 0.4} }})")
+    sn = pg.evaluate(f"{v3}.dra('{pv['id']}', 0, 0, {{ tol: 0.5 }})"); pv = pg.evaluate(f'{v3}.vald()')
+    print('  snäpp:', sn, round(pv['primitiv']['x'] - ax, 3), round(pv['primitiv']['y'] - ay, 3))
+    assert sn and sn['typ'] == 'yta' and abs(pv['primitiv']['x'] - ax - 11) < 0.01 and abs(pv['primitiv']['y'] - ay) < 0.01, 'an mot sidan, hörnen i linje'
+    pg.wait_for_timeout(300)
+    kedjor = pg.evaluate(f'{v3}.kedjor()'); print('  kedjor:', kedjor)
+    assert any({k['a'], k['b']} == {a['id'], pv['id']} for k in kedjor), 'kedjeikon i fogen'
+    # avstånd efter snäppet: 2 m
+    assert pg.locator('#vald-snapp').is_visible(), 'avståndsfältet syns efter snäpp'
+    pg.fill('#vald-avstand', '2'); pg.dispatch_event('#vald-avstand', 'change'); pg.wait_for_timeout(200)
+    pv = pg.evaluate(f'{v3}.vald()'); print('  avstånd 2 m:', round(pv['primitiv']['x'] - ax, 3))
+    assert abs(pv['primitiv']['x'] - ax - 13) < 0.01
+    pg.evaluate(f"{v3}.angra()"); pv = pg.evaluate(f"{v3}.volymer().find(v => v.id === '{pv['id']}')")
+    assert abs(pv['primitiv']['x'] - ax - 11) < 0.01, 'ångra'
+    # kedjan: klick sätter ihop, då följer prismat med när blocket flyttas
+    pg.evaluate(f"{v3}.vald('{a['id']}')"); pg.wait_for_timeout(300)
+    knapp = pg.locator(f".vy3d-kedja[data-a='{a['id']}'][data-b='{pv['id']}'], .vy3d-kedja[data-a='{pv['id']}'][data-b='{a['id']}']")
+    knapp.first.click(); pg.wait_for_timeout(300)
+    assert pg.evaluate(f'{v3}.kedjor()')[0]['lankad'] or any(k['lankad'] for k in pg.evaluate(f'{v3}.kedjor()')), 'länkad'
+    print('  grupp:', pg.inner_text('#vald-grupp'))
+    # dra blocket med musen i toppvyn: prismat följer med
+    pg.click('#vy3d-toppvy'); pg.wait_for_timeout(500)
+    assert pg.evaluate(f'{v3}.toppvy()') is True
+    a = pg.evaluate(f"{v3}.volymer().find(v => v.id === '{a['id']}')")
+    s0 = pg.evaluate(f"{v3}.skarmpunkt({a['primitiv']['x']}, {a['primitiv']['y']}, {a['golv'] + a['takfot']})")
+    pg.mouse.move(s0['x'], s0['y']); pg.mouse.down(); pg.mouse.move(s0['x'] + 60, s0['y'] + 30, steps=8); pg.mouse.up(); pg.wait_for_timeout(400)
+    a2 = pg.evaluate(f"{v3}.volymer().find(v => v.id === '{a['id']}')"); b2 = pg.evaluate(f"{v3}.volymer().find(v => v.id === '{pv['id']}')")
+    da = (a2['primitiv']['x'] - a['primitiv']['x'], a2['primitiv']['y'] - a['primitiv']['y']); db = (b2['primitiv']['x'] - pv['primitiv']['x'], b2['primitiv']['y'] - pv['primitiv']['y'])
+    print('  dragen med musen:', [round(q, 2) for q in da], 'prismat:', [round(q, 2) for q in db])
+    assert da[0] > 1 and da[1] < -0.5 and abs(da[0] - db[0]) < 1e-3 and abs(da[1] - db[1]) < 1e-3, 'gruppen flyttas ihop, öster och söder'
+    pg.screenshot(path=f'{UT}/07b_modell_toppvy.png')
+    # vrid med handtaget och skift: steg om 15°
+    h = pg.locator('.vy3d-vrid').bounding_box()
+    c0 = pg.evaluate(f"{v3}.skarmpunkt({a2['primitiv']['x']}, {a2['primitiv']['y']}, {a2['golv']})")
+    import math
+    r = math.hypot(h['x'] + 14 - c0['x'], h['y'] + 14 - c0['y']); a0 = math.atan2(h['y'] + 14 - c0['y'], h['x'] + 14 - c0['x'])
+    pg.keyboard.down('Shift'); pg.mouse.move(h['x'] + 14, h['y'] + 14); pg.mouse.down()
+    for k in range(1, 9):
+        v = a0 - k * 0.05; pg.mouse.move(c0['x'] + r * math.cos(v), c0['y'] + r * math.sin(v))
+    pg.mouse.up(); pg.keyboard.up('Shift'); pg.wait_for_timeout(300)
+    a3 = pg.evaluate(f"{v3}.volymer().find(v => v.id === '{a['id']}')"); b3 = pg.evaluate(f"{v3}.volymer().find(v => v.id === '{pv['id']}')")
+    print('  vriden:', a3['primitiv']['vrid'], b3['primitiv']['vrid'])
+    assert a3['primitiv']['vrid'] % 15 == 0 and a3['primitiv']['vrid'] != 0 and abs(a3['primitiv']['vrid'] - b3['primitiv']['vrid']) < 1e-6, 'vriden i steg om 15°, gruppen med'
+    pg.evaluate(f"{v3}.vrida('{a['id']}', {-a3['primitiv']['vrid']})")
+    # ovanpå: ett mindre block mitt på blocket står på dess tak
+    a = pg.evaluate(f"{v3}.volymer().find(v => v.id === '{a['id']}')")
+    c = pg.evaluate(f"{v3}.nyVolym({{ typ: 'block', b: 6, d: 6, hojd: 3 }}, {{ x: {a['primitiv']['x'] + 1}, y: {a['primitiv']['y']} }})")
+    print('  ovanpå: golv', c['golv'], 'blockets tak', round(a['golv'] + a['takfot'], 3), '|', pg.inner_text('#vald-golvtext'))
+    assert abs(c['golv'] - (a['golv'] + a['takfot'])) < 1e-3 and 'står på' in pg.inner_text('#vald-golvtext').lower()
+    # mått i panelen: bredden 6 → 9 m
+    pg.fill('#vald-b', '9'); pg.dispatch_event('#vald-b', 'change'); pg.wait_for_timeout(200)
+    c = pg.evaluate(f'{v3}.vald()'); xs = [q[0] for q in c['fotavtryck']]
+    assert abs(max(xs) - min(xs) - 9) < 0.01, 'bredden ändrad'
+    # en cylinder in i blocket (union): kanterna inuti tas bort
+    pg.evaluate(f"{v3}.nyVolym({{ typ: 'cylinder', diam: 8, hojd: 9 }}, {{ x: {a['primitiv']['x'] - 6}, y: {a['primitiv']['y'] - 4} }})")
+    pg.click('#vy3d-toppvy'); pg.wait_for_timeout(300)
+    pg.evaluate(f"{v3}.tittaPa({a['primitiv']['x']}, {a['primitiv']['y']}, 70)")
+    pg.evaluate(f"{v3}.vald(null)"); pg.wait_for_timeout(600)
+    pg.screenshot(path=f'{UT}/07c_modell_perspektiv.png')
+    if pg.locator('#vy3d-skuggor').is_visible():
+        if pg.get_attribute('#vy3d-skuggor', 'aria-pressed') != 'true': pg.click('#vy3d-skuggor')
+        pg.click('[data-solhandelse=mars]'); pg.fill('#vy3d-tid', '780'); pg.dispatch_event('#vy3d-tid', 'input'); pg.wait_for_timeout(800)
+        pg.screenshot(path=f'{UT}/07d_modell_skuggor.png'); pg.click('#vy3d-skuggor')
+    # ta bort med Delete, ångra
+    n0 = len(pg.evaluate(f'{v3}.volymer()'))
+    pg.evaluate(f"{v3}.vald('{c['id']}')"); pg.mouse.move(mx, my); pg.keyboard.press('Delete'); pg.wait_for_timeout(200)
+    assert len(pg.evaluate(f'{v3}.volymer()')) == n0 - 1, 'Delete tar bort'
+    pg.keyboard.press('Control+z'); pg.wait_for_timeout(200)
+    assert len(pg.evaluate(f'{v3}.volymer()')) == n0, 'Ctrl+Z tar tillbaka'
+    # skissen följer med tillbaka till 04 Skiss
+    print('  volymlistan:', pg.locator('#volymlista li').count(), 'volymer i 3D:', n0)
+    assert pg.locator('#volymlista li').count() == n0
+    pg.evaluate(f"{v3}.vald('{c['id']}')"); pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    assert pg.evaluate(f'{v3}.vald()') is None and pg.evaluate(f'{v3}.modellera()') is True, 'Esc tar bort valet'
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    assert pg.evaluate(f'{v3}.modellera()') is False and not pg.locator('#vy3d-modell').is_visible() and pg.locator('#vy3d').is_visible(), 'Esc igen går ur modelleringen'
+    if pg.locator('#vy3d-skuggor').is_visible() and pg.get_attribute('#vy3d-skuggor', 'aria-pressed') == 'true': pg.click('#vy3d-skuggor')
+    if pg.locator('#vy3d-konturer').is_visible() and pg.get_attribute('#vy3d-konturer', 'aria-pressed') == 'true': pg.click('#vy3d-konturer')
     if pg.locator('#vy3d-tradniva-rad').is_visible(): pg.select_option('#vy3d-tradniva', 'enkel')
-    if pg.locator('#vy3d-takformer').is_visible(): pg.click('#vy3d-takformer')
+    if pg.locator('#vy3d-takformer').is_visible() and pg.get_attribute('#vy3d-takformer', 'aria-pressed') == 'true': pg.click('#vy3d-takformer')
     pg.click('#vy3d-stang')
+    print('  efter stängning:', pg.inner_text('#status-text'))
+    assert 'Skissen är ändrad' in pg.inner_text('#status-text')
 
     # projektlänk
     pg.click('#flik-plats'); pg.click('#kopiera-projektlank'); pg.wait_for_timeout(200)
