@@ -1,11 +1,15 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.9.1 publicerad (rättelser i 3D-vyn), 0.10.0 nästa.
+överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.9.2 publicerad (förenklade takformer), 0.10.0 nästa.
 
 ## Läget
 
-- **0.9.1 är klar** 29 oktober (gren `v0.9.1`, sammanslagen med `main`), efter
+- **0.9.2 är klar** 29 oktober (gren `v0.9.2`): Carl August tyckte att takformerna
+  i 0.9.1 blev för bulliga och föreslog nockhöjd + ungefärlig takvinkel eller 35°.
+  Nu passas sadeltak, valmat eller platt tak till laserdatan, se *Takformer i
+  0.9.2*. Inte testad av honom än.
+- **0.9.1** 29 oktober (gren `v0.9.1`, sammanslagen med `main`), efter
   Carl Augusts första prov av 0.9.0: Konturfärg och Gränsfärg, Takformer ur
   laserdatan, ögonhöjd utan pekarlås och realistiska träd. Se *3D-vyn i 0.9.1*.
   Inte testad av honom än.
@@ -53,6 +57,23 @@ fält på volymen, så att gamla volymer från cad-apa och DXF fungerar som för
 
 **0.10.x:** bortskärning (en volym gör urtag i en annan, kräver CSG och att
 analyserna får den nya formen) och egna takfotslinjer.
+
+## Takformer i 0.9.2
+
+`Byggnad.takmodell(b)` förbehandlar laserdatan som i 0.9.1 (egna punkter,
+median mot skorstenar, riktningsfilter) men använder den bara för att passa en
+form. Konvexa hus (yta / höljets yta ≥ 0,85): minsta omskrivna rektangeln kring
+höljet (`rektangel`), lokala axlar u (lång) och v. Sadeltak: d = B − |v|;
+valmat: d = min(B − |v|, L − |u|); höjd = takfot + tan(vinkel) · d. För varje
+form och vinkel 5–60° är nocken medianen av hz + tan · (D − d), felet medel av de
+85 % minsta avvikelserna. Sadeltak får 5 cm försprång, platt väljs om det är
+högst 1 dm sämre eller vinkeln < 10°. Under 8 celler: sadeltak 35°. Takfot =
+nock − tan · B, minst mark + 2 (annars flackare, under 5° platt). Takfallen
+klipps ur höljet med halvplan (`klipp`), gavlar och kanter blir lodräta remsor
+från takfoten. Inbuktade hus: bara valmat (d = avstånd till fotavtryckets
+kanter) eller platt, valmat ritas i ett rutnät på 0,5 m; platt får ingen egen yta.
+Ger `{ form, lutning, takfot, nock, pos, index }`. Inte provat på riktig
+laserdata; vinkelhus med sadeltak i båda flyglarna blir valmade.
 
 ## 3D-vyn i 0.9.1
 
@@ -199,11 +220,11 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Kontrollera att publiceringen av 0.9.1 gick igenom (steget Kontrollera
+1. Kontrollera att publiceringen av 0.9.2 gick igenom (steget Kontrollera
    webbplatsen).
-2. Be Carl August om test av 0.9.1 (listan under Att testa i
-   `docs/SYNPUNKTER.md`): takformerna på riktiga hus, de realistiska trädens
-   tyngd på dator och iPhone, och iPhone med två fingrar. Fel blir 0.9.2.
+2. Be Carl August om test av 0.9.2 (listan under Att testa i
+   `docs/SYNPUNKTER.md`): de förenklade takformerna på riktiga hus, de realistiska trädens
+   tyngd på dator och iPhone, och iPhone med två fingrar. Fel blir 0.9.3.
 3. Därefter 0.10.0, volymer i 3D-vyn, på en egen gren (se *Skissfunktionen och
    3D-vyn* ovan). Toppvyn kan byggas med en `OrthographicCamera` bredvid
    perspektivkameran; `traffMark` finns redan för klick på marken.

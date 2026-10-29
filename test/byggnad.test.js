@@ -74,34 +74,55 @@ Terrang.registreraZoner();
     assert.ok(bv.length > 20, 'Vimmerby centrum har byggnader');
     assert.ok(bv.every(b => b.fotavtryck.length >= 3 && b.typ));
   }
-  // takformer ur laserdatan (0.9.1): sadeltak, takfot 6 m, nock 10 m, en skorsten
+  // takformer (0.9.2): förenklade former som passas till laserdatan
   {
-    const W = 60, H = 40, dtm = new Float32Array(W * H).fill(100), ndsm = new Float32Array(W * H);
-    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-      const x = i, y = 40 - j;
-      if (Math.abs(x - 30) < 10 && Math.abs(y - 20) < 6) ndsm[j * W + i] = 10 - 4 * Math.abs(y - 20) / 6;
-    }
-    ndsm[(40 - 22) * W + 25] = 14;
-    const b = { fotavtryck: [[20, 14], [40, 14], [40, 26], [20, 26]], hal: [] };
-    B.hojder([b], { W, H, s: 1, x0: 0, y1: 40, dtm, ndsm });
+    let fro = 1;
+    const slump = () => (fro = (fro * 16807) % 2147483647) / 2147483647;
+    const hus = (fot, hf, tathet = 0.7) => {
+      const W = 60, H = 50, dtm = new Float32Array(W * H).fill(100), ndsm = new Float32Array(W * H), ra = new Float32Array(W * H);
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+        const x = i, y = 50 - j, h = B.inuti(fot, x, y) ? hf(x, y) + (slump() - 0.5) * 0.2 : 0;
+        ndsm[j * W + i] = h; ra[j * W + i] = h > 0 && slump() < tathet ? h : 0;
+      }
+      const b = { fotavtryck: fot, hal: [] };
+      B.hojder([b], { W, H, s: 1, x0: 0, y1: 50, dtm, ndsm, ra });
+      return { b, t: B.takmodell(b) };
+    };
+    const rekt = [[20, 14], [40, 14], [40, 26], [20, 26]];
+    // sadeltak, takfot 6 m, nock 10 m (34°), och en skorsten
+    const { b, t } = hus(rekt, (x, y) => (x === 25 && y === 22 ? 14 : 10 - 4 * Math.abs(y - 20) / 6));
     assert.ok(b.tak && !Object.keys(b).includes('tak'), 'takets höjder följer inte med när byggnaden sparas');
-    const t = B.takmodell(b);
-    assert.ok(t, 'takform');
-    assert.ok(Math.abs(t.nock - 110) < 0.01, `nocken utan skorstenen: ${t.nock}`);
-    assert.ok(t.takfot > 105.5 && t.takfot < 107.5, `takfoten nära 6 m: ${t.takfot}`);
+    assert.strictEqual(t.form, 'sadeltak');
+    assert.ok(Math.abs(t.lutning - 34) <= 3, `takvinkel ${t.lutning}`);
+    assert.ok(Math.abs(t.nock - 110) < 0.4 && Math.abs(t.takfot - 106) < 0.4, `nock ${t.nock}, takfot ${t.takfot}`);
+    assert.ok(t.index.length / 3 <= 20, `enkel geometri: ${t.index.length / 3} trianglar`);
     let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
     for (let i = 0; i < t.pos.length; i += 3) {
       xmin = Math.min(xmin, t.pos[i]); xmax = Math.max(xmax, t.pos[i]); ymin = Math.min(ymin, t.pos[i + 1]); ymax = Math.max(ymax, t.pos[i + 1]);
       assert.ok(t.pos[i + 2] >= t.takfot - 0.01 && t.pos[i + 2] <= t.nock + 0.01);
     }
-    assert.deepStrictEqual([xmin, xmax, ymin, ymax].map(Math.round), [20, 40, 14, 26], 'taket går ut till fotavtryckets kanter');
-    // trianglarna vänder uppåt (moturs ovanifrån)
+    assert.deepStrictEqual([xmin, xmax, ymin, ymax].map(Math.round), [20, 40, 14, 26], 'taket täcker fotavtrycket');
+    // takfallen vänder uppåt; gavlarna är lodräta
+    let gavlar = 0;
     for (let k = 0; k < t.index.length; k += 3) {
-      const [a, c, d] = [t.index[k], t.index[k + 1], t.index[k + 2]].map(q => [t.pos[q * 3], t.pos[q * 3 + 1]]);
-      assert.ok((c[0] - a[0]) * (d[1] - a[1]) - (c[1] - a[1]) * (d[0] - a[0]) > 0);
+      const [a, c, d] = [t.index[k], t.index[k + 1], t.index[k + 2]].map(q => [t.pos[q * 3], t.pos[q * 3 + 1], t.pos[q * 3 + 2]]);
+      const kr = (c[0] - a[0]) * (d[1] - a[1]) - (c[1] - a[1]) * (d[0] - a[0]);
+      if (Math.abs(kr) < 1e-6) gavlar++; else assert.ok(kr > 0, 'takfall vänt nedåt');
     }
-    assert.strictEqual(B.takmodell({ fotavtryck: b.fotavtryck, hal: [], mark: 100, hojd: 9 }), null, 'utan laserdata ingen takform');
+    assert.ok(gavlar >= 2, 'gavlar');
+    // valmat och platt tak, ett vinkelhus och ett hus med för lite laserdata
+    const valm = hus(rekt, (x, y) => 10 - 4 * Math.max(Math.abs(y - 20) / 6, (Math.abs(x - 30) - 4) / 6)).t;
+    assert.strictEqual(valm.form, 'valmat');
+    assert.strictEqual(hus(rekt, () => 7).t.form, 'platt');
+    const L = [[10, 10], [40, 10], [40, 20], [20, 20], [20, 40], [10, 40]];
+    const vinkel = hus(L, (x, y) => 6 + 0.7 * Math.min(5, B.avstandTillRing(L, x, y))).t;
+    assert.strictEqual(vinkel.form, 'valmat');
+    assert.ok(Math.abs(vinkel.lutning - 35) <= 3, `vinkelhusets takvinkel ${vinkel.lutning}`);
+    const litet = hus([[20, 14], [23, 14], [23, 16], [20, 16]], () => 5, 0.7).t;
+    assert.ok(litet && ['sadeltak', 'platt'].includes(litet.form), 'litet hus');
+    assert.strictEqual(B.takmodell({ fotavtryck: rekt, hal: [], mark: 100, hojd: 9 }), null, 'utan laserdata ingen takform');
     console.log('ok takform ur laserdatan');
   }
+
   console.log('byggnad: alla test godkända');
 })().catch(e => { console.error(e); process.exit(1); });

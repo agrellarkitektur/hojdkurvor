@@ -3,6 +3,18 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.9.2 – 2026-10-29
+
+- **Takformer förenklade**: taken följde laserpunkterna och blev bulliga. Nu får
+  varje hus en enkel form, sadeltak (nocken längs husets långa axel), valmat
+  eller platt tak, lagd över den minsta rektangeln kring huset. Formen,
+  takvinkeln (5–60°) och nockhöjden passas till laserdatan; sadeltak går före
+  valm och platt före lutande när skillnaden är liten. Med för lite laserdata
+  blir det sadeltak i 35°. Takfoten följer av nocken, vinkeln och bredden (minst
+  2 m över marken). Gavlarna är lodräta. Vinkelhus och andra inbuktade hus får
+  valmat tak som följer fotavtrycket. `Byggnad.takmodell` ger nu också `form` och
+  `lutning`.
+
 ## 0.9.1 – 2026-10-29
 
 Rättelser och tillägg efter Carl Augusts första prov av 3D-vyn.
