@@ -367,7 +367,7 @@ with sync_playwright() as p:
     assert abs(pv['primitiv']['x'] - ax - 11) < 0.01, 'ångra'
     # kedjan: klick sätter ihop, då följer prismat med när blocket flyttas
     pg.evaluate(f"{v3}.vald('{a['id']}')"); pg.wait_for_timeout(300)
-    knapp = pg.locator(f".vy3d-kedja[data-a='{a['id']}'][data-pv='{pv['id']}'], .vy3d-kedja[data-a='{pv['id']}'][data-pv='{a['id']}']")
+    knapp = pg.locator(f".vy3d-kedja[data-a='{a['id']}'][data-b='{pv['id']}'], .vy3d-kedja[data-a='{pv['id']}'][data-b='{a['id']}']")
     knapp.first.click(); pg.wait_for_timeout(300)
     assert pg.evaluate(f'{v3}.kedjor()')[0]['lankad'] or any(k['lankad'] for k in pg.evaluate(f'{v3}.kedjor()')), 'länkad'
     print('  grupp:', pg.inner_text('#vald-grupp'))
