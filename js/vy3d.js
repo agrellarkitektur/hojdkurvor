@@ -9,6 +9,9 @@
  * 0.9.0: skuggor efter solens läge (js/sol.js, samma beräkning som skuggstudien i PDF:en), konturer på
  * byggnaderna, färg på befintliga byggnader och skissen, trädmodeller (js/trad3d.js) i två nivåer,
  * ögonhöjd (gå med WASD eller spaken på mobilen) och bilder i högre upplösning, också för AI (js/bild3d.js).
+ *
+ * 0.9.1: färg på konturerna och fastighetsgränserna, takformer ur laserdatan (Byggnad.takmodell),
+ * realistiska träd med lövkort och ögonhöjd utan pekarlås (musen syns hela tiden).
  */
 (function () {
   'use strict';
@@ -141,48 +144,83 @@
         art: Trad3D ? Trad3D.art(t) : 'lov', vrid: v.vrid, ljus: v.ljus };
     });
     const tradMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    const tradMesh = {};   // art → { enkel, detaljerad }
-    let tradniva = data.tradniva === 'detaljerad' ? 'detaljerad' : 'enkel', tradskugga = data.tradskuggor !== false;
-    if (trad.length && Trad3D) {
-      const l = nyttLager('trad');
+    const NIVAER = ['enkel', 'detaljerad', 'realistisk'];
+    const tradMesh = {};   // art → { enkel: [mesh], detaljerad: [mesh], realistisk: [stam, lövverk] }
+    let tradniva = NIVAER.includes(data.tradniva) ? data.tradniva : 'enkel', tradskugga = data.tradskuggor !== false;
+    const tradLager = trad.length && Trad3D ? nyttLager('trad') : null;
+    const instanser = (geo, mat, antal) => {
+      const im = new THREE.InstancedMesh(geo, mat, antal);
+      im.count = 0; im.castShadow = tradskugga; im.receiveShadow = true;
+      im.frustumCulled = false;
+      tradLager.add(im);
+      return im;
+    };
+    const geometri = m => {
+      const tg = new THREE.BufferGeometry();
+      tg.setAttribute('position', new THREE.BufferAttribute(m.pos, 3));
+      tg.setAttribute('normal', new THREE.BufferAttribute(m.norm, 3));
+      tg.setAttribute('color', new THREE.BufferAttribute(m.farg, 3));
+      if (m.uv) tg.setAttribute('uv', new THREE.BufferAttribute(m.uv, 2));
+      return tg;
+    };
+    if (tradLager) {
       for (const art of Trad3D.ARTER) {
         const antal = trad.filter(t => t.art === art).length;
         if (!antal) continue;
-        tradMesh[art] = {};
-        for (const niva of ['enkel', 'detaljerad']) {
-          const m = Trad3D.modell(art, niva), tg = new THREE.BufferGeometry();
-          tg.setAttribute('position', new THREE.BufferAttribute(m.pos, 3));
-          tg.setAttribute('normal', new THREE.BufferAttribute(m.norm, 3));
-          tg.setAttribute('color', new THREE.BufferAttribute(m.farg, 3));
-          const im = new THREE.InstancedMesh(tg, tradMat, antal);
-          im.count = 0; im.castShadow = tradskugga; im.receiveShadow = true;
-          im.frustumCulled = false;
-          tradMesh[art][niva] = im;
-          l.add(im);
-        }
+        tradMesh[art] = { antal };
+        for (const niva of ['enkel', 'detaljerad']) tradMesh[art][niva] = [instanser(geometri(Trad3D.modell(art, niva)), tradMat, antal)];
       }
     }
-    // detaljerade träd närmast kameran, enkla längre bort (mobilen orkar färre)
-    const MAX_DETALJ = mobil ? 600 : 6000, NARA_MOBIL = 250;
+    /**
+     * Lövkorten: dubbelsidiga, men med samma normal på båda sidor (ut från kronan), så att kronan
+     * ljussätts som en helhet. three.js vänder normalen på baksidan; här vänds den tillbaka.
+     */
+    const sammaNormal = mat => {
+      mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n#ifdef DOUBLE_SIDED\n\tnormal *= faceDirection;\n#endif'); };
+      mat.customProgramCacheKey = () => 'lovkort';
+      return mat;
+    };
+    let lovTex = null, lovMat = null, lovDjup = null;
+    /** Realistiska träd byggs först när de väljs: lövbilden ritas och korten läggs ut (0.9.1). */
+    const byggRealistiska = () => {
+      if (lovMat || !tradLager || !Trad3D.realistisk) return;
+      const c = document.createElement('canvas'), S = mobil ? 256 : 512;
+      c.width = 3 * S; c.height = S;
+      Trad3D.ritaLovbild(c.getContext('2d'), S);
+      lovTex = new THREE.CanvasTexture(c);
+      lovTex.colorSpace = THREE.SRGBColorSpace;
+      lovTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      lovMat = sammaNormal(new THREE.MeshLambertMaterial({ map: lovTex, vertexColors: true, alphaTest: 0.45, side: THREE.DoubleSide, alphaToCoverage: true }));
+      lovDjup = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: lovTex, alphaTest: 0.45, side: THREE.DoubleSide });
+      for (const art in tradMesh) {
+        const m = Trad3D.realistisk(art), antal = tradMesh[art].antal;
+        const stam = instanser(geometri(m.stam), tradMat, antal), lov = instanser(geometri(m.lov), lovMat, antal);
+        lov.customDepthMaterial = lovDjup;
+        lov.userData.lov = true;
+        tradMesh[art].realistisk = [stam, lov];
+      }
+    };
+    // detaljerade eller realistiska träd närmast kameran, enkla längre bort (mobilen orkar färre)
+    const MAX_NARA = { detaljerad: mobil ? 600 : 6000, realistisk: mobil ? 400 : 3000 }, NARA_MOBIL = { detaljerad: 250, realistisk: 200 };
     let tradPlats = null;
     const placeraTrad = () => {
-      if (!trad.length || !Trad3D) return;
+      if (!tradLager) return;
+      if (tradniva === 'realistisk') byggRealistiska();
+      const narNiva = tradniva === 'realistisk' && !lovMat ? 'detaljerad' : tradniva;
       const kp = kamera.position, m = new THREE.Matrix4(), q = new THREE.Quaternion(), ax = new THREE.Vector3(0, 1, 0), c = new THREE.Color();
-      let nara = new Set();
-      if (tradniva === 'detaljerad') {
+      const nara = new Set();
+      if (narNiva !== 'enkel') {
         const avst = trad.map((t, i) => [Math.hypot(t.x - kp.x, t.z - kp.z), i]).sort((a, b) => a[0] - b[0]);
-        for (let n = 0; n < Math.min(MAX_DETALJ, avst.length); n++) { if (mobil && avst[n][0] > NARA_MOBIL) break; nara.add(avst[n][1]); }
+        for (let n = 0; n < Math.min(MAX_NARA[narNiva], avst.length); n++) { if (mobil && avst[n][0] > NARA_MOBIL[narNiva]) break; nara.add(avst[n][1]); }
       }
       const raknare = {};
-      for (const art in tradMesh) raknare[art] = { enkel: 0, detaljerad: 0 };
+      for (const art in tradMesh) raknare[art] = { enkel: 0, detaljerad: 0, realistisk: 0 };
       trad.forEach((t, i) => {
-        const niva = nara.has(i) ? 'detaljerad' : 'enkel', im = tradMesh[t.art][niva], n = raknare[t.art][niva]++;
+        const niva = nara.has(i) ? narNiva : 'enkel', n = raknare[t.art][niva]++;
         m.compose(new THREE.Vector3(t.x, t.b, t.z), q.setFromAxisAngle(ax, t.vrid), new THREE.Vector3(t.kr, t.h, t.kr));
-        im.setMatrixAt(n, m);
-        im.setColorAt(n, c.setScalar(t.ljus));
+        for (const im of tradMesh[t.art][niva]) { im.setMatrixAt(n, m); im.setColorAt(n, c.setScalar(t.ljus)); }
       });
-      for (const art in tradMesh) for (const niva of ['enkel', 'detaljerad']) {
-        const im = tradMesh[art][niva];
+      for (const art in tradMesh) for (const niva of NIVAER) for (const im of tradMesh[art][niva] || []) {
         im.count = raknare[art][niva];
         im.instanceMatrix.needsUpdate = true;
         if (im.instanceColor) im.instanceColor.needsUpdate = true;
@@ -207,11 +245,16 @@
     }
 
     // fastighetsgränser och vägar draperade på marken
-    if (data.fastigheter && data.fastigheter.length) nyttLager('fastigheter').add(draperade(data.fastigheter, data.fastighet || '#b0306a', 0.25));
+    let gransMat = null;
+    if (data.fastigheter && data.fastigheter.length) {
+      const l = draperade(data.fastigheter, data.gransfarg || data.fastighet || '#b0306a', 0.25);
+      gransMat = l.material;
+      nyttLager('fastigheter').add(l);
+    }
     if (data.vagar && data.vagar.length) nyttLager('vagar').add(draperade(data.vagar, data.vag || '#6b6258', 0.15));
 
     // konturer: svarta kanter på byggnaderna och skissen, av från början (0.9.0)
-    const konturMat = new THREE.LineBasicMaterial({ color: '#000000' });
+    const konturMat = new THREE.LineBasicMaterial({ color: data.konturfarg || '#000000' });
     const konturer = [];
     let visaKonturer = !!data.konturer;
     const kontur = (mesh, vinkel = 20) => {
@@ -220,24 +263,61 @@
       mesh.add(ls); konturer.push(ls);
     };
 
-    // befintliga byggnader: lådor till höjden ur laserdatan, fotavtryck på marken för dem utan höjd
+    // befintliga byggnader: lådor till höjden ur laserdatan, fotavtryck på marken för dem utan höjd.
+    // Med takformer (0.9.1) byts lådan mot väggar till takfoten och taket ur laserdatan.
     const befMat = new THREE.MeshLambertMaterial({ color: data.befintlig || '#b9b3aa' });
-    let harBefintliga = false;
+    // taken ur laserdatan skuggas per yta, så att nockar och takfall syns (samma färg som husen)
+    const takMat = new THREE.MeshLambertMaterial({ color: befMat.color, flatShading: true, side: THREE.DoubleSide, shadowSide: THREE.FrontSide });
+    let harBefintliga = false, fotMat = null;
+    const formade = new Map();   // id → { lada, form }
+    let takformerPa = false;
+    /** Väggarna: fotavtrycket (med gårdar) extruderat från golvet till höjden h. */
+    const vaggar = (v, h) => {
+      const shape = new THREE.Shape(v.fotavtryck.map(p => new THREE.Vector2(p[0] - cx, p[1] - cy)));
+      (v.hal || []).forEach(hl => shape.holes.push(new THREE.Path(hl.map(p => new THREE.Vector2(p[0] - cx, p[1] - cy)))));
+      const g = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false });
+      g.rotateX(-Math.PI / 2);
+      const mesh = new THREE.Mesh(g, befMat);
+      mesh.position.y = v.golv - zmin;
+      mesh.castShadow = mesh.receiveShadow = true;
+      kontur(mesh);
+      return mesh;
+    };
     if ((data.befintliga && data.befintliga.length) || (data.fotavtryck && data.fotavtryck.length)) {
       const l = nyttLager('byggnader');
+      const former = new Map((data.takmodeller || []).map(t => [t.id, t]));
       (data.befintliga || []).forEach(v => {
-        const shape = new THREE.Shape(v.fotavtryck.map(p => new THREE.Vector2(p[0] - cx, p[1] - cy)));
-        const g = new THREE.ExtrudeGeometry(shape, { depth: v.takfot, bevelEnabled: false });
-        g.rotateX(-Math.PI / 2);
-        const mesh = new THREE.Mesh(g, befMat);
-        mesh.position.y = v.golv - zmin;
-        mesh.castShadow = mesh.receiveShadow = true;
-        kontur(mesh);
-        l.add(mesh);
+        const lada = vaggar(v, v.takfot);
+        l.add(lada);
         harBefintliga = true;
+        const t = former.get(v.id);
+        if (!t) return;
+        // väggar till takfoten och taket som en yta (i zonens koordinater, RH 2000)
+        const form = new THREE.Group();
+        form.add(vaggar(v, Math.max(0.5, t.takfot - v.golv)));
+        const tp = new Float32Array(t.pos.length);
+        for (let i = 0; i < t.pos.length; i += 3) { tp[i] = t.pos[i] - cx; tp[i + 1] = t.pos[i + 2] - zmin; tp[i + 2] = -(t.pos[i + 1] - cy); }
+        const tg = new THREE.BufferGeometry();
+        tg.setAttribute('position', new THREE.BufferAttribute(tp, 3)); tg.setIndex(new THREE.BufferAttribute(t.index, 1)); tg.computeVertexNormals();
+        const tak = new THREE.Mesh(tg, takMat);
+        tak.castShadow = tak.receiveShadow = true;
+        kontur(tak, 35);
+        form.add(tak);
+        form.visible = false;
+        l.add(form);
+        formade.set(v.id, { lada, form });
       });
-      if (data.fotavtryck && data.fotavtryck.length) l.add(draperade(data.fotavtryck.map(f => f.concat([f[0]])), data.byggnad || '#5b4636', 0.3));
+      if (data.fotavtryck && data.fotavtryck.length) {
+        const fl = draperade(data.fotavtryck.map(f => f.concat([f[0]])), data.konturfarg || data.byggnad || '#5b4636', 0.3);
+        fotMat = fl.material;
+        l.add(fl);
+      }
     }
+    const visaTakformer = pa => {
+      takformerPa = !!pa;
+      formade.forEach(({ lada, form }) => { lada.visible = !takformerPa; form.visible = takformerPa; });
+      skuggaOm();
+    };
 
     // skissade volymer: väggar till takfot och tak efter takform, i skissens färg
     const skissMat = new THREE.MeshLambertMaterial({ color: data.skissfarg || data.volym || '#e85528', side: THREE.DoubleSide, shadowSide: THREE.FrontSide });
@@ -381,6 +461,7 @@
       lage = 'ogon';
       kamera.fov = 60; kamera.near = 0.1; kamera.updateProjectionMatrix();
       spak.hidden = !(pekskarm || anvandTouch);
+      el.style.cursor = 'grab';
       placera(); placeraTrad(); meddela();
     };
     const tillOversikt = () => {
@@ -446,9 +527,8 @@
       if (lage === 'valj' && (e.pointerType !== 'mouse' || e.button === 0)) {
         const p = traffMark(e.clientX, e.clientY);
         if (p) ogonhojdVid(p, kamera.position.clone());
-      } else if (lage === 'ogon' && e.pointerType === 'mouse' && e.button === 0 && el.requestPointerLock) {
-        try { const p = el.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (err) { /* utan pekarlås går det att dra */ }
       }
+      // i ögonhöjd låses inte musen (0.9.1): pekaren ska synas, och Esc ska inte råka ta en ur läget
     };
     el.addEventListener('pointerup', slapp); el.addEventListener('pointercancel', slapp);
     el.addEventListener('wheel', e => {
@@ -462,7 +542,8 @@
       azimut = START.azimut; lutning = START.lutning; avst = START.avst; mal.set(...START.mal); mal.y *= faktor; placera(); placeraTrad();
     };
 
-    // titta runt i ögonhöjd: musen (med eller utan pekarlås), pekskärmen, och gå med tangenterna eller spaken
+    // titta runt i ögonhöjd: dra med musen eller fingret, och gå med tangenterna eller spaken.
+    // Pekarlåset finns kvar om en webbläsare låser ändå, men vyn ber inte om det sedan 0.9.1.
     const titta = (dx, dy) => {
       ogon.yaw -= dx * 0.0035;
       ogon.pitch = Math.max(-1.35, Math.min(1.35, ogon.pitch - dy * 0.0035));
@@ -540,7 +621,7 @@
       const dt = Math.min(0.25, (nu - forraTid) / 1000); forraTid = nu;
       if (lage === 'ogon') ga(dt);
       // byt detaljerade och enkla träd när kameran har flyttat sig en bit
-      if (tradniva === 'detaljerad' && tradPlats && nu - tradTid > 250) {
+      if (tradniva !== 'enkel' && tradPlats && nu - tradTid > 250) {
         const flytt = kamera.position.distanceTo(tradPlats), avstand = Math.max(10, kamera.position.distanceTo(mal));
         if (flytt > Math.min(20, Math.max(2, avstand * 0.05))) { placeraTrad(); tradTid = nu; }
       }
@@ -556,28 +637,64 @@
     const djupMat = new THREE.ShaderMaterial({
       uniforms: { bortre: { value: 1 } }, side: THREE.DoubleSide,
       vertexShader: `varying float vD;
+        #ifdef LOV
+          varying vec2 vUv;
+        #endif
         void main() { vec4 p = vec4(position, 1.0);
+        #ifdef LOV
+          vUv = uv;
+        #endif
         #ifdef USE_INSTANCING
           p = instanceMatrix * p;
         #endif
           vec4 mv = modelViewMatrix * p; vD = -mv.z; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `uniform float bortre; varying float vD;
-        void main() { float v = clamp(vD / bortre, 0.0, 0.99999);
+        #ifdef LOV
+          uniform sampler2D karta; varying vec2 vUv;
+        #endif
+        void main() {
+        #ifdef LOV
+          if (texture2D(karta, vUv).a < 0.45) discard;
+        #endif
+          float v = clamp(vD / bortre, 0.0, 0.99999);
           vec3 e = fract(v * vec3(1.0, 255.0, 65025.0)); e -= e.yzz * vec3(1.0 / 255.0, 1.0 / 255.0, 0.0);
           gl_FragColor = vec4(e, 1.0); }`,
     });
     const normalMat = new THREE.ShaderMaterial({
       side: THREE.DoubleSide,
       vertexShader: `varying vec3 vN;
+        #ifdef LOV
+          varying vec2 vUv;
+        #endif
         void main() { vec4 p = vec4(position, 1.0); vec3 n = normal;
+        #ifdef LOV
+          vUv = uv;
+        #endif
         #ifdef USE_INSTANCING
           p = instanceMatrix * p; n = mat3(instanceMatrix) * n;
         #endif
           vN = normalize(normalMatrix * n); gl_Position = projectionMatrix * modelViewMatrix * p; }`,
       fragmentShader: `varying vec3 vN;
-        void main() { vec3 n = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0); gl_FragColor = vec4(n * 0.5 + 0.5, 1.0); }`,
+        #ifdef LOV
+          uniform sampler2D karta; varying vec2 vUv;
+        #endif
+        void main() {
+        #ifdef LOV
+          if (texture2D(karta, vUv).a < 0.45) discard;
+        #endif
+          vec3 n = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0); gl_FragColor = vec4(n * 0.5 + 0.5, 1.0); }`,
     });
     const leraMat = new THREE.MeshLambertMaterial({ color: '#f4f2ee', side: THREE.DoubleSide, shadowSide: THREE.FrontSide });
+    // lövkorten behåller sina hål i lermodellen, djupkartan och normalerna
+    const lovVariant = mat => { const m = mat.clone(); m.defines = Object.assign({}, m.defines, { LOV: '' }); m.uniforms = Object.assign({}, m.uniforms, { karta: { value: null } }); return m; };
+    const djupLovMat = lovVariant(djupMat), normalLovMat = lovVariant(normalMat);
+    let leraLovMat = null;
+    /** Byter material på alla ytor under gor(): vanlig för det mesta, lov för lövkorten. */
+    const medMaterial = (vanlig, lov, gor) => {
+      const byten = [];
+      scen.traverse(o => { if (o.isMesh) { byten.push([o, o.material]); o.material = o.userData.lov ? lov : vanlig; } });
+      try { return gor(); } finally { byten.forEach(([o, m]) => { o.material = m; }); }
+    };
 
     /** Ritar scenen i en bild w × h och läser tillbaka pixlarna (nerifrån och upp). */
     const rendera = (kam, w, h, { msaa = true, srgb = true } = {}) => {
@@ -615,22 +732,28 @@
       ut.farg = await somPng(tillCanvas(Bild3D.vand(rendera(kam, w, h), w, h), w, h));
       if (!ai) return ut;
       // lermodell: allt vitt, utan linjer, med skuggorna som de är
-      const byten = [];
-      scen.traverse(o => { if (o.isMesh) { byten.push([o, o.material]); o.material = leraMat; } });
+      if (lovTex && !leraLovMat) {
+        leraLovMat = sammaNormal(new THREE.MeshLambertMaterial({ color: '#f4f2ee', alphaMap: null, map: lovTex, alphaTest: 0.45, side: THREE.DoubleSide }));
+        // bara bildens genomskinlighet, inte färgen
+        const forra = leraLovMat.onBeforeCompile;
+        leraLovMat.onBeforeCompile = sh => { forra(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n\tdiffuseColor.rgb = diffuse;'); };
+        leraLovMat.customProgramCacheKey = () => 'lovkort-lera';
+      }
       scen.background = new THREE.Color('#ffffff');
-      try { ut.lera = await somPng(tillCanvas(Bild3D.vand(utanLinjer(() => rendera(kam, w, h)), w, h), w, h)); }
-      finally { byten.forEach(([o, m]) => { o.material = m; }); scen.background = bakgrund; }
+      try { ut.lera = await somPng(tillCanvas(Bild3D.vand(medMaterial(leraMat, leraLovMat || leraMat, () => utanLinjer(() => rendera(kam, w, h))), w, h), w, h)); }
+      finally { scen.background = bakgrund; }
       // djup och normaler utan kantutjämning, himlen genomskinlig
       const forraKlar = renderer.getClearAlpha(), forraFarg = renderer.getClearColor(new THREE.Color());
       scen.background = null; renderer.setClearColor(0x000000, 0);
       let djupPx, normPx;
-      djupMat.uniforms.bortre.value = kam.far;
+      djupMat.uniforms.bortre.value = djupLovMat.uniforms.bortre.value = kam.far;
+      djupLovMat.uniforms.karta.value = normalLovMat.uniforms.karta.value = lovTex;
       try {
         utanLinjer(() => {
-          scen.overrideMaterial = djupMat; djupPx = rendera(kam, w, h, { msaa: false, srgb: false });
-          scen.overrideMaterial = normalMat; normPx = rendera(kam, w, h, { msaa: false, srgb: false });
+          djupPx = medMaterial(djupMat, djupLovMat, () => rendera(kam, w, h, { msaa: false, srgb: false }));
+          normPx = medMaterial(normalMat, normalLovMat, () => rendera(kam, w, h, { msaa: false, srgb: false }));
         });
-      } finally { scen.overrideMaterial = null; scen.background = bakgrund; renderer.setClearColor(forraFarg, forraKlar); }
+      } finally { scen.background = bakgrund; renderer.setClearColor(forraFarg, forraKlar); }
       const d = Bild3D.avkodaDjup(djupPx, w, h, kam.far);
       ut.djup = await somPng(tillCanvas(Bild3D.djupbild(d, w, h), w, h));
       const n = Bild3D.avkodaNormaler(normPx, w, h);
@@ -638,7 +761,7 @@
       return ut;
     }
 
-    const material = () => [markMat, ortoMat, tradMat, kurvMat, konturMat, befMat, skissMat];
+    const material = () => [markMat, ortoMat, tradMat, kurvMat, konturMat, befMat, skissMat, takMat, lovMat, lovDjup, leraLovMat, djupLovMat, normalLovMat];
     return {
       /** Ortofotot på eller av; null om det saknas. */
       ortofoto(pa) { if (!ortoMat) return null; if (pa != null) terrang.material = pa ? ortoMat : markMat; return terrang.material === ortoMat; },
@@ -654,10 +777,22 @@
       /** Höjdkurvornas färg (#rrggbb); utan argument den nuvarande. null om kurvor saknas. */
       kurvfarg(c) { if (!kurvMat) return null; if (c) kurvMat.color.set(c); return '#' + kurvMat.color.getHexString(); },
       /** Färgen på befintliga byggnader (0.9.0); null om det inte finns några med höjd. */
-      byggnadsfarg(c) { if (!harBefintliga) return null; if (c) befMat.color.set(c); return '#' + befMat.color.getHexString(); },
+      byggnadsfarg(c) { if (!harBefintliga) return null; if (c) { befMat.color.set(c); takMat.color.set(c); } return '#' + befMat.color.getHexString(); },
       /** Skissens färg (0.9.0); null om det inte finns någon skiss. */
       skissfarg(c) { if (!skiss) return null; if (c) skissMat.color.set(c); return '#' + skissMat.color.getHexString(); },
       /** Svarta konturer på byggnaderna och skissen (0.9.0); null om det inte finns några. */
+      /** Färgen på husens konturer och fotavtrycken utan höjd (0.9.1); null om det inte finns några. */
+      konturfarg(c) {
+        if (!konturer.length && !fotMat) return null;
+        if (c) { konturMat.color.set(c); if (fotMat) fotMat.color.set(c); }
+        return '#' + (konturer.length ? konturMat : fotMat).color.getHexString();
+      },
+      /** Fastighetsgränsernas färg (0.9.1); null om gränser saknas. */
+      gransfarg(c) { if (!gransMat) return null; if (c) gransMat.color.set(c); return '#' + gransMat.color.getHexString(); },
+      /** Takformer ur laserdatan på de befintliga husen (0.9.1); null om inget hus har en takform. */
+      takformer(pa) { if (!formade.size) return null; if (pa != null) visaTakformer(pa); return takformerPa; },
+      /** Hur många hus som har en takform, för testerna. */
+      takformantal() { return formade.size; },
       konturer(pa) { if (!konturer.length) return null; if (pa != null) { visaKonturer = !!pa; konturer.forEach(l => { l.visible = visaKonturer; }); } return visaKonturer; },
       /** Skuggor efter solens läge (0.9.0); null om platsen saknas. */
       skuggor(pa) { if (!kanSkugga) return null; if (pa != null) { skuggorPa = !!pa; uppdateraSol(); } return skuggorPa; },
@@ -666,13 +801,13 @@
       /** Om träden kastar skugga (kan stängas av om det blir tungt på mobilen). null om träd saknas. */
       tradskuggor(pa) {
         if (!trad.length) return null;
-        if (pa != null) { tradskugga = !!pa; for (const a in tradMesh) for (const n in tradMesh[a]) tradMesh[a][n].castShadow = tradskugga; skuggaOm(); }
+        if (pa != null) { tradskugga = !!pa; for (const a in tradMesh) for (const n of NIVAER) for (const im of tradMesh[a][n] || []) im.castShadow = tradskugga; skuggaOm(); }
         return tradskugga;
       },
-      /** 'enkel' eller 'detaljerad'; null om träd saknas. */
-      tradniva(n) { if (!trad.length) return null; if (n === 'enkel' || n === 'detaljerad') { tradniva = n; placeraTrad(); } return tradniva; },
+      /** 'enkel', 'detaljerad' eller 'realistisk' (0.9.1); null om träd saknas. */
+      tradniva(n) { if (!tradLager) return null; if (NIVAER.includes(n)) { tradniva = n; placeraTrad(); } return tradniva; },
       /** Hur många träd av varje art och nivå som visas, för testerna. */
-      tradantal() { const ut = {}; for (const a in tradMesh) ut[a] = { enkel: tradMesh[a].enkel.count, detaljerad: tradMesh[a].detaljerad.count }; return ut; },
+      tradantal() { const ut = {}; for (const a in tradMesh) { ut[a] = {}; for (const n of NIVAER) ut[a][n] = tradMesh[a][n] ? tradMesh[a][n][0].count : 0; } return ut; },
       /** Vad det gör att dra med ett finger eller vänster musknapp: 'snurra' eller 'flytta' (0.8.1). */
       dragLage(l) { if (l === 'snurra' || l === 'flytta') dragLage = l; return dragLage; },
       /**
@@ -718,5 +853,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.9.0' };
+  window.Vy3D = { visa, version: '0.9.1' };
 }());

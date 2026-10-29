@@ -216,19 +216,42 @@ with sync_playwright() as p:
 
     # 0.9.0: konturer, färger, träd, skuggor, ögonhöjd och bilder
     v3 = 'TERRANG_TEST.vy3d'
-    print('  0.9.0 knappar:', {i: pg.locator('#' + i).is_visible() for i in ('vy3d-konturer', 'vy3d-tradniva', 'vy3d-skuggor', 'vy3d-husfarg-rad', 'vy3d-skissfarg-rad', 'vy3d-ogon', 'vy3d-bild', 'vy3d-ai')})
+    print('  0.9.0 knappar:', {i: pg.locator('#' + i).is_visible() for i in ('vy3d-konturer', 'vy3d-tradniva-rad', 'vy3d-skuggor', 'vy3d-husfarg-rad', 'vy3d-skissfarg-rad', 'vy3d-ogon', 'vy3d-bild', 'vy3d-ai')})
+    print('  0.9.1 knappar:', {i: pg.locator('#' + i).is_visible() for i in ('vy3d-takformer', 'vy3d-konturfarg-rad', 'vy3d-gransfarg-rad')},
+          'takformer', pg.evaluate(f'{v3}.takformantal()'))
     if pg.locator('#vy3d-konturer').is_visible():
         pg.click('#vy3d-konturer'); assert pg.evaluate(f'{v3}.konturer()') is True
     if pg.locator('#vy3d-husfarg-rad').is_visible():
         pg.eval_on_selector('#vy3d-husfarg', "e => { e.value = '#d8c3a0'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
         assert pg.evaluate(f'{v3}.byggnadsfarg()') == '#d8c3a0'
-    if pg.locator('#vy3d-tradniva').is_visible():
+    if pg.locator('#vy3d-konturfarg-rad').is_visible():
+        pg.eval_on_selector('#vy3d-konturfarg', "e => { e.value = '#2050c0'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
+        assert pg.evaluate(f'{v3}.konturfarg()') == '#2050c0'
+    if pg.locator('#vy3d-gransfarg-rad').is_visible():
+        pg.eval_on_selector('#vy3d-gransfarg', "e => { e.value = '#10a010'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
+        assert pg.evaluate(f'{v3}.gransfarg()') == '#10a010'
+    if pg.locator('#vy3d-takformer').is_visible():
+        pg.click('#vy3d-takformer'); pg.wait_for_timeout(300)
+        assert pg.evaluate(f'{v3}.takformer()') is True and pg.get_attribute('#vy3d-takformer', 'aria-pressed') == 'true'
+    if pg.locator('#vy3d-tradniva-rad').is_visible():
         print('  träd enkla:', pg.evaluate(f'{v3}.tradantal()'))
-        pg.click('#vy3d-tradniva'); pg.wait_for_timeout(300)
+        pg.select_option('#vy3d-tradniva', 'detaljerad'); pg.wait_for_timeout(300)
         antal = pg.evaluate(f'{v3}.tradantal()')
         print('  träd detaljerade:', antal)
         assert sum(a['detaljerad'] for a in antal.values()) > 0, 'detaljerade träd visas'
+        pg.select_option('#vy3d-tradniva', 'realistisk'); pg.wait_for_timeout(1500)
+        antal = pg.evaluate(f'{v3}.tradantal()')
+        print('  träd realistiska:', antal)
+        assert sum(a['realistisk'] for a in antal.values()) > 0, 'realistiska träd visas'
     pg.wait_for_timeout(500); pg.screenshot(path=f'{UT}/06g_3d_konturer_trad.png')
+    # närbild på huset med takform och de realistiska träden: zooma in mot mitten, sedan ögonhöjd framför huset
+    yta = pg.locator('#vy3d-yta canvas').bounding_box()
+    cx3, cy3 = yta['x'] + yta['width'] / 2, yta['y'] + yta['height'] / 2
+    for _ in range(6): pg.mouse.move(cx3, cy3); pg.mouse.wheel(0, -500); pg.wait_for_timeout(80)
+    pg.wait_for_timeout(800); pg.screenshot(path=f'{UT}/06l_3d_takform_nara.png')
+    pg.click('#vy3d-ogon'); pg.mouse.click(cx3, cy3 + yta['height'] * 0.3); pg.wait_for_timeout(1200)
+    pg.screenshot(path=f'{UT}/06m_3d_tak_och_trad_ogonhojd.png')
+    pg.evaluate(f'{v3}.oversikt()'); pg.evaluate(f'{v3}.aterstall()'); pg.wait_for_timeout(300)
     if pg.locator('#vy3d-skuggor').is_visible():
         pg.click('#vy3d-skuggor'); pg.wait_for_timeout(300)
         assert pg.locator('#vy3d-sol').is_visible(), 'solraden syns med skuggor'
@@ -281,12 +304,17 @@ with sync_playwright() as p:
     assert gatt > 1, 'W går framåt'
     pg.mouse.move(mx, my); pg.mouse.down(); pg.mouse.move(mx + 200, my, steps=5); pg.mouse.up(); pg.wait_for_timeout(300)
     pg.screenshot(path=f'{UT}/06k_3d_ogonhojd_vriden.png')
+    # ett klick låser inte musen och tar inte en ur läget (0.9.1)
+    pg.mouse.click(mx, my); pg.wait_for_timeout(300)
+    assert pg.evaluate('document.pointerLockElement') is None, 'klick i ögonhöjd låser inte musen'
+    assert pg.evaluate(f'{v3}.lage()') == 'ogon', 'klick i ögonhöjd stannar i läget'
     pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
     assert pg.evaluate(f'{v3}.lage()') == 'oversikt' and pg.locator('#vy3d').is_visible(), 'Esc tillbaka utan att stänga'
     pg.click('#vy3d-ogon'); pg.keyboard.press('Escape'); assert pg.evaluate(f'{v3}.lage()') == 'oversikt', 'Esc avbryter valet'
     if pg.locator('#vy3d-skuggor').is_visible(): pg.click('#vy3d-skuggor')
     if pg.locator('#vy3d-konturer').is_visible(): pg.click('#vy3d-konturer')
-    if pg.locator('#vy3d-tradniva').is_visible(): pg.click('#vy3d-tradniva')
+    if pg.locator('#vy3d-tradniva-rad').is_visible(): pg.select_option('#vy3d-tradniva', 'enkel')
+    if pg.locator('#vy3d-takformer').is_visible(): pg.click('#vy3d-takformer')
     pg.click('#vy3d-stang')
 
     # projektlänk

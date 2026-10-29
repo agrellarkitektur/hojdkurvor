@@ -2,7 +2,8 @@
  * Trädmodeller för 3D-vyn (0.9.0). Ren geometri utan three.js, så att den kan testas i Node.
  *
  * Tre modeller: gran, tall och lövträd, var och en i två nivåer: 'enkel' (low-poly, för
- * mobilen och träd långt bort) och 'detaljerad'. En modell är 1 m hög och 1 m bred med
+ * mobilen och träd långt bort) och 'detaljerad'. Sedan 0.9.1 också 'realistisk' (realistisk(art)):
+ * lövverk av små kort med en genomskinlig bild av blad eller barr (ritaLovbild). En modell är 1 m hög och 1 m bred med
  * stammens fot i origo; 3D-vyn skalar den till laserns trädhöjd och kronbredd.
  * Arten gissas ur formen (höjd mot kronbredd), inte ur någon artdata.
  *
@@ -35,6 +36,8 @@
     const tri = (a, b, c, f) => { for (const p of [a, b, c]) { pos.push(p[0], p[1], p[2]); farg.push(f[0], f[1], f[2]); } };
     return {
       tri,
+      /** Hörnen och färgerna som de är, utan skalning. */
+      ra() { return { pos, farg }; },
       /** Kon eller stympad kon: radie r0 vid y0, r1 vid y1, seg sidor, med botten om botten. */
       kon(r0, y0, r1, y1, seg, f, { botten = false, vrid = 0 } = {}) {
         for (let i = 0; i < seg; i++) {
@@ -132,6 +135,206 @@
     },
   };
 
+  // ------------------------------------------------------------------
+  // Realistiska träd (0.9.1): stam och grenar som geometri, lövverket som små kort med en
+  // genomskinlig bild av blad eller barr (alfatest), så att man ser igenom kronan och skuggan
+  // blir prickig. Korten ligger åt olika håll i kronan, så att trädet ser fylligt ut från alla
+  // vinklar, också ovanifrån. Normalerna pekar ut från kronans mitt, så att ljuset faller på
+  // kronan som helhet i stället för på varje kort.
+  // ------------------------------------------------------------------
+  /** Lövbildens rutor: en per art, sida vid sida i en bild 3 × 1. */
+  const RUTA = { gran: 0, tall: 1, lov: 2 };
+
+  /** Kort med mitten c, axlarna u och v (halva sidor) och normalen n, i lövbildens ruta. */
+  function kort(lista, c, u, v, n, ruta, skugg) {
+    const h = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [c[0] + u[0] * a + v[0] * b, c[1] + u[1] * a + v[1] * b, c[2] + u[2] * a + v[2] * b]);
+    const uv = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [(ruta + 0.02 + a * 0.96) / 3, 0.02 + b * 0.96]);
+    for (const k of [0, 1, 2, 0, 2, 3]) lista.push({ p: h[k], uv: uv[k], n, f: skugg });
+  }
+  const norm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+  const kryss = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  /** Två axlar vinkelräta mot riktningen d, vridna vinkeln a runt den. */
+  function axlar(d, a) {
+    const hj = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+    const e1 = norm(kryss(d, hj)), e2 = kryss(d, e1);
+    const c = Math.cos(a), s = Math.sin(a);
+    return [[e1[0] * c + e2[0] * s, e1[1] * c + e2[1] * s, e1[2] * c + e2[2] * s], [e2[0] * c - e1[0] * s, e2[1] * c - e1[1] * s, e2[2] * c - e1[2] * s]];
+  }
+  /** Normal utåt från kronans mitt k, lite uppåt; skuggning mörkare inåt och nedåt. */
+  function ljusning(p, k, rx, ry) {
+    const d = [(p[0] - k[0]) / rx, (p[1] - k[1]) / ry, (p[2] - k[2]) / rx];
+    const r = Math.min(1, Math.hypot(d[0], d[1], d[2]));
+    return { n: norm([d[0], d[1] + 0.35, d[2]]), skugg: 0.55 + 0.45 * r * (0.75 + 0.25 * Math.max(0, d[1] + 0.5)) };
+  }
+
+  const REALISTISK = {
+    lov() {
+      const b = bygge(), s = slump(11), kortlista = [];
+      b.kon(0.05, 0, 0.03, 0.55, 8, FARG.stam);
+      const k = [0, 0.6, 0], rx = 0.42, ry = 0.33;
+      // grenar ut i kronan
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * 2 * Math.PI + s(), y = 0.38 + s() * 0.2, l = 0.22 + s() * 0.12;
+        const mal = [Math.cos(a) * l, y + 0.12 + s() * 0.1, Math.sin(a) * l];
+        gren(b, [0, y, 0], mal, 0.014, FARG.stam);
+      }
+      for (let i = 0; i < 110; i++) {
+        // mest nära kronans yta, några längre in
+        const t = s() * 2 * Math.PI, f = Math.acos(2 * s() - 1), r = 0.45 + 0.55 * Math.sqrt(s());
+        const p = [k[0] + Math.sin(f) * Math.cos(t) * rx * r, k[1] + Math.cos(f) * ry * r, k[2] + Math.sin(f) * Math.sin(t) * rx * r];
+        const d = norm([s() * 2 - 1, s() * 2 - 1, s() * 2 - 1]), [u, v] = axlar(d, s() * 6.3), st = 0.11 + s() * 0.05;
+        const l = ljusning(p, k, rx, ry);
+        kort(kortlista, p, u.map(q => q * st), v.map(q => q * st), l.n, RUTA.lov, l.skugg);
+      }
+      return { stam: b, kort: kortlista };
+    },
+    gran() {
+      const b = bygge(), s = slump(5), kortlista = [];
+      b.kon(0.03, 0, 0.006, 0.97, 7, FARG.stam);
+      const varv = 13;
+      for (let i = 0; i < varv; i++) {
+        const t = i / (varv - 1), y = 0.24 + t * 0.7, R = 0.5 * Math.pow(1 - t * 0.97, 0.95), antal = Math.max(4, Math.round(9 - t * 4));
+        for (let n = 0; n < antal; n++) {
+          // en gren: ett kort ut från stammen, lite hängande i yttre änden
+          const a = n / antal * 2 * Math.PI + i * 0.7 + s() * 0.4, l = R * (0.8 + s() * 0.2);
+          const ut = [Math.cos(a), 0, Math.sin(a)], hang = -0.25 - s() * 0.2;
+          const d = norm([ut[0], hang, ut[2]]), sid = [-ut[2], 0, ut[0]];
+          const c = [ut[0] * l * 0.55, y + hang * l * 0.45, ut[2] * l * 0.55];
+          const vv = d.map(q => q * l * 0.5), uu = sid.map(q => q * Math.max(0.05, l * 0.32));
+          const nn = norm([ut[0] * 0.6, 1, ut[2] * 0.6]);
+          kort(kortlista, c, uu, vv, nn, RUTA.gran, 0.6 + 0.4 * (0.4 + 0.6 * t) * (0.7 + 0.3 * (n % 2)));
+        }
+      }
+      // toppskottet
+      kort(kortlista, [0, 0.95, 0], [0.03, 0, 0], [0, 0.05, 0], [0, 1, 0], RUTA.gran, 1);
+      kort(kortlista, [0, 0.95, 0], [0, 0, 0.03], [0, 0.05, 0], [0, 1, 0], RUTA.gran, 1);
+      return { stam: b, kort: kortlista };
+    },
+    tall() {
+      const b = bygge(), s = slump(9), kortlista = [];
+      b.kon(0.035, 0, 0.018, 0.9, 7, FARG.tallstam);
+      const klumpar = [[0.2, 0.78, 0.06, 0.2], [-0.22, 0.74, -0.12, 0.18], [0.03, 0.88, -0.22, 0.18], [-0.08, 0.84, 0.22, 0.17], [0, 0.94, 0, 0.17], [0.16, 0.9, 0.16, 0.14]];
+      for (const [x, y, z, r] of klumpar) {
+        gren(b, [0, y - 0.14, 0], [x * 0.8, y, z * 0.8], 0.012, FARG.tallstam);
+        for (let i = 0; i < 18; i++) {
+          const t = s() * 2 * Math.PI, f = Math.acos(2 * s() - 1), rr = 0.4 + 0.6 * Math.sqrt(s());
+          const p = [x + Math.sin(f) * Math.cos(t) * r * rr, y + Math.cos(f) * r * 0.45 * rr, z + Math.sin(f) * Math.sin(t) * r * rr];
+          const d = norm([s() * 0.8 - 0.4, 1, s() * 0.8 - 0.4]), [u, v] = axlar(d, s() * 6.3), st = 0.07 + s() * 0.04;
+          const l = ljusning(p, [x, y, z], r, r * 0.45);
+          kort(kortlista, p, u.map(q => q * st), v.map(q => q * st), l.n, RUTA.tall, l.skugg);
+        }
+      }
+      return { stam: b, kort: kortlista };
+    },
+  };
+  /** En gren som smal kon från a till b. */
+  function gren(b, a, mal, r, f) {
+    const d = [mal[0] - a[0], mal[1] - a[1], mal[2] - a[2]], l = Math.hypot(...d), dn = norm(d), [u, v] = axlar(dn, 0), seg = 4;
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * 2 * Math.PI, a1 = (i + 1) / seg * 2 * Math.PI;
+      const ring = (ang, rr, t) => [0, 1, 2].map(k => a[k] + dn[k] * l * t + (u[k] * Math.cos(ang) + v[k] * Math.sin(ang)) * rr);
+      const p00 = ring(a0, r, 0), p01 = ring(a1, r, 0), p1 = ring(0, 0, 1);
+      b.tri(p00, p01, p1, f);
+    }
+  }
+
+  const realCache = {};
+  /**
+   * Realistisk modell för en art (0.9.1): { stam: { pos, norm, farg }, lov: { pos, norm, uv, farg } }.
+   * Stammen har en normal per yta, lövkorten normaler ut från kronan och ljushet per hörn (gråskala,
+   * som multipliceras med lövbildens färger). Skalad till 1 × 1 m som de andra modellerna.
+   */
+  function realistisk(art) {
+    if (realCache[art]) return realCache[art];
+    const { stam, kort: kl } = REALISTISK[art]();
+    // gemensam skala för stammen och korten: 1 m hög, 1 m bred
+    const rå = stam.ra();
+    let xmax = 0, ymax = 0;
+    for (let i = 0; i < rå.pos.length; i += 3) { xmax = Math.max(xmax, Math.abs(rå.pos[i]), Math.abs(rå.pos[i + 2])); ymax = Math.max(ymax, rå.pos[i + 1]); }
+    for (const q of kl) { xmax = Math.max(xmax, Math.abs(q.p[0]), Math.abs(q.p[2])); ymax = Math.max(ymax, q.p[1]); }
+    const sx = 0.5 / xmax, sy = 1 / ymax;
+    const P = new Float32Array(rå.pos.length);
+    for (let i = 0; i < P.length; i += 3) { P[i] = rå.pos[i] * sx; P[i + 1] = rå.pos[i + 1] * sy; P[i + 2] = rå.pos[i + 2] * sx; }
+    const stamUt = { pos: P, norm: ytnormaler(P), farg: new Float32Array(rå.farg) };
+    const lp = new Float32Array(kl.length * 3), ln = new Float32Array(kl.length * 3), lu = new Float32Array(kl.length * 2), lf = new Float32Array(kl.length * 3);
+    kl.forEach((q, i) => {
+      lp[i * 3] = q.p[0] * sx; lp[i * 3 + 1] = q.p[1] * sy; lp[i * 3 + 2] = q.p[2] * sx;
+      ln.set(q.n, i * 3); lu.set(q.uv, i * 2); lf.set([q.f, q.f, q.f], i * 3);
+    });
+    return (realCache[art] = { stam: stamUt, lov: { pos: lp, norm: ln, uv: lu, farg: lf } });
+  }
+  /** En normal per triangel. */
+  function ytnormaler(P) {
+    const N = new Float32Array(P.length);
+    for (let i = 0; i < P.length; i += 9) {
+      const ux = P[i + 3] - P[i], uy = P[i + 4] - P[i + 1], uz = P[i + 5] - P[i + 2], vx = P[i + 6] - P[i], vy = P[i + 7] - P[i + 1], vz = P[i + 8] - P[i + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.hypot(nx, ny, nz) || 1;
+      for (let k = 0; k < 9; k += 3) { N[i + k] = nx / l; N[i + k + 1] = ny / l; N[i + k + 2] = nz / l; }
+    }
+    return N;
+  }
+
+  /**
+   * Ritar lövbilden (3 rutor: gran, tall, lövträd) på en canvas 2D, genomskinlig mellan bladen.
+   * ctx: CanvasRenderingContext2D med bredden 3 × storleken och höjden storleken.
+   */
+  function ritaLovbild(ctx, storlek = 512) {
+    const S = storlek;
+    ctx.clearRect(0, 0, 3 * S, S);
+    const s = slump(21);
+    const gron = (h, l, a = 1) => `hsla(${h}, ${45 + s() * 20}%, ${l}%, ${a})`;
+    // gran: en grenspets med sidoskott och täta barr
+    {
+      const ox = 0, kvist = (x0, y0, x1, y1, tjock, barr) => {
+        ctx.strokeStyle = 'rgb(70, 55, 40)'; ctx.lineWidth = tjock;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        const l = Math.hypot(x1 - x0, y1 - y0), n = Math.round(l / 3);
+        for (let i = 0; i < n; i++) {
+          const t = i / n, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t, a = Math.atan2(y1 - y0, x1 - x0);
+          for (const sida of [-1, 1]) {
+            const v = a + sida * (0.9 + s() * 0.4), bl = barr * (0.6 + 0.4 * Math.sin(Math.PI * Math.min(1, t * 1.2)));
+            ctx.strokeStyle = gron(115 + s() * 20, 18 + s() * 14); ctx.lineWidth = 2.2;
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(v) * bl, y + Math.sin(v) * bl); ctx.stroke();
+          }
+        }
+      };
+      // grenen går nerifrån (vid stammen) och upp (spetsen)
+      kvist(ox + S * 0.5, S * 0.98, ox + S * 0.5, S * 0.04, 4, S * 0.07);
+      for (let i = 0; i < 9; i++) {
+        const t = 0.12 + i * 0.09, y = S * (0.98 - t * 0.94), l = S * (0.34 - t * 0.22);
+        for (const sida of [-1, 1]) kvist(ox + S * 0.5, y, ox + S * 0.5 + sida * l, y - l * 0.55, 2.2, S * 0.045);
+      }
+    }
+    // tall: tofsar av långa barr
+    {
+      const ox = S;
+      for (let n = 0; n < 9; n++) {
+        const cx = ox + S * (0.22 + s() * 0.56), cy = S * (0.22 + s() * 0.56), r = S * (0.13 + s() * 0.08);
+        ctx.strokeStyle = 'rgb(110, 70, 45)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(ox + S * 0.5, S * 0.98); ctx.lineTo(cx, cy); ctx.stroke();
+        for (let i = 0; i < 70; i++) {
+          const a = s() * 2 * Math.PI, l = r * (0.5 + s() * 0.5);
+          ctx.strokeStyle = gron(95 + s() * 25, 26 + s() * 18); ctx.lineWidth = 1.8;
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * l, cy + Math.sin(a) * l); ctx.stroke();
+        }
+      }
+    }
+    // lövträd: blad i en klunga runt några kvistar
+    {
+      const ox = 2 * S;
+      ctx.strokeStyle = 'rgb(85, 65, 48)'; ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(ox + S * 0.5, S); ctx.lineTo(ox + S * (0.15 + s() * 0.7), S * (0.1 + s() * 0.5)); ctx.stroke(); }
+      for (let i = 0; i < 260; i++) {
+        const a = s() * 2 * Math.PI, rr = Math.sqrt(s()) * 0.46, x = ox + S * (0.5 + Math.cos(a) * rr), y = S * (0.5 + Math.sin(a) * rr);
+        const l = S * (0.035 + s() * 0.03), b = l * (0.45 + s() * 0.15), v = s() * 2 * Math.PI;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(v);
+        ctx.fillStyle = gron(85 + s() * 35, 24 + s() * 22 + (1 - rr * 2) * 6);
+        ctx.beginPath(); ctx.moveTo(-l, 0); ctx.quadraticCurveTo(0, -b, l, 0); ctx.quadraticCurveTo(0, b, -l, 0); ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+
   const cache = {};
   /** Modellen för en art ('gran', 'tall', 'lov') och nivå ('enkel', 'detaljerad'). */
   function modell(art, niva) {
@@ -153,5 +356,5 @@
     return { vrid: s() * 2 * Math.PI, ljus: 0.85 + s() * 0.3 };
   }
 
-  return { modell, art, variation, ARTER: ['gran', 'tall', 'lov'] };
+  return { modell, realistisk, ritaLovbild, art, variation, ARTER: ['gran', 'tall', 'lov'] };
 }));

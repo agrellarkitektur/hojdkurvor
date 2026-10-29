@@ -47,7 +47,8 @@ och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
 `TERRANG_TEST.vy3d`, så att testet kan läsa kamerans läge.
 
-3D-testet prövar trädmodellerna (storlek, ytornas riktning, artgissningen) och
+3D-testet prövar trädmodellerna (storlek, ytornas riktning, artgissningen, de
+realistiska trädens lövkort) och
 beräkningarna för bilderna: djupet, djupkartan, kantlinjerna och storleken.
 
 Höjdpunkter, lutning, skyfall, volymer och tak, DXF-läsning och strandskydd
@@ -67,9 +68,11 @@ sparas filerna, så att de kan kontrolleras med IfcOpenShell
 `ifcopenshell.validate.validate(f, logger, express_rules=True)`). `ui_test.py`
 kontrollerar också att IFC-filerna kommer med i zip:en, att 3D-vyn flyttas vid
 högerdrag och att dubbelklick återställer den, och 3D-vyns konturer, färger,
-detaljerade träd, skuggor med snabbval och uppspelning, Spara bild (2 ×
-skärmen), Bild för AI (fyra bilder i zip:en) och ögonhöjd (W går framåt, Esc
-går tillbaka utan att stänga vyn).
+konturfärg och gränsfärg, takformer, detaljerade och realistiska träd, skuggor
+med snabbval och uppspelning, Spara bild (2 × skärmen), Bild för AI (fyra
+bilder i zip:en) och ögonhöjd (W går framåt, ett klick låser inte musen, Esc
+går tillbaka utan att stänga vyn). Byggnadstestet prövar också takformen på ett
+sadeltak med en skorsten (nock, takfot och att taket går ut till kanterna).
 Tar några sekunder. Med `BYGGNAD_GPKG=…/byggnad_knKKKK.gpkg` och
 `FASTIGHET_GPKG=…/fastighetsindelning_knKKKK.gpkg` körs samma kontroller
 också på riktiga filer från Lantmäteriet (för Vimmerby centrum, kommun 0884).

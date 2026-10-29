@@ -1,14 +1,16 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.9.0 publicerad (3D-vyn som studieverktyg), 0.10.0 nästa.
+överlämning; historiken finns i git. Senast: 29 oktober 2026, 0.9.1 publicerad (rättelser i 3D-vyn), 0.10.0 nästa.
 
 ## Läget
 
-- **0.9.0 är klar** 29 oktober (gren `v0.9.0`, sammanslagen med `main`): skuggor,
-  konturer, hus- och skissfärg, trädmodeller, ögonhöjd och bilder i 3D-vyn.
-  Se *3D-vyn i 0.9.0* nedan. Inte testad av Carl August än, varken på Windows
-  eller iPhone (se Att testa i `docs/SYNPUNKTER.md`).
+- **0.9.1 är klar** 29 oktober (gren `v0.9.1`, sammanslagen med `main`), efter
+  Carl Augusts första prov av 0.9.0: Konturfärg och Gränsfärg, Takformer ur
+  laserdatan, ögonhöjd utan pekarlås och realistiska träd. Se *3D-vyn i 0.9.1*.
+  Inte testad av honom än.
+- **0.9.0** (29 oktober): skuggor, konturer, hus- och skissfärg, trädmodeller,
+  ögonhöjd och bilder i 3D-vyn. Se *3D-vyn i 0.9.0* nedan.
 - **0.8.2** (27 oktober) bytte bara publiceringen till Node 24. **0.8.1** godkänd
   på Windows 27 oktober (IFC i Archicad i lokal nolla, Flytta, skift-dra,
   Kurvfärg). iPhone (två fingrar i 3D) är fortfarande inte testad.
@@ -51,6 +53,38 @@ fält på volymen, så att gamla volymer från cad-apa och DXF fungerar som för
 
 **0.10.x:** bortskärning (en volym gör urtag i en annan, kräver CSG och att
 analyserna får den nya formen) och egna takfotslinjer.
+
+## 3D-vyn i 0.9.1
+
+- **Färger**: `konturfarg(hex)` (konturerna och fotavtrycken utan höjd) och
+  `gransfarg(hex)` (fastighetsgränserna); localStorage `terrang-3d-konturfarg`
+  och `terrang-3d-gransfarg`.
+- **Takformer**: `Byggnad.hojder` sparar `b.tak` (inte uppräkningsbar, följer
+  inte med i JSON) med ytmodellen (`z`) och cellens egna laserpunkter (`punkt`,
+  ur `y.ra`) i en ruta runt huset. `Byggnad.takmodell(b)` ger `{ takfot, nock,
+  pos, index }` i zonen: tomma celler fylls med grannarnas punkter inom
+  fotavtrycket (stängningen i `ytmodell` lyfter annars tomma celler nära
+  nocken), avvikelser > 1,5 m från medianen 3 × 3 byts (skorstenar),
+  riktningsfilter i två varv (fem celler längs den av fyra riktningar som
+  varierar minst), takfot = 30:e percentilen av kantcellerna, nock = största
+  värdet. Hörn utanför fotavtrycket flyttas till kanten på takfotens höjd.
+  `app.js` (`takmodeller3d`) ger dem samma id som `somVolymer`; vyn bygger en
+  grupp per hus (väggar till takfoten + tak med `takMat`, flatShading) och
+  `takformer(på)` byter mot lådan. localStorage `terrang-3d-takformer`. Provat på
+  testhusets sadeltak (nock 9,85 av 10 m) och ett syntetiskt valmat tak; inte
+  på riktig laserdata. Finns inte efter att ett projekt öppnats utan laserdata.
+- **Ögonhöjd**: `requestPointerLock` togs bort. Pekarlåset hanteras fortfarande
+  om det ändå släpps, men vyn ber inte om det.
+- **Realistiska träd** (`Trad3D.realistisk(art)`, `Trad3D.ritaLovbild`):
+  `{ stam, lov }`; lövkort med uv i en bild 3 × 1 (gran, tall, löv) som ritas på
+  en canvas när nivån väljs (`byggRealistiska`). `lovMat` är DoubleSide med
+  `alphaTest` och `alphaToCoverage`, och `sammaNormal` vänder tillbaka normalen
+  på baksidan (patch av `normal_fragment_begin`, three r170). Skuggor med
+  `customDepthMaterial` med samma bild. `tradniva` tar 'realistisk'; nivåerna är
+  listor av InstancedMesh. *Bild för AI* byter material per yta (`medMaterial`)
+  i stället för `overrideMaterial`, så att lövkorten har hål i lera, djup och
+  normaler. Högst 3 000 nära på datorn, 400 inom 200 m på mobilen.
+- Testkrok: `TERRANG_TEST.byggnader` (husen med `tak`) bredvid `vy3d`.
 
 ## 3D-vyn i 0.9.0
 
@@ -165,10 +199,11 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Kontrollera att publiceringen av 0.9.0 gick igenom (steget Kontrollera
+1. Kontrollera att publiceringen av 0.9.1 gick igenom (steget Kontrollera
    webbplatsen).
-2. Be Carl August om test av 0.9.0 (listan under Att testa i
-   `docs/SYNPUNKTER.md`), och om iPhone med två fingrar. Fel blir 0.9.1.
+2. Be Carl August om test av 0.9.1 (listan under Att testa i
+   `docs/SYNPUNKTER.md`): takformerna på riktiga hus, de realistiska trädens
+   tyngd på dator och iPhone, och iPhone med två fingrar. Fel blir 0.9.2.
 3. Därefter 0.10.0, volymer i 3D-vyn, på en egen gren (se *Skissfunktionen och
    3D-vyn* ovan). Toppvyn kan byggas med en `OrthographicCamera` bredvid
    perspektivkameran; `traffMark` finns redan för klick på marken.

@@ -3,6 +3,31 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.9.1 – 2026-10-29
+
+Rättelser och tillägg efter Carl Augusts första prov av 3D-vyn.
+
+- **Konturfärg och Gränsfärg**: färgväljare för husens konturer (och
+  fotavtrycken för hus utan höjd) och för fastighetsgränserna, som Kurvfärg.
+  Valen sparas i webbläsaren (`terrang-3d-konturfarg`, `terrang-3d-gransfarg`).
+- **Takformer**: valfri högre detaljnivå för befintliga hus. Väggarna går till
+  takfoten och taket byggs ur ytmodellen inom fotavtrycket, så att sadeltak,
+  valm och flera huskroppar syns ungefärligt. `Byggnad.hojder` sparar takets
+  höjder per hus (inte uppräkningsbart, följer inte med i platspaketet) och
+  `Byggnad.takmodell` gör taket: helst cellens egna laserpunkter, avvikande
+  värden byts mot grannarnas median (skorstenar) och ytan jämnas ut längs den
+  riktning där den varierar minst, så att nock och takfot står kvar. Taket
+  skuggas per yta. Bara i 3D-vyn; DXF, IFC och analyserna är som förut.
+- **Ögonhöjd**: ett klick låser inte längre musen. Pekaren syns hela tiden och
+  man tittar runt genom att dra. Esc eller *Tillbaka* går upp igen som förut.
+- **Realistiska träd**: valet *Träd* har nu Enkla, Detaljerade och
+  Realistiska. De realistiska har stam och grenar som geometri och lövverk av
+  små kort med en genomskinlig bild av blad eller barr (ritas i webbläsaren, ingen
+  bildfil), så att man ser igenom kronan och skuggan blir prickig. Kronan
+  ljussätts som en helhet. Högst 3 000 närmast kameran på datorn, 400 inom 200 m
+  på mobilen, enkla längre bort. Lermodellen och djupkartan i *Bild för AI* tar
+  med hålen i lövverket.
+
 ## 0.9.0 – 2026-10-29
 
 3D-vyn som studieverktyg.
