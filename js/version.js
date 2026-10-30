@@ -1,2 +1,2 @@
 /* Version av höjdkurvor.se. Höj vid varje uppdatering och skriv vad som är nytt i CHANGELOG.md och på Om-sidan. */
-window.HOJDKURVOR = { version: '0.10.1', datum: '2026-10-30' };
+window.HOJDKURVOR = { version: '0.11.0', datum: '2026-10-30' };

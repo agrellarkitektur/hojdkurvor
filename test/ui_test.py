@@ -146,9 +146,18 @@ with sync_playwright() as p:
         print('  ifc:', ifc)
         assert len(ifc) == 2, 'IFC lokal och sweref följer med byggnaderna'
         assert z.read(ifc[0]).startswith(b'ISO-10303-21;'), 'IFC-filen börjar med STEP-huvudet'
+    # 0.11.0: bilvägar och gångvägar i varsin DXF, med vägytorna
+    vagfiler = sorted(n for n in namn_i_zip if n.startswith('vagar/') or '/vagar/' in n)
+    print('  vägar:', vagfiler)
+    bil = next((n for n in vagfiler if n.endswith('_vagar_sweref.dxf')), None)
+    gang = next((n for n in vagfiler if n.endswith('_gangvagar_sweref.dxf')), None)
+    assert bil and gang, 'bilvägar och gångvägar i varsin fil'
+    bt, gt = z.read(bil).decode('latin-1'), z.read(gang).decode('latin-1')
+    assert 'VAG_YTA_BIL' in bt and 'VAG_GANG_CYKEL' not in bt, 'bilvägarnas fil har ytorna och inga gångvägar'
+    assert 'VAG_GANG_CYKEL' in gt and 'VAG_LOKALGATA' not in gt, 'gångvägarnas fil har bara gångvägar'
     info = next((z.read(n).decode('utf-8', 'replace') for n in namn_i_zip if n.endswith('info.txt')), '')
     for rad in info.splitlines():
-        if 'IFC' in rad or 'från en byggnad är borttagna' in rad or 'precis vid en byggnad' in rad: print('  info:', rad.strip()[:160])
+        if 'IFC' in rad or 'från en byggnad är borttagna' in rad or 'precis vid en byggnad' in rad or 'vägar:' in rad or 'VÄGYTOR' in rad: print('  info:', rad.strip()[:160])
 
     # utskrift i skala med Lantmäteriets karta
     pg.click('#lp-bakgrund button:has-text("LANTMÄTERIET")'); pg.wait_for_timeout(2000)
@@ -332,6 +341,36 @@ with sync_playwright() as p:
         pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
         assert not pg.locator('#vy3d-tak').is_visible() and pg.locator('#vy3d').is_visible(), 'Esc stänger takpanelen, inte vyn'
         pg.evaluate(f'{v3}.aterstall()')
+
+    # 0.11.0: välja, ändra och dölja ett träd och dölja ett hus
+    if pg.evaluate(f'{v3}.tradantal().enkel') is not None and pg.evaluate('TERRANG_TEST.vy3d.klickaTrad(0)'):
+        pg.wait_for_timeout(300)
+        assert pg.locator('#vy3d-trad').is_visible(), 'klick på ett träd öppnar trädpanelen'
+        print('  trädpanel:', pg.inner_text('#trad-info'))
+        pg.select_option('#trad-art', 'bjork'); pg.fill('#trad-hojd', '7,5'); pg.dispatch_event('#trad-hojd', 'change'); pg.wait_for_timeout(300)
+        info = pg.inner_text('#trad-info'); print('  björk 7,5 m:', info)
+        assert info.startswith('Björk, 7,5 m') and 'Ur laserdatan' in info
+        sparat = pg.evaluate("JSON.parse(localStorage.getItem('terrang-tradval') || '{}')")
+        assert any(v.get('art') == 'bjork' and v.get('hojd') == 7.5 for v in sparat.values()), 'trädets val sparas'
+        assert pg.evaluate('TERRANG_TEST.senaste().trad.some(t => t.andrat && t.hojd === 7.5)'), 'ändringen följer med till cad-apa'
+        pg.wait_for_timeout(300); pg.screenshot(path=f'{UT}/06p_3d_trad_valt.png')
+        fore = pg.evaluate('TERRANG_TEST.senaste().trad.length')
+        pg.click('#trad-dolj'); pg.wait_for_timeout(300)
+        assert not pg.locator('#vy3d-trad').is_visible() and pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore - 1, 'Dölj trädet tar bort det'
+        assert pg.locator('#vy3d-dolda').is_visible() and '(1)' in pg.inner_text('#vy3d-dolda'), 'Visa dolda (1)'
+        if hus3:
+            pg.evaluate(f'{v3}.klickaHus({hus3[0]}, {hus3[1]})'); pg.wait_for_timeout(200)
+            if pg.locator('#vy3d-tak').is_visible():
+                nh = pg.evaluate('TERRANG_TEST.senaste().byggnader.length')
+                pg.click('#hus-dolj'); pg.wait_for_timeout(300)
+                assert pg.evaluate('TERRANG_TEST.senaste().byggnader.length') == nh - 1 and '(2)' in pg.inner_text('#vy3d-dolda'), 'Dölj huset'
+                assert pg.evaluate(f'{v3}.klickaHus({hus3[0]}, {hus3[1]})') is None or not pg.locator('#vy3d-tak').is_visible(), 'ett dolt hus går inte att välja'
+        pg.screenshot(path=f'{UT}/06q_3d_dolda.png')
+        pg.click('#vy3d-dolda'); pg.wait_for_timeout(300)
+        assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore and pg.locator('#vy3d-dolda').is_hidden(), 'Visa dolda visar dem igen'
+        sparat = pg.evaluate("JSON.parse(localStorage.getItem('terrang-tradval') || '{}')")
+        assert any(v.get('art') == 'bjork' and not v.get('dolt') for v in sparat.values()), 'de andra ändringarna står kvar'
+        pg.evaluate("localStorage.removeItem('terrang-tradval'); localStorage.removeItem('terrang-husval')")
 
     # 0.10.0: modellera volymer i 3D-vyn
     pg.click('#vy3d-modellera'); pg.wait_for_timeout(300)

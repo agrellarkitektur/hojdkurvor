@@ -1,31 +1,100 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 30 oktober 2026, 0.10.1 publicerad (ortofotot till cad-apa).
+överlämning; historiken finns i git. Senast: 30 oktober 2026, 0.11.0 (synpunkterna i inkorgen 30 oktober).
 
 ## Läget
 
-- **0.10.1** 30 oktober (gren `v0.10.1`): ortofotot följer med i platspaketet
-  (fältet `ortofoto`, samma fält som `senaste.ortofoto` och cad-apas
-  `PaketOrtofoto`), nedskalat till högst 4 096 px (`ortofotoTillCadApa` i
-  `app.js`, räknas en gång per underlag och sparas i `senaste.ortofoto.cadapa`).
-  cad-apa bad om det i sin överlämning (0.10.31). Enhetstest i
-  `test/utbyte.test.js`, låtsas-cad-apa loggar ortofotot; gränssnittstestet
-  godkänt i Blueprint. Nedskalningen är inte provad med en riktig bild över
-  4 096 px. Carl August har inte testat.
-- **0.10.0** 29 oktober (gren `v0.10.0`): modellera volymer i 3D-vyn, egen
-  takform per befintligt hus och nya stiliserade träd. Carl August bad om det
-  med sina synpunkter på 0.9.2 (taken bra i stort men vissa feltolkade; de
-  detaljerade träden såg inte bra ut, han skickade ett low-poly-paket från
-  Sketchfab som förebild). Se avsnitten nedan. Inte testad av honom än; listan
-  står under *Att testa* i `docs/SYNPUNKTER.md`.
-- Publicerad 29 oktober (sammanslagen med `main`, körningen och Kontrollera
-  webbplatsen gick igenom). Gränssnittstestet godkänt i alla tre teman, mobiltestet också.
+- **0.11.0** 30 oktober (gren `v0.11.0`): Carl Augusts fyra synpunkter i
+  inkorgen 30 oktober, alla inarbetade (inkorgen är tom):
+  1. bilvägar och gångvägar var för sig (filer, kartlager, 3D-lager, utskrift,
+     `slag` i platspaketet),
+  2. utkast till vägytor med bredden mätt i ortofotot, utan AI,
+  3. dölja och rätta enskilda träd och dölja hus i 3D-vyn,
+  4. ortofotot till cad-apa i full upplösning och träden med art, modell och
+     de detaljerade modellerna (`tradmodeller`).
+  Se avsnitten nedan. Enhetstester gröna; gränssnittstestet godkänt i alla tre
+  teman och mobiltestet. Carl August har inte testat; listan står under *Att
+  testa* i `docs/SYNPUNKTER.md`.
+- **0.10.1** 30 oktober: ortofotot i platspaketet. Nedskalningen till 4 096 px
+  togs bort i 0.11.0.
+- **0.10.0** 29 oktober: modellera volymer i 3D-vyn, egen takform per
+  befintligt hus och stiliserade träd. Inte testad av honom än.
 - **0.9.0–0.9.2** (29 oktober): skuggor, konturer, färger, ögonhöjd, bilder,
-  takformer ur laserdatan (förenklade i 0.9.2). Carl August har provat 0.9.2 på
-  Windows: taken ser generellt bra ut.
+  takformer ur laserdatan. Carl August har provat 0.9.2 på Windows: taken ser
+  generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## Vägar (0.11.0, `js/vagar.js`)
+
+- `hamta` ger `linjer` (klippta mot utsnittet) och `alla` (15 m utanför, för
+  ytorna). Varje linje har `lager`, `slag` (`bil`/`gang`, ur `KLASSER`), `typ`
+  och taggarna `bredd` (width), `korfalt` (lanes), `enkelriktad`, `ytskikt`,
+  `service`.
+- `schablon(l)`: width → lanes × 3,25 + 0,5 → `SCHABLON[typ]` (enkelriktade
+  60 %, driveway/parking_aisle 3 m).
+- `matLinje`: stationer var 2 m (`stationer`, normal ur grannarna), färgen
+  mitt på vägen (±0,3 × schablonen, inte grönt) som median i ett fönster ±3
+  stationer, och bara om den är grå/gråbrun (största minus minsta kanal ≤ 70).
+  Ut åt båda håll i steg om ¾ pixel tills två–tre pixlar i rad inte liknar
+  (rgb-avstånd ≥ 42 eller grönt), högst 0,9 × schablonen + 1,5 m.
+- `profil`: under 35 % stationer med båda kanterna → schablonen. Annars
+  rullande median (±7) av bredd och sidförskjutning, bredden inom
+  0,6–1,6 × schablonen (+1 m), förskjutningen högst 1,5 m eller en fjärdedel av
+  bredden. OSM:s width går före bilden; gångvägar mäts aldrig.
+- `ytor`: ett avståndsfält per slag (värde = halva bredden − avståndet till
+  segmentet, max över segmenten, kanten −1 så att ringarna sluts mot
+  utsnittet), `Terrang.kurvorForNiva` på nivå 0, `forenkla` 8 cm, `polygoner`
+  (hål = inne i ett udda antal ringar). Rutan 0,2 m, grövre så att det blir
+  högst 3 miljoner rutor.
+- `app.js`: `val.vagytor` (underval, förvalt). Ortofotot läses före vägarna
+  (`ortofotoPixlar`: getImageData ur `senaste.ortofoto.canvas`). Filerna
+  `vagar/<namn>_vagar_*.dxf` och `_gangvagar_*.dxf` (bara om det finns sådana
+  vägar). Kartan: `visaVagar` (lagren `vagar` och `gangvagar`), utskriften:
+  `vagarTillUtskrift` (bara synliga lager), 3D: `vagar3d` (mittlinjer +
+  ytornas kanter, draperade) och lagret `gangvagar` i vyn.
+- Testdata: `make_orto.py` målar Bygatan (7,5 m, 1 m norr om OSM-linjen) och
+  Skolvägen (5 m) grå. Gränssnittstestet: 2 vägar mätta, 2 schablon.
+- **Inte provat på riktiga ortofoton.** Träd över vägen, skuggor, parkeringar
+  och vägmarkeringar är de troliga felkällorna. Om det blir för brusigt:
+  höj tröskeln för andel träffar eller fönstret i den rullande medianen.
+
+## Enskilda träd och hus (0.11.0, `js/objektval.js`)
+
+- localStorage `terrang-tradval` = `{ "x,y" (dm): { dolt, hojd, krona, art } }`,
+  `terrang-husval` = `{ objektidentitet: { dolt } }`. `tillampaTrad` känner
+  igen ett träd på exakt nyckel eller närmast inom 0,6 m (topparna ligger
+  minst 1,5 m isär); `medDolda` ger alla med `dolt: true` (för 3D-vyn, så att
+  index stämmer med `senaste.tradAlla`). Ändrade träd är kopior med `andrat`
+  och `ra` (laserns höjd och krona). `Trad3D.art/typ` respekterar `t.art`
+  (`gran`, `tall`, `lov`, `bjork`).
+- Skapa: `senaste.tradAlla` (efter `tradVidByggnader`) och `senaste.trad`
+  (med valen), `senaste.byggnaderAlla` och `senaste.byggnader` (utan dolda),
+  `senaste.byggnaderDolda`. `skarBort` sätter dsm = dtm inom dolda kronor och
+  fotavtryck (+0,5 m) innan skuggorna och volymerna.
+- 3D-vyn: träden väljs med en lodrät cylinder per träd (`traffTrad`, 0,45 ×
+  kronan), närmast av träd och hus vinner (`valjObjekt`). `bytTrad(i, t)`,
+  `markeraTrad(i)` (gula ringar), `doljHus(id, dolt)` (objekten tas ur
+  lagret), `lyssnaTrad`, testkrok `klickaTrad(i)`. Trädens InstancedMesh skapas
+  nu i `placeraTrad` och växer vid behov (`tradMeshFor`), så att en ändrad art
+  får plats.
+- `app.js`: panelen `#vy3d-trad`, `#hus-dolj` i takpanelen, `#vy3d-dolda`
+  (Visa dolda (n)). `objektAndrat` uppdaterar `state.senaste` och kartan
+  direkt; när vyn stängs ber statusraden om Skapa igen. Testkrok
+  `TERRANG_TEST.senaste()`.
+
+## Till cad-apa (0.11.0)
+
+- `ortofotoTillCadApa` skickar `senaste.ortofoto` som det är (full upplösning).
+- `Utbyte.platspaket` lägger `art`, `modell`, `vrid` (grader moturs), `ljus` och
+  `andrat` på varje träd och `tradmodeller` (`Utbyte.tradmodeller`: x öst, y
+  norr, z upp, Float32 base64, cirka 330 kB för alla sju) när `Trad3D` finns.
+  `trad3d.js` laddas därför i `index.html`. `vagar[].slag` och `vagytor`.
+  Beskrivet i `docs/UTBYTE-CAD-APA.md`.
+- **cad-apa läser inte de nya fälten än** (träden ritas som förut;
+  trädmodeller står i cad-apas plan för 0.12.1). Ändra inget i cad-apa
+  härifrån; nämn det för Carl August så att cad-apa-sessionen kan ta det.
 
 ## Modellera i 3D-vyn (0.10.0)
 
@@ -249,8 +318,9 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Be Carl August om test av 0.10.0 och 0.10.1 (listan under Att testa). Rättelser blir 0.10.2.
-2. Därefter 0.10.x: urtag och egna takfotslinjer, när han har provat
+1. Be Carl August om test av 0.10.0–0.11.0 (listan under Att testa).
+   Rättelser blir 0.11.1. Särskilt: vägytorna mot ett riktigt ortofoto.
+2. Därefter 0.11.x: urtag och egna takfotslinjer, när han har provat
    modelleringen.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
@@ -272,7 +342,9 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Idéer som inte är beslutade
 
-- Ortofotot i platsanalysbladets kartor. (Till cad-apa: klart i 0.10.1; 2D-underlag är cad-apas sak.)
+- Ortofotot i platsanalysbladets kartor. (Till cad-apa: klart i 0.10.1, full upplösning i 0.11.0; 2D-underlag är cad-apas sak.)
+- Rätta vägytorna för hand (dra i kanterna) eller rätta bredden per väg.
+- Dölja och rätta hus utan laserhöjd (fotavtrycken) och ge dem en höjd.
 - Val av flygår eller upplösning för ortofotot (nu senaste och automatiskt).
 - Byggnader utan laserdata: höjd saknas (i 3D syns de som fotavtryck, i IFC
   saknas de); schablon per typ vore möjligt men osäkert.

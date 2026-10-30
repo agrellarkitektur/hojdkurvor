@@ -3,6 +3,48 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.11.0 – 2026-10-30
+
+Carl Augusts synpunkter från 30 oktober: vägar och gångvägar var för sig, ett
+utkast till vägytorna, dölja och rätta enskilda träd och hus, och mer till
+cad-apa.
+
+- **Bilvägar och gångvägar var för sig**: vägarna från OpenStreetMap delas i
+  bilvägar (huvudvägar, lokalgator, övriga) och gång- och cykelvägar (`slag`
+  `bil`/`gang`). De hamnar i varsin DXF (`_vagar_…` och `_gangvagar_…`), i
+  varsitt lager på kartan, i utskriften (egen teckenförklaring) och i 3D-vyn,
+  och varje väg i platspaketet har `slag`. Trottoarer och övergångsställen
+  (`sidewalk`, `crossing`) räknas som gångvägar.
+- **Utkast till vägytor** (underval till Vägar, förvalt): vägytorna som slutna
+  polylinjer (lagren `VAG_YTA_BIL` och `VAG_YTA_GANG`), ihopslagna i
+  korsningarna och med hål i rondeller. Bredden tas ur OSM:s `width`, annars ur
+  `lanes` (3,25 m per körfält), annars en schablon per vägtyp. Med Ortofoto
+  ikryssat mäts bilvägarna i bilden, utan AI: var 2:a meter går appen ut från
+  mittlinjen åt båda håll så länge färgen liknar vägbanans (en grå eller
+  gråbrun färg tagen mitt på vägen, lokalt längs vägen), bredden och
+  sidförskjutningen jämnas med en rullande median och hålls inom 0,6–1,6
+  gånger schablonen; mindre än 35 % träffar ger schablonen. Ytorna slås ihop i
+  ett rutnät (ett avståndsfält, 0,2 m rutor eller grövre vid stora utsnitt) och
+  ritas med höjdkurvornas marching squares. Info-filen säger hur många vägar som
+  fick bredden på vilket sätt. Ytorna följer med på kartan, i utskriften, i
+  3D-vyn och till cad-apa (`vagytor`). `js/vagar.js`, `test/vagar.test.js`.
+- **Dölja och rätta träd och hus**: klicka på ett träd i 3D-vyn för att välja
+  art (gran, tall, lövträd, björk), höjd och kronbredd, eller dölja det. Takpanelen
+  har *Dölj huset*. *Visa dolda (n)* visar dem igen. Valen sparas i webbläsaren
+  (`terrang-tradval`, `terrang-husval`); träd känns igen på läget (inom 0,6 m),
+  hus på objektidentiteten. Kartan och platsen till cad-apa följer med direkt;
+  filerna, skuggstudien och info-filen när man skapar igen. Dolda träd och hus
+  skärs bort ur ytmodellen innan skuggorna räknas. `js/objektval.js`,
+  `test/objektval.test.js`.
+- **Ortofotot till cad-apa i full upplösning**: samma bild som i zip-filen
+  (högst 8 192 pixlar per sida), inte längre nedskalad till 4 096.
+- **Träden till cad-apa med modellerna**: varje träd har `art`, `modell`
+  (variant), `vrid` och `ljus`, och paketet har `tradmodeller` med de
+  detaljerade low-poly-modellerna som används (1 m höga, trianglar och färg per
+  hörn, cirka 50 kB per modell), så att cad-apa kan rita samma träd som 3D-vyn.
+  Ändrade träd har `andrat: true`. `js/trad3d.js` laddas nu med sidan.
+- Testdata: låtsasortofotot har två grå vägbanor längs testserverns OSM-vägar.
+
 ## 0.10.1 – 2026-10-30
 
 Ortofotot följer med till cad-apa.

@@ -46,6 +46,14 @@ node test/vy3d.test.js
 node test/volym3d.test.js
 ```
 
+```
+node test/vagar.test.js
+```
+
+```
+node test/objektval.test.js
+```
+
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
@@ -54,6 +62,13 @@ Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn 
 3D-testet prövar trädmodellerna (storlek, ytornas riktning, artgissningen och
 varianterna) och
 beräkningarna för bilderna: djupet, djupkartan, kantlinjerna och storleken.
+
+Vägtestet (0.11.0) prövar bil- och gångvägar, bredden ur OSM:s taggar och
+schablonen, mätningen av bredden och läget i ett låtsat ortofoto (grå väg på
+grönt) och vägytorna: en korsning blir en yta och en rondell får ett hål.
+Objektvalstestet (0.11.0) prövar att dölja och rätta träd och hus, att ett träd
+känns igen på nytt inom 0,6 m och att dolda träd och hus skärs bort ur
+ytmodellen.
 
 Volymtestet (0.10.0) prövar volymerna att modellera: fotavtrycken för rätblock,
 cylinder och prisma, att takets höjd är densamma som `Platsanalys.takhojd`, de
@@ -125,7 +140,9 @@ python3.12 test/data/make_orto.py test/data
 ```
 
 De har röda och blå linjer var tionde meter i SWEREF 99 TM, så att läget går
-att kontrollera.
+att kontrollera, och två grå vägbanor längs testserverns OSM-vägar (Bygatan
+7,5 m bred, 1 m norr om OSM-linjen, och Skolvägen 5 m), så att mätningen av
+vägarnas bredd prövas.
 
 Topografisk webbkarta (`topowebb-3006.gpkg`) finns inte med. Utan den svarar
 testservern 404 när testet väljer Lantmäteriets karta, och utskriften görs utan

@@ -61,5 +61,30 @@ Terrang.registreraZoner();
   const pof = U.platspaket(Object.assign({ fastigheter: fi, ortofoto: { bild, x0: 0, y1: 0, s: 1, W: 2, H: 2 } }, bas));
   assert.ok(/laserdata, fastighetsindelning och ortofoto © Lantmäteriet/.test(pof.licens), pof.licens);
   assert.ok(!('ortofoto' in U.platspaket(Object.assign({ ortofoto: { bild: 'inte en bild', x0: 0, y1: 0, s: 1, W: 2, H: 2 } }, bas))), 'trasigt ortofoto hoppas över');
+
+  // vägarna (0.11.0): slag per linje och vägytorna
+  const vag = { linjer: [{ lager: 'VAG_LOKALGATA', slag: 'bil', typ: 'residential', namn: 'Skolvägen', pts: [[0, 0], [10, 0]] }, { lager: 'VAG_GANG_CYKEL', typ: 'footway', pts: [[0, 5], [10, 5]] }],
+    ytor: { bil: [{ ringar: [[[0, -3], [10, -3], [10, 3], [0, 3]]], yta: 60 }], gang: [] } };
+  const pv = U.platspaket(Object.assign({ vagar: vag }, bas));
+  assert.deepStrictEqual(pv.vagar.map(v => v.slag), ['bil', 'gang']);
+  assert.deepStrictEqual(pv.vagytor, { bil: [{ ringar: [[[0, -3], [10, -3], [10, 3], [0, 3]]], yta: 60 }], gang: [] });
+  assert.ok(!('vagytor' in U.platspaket(Object.assign({ vagar: { linjer: vag.linjer } }, bas))));
+
+  // träden (0.11.0): art, modell och variation, och de detaljerade modellerna som används
+  const T3 = require('../js/trad3d.js');
+  const pt = JSON.parse(JSON.stringify(U.platspaket(Object.assign({ trad3d: T3, trad: [
+    { x: r.xmin + 10, y: r.ymin + 10, zMark: 100, hojd: 20, krona: 4 },
+    { x: r.xmin + 20, y: r.ymin + 10, zMark: 100, hojd: 9, krona: 7, art: 'bjork', andrat: true },
+  ] }, bas))));
+  assert.strictEqual(pt.trad[0].art, 'gran'); assert.ok(['gran', 'gran2'].includes(pt.trad[0].modell));
+  assert.strictEqual(pt.trad[1].art, 'bjork'); assert.strictEqual(pt.trad[1].modell, 'bjork'); assert.strictEqual(pt.trad[1].andrat, true);
+  assert.ok(pt.trad[0].vrid >= 0 && pt.trad[0].vrid < 360 && pt.trad[0].ljus > 0.8);
+  assert.deepStrictEqual(Object.keys(pt.tradmodeller).sort(), [pt.trad[0].modell, 'bjork'].sort());
+  const m = pt.tradmodeller.bjork, mp = U.avkodaFloat32(m.pos), mf = U.avkodaFloat32(m.farg);
+  assert.strictEqual(mp.length, m.antal * 3); assert.strictEqual(mf.length, m.antal * 3); assert.strictEqual(m.antal % 3, 0);
+  // z uppåt: från 0 (stammens fot) till ungefär 1
+  let zmin = Infinity, zmax = -Infinity;
+  for (let i = 2; i < mp.length; i += 3) { zmin = Math.min(zmin, mp[i]); zmax = Math.max(zmax, mp[i]); }
+  assert.ok(zmin > -0.05 && zmin < 0.05 && zmax > 0.9 && zmax < 1.1, `modellens höjd ${zmin}–${zmax}`);
   console.log('utbyte: alla test godkända');
 })().catch(e => { console.error(e); process.exit(1); });

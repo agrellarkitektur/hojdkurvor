@@ -44,6 +44,20 @@ def bild(x0, x1, ar):
         rgb[2] += 40                                         # grannrutan något blåare, så att skarven syns
     xs = x0 + (np.arange(w) + 0.5) * S
     ys = Y1 - (np.arange(h) + 0.5) * S
+    # grå vägbanor längs två av testserverns OSM-vägar (0.11.0), så att mätningen av bredden prövas:
+    # Bygatan 7,5 m bred och Skolvägen 5 m, Bygatan 1 m norr om OSM-linjen
+    X, Yg = np.meshgrid(xs, ys)
+    for pts, bredd, dy in ((((539400, 6427640), (539600, 6427660), (539800, 6427650), (540100, 6427700)), 7.5, 1.0),
+                           (((539700, 6427500), (539705, 6427650), (539720, 6427900)), 5.0, 0.0)):
+        d = np.full(X.shape, np.inf, dtype=np.float32)
+        for (ax, ay), (bx, by) in zip(pts[:-1], pts[1:]):
+            ay += dy; by += dy
+            vx, vy = bx - ax, by - ay
+            t = np.clip(((X - ax) * vx + (Yg - ay) * vy) / (vx * vx + vy * vy), 0, 1)
+            d = np.minimum(d, np.hypot(X - ax - t * vx, Yg - ay - t * vy))
+        vag = d <= bredd / 2
+        for k, c in enumerate((112, 110, 106)):
+            rgb[k][vag] = c + (skugga[vag] - 0.75) * 30
     linje_x = np.abs(xs - np.round(xs / 10) * 10) < 0.5
     linje_y = np.abs((ys - 5) - np.round((ys - 5) / 10) * 10) < 0.5
     rod, bla = (255, 0, 0), (0, 0, 255)

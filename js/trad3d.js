@@ -286,8 +286,11 @@
   }
   const artFor = typ => Object.keys(VARIANTER).find(a => VARIANTER[a].includes(typ)) || 'lov';
 
-  /** Gissad art ur formen: smala och höga blir granar, höga med smalare krona tallar, resten lövträd. */
+  /** Arter man kan välja för ett träd (0.11.0); björk är ett lövträd med egen modell. */
+  const EGNA = ['gran', 'tall', 'lov', 'bjork'];
+  /** Gissad art ur formen: smala och höga blir granar, höga med smalare krona tallar, resten lövträd. Ett valt t.art går före. */
   function art(t) {
+    if (EGNA.includes(t.art)) return t.art === 'bjork' ? 'lov' : t.art;
     const h = t.hojd, k = Math.max(0.5, t.krona), kvot = h / k;
     if (kvot >= 2.4) return 'gran';
     if (h >= 12 && kvot >= 1.6) return 'tall';
@@ -302,10 +305,12 @@
 
   /** Modelltypen för ett träd: arten ur formen och en variant ur läget (ungefär var tredje lövträd blir en björk). */
   function typ(t) {
+    if (t.art === 'bjork') return 'bjork';
     const a = art(t), v = variation(t).variant, lista = VARIANTER[a];
+    if (a === 'lov' && t.art === 'lov') return v < 0.6 ? 'lov' : 'lov2';
     if (a === 'lov') return v < 0.4 ? 'lov' : v < 0.65 ? 'lov2' : 'bjork';
     return lista[Math.min(lista.length - 1, Math.floor(v * lista.length))];
   }
 
-  return { modell, art, typ, artFor, variation, ARTER: ['gran', 'tall', 'lov'], TYPER, VARIANTER };
+  return { modell, art, typ, artFor, variation, ARTER: ['gran', 'tall', 'lov'], EGNA, TYPER, VARIANTER };
 }));

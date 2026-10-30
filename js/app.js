@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.10.1';
+  const FILVERSION = '0.11.0';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -158,13 +158,13 @@
   const RES = [
     ['kurvor', 'Höjdkurvor', 'linje', 'sw-kurva', 'u'], ['hojdpunkter', 'Höjdpunkter', 'ring', 'annot', 'u'], ['byggnader', 'Byggnader', 'yta', 'sw-byggnad', 'u'], ['fastigheter', 'Fastighetsgränser', 'linje', 'sw-fastighet', 'u'], ['marktacke', 'Marktäcke', 'yta', 'sw-mark', 'u'], ['ortofoto', 'Ortofoto', 'yta', 'sw-orto', 'u'],
     ['hom', 'Höjd över mark', 'yta', 'sw-hom', 'u'], ['trad', 'Träd', 'ring', 'sw-trad', 'u'], ['stompunkter', 'Stompunkter', 'ring', 'sw-sp', 'u'],
-    ['vagar', 'Vägar (OSM)', 'linje', 'sw-vag', 'u'], ['laser', 'Laserpunkter', 'yta', 'sw-skugga', 'u'],
+    ['vagar', 'Vägar (OSM)', 'linje', 'sw-vag', 'u'], ['gangvagar', 'Gång- och cykelvägar (OSM)', 'linje', 'sw-vag-gang', 'u'], ['laser', 'Laserpunkter', 'yta', 'sw-skugga', 'u'],
     ['lutning', 'Lutning', 'yta', 'sw-lutning', 'a'], ['skyfall', 'Skyfall', 'yta', 'sw-skyfall', 'a'], ['skugga', 'Skugga', 'yta', 'sw-skugga', 'a'],
     ['lamningar', 'Lämningar (RAÄ)', 'ring', 'sw-lamning', 'a'], ['natur', 'Skyddad natur', 'linje', 'sw-natur', 'a'], ['oversvamning', 'Översvämning', 'yta', 'sw-skyfall', 'a'],
   ];
   const GRUPPER = { u: 'UNDERLAG', a: 'ANALYS', s: 'SKISS' };
   const TRAD_VID_HUS = 1;   // meter: träd så nära en byggnad räknas som byggnaden
-  const UTSKRIVBARA = new Set(['ortofoto', 'kurvor', 'byggnader', 'fastigheter', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
+  const UTSKRIVBARA = new Set(['ortofoto', 'kurvor', 'byggnader', 'fastigheter', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'gangvagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
   const resultat = {};
   karta.createPane('ortofotoPane').style.zIndex = 350;      // under kurvor och andra resultat
   const dolda = new Set(lager.las('localStorage', 'terrang-dolda-lager') || []);
@@ -908,7 +908,7 @@
     return Object.assign({}, t, {
       sol: pa && k.sol && t.sol, horisont: pa && k.sol && t.sol && t.horisont, skugga: pa && k.sol && t.skugga,
       lutning: pa && k.terrang, skyfall: pa && k.vatten, skydd: pa && k.skydd,
-      byggnadshojd: !!(t.byggnader && t.byggnadshojd),
+      byggnadshojd: !!(t.byggnader && t.byggnadshojd), vagytor: !!(t.vagar && t.vagytor),
     });
   }
 
@@ -1564,7 +1564,7 @@
           await laddaSkript('vendor/sql-wasm.js');
           const kommuner = kommunerIUtsnitt();
           if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
-          const bygg = await Byggnad.hamta({
+          const byggAlla = await Byggnad.hamta({
             kommuner, utsnitt: r, epsg, auth,
             logg: t => visaStatus(t),
             framsteg: f => delFramsteg('byggnader', f * 0.8),
@@ -1572,8 +1572,10 @@
           });
           delFramsteg('byggnader', 0.85, 'Räknar byggnadshöjder');
           if (pz && val.byggnadshojd) ytaFardig = Analys.ytmodell(dtmZ, pz);
-          Byggnad.hojder(bygg, ytaFardig || { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length) });
-          senaste.byggnader = bygg;
+          Byggnad.hojder(byggAlla, ytaFardig || { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length) });
+          // hus som användaren har dolt (0.11.0) kommer inte med någonstans
+          const { byggnader: bygg, dolda: byggDolda } = Objektval.tillampaHus(byggAlla, husval());
+          senaste.byggnaderAlla = byggAlla; senaste.byggnader = bygg; senaste.byggnaderDolda = byggDolda;
           const medHojd = bygg.filter(b => b.hojd != null).length;
           filer[`byggnader/${namn}_byggnader_lokal.dxf`] = Byggnad.dxf(bygg, r, X0, Y0, Z0);
           filer[`byggnader/${namn}_byggnader_sweref.dxf`] = Byggnad.dxf(bygg, r, 0, 0, 0);
@@ -1595,6 +1597,7 @@
           extraInfo.push('', 'BEFINTLIGA BYGGNADER',
             '  Källa: Byggnad Nedladdning, vektor. © Lantmäteriet. Bearbetad: utvald och omprojicerad. Licens: CC BY 4.0.',
             `  ${bygg.length} byggnader som berör utsnittet. Hela fotavtrycket är med, även den del som ligger utanför.`,
+            ...(byggDolda.length ? [`  ${byggDolda.length} ${byggDolda.length === 1 ? 'byggnad är dold' : 'byggnader är dolda'} i 3D-vyn och är inte med i filerna eller skuggorna.`] : []),
             ...Object.keys(per).sort().map(t => `    ${t}: ${per[t]} st (lager ${Byggnad.lagerFor({ typ: t })})`),
             '  Fotavtrycken är oftast inmätta vid takkanten, inte vid fasaden, och kan avvika någon meter.',
             '  Kontrollera mot grundkartan eller en inmätning innan de används för projektering.',
@@ -1610,10 +1613,7 @@
                 + (ifcLokal.utanHojd ? ` ${ifcLokal.utanHojd} ${ifcLokal.utanHojd === 1 ? 'byggnad' : 'byggnader'} utan höjd är inte med.` : '')
               : '  IFC: ingen byggnad har höjd, så ingen IFC-fil skapades. Kryssa i Höjd ur laserdatan.');
           sammanExtra.push(['Byggnader', `${bygg.length} st` + (medHojd ? `, ${medHojd} med höjd` : '')]);
-          const bstil = () => ({ color: farg('byggnad'), weight: 1.2, fillColor: farg('byggnad'), fillOpacity: 0.35 });
-          const bgrp = L.featureGroup(bygg.map(b => L.polygon([b.fotavtryck.map(tt), ...b.hal.map(h => h.map(tt))], bstil())
-            .bindTooltip(esc(Byggnad.beteckning(b)) + (b.hojd != null ? `, ${fmt(b.hojd, 1)} m` : ''), { sticky: true })));
-          visaResultatLager('byggnader', bgrp, () => bgrp.setStyle(bstil()));
+          visaByggnaderKarta(bygg, tt);
           visaLagring();
         } catch (e) { console.error(e); varningar.push('Byggnader: ' + e.message); }
       }
@@ -1629,12 +1629,15 @@
           if (!pz) varningar.push(`Skuggstudien räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
           senaste.yta = y;
           const iUtsnitt = t => t.x >= r.xmin && t.x <= r.xmax && t.y >= r.ymin && t.y <= r.ymax;
+          let tradDolda = [];
           if (val.trad && pz) {
             delFramsteg('analys', 0.1, 'Söker träd');
             const hittade = Analys.hittaTrad(y, pz).filter(iUtsnitt);
             // träd på eller precis vid en byggnad är oftast takkanten, inte ett träd (0.8.0)
-            const { kvar: trad, borttagna: tradVidHus } = Byggnad.tradVidByggnader(hittade, senaste.byggnader, TRAD_VID_HUS);
-            senaste.trad = trad;
+            const { kvar: tradHittade, borttagna: tradVidHus } = Byggnad.tradVidByggnader(hittade, senaste.byggnader, TRAD_VID_HUS);
+            // egna val för enskilda träd (0.11.0): dolda och rättade
+            const { trad, dolda } = Objektval.tillampaTrad(tradHittade, tradval());
+            senaste.tradAlla = tradHittade; senaste.trad = trad; tradDolda = dolda;
             filer[`trad/${namn}_trad_lokal.dxf`] = Analys.dxfTrad(trad, r, X0, Y0, Z0);
             filer[`trad/${namn}_trad_sweref.dxf`] = Analys.dxfTrad(trad, r, 0, 0, 0);
             filer[`trad/${namn}_trad.csv`] = Analys.csvTrad(trad, X0, Y0, Z0);
@@ -1646,13 +1649,11 @@
                   ? `  ${tradVidHus.length} ${tradVidHus.length === 1 ? 'topp' : 'toppar'} på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad ${tradVidHus.length === 1 ? 'är borttagen' : 'är borttagna'}, eftersom det oftast är byggnaden som är inmätt.`
                   : `  Ingen topp låg på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad.`)
                 : '  Kryssa i Befintliga byggnader för att också ta bort toppar som ligger på eller precis vid en byggnad.',
+              ...(dolda.length || trad.some(t => t.andrat) ? [`  Ändrade i 3D-vyn: ${dolda.length} dolda, ${trad.filter(t => t.andrat).length} med egen höjd, krona eller art. De dolda är inte med i filerna eller skuggorna.`] : []),
               '  DXF-lager: TRAD_KRONA (cirkel på toppens höjd), TRAD_STAM (punkt på marken), TRAD_TEXT (höjd).',
               '  CSV: id;x;y;x_lokal;y_lokal;markhojd;tradhojd_m;topphojd;kronbredd_m (höjder minus Z0).');
             sammanExtra.push(['Träd', `${fmt(trad.length)} st`]);
-            const tstil = () => ({ color: farg('trad'), weight: 1, fillColor: farg('trad'), fillOpacity: 0.15 });
-            const tgrp = L.featureGroup(trad.map(t => L.circle(tt([t.x, t.y]), Object.assign({ radius: t.krona / 2 }, tstil()))
-              .bindTooltip(`${fmt(t.hojd)} m högt, krona ${fmt(t.krona, 1)} m`, { sticky: true })));
-            visaResultatLager('trad', tgrp, () => tgrp.setStyle(tstil()));
+            visaTradKarta(trad, tt);
           }
           if (pz) {   // bilden behövs också som lager i utskriften
             const homC = Utskrift.homCanvas(y.ndsm, y.W, y.H), bild = homC.toDataURL('image/png');
@@ -1675,6 +1676,8 @@
               sammanExtra.push(['Höjd över mark', 'bild med världsfil']);
             }
           }
+          // dolda träd och hus (0.11.0) kastar ingen skugga
+          if (pz) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: senaste.byggnaderDolda || [] });
           if (senaste.volymer.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, senaste.volymer);
           if (val.skugga) {
             delFramsteg('analys', 0.3, 'Räknar skuggor');
@@ -1987,19 +1990,39 @@
           delFramsteg('vagar', 0, 'Hämtar vägar från OpenStreetMap');
           const v = await Vagar.hamta({ utsnitt: r, epsg });
           senaste.vagar = v;
-          filer[`vagar/${namn}_vagar_lokal.dxf`] = Vagar.dxf(v, r, X0, Y0);
-          filer[`vagar/${namn}_vagar_sweref.dxf`] = Vagar.dxf(v, r, 0, 0);
+          // utkast till vägytorna (0.11.0): bredden ur OSM, mätt i ortofotot eller schablonen
+          if (val.vagytor) {
+            delFramsteg('vagar', 0.4, senaste.ortofoto ? 'Mäter vägarnas bredd i ortofotot' : 'Ritar vägytorna');
+            await new Promise(res => setTimeout(res, 0));
+            v.ytor = Vagar.utkast(v, r, ortofotoPixlar(senaste.ortofoto));
+          }
+          const slagFil = { bil: 'vagar', gang: 'gangvagar' };
+          for (const sl of ['bil', 'gang']) {
+            if (!v.linjer.some(l => l.slag === sl)) continue;
+            filer[`vagar/${namn}_${slagFil[sl]}_lokal.dxf`] = Vagar.dxf(v, r, X0, Y0, { slag: sl });
+            filer[`vagar/${namn}_${slagFil[sl]}_sweref.dxf`] = Vagar.dxf(v, r, 0, 0, { slag: sl });
+          }
           const per = {};
           v.linjer.forEach(l => { per[l.lager] = (per[l.lager] || 0) + 1; });
+          const antalSlag = sl => v.linjer.filter(l => l.slag === sl).length;
+          const y = v.ytor, kallText = { osm: 'bredd i OSM', korfalt: 'antal körfält i OSM', ortofoto: 'mätt i ortofotot', schablon: 'schablon för vägtypen' };
+          const perKalla = {};
+          if (y) y.profiler.forEach(p => { perKalla[p.kalla] = (perKalla[p.kalla] || 0) + 1; });
           extraInfo.push('', 'VÄGAR',
             '  Källa: © OpenStreetMap-bidragsgivare, licens ODbL (www.openstreetmap.org/copyright). Hämtat via Overpass API.',
             '  Mittlinjer i 2D (Z = 0), klippta mot utsnittet. Kvaliteten varierar; kontrollera mot grundkartan.',
+            `  Bilvägar och gångvägar i varsin fil: _vagar (${antalSlag('bil')} linjer) och _gangvagar (${antalSlag('gang')} linjer).`,
             '  DXF-lager:',
-            ...Object.keys(Vagar.KLASSER).filter(k => per[k]).map(k => `    ${k}: ${Vagar.KLASSER[k].namn}, ${per[k]} linjer`));
-          sammanExtra.push(['Vägar', `${v.linjer.length} linjer (OSM)`]);
-          const vStil = l => ({ color: farg(l.lager === 'VAG_GANG_CYKEL' ? 'vag-gang' : 'vag'), weight: l.lager === 'VAG_HUVUDVAG' ? 3 : l.lager === 'VAG_GANG_CYKEL' ? 1.2 : 2, dashArray: l.lager === 'VAG_GANG_CYKEL' ? '4 3' : null, opacity: 0.85 });
-          const vGrp = L.featureGroup(v.linjer.map(l => L.polyline(l.pts.map(tt), vStil(l)).bindTooltip(`${l.namn || l.typ}`, { sticky: true })));
-          visaResultatLager('vagar', vGrp, () => vGrp.eachLayer(pl => { const l = v.linjer[vGrp.getLayers().indexOf(pl)]; if (l) pl.setStyle(vStil(l)); }));
+            ...Object.keys(Vagar.KLASSER).filter(k => per[k]).map(k => `    ${k}: ${Vagar.KLASSER[k].namn}, ${per[k]} linjer`),
+            ...(y ? [
+              '  VÄGYTOR (utkast): slutna polylinjer i lagren VAG_YTA_BIL och VAG_YTA_GANG, ihopslagna i korsningarna.',
+              '    Bredden kommer från OSM:s bredd eller antal körfält när de finns, annars en schablon för vägtypen.'
+                + (y.medBild ? ' Bilvägarnas bredd och läge är mätta i ortofotot där vägbanan syns (färgen mitt på vägen följs ut till kanterna).' : ' Kryssa i Ortofoto för att mäta bilvägarnas bredd i bilden.'),
+              `    ${Object.keys(perKalla).map(k => `${perKalla[k]} ${perKalla[k] === 1 ? 'väg' : 'vägar'}: ${kallText[k]}`).join(', ')}.`,
+              '    Träd över vägen, skuggor, parkeringar och infarter gör mätningen osäker. Ett utkast att rätta, inte en inmätning.',
+            ] : []));
+          sammanExtra.push(['Vägar', `${antalSlag('bil')} bilvägar, ${antalSlag('gang')} gångvägar (OSM)` + (y ? `, ytor ${y.matta ? `(${y.matta} mätta i ortofotot)` : '(schablon)'}` : '')]);
+          visaVagar(v, tt);
         } catch (e) { console.error(e); varningar.push('Vägar: ' + e.message); }
       }
 
@@ -2245,7 +2268,7 @@
           hom: syns('hom') ? s.hom : null,
           skuggor: sk ? { konturer: sk.konturer, etikett: `${KORT_DATUM[sk.k]} kl ${sk.etikett}` } : null,
           trad: syns('trad') ? s.trad : null, stompunkter: syns('stompunkter') ? s.stompunkter : null, dz: s.Z0 || 0,
-          vagar: syns('vagar') ? s.vagar : null,
+          vagar: vagarTillUtskrift(s.vagar, syns),
           lutning: syns('lutning') && s.lutning ? s.lutning.bild : null, skyfall: syns('skyfall') ? s.skyfall : null,
           hojdpunkter: syns('hojdpunkter') ? s.hojdpunkter : null, volymer: synlig('volymer') && s.volymer && s.volymer.length ? s.volymer : null,
           sektioner: s.sektioner && synlig('sektioner') ? s.sektioner : null,
@@ -2253,7 +2276,7 @@
         },
         titel: { projekt: s.projekt || s.namn, kommun: s.kommun, system: `Koordinatsystem ${T.zon(s.epsg).namn}`, datum: idag(),
           ekvidistans: `${String(s.intervall).replace('.', ',')} m`,
-          kallor: ['© Lantmäteriet (CC BY 4.0)', bakgrund ? 'Bakgrund: Topografisk webbkarta' : '', syns('vagar') ? 'Vägar © OpenStreetMap-bidragsgivare (ODbL)' : '', 'Underlag för tidiga skeden.'].filter(Boolean).join('. ') },
+          kallor: ['© Lantmäteriet (CC BY 4.0)', bakgrund ? 'Bakgrund: Topografisk webbkarta' : '', syns('vagar') || syns('gangvagar') ? 'Vägar © OpenStreetMap-bidragsgivare (ODbL)' : '', 'Underlag för tidiga skeden.'].filter(Boolean).join('. ') },
       });
       await skrivFil(mal, new Blob([pdf], { type: 'application/pdf' }), filnamn);
       if (bgFel) lagerpanelMeddelande('PDF:en skapades utan bakgrundskarta: ' + bgFel);
@@ -2438,6 +2461,49 @@
   });
 
   // ------------------------------------------------------------------
+  // Vägar (0.11.0): bilvägar och gångvägar som egna lager, vägytorna som utkast
+  // ------------------------------------------------------------------
+  /** Ortofotots pixlar för mätningen av vägarna: { rgba, W, H, x0, y1, s }, eller null. */
+  function ortofotoPixlar(o) {
+    if (!o || !o.canvas) return null;
+    try {
+      const d = o.canvas.getContext('2d').getImageData(0, 0, o.W, o.H);
+      return { rgba: d.data, W: o.W, H: o.H, x0: o.x0, y1: o.y1, s: o.s };
+    } catch (e) { console.error(e); return null; }
+  }
+  /** Ritar vägarna på kartan: bilvägar i lagret Vägar, gång- och cykelvägar i sitt eget, ytorna under linjerna. */
+  function visaVagar(v, tt) {
+    const gang = l => l.slag === 'gang';
+    const vStil = l => ({ color: farg(gang(l) ? 'vag-gang' : 'vag'), weight: l.lager === 'VAG_HUVUDVAG' ? 3 : gang(l) ? 1.2 : 2, dashArray: gang(l) ? '4 3' : null, opacity: 0.85 });
+    const yStil = sl => ({ color: farg(sl === 'gang' ? 'vag-gang' : 'vag'), weight: 0.8, fillColor: farg(sl === 'gang' ? 'vag-gang' : 'vag'), fillOpacity: 0.18, opacity: 0.7, interactive: false });
+    for (const [id, sl] of [['vagar', 'bil'], ['gangvagar', 'gang']]) {
+      const linjer = v.linjer.filter(l => l.slag === sl), ytor = v.ytor ? v.ytor[sl] : [];
+      if (!linjer.length && !ytor.length) { visaResultatLager(id, null); continue; }
+      const yGrp = ytor.map(p => L.polygon(p.ringar.map(ring => ring.map(tt)), yStil(sl)));
+      const lGrp = linjer.map(l => L.polyline(l.pts.map(tt), vStil(l)).bindTooltip(esc(l.namn || l.typ), { sticky: true }));
+      const grp = L.featureGroup(yGrp.concat(lGrp));
+      visaResultatLager(id, grp, () => { yGrp.forEach(p => p.setStyle(yStil(sl))); lGrp.forEach((pl, i) => pl.setStyle(vStil(linjer[i]))); });
+    }
+  }
+  /** Vägarnas linjer till 3D-vyn för ett slag: mittlinjerna och ytornas kanter (slutna). */
+  function vagar3d(v, sl) {
+    if (!v) return null;
+    const ut = v.linjer.filter(l => (l.slag || Vagar.slag(l.lager)) === sl).map(l => l.pts);
+    if (v.ytor) for (const p of v.ytor[sl] || []) for (const ring of p.ringar) ut.push(ring.concat([ring[0]]));
+    return ut.length ? ut : null;
+  }
+  /** Vägarna till utskriften: bara de lager som syns. */
+  function vagarTillUtskrift(v, syns) {
+    if (!v) return null;
+    const med = sl => syns(sl === 'gang' ? 'gangvagar' : 'vagar');
+    if (!med('bil') && !med('gang')) return null;
+    return {
+      linjer: v.linjer.filter(l => med(l.slag || Vagar.slag(l.lager))),
+      ytor: v.ytor ? { bil: med('bil') ? v.ytor.bil : [], gang: med('gang') ? v.ytor.gang : [] } : null,
+    };
+  }
+
+  // ------------------------------------------------------------------
   // cad-apa
   // ------------------------------------------------------------------
   const CADAPA = window.TERRANG_CADAPA || KONF.cadApaUrl || '../cad-apa/';   // TERRANG_CADAPA: testkrok
@@ -2458,23 +2524,12 @@
     });
   }
   /**
-   * Ortofotot till cad-apa (0.10.1), nedskalat till högst ORTO_CADAPA_PX pixlar på längsta sidan
-   * (cad-apa skalar sina egna ortofoton likadant). Räknas en gång per underlag.
+   * Ortofotot till cad-apa: sedan 0.11.0 i full upplösning, samma bild som i zip:en (högst 8 192 pixlar
+   * per sida, se Ortofoto.upplosning). 0.10.1 skalade ned till 4 096 pixlar.
    */
-  const ORTO_CADAPA_PX = 4096;
   function ortofotoTillCadApa(s) {
     const o = s && s.ortofoto;
-    if (!o) return null;
-    if (o.cadapa) return o.cadapa;
-    const f = Math.ceil(Math.max(o.W, o.H) / ORTO_CADAPA_PX);
-    if (f <= 1 || !o.canvas) return (o.cadapa = { bild: o.bild, x0: o.x0, y1: o.y1, s: o.s, W: o.W, H: o.H, ar: o.ar });
-    const W = Math.ceil(o.W / f), H = Math.ceil(o.H / f), s2 = o.s * f;
-    const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const cx = c.getContext('2d'); cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, W, H);
-    cx.imageSmoothingQuality = 'high';
-    cx.drawImage(o.canvas, 0, 0, o.W, o.H, 0, 0, o.W / f, o.H / f);
-    const kx = o.x0 - o.s / 2, ky = o.y1 + o.s / 2;     // bildens övre vänstra hörn
-    return (o.cadapa = { bild: c.toDataURL('image/jpeg', 0.88), x0: kx + s2 / 2, y1: ky - s2 / 2, s: s2, W, H, ar: o.ar });
+    return o ? { bild: o.bild, x0: o.x0, y1: o.y1, s: o.s, W: o.W, H: o.H, ar: o.ar } : null;
   }
   /** Påminnelse om fastighetsgränser och byggnader som inte kom med, eftersom de inte var ikryssade (0.8.0). */
   function saknasTillCadApa() {
@@ -2666,20 +2721,25 @@
     $('vy3d').hidden = false;
     document.body.classList.add('vy3d-oppen');
     try {
-      await Promise.all(['js/trad3d.js', 'js/bild3d.js', 'js/volym3d.js'].map(laddaSkript));
+      await Promise.all([!window.Trad3D && 'js/trad3d.js', 'js/bild3d.js', 'js/volym3d.js'].filter(Boolean).map(laddaSkript));
       await laddaSkript('js/vy3d.js');
       varnaGamlaFiler('vy3d.js', Vy3D.version);
       if (vy3d) vy3d.stang();
       stoppaUppspelning();
       let sol = null;
       try { const m = utsnittsMitt(); sol = { lat: m.lat, lon: m.lon, konvergens: m.konvergens, tid: soltid3d() }; } catch (e) { console.error(e); }
-      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad, volymer: s.volymer, befintliga: s.byggnader ? Byggnad.somVolymer(s.byggnader) : null,
+      // alla träd och hus, de dolda markerade, så att de kan visas igen (0.11.0)
+      trad3d = s.trad ? Objektval.tillampaTrad(s.tradAlla || s.trad, tradval(), { medDolda: true }).trad : [];
+      const husAlla = s.byggnaderAlla || s.byggnader;
+      const takm = takmodeller3d(husAlla);
+      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad ? trad3d : null, volymer: s.volymer, befintliga: husAlla ? Byggnad.somVolymer(husAlla) : null,
+        doldaHus: doldaHus3d(),
         fotavtryck: s.byggnader ? s.byggnader.filter(b => b.hojd == null).map(b => b.fotavtryck) : null,
-        kurvor: s.kurvor, fastigheter: s.fastigheter ? s.fastigheter.granser.map(g => g.pts) : null, vagar: s.vagar ? s.vagar.linjer.map(l => l.pts) : null,
-        kurva: kurvfarg3d(), fastighet: farg('fastighet'), vag: farg('vag'), byggnad: farg('byggnad'),
+        kurvor: s.kurvor, fastigheter: s.fastigheter ? s.fastigheter.granser.map(g => g.pts) : null, vagar: vagar3d(s.vagar, 'bil'), gangvagar: vagar3d(s.vagar, 'gang'),
+        kurva: kurvfarg3d(), fastighet: farg('fastighet'), vag: farg('vag'), vagGang: farg('vag-gang'), byggnad: farg('byggnad'),
         befintlig: sparadFarg('terrang-3d-husfarg', '#b9b3aa'), skissfarg: sparadFarg('terrang-3d-skissfarg', farg('annot')),
         konturfarg: sparadFarg('terrang-3d-konturfarg', '#000000'), gransfarg: sparadFarg('terrang-3d-gransfarg', farg('fastighet')),
-        takmodeller: takmodeller3d(s.byggnader),
+        takmodeller: takm,
         tradniva: ['detaljerad', 'realistisk'].includes(lager.las('localStorage', 'terrang-3d-trad')) ? 'detaljerad' : 'enkel',
         konturer: lager.las('localStorage', 'terrang-3d-konturer') === true, sol,
         bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
@@ -2692,11 +2752,14 @@
       vy3d.lyssna(visaLage3d);
       vy3d.lyssnaSkiss(skissFran3d);
       vy3d.lyssnaHus(visaTakpanel);
-      stangTakpanel();
+      vy3d.lyssnaTrad(visaTradpanel);
+      stangTakpanel(); stangTradpanel();
+      objektAndrade = false;
+      uppdateraDoldaKnapp();
       $('vy3d-nyform').hidden = true; vantarPlacering = false;
       skissFran3d({ typ: 'start', redigera: false, toppvy: false, vald: null, kanAngra: false, kanGoraOm: false });
       visaLage3d({ lage: 'oversikt' });
-      if (window.TERRANG_TEST) { window.TERRANG_TEST.vy3d = vy3d; window.TERRANG_TEST.byggnader = s.byggnader; }   // testkrokar: kamerans läge och takformerna i gränssnittstestet
+      if (window.TERRANG_TEST) { window.TERRANG_TEST.vy3d = vy3d; window.TERRANG_TEST.byggnader = s.byggnader; window.TERRANG_TEST.senaste = () => state.senaste; }   // testkrokar: kamerans läge och takformerna i gränssnittstestet
       ritaLager3d();
       $('vy3d-kurvfarg-rad').hidden = vy3d.kurvfarg() == null;
       $('vy3d-kurvfarg').value = kurvfarg3d();
@@ -2723,13 +2786,17 @@
   const stang3d = () => {
     stoppaUppspelning(); $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen');
     const andrad = vy3d && vy3d.skissAndrad();
-    stangTakpanel(); $('vy3d-modell').hidden = true;
+    stangTakpanel(); stangTradpanel(); $('vy3d-modell').hidden = true;
     if (vy3d) { vy3d.stang(); vy3d = null; }
     if (andrad) {
       // underlaget i zip:en och PDF:en har den gamla skissen tills man skapar igen
       $('skapa').classList.remove('gjord');
       visaStatus('Skissen är ändrad i 3D-vyn. Välj Skapa igen för att räkna om skuggor, horisont och filer med den.');
+    } else if (objektAndrade) {
+      $('skapa').classList.remove('gjord');
+      visaStatus('Träd eller hus är ändrade i 3D-vyn. Kartan och platsen till cad-apa har ändringen; välj Skapa igen för att få den i filerna och skuggorna.');
     }
+    objektAndrade = false;
     $('visa-3d').focus();
   };
   $('vy3d-stang').addEventListener('click', stang3d);
@@ -2738,12 +2805,13 @@
     // Esc avbryter först en placering eller ett val i modelleringen, och stänger takpanelen
     if (vy3d && vy3d.avbryt()) return;
     if (!$('vy3d-tak').hidden) { stangTakpanel(); return; }
+    if (!$('vy3d-trad').hidden) { stangTradpanel(); return; }
     // i ögonhöjd går Esc tillbaka till översikten, annars stänger den vyn
     if (vy3d && vy3d.lage() !== 'oversikt') { vy3d.oversikt(); return; }
     stang3d();
   });
   /** En knapp per lager som finns i 3D-vyn, i samma ordning varje gång. Valen sparas så länge fliken är öppen. */
-  const LAGER3D = [['kurvor', 'Höjdkurvor'], ['trad', 'Träd'], ['byggnader', 'Byggnader'], ['fastigheter', 'Fastighetsgränser'], ['vagar', 'Vägar'], ['skiss', 'Skiss']];
+  const LAGER3D = [['kurvor', 'Höjdkurvor'], ['trad', 'Träd'], ['byggnader', 'Byggnader'], ['fastigheter', 'Fastighetsgränser'], ['vagar', 'Vägar'], ['gangvagar', 'Gångvägar'], ['skiss', 'Skiss']];
   function ritaLager3d() {
     const rad = $('vy3d-lager'), finns = vy3d.lager(), dolda = lager.las('sessionStorage', 'terrang-3d-dolda') || [];
     rad.querySelectorAll('[data-lager3d]').forEach(b => b.remove());
@@ -2764,7 +2832,7 @@
       rad.append(b);
     }
     // övriga val sist i raden, i samma ordning varje gång
-    rad.append($('vy3d-orto'), $('vy3d-takformer'), $('vy3d-konturer'), $('vy3d-tradniva-rad'), $('vy3d-skuggor'), $('vy3d-kurvfarg-rad'), $('vy3d-husfarg-rad'), $('vy3d-konturfarg-rad'), $('vy3d-gransfarg-rad'), $('vy3d-skissfarg-rad'));
+    rad.append($('vy3d-orto'), $('vy3d-takformer'), $('vy3d-konturer'), $('vy3d-tradniva-rad'), $('vy3d-skuggor'), $('vy3d-dolda'), $('vy3d-kurvfarg-rad'), $('vy3d-husfarg-rad'), $('vy3d-konturfarg-rad'), $('vy3d-gransfarg-rad'), $('vy3d-skissfarg-rad'));
   }
   $('vy3d-orto').addEventListener('click', () => {
     if (!vy3d) return;
@@ -2880,6 +2948,127 @@
   $('tak-stang').addEventListener('click', stangTakpanel);
 
   // ------------------------------------------------------------------
+  // Enskilda träd och hus (0.11.0): dölja dem som är uppenbart fel och rätta träden. Valen sparas i
+  // webbläsaren (Objektval). Kartan och platsen till cad-apa följer med direkt, filerna och skuggorna
+  // när man skapar underlaget igen.
+  // ------------------------------------------------------------------
+  const TRADVAL = 'terrang-tradval', HUSVAL = 'terrang-husval';
+  function tradval() { const v = lager.las('localStorage', TRADVAL); return v && typeof v === 'object' ? v : {}; }
+  function husval() { const v = lager.las('localStorage', HUSVAL); return v && typeof v === 'object' ? v : {}; }
+  const ARTNAMN = { gran: 'Gran', tall: 'Tall', lov: 'Lövträd', bjork: 'Björk' };
+  let trad3d = [], tradVal = null, objektAndrade = false;
+  /** Träden på kartan, som cirklar med kronans storlek. */
+  function visaTradKarta(trad, tt) {
+    const tstil = () => ({ color: farg('trad'), weight: 1, fillColor: farg('trad'), fillOpacity: 0.15 });
+    const tgrp = L.featureGroup(trad.map(t => L.circle(tt([t.x, t.y]), Object.assign({ radius: t.krona / 2 }, tstil()))
+      .bindTooltip(`${fmt(t.hojd)} m högt, krona ${fmt(t.krona, 1)} m` + (t.andrat ? ' (ändrat)' : ''), { sticky: true })));
+    visaResultatLager('trad', tgrp, () => tgrp.setStyle(tstil()));
+  }
+  /** Byggnaderna på kartan. */
+  function visaByggnaderKarta(bygg, tt) {
+    const bstil = () => ({ color: farg('byggnad'), weight: 1.2, fillColor: farg('byggnad'), fillOpacity: 0.35 });
+    const bgrp = L.featureGroup(bygg.map(b => L.polygon([b.fotavtryck.map(tt), ...b.hal.map(h => h.map(tt))], bstil())
+      .bindTooltip(esc(Byggnad.beteckning(b)) + (b.hojd != null ? `, ${fmt(b.hojd, 1)} m` : ''), { sticky: true })));
+    visaResultatLager('byggnader', bgrp, () => bgrp.setStyle(bstil()));
+  }
+  /** Efter en ändring: träd och hus i state.senaste och på kartan. */
+  function objektAndrat() {
+    const s = state.senaste;
+    if (!s) return;
+    const tt = tillLatLng(s.epsg);
+    if (s.tradAlla) { s.trad = Objektval.tillampaTrad(s.tradAlla, tradval()).trad; if (resultat.trad) visaTradKarta(s.trad, tt); }
+    if (s.byggnaderAlla) {
+      const h = Objektval.tillampaHus(s.byggnaderAlla, husval());
+      s.byggnader = h.byggnader; s.byggnaderDolda = h.dolda;
+      if (resultat.byggnader) visaByggnaderKarta(s.byggnader, tt);
+    }
+    objektAndrade = true;
+    uppdateraDoldaKnapp();
+  }
+  /** Husen som är dolda i 3D-vyn (id som i Byggnad.somVolymer). */
+  const doldaHus3d = () => { const v = husval(); return [...hus3d].filter(([, b]) => b.id != null && v[String(b.id)] && v[String(b.id)].dolt).map(([id]) => id); };
+  function uppdateraDoldaKnapp() {
+    const n = trad3d.filter(t => t.dolt).length + doldaHus3d().length;
+    $('vy3d-dolda').hidden = !vy3d || n === 0;
+    $('vy3d-dolda').textContent = `Visa dolda (${n})`;
+  }
+  function stangTradpanel() {
+    $('vy3d-trad').hidden = true; tradVal = null;
+    if (vy3d) vy3d.markeraTrad(null);
+  }
+  function visaTradpanel(i) {
+    const t = i != null && trad3d[i];
+    if (!t || !vy3d || vy3d.modellera()) { stangTradpanel(); return; }
+    tradVal = i;
+    vy3d.markeraTrad(i);
+    const e = Objektval.valFor(t, tradval());
+    $('trad-art').value = e.art || '';
+    $('trad-hojd').value = decimal(e.hojd, 1); $('trad-krona').value = decimal(e.krona, 1);
+    const ra = t.ra || t;
+    $('trad-hojd').placeholder = decimal(ra.hojd, 1); $('trad-krona').placeholder = decimal(ra.krona, 1);
+    tradInfo(t);
+    $('vy3d-trad').hidden = false;
+  }
+  function tradInfo(t) {
+    const ra = t.ra || t, typ = Trad3D.typ(t);
+    $('trad-info').textContent = `${ARTNAMN[typ === 'bjork' ? 'bjork' : Trad3D.art(t)]}, ${decimal(t.hojd, 1)} m högt, krona ${decimal(t.krona, 1)} m.`
+      + (t.andrat ? ` Ur laserdatan: ${decimal(ra.hojd, 1)} m, krona ${decimal(ra.krona, 1)} m.` : ' Allt ur laserdatan; arten är gissad ur formen.');
+  }
+  /** Sparar valet för det valda trädet och byter det i vyn. */
+  function sparaTrad(e) {
+    const s = state.senaste, i = tradVal;
+    if (i == null || !s) return;
+    const orig = (s.tradAlla || s.trad)[i];
+    if (!orig) return;
+    const val = Objektval.sattTrad(tradval(), orig, e);
+    lager.spara('localStorage', TRADVAL, val);
+    trad3d[i] = Objektval.tillampaTrad([orig], val, { medDolda: true }).trad[0];
+    vy3d.bytTrad(i, trad3d[i]);
+    objektAndrat();
+    if (trad3d[i].dolt) stangTradpanel(); else tradInfo(trad3d[i]);
+  }
+  const tradFalt = () => {
+    const e = {}, h = tal($('trad-hojd').value), k = tal($('trad-krona').value);
+    if ($('trad-art').value) e.art = $('trad-art').value;
+    if (h > 0) e.hojd = h;
+    if (k > 0) e.krona = k;
+    return e;
+  };
+  ['trad-art', 'trad-hojd', 'trad-krona'].forEach(id => $(id).addEventListener('change', () => sparaTrad(tradFalt())));
+  $('trad-aterstall').addEventListener('click', () => { ['trad-art', 'trad-hojd', 'trad-krona'].forEach(id => { $(id).value = ''; }); sparaTrad({}); });
+  $('trad-dolj').addEventListener('click', () => sparaTrad(Object.assign(tradFalt(), { dolt: true })));
+  $('trad-stang').addEventListener('click', stangTradpanel);
+  $('hus-dolj').addEventListener('click', () => {
+    if (!husVal || !vy3d) return;
+    const nyckel = husNyckel(husVal.b), id = husVal.id;
+    if (!nyckel) { $('tak-info').textContent = 'Huset saknar id, så det går inte att dölja.'; return; }
+    const v = husval(); v[nyckel] = { dolt: true };
+    lager.spara('localStorage', HUSVAL, v);
+    stangTakpanel();
+    vy3d.doljHus(id, true);
+    objektAndrat();
+  });
+  /** Visar igen alla träd och hus som är dolda här (de andra ändringarna av träden står kvar). */
+  $('vy3d-dolda').addEventListener('click', () => {
+    const s = state.senaste;
+    if (!vy3d || !s) return;
+    const val = tradval();
+    trad3d.forEach((t, i) => {
+      if (!t.dolt) return;
+      const orig = (s.tradAlla || s.trad)[i], e = Objektval.valFor(t, val);
+      delete e.dolt;
+      Objektval.sattTrad(val, orig, e);
+      trad3d[i] = Objektval.tillampaTrad([orig], val, { medDolda: true }).trad[0];
+      vy3d.bytTrad(i, trad3d[i]);
+    });
+    lager.spara('localStorage', TRADVAL, val);
+    const hv = husval();
+    for (const id of doldaHus3d()) { delete hv[String(hus3d.get(id).id)]; vy3d.doljHus(id, false); }
+    lager.spara('localStorage', HUSVAL, hv);
+    objektAndrat();
+  });
+
+  // ------------------------------------------------------------------
   // Modellera i 3D-vyn (0.10.0): volymer med mått, snäpp och länkar. Skissen går tillbaka till
   // state.volymer (och listan under 04 Skiss) och följer med i analyserna nästa gång man skapar.
   // ------------------------------------------------------------------
@@ -2896,7 +3085,7 @@
     $('vy3d-modellera').setAttribute('aria-pressed', String(ut.redigera));
     $('vy3d-toppvy').setAttribute('aria-pressed', String(ut.toppvy));
     $('vy3d-modell').hidden = !ut.redigera;
-    if (ut.redigera) stangTakpanel();
+    if (ut.redigera) { stangTakpanel(); stangTradpanel(); }
     $('vy3d-angra').disabled = !ut.kanAngra; $('vy3d-gorom').disabled = !ut.kanGoraOm;
     if (vantarPlacering && !ut.placerar) { vantarPlacering = false; $('vy3d-nyform').hidden = true; visaLage3d({ lage: vy3d ? vy3d.lage() : 'oversikt' }); }
     const v = ut.vald, f = $('vy3d-valdform');

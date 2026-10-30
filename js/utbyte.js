@@ -54,8 +54,29 @@
       p.terrang.rutnat = { x0: g.x0, y1: g.y1, s: g.s, W: g.W, H: g.H, z: kodaFloat32(g.z instanceof Float32Array ? g.z : Float32Array.from(g.z)) };
     }
     if (o.kurvor) p.terrang.kurvor = o.kurvor.map(k => ({ z: avrunda(k.h != null ? k.h : k.z, 3), lager: k.lager, sluten: !!k.sluten, pts: runda(k.pts) }));
-    if (o.trad) p.trad = o.trad.map(t => ({ x: avrunda(t.x), y: avrunda(t.y), mark: avrunda(t.zMark != null ? t.zMark : t.mark, 2), hojd: avrunda(t.hojd, 1), krona: avrunda(t.krona, 1) }));
-    if (o.vagar) p.vagar = o.vagar.linjer.map(l => ({ typ: l.typ, lager: l.lager, namn: l.namn || '', pts: runda(l.pts) }));
+    if (o.trad) {
+      // arten, modellen och variationen (0.11.0), så att cad-apa kan rita samma träd som 3D-vyn
+      const T3 = o.trad3d || (typeof Trad3D !== 'undefined' ? Trad3D : null);
+      p.trad = o.trad.map(t => {
+        const ut = { x: avrunda(t.x), y: avrunda(t.y), mark: avrunda(t.zMark != null ? t.zMark : t.mark, 2), hojd: avrunda(t.hojd, 1), krona: avrunda(t.krona, 1) };
+        if (T3) {
+          const v = T3.variation(t), typ = T3.typ(t);
+          Object.assign(ut, { art: typ === 'bjork' ? 'bjork' : T3.art(t), modell: typ, vrid: avrunda(v.vrid * 180 / Math.PI, 1), ljus: avrunda(v.ljus, 2) });
+        }
+        if (t.andrat) ut.andrat = true;
+        return ut;
+      });
+      if (T3 && p.trad.length) p.tradmodeller = tradmodeller(T3, new Set(p.trad.map(t => t.modell)));
+    }
+    if (o.vagar) {
+      p.vagar = o.vagar.linjer.map(l => ({ typ: l.typ, lager: l.lager, slag: l.slag || (l.lager === 'VAG_GANG_CYKEL' ? 'gang' : 'bil'), namn: l.namn || '', pts: runda(l.pts) }));
+      // vägytorna (0.11.0): utkast, slutna ringar (första yttre, resten hål) per slag
+      const y = o.vagar.ytor;
+      if (y && ((y.bil && y.bil.length) || (y.gang && y.gang.length))) {
+        const poly = lista => (lista || []).map(q => ({ ringar: q.ringar.map(runda), yta: avrunda(q.yta, 1) }));
+        p.vagytor = { bil: poly(y.bil), gang: poly(y.gang) };
+      }
+    }
     if (o.stompunkter) p.stompunkter = o.stompunkter.map(s => ({ namn: s.namn || s.id, x: s.x, y: s.y, z: s.z }));
     if (o.volymer && o.volymer.length) p.volymer = o.volymer.map(volymTillPaket);
     if (o.byggnader && o.byggnader.length) {
@@ -84,6 +105,19 @@
       p.licens = p.licens.replace(/^(Höjddata[^©]*?) ©/, (m, a) => a.replace(/ och ([^,]+)$/, ', $1') + ' och ortofoto ©');
     }
     return p;
+  }
+  /**
+   * De detaljerade trädmodellerna (0.11.0): en per typ, 1 m hög och 1 m bred med stammens fot i origo,
+   * x österut, y norrut och z uppåt. Trianglar utan index (tre hörn i rad), färg per hörn (linjär rgb 0–1).
+   */
+  function tradmodeller(T3, typer) {
+    const ut = {};
+    for (const typ of typer) {
+      const m = T3.modell(typ, 'detaljerad'), n = m.pos.length, pos = new Float32Array(n);
+      for (let i = 0; i < n; i += 3) { pos[i] = avrunda(m.pos[i], 4); pos[i + 1] = avrunda(-m.pos[i + 2], 4); pos[i + 2] = avrunda(m.pos[i + 1], 4); }
+      ut[typ] = { antal: n / 3, pos: kodaFloat32(pos), farg: kodaFloat32(m.farg instanceof Float32Array ? m.farg : Float32Array.from(m.farg)) };
+    }
+    return ut;
   }
   const volymTillPaket = v => ({ id: v.id, namn: v.namn, fotavtryck: runda(v.fotavtryck), golv: avrunda(v.golv), takfot: avrunda(v.takfot), takform: v.takform || 'platt', taklutning: v.taklutning || 0, nockriktning: v.nockriktning == null ? null : v.nockriktning });
 
@@ -185,5 +219,5 @@
     }
   }
 
-  return { PLATS, SKISS, VERSION, platspaket, glesa, lasSkiss, lokalTillZon, kodaFloat32, avkodaFloat32, skickaTillCadApa, lyssnaPaCadApa, volymTillPaket, nyttId };
+  return { PLATS, SKISS, VERSION, platspaket, tradmodeller, glesa, lasSkiss, lokalTillZon, kodaFloat32, avkodaFloat32, skickaTillCadApa, lyssnaPaCadApa, volymTillPaket, nyttId };
 }));

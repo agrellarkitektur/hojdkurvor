@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>höjdkurvor.se – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.10.1"></script>
-  <script src="js/tema.js?v=0.10.1"></script>
-  <script src="js/synpunkter.js?v=0.10.1" defer></script>
+  <script src="js/version.js?v=0.11.0"></script>
+  <script src="js/tema.js?v=0.11.0"></script>
+  <script src="js/synpunkter.js?v=0.11.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.10.1">
-  <link rel="stylesheet" href="app.css?v=0.10.1">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.11.0">
+  <link rel="stylesheet" href="app.css?v=0.11.0">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -286,7 +286,11 @@
             </div>
             <div class="tillval">
               <label class="kryss"><input type="checkbox" name="tillval" value="vagar"> Vägar från OpenStreetMap</label>
-              <p class="hjalp">Vägar, gator och gångvägar som mittlinjer i DXF, ett lager per vägtyp. Kvaliteten varierar; kontrollera mot grundkartan.</p>
+              <p class="hjalp">Vägar och gator i en DXF och gång- och cykelvägar i en annan, som mittlinjer med ett lager per vägtyp. Kvaliteten varierar; kontrollera mot grundkartan.</p>
+              <div class="underval">
+                <label class="kryss"><input type="checkbox" name="tillval" value="vagytor" checked> Utkast till vägytor</label>
+                <p class="hjalp">Vägarnas ytor som slutna linjer, ihopslagna i korsningarna. Bredden tas ur OSM eller en schablon för vägtypen. Med Ortofoto ikryssat mäts bilvägarnas bredd och läge i bilden. Ett utkast att rätta.</p>
+              </div>
             </div>
           </details>
 
@@ -433,7 +437,7 @@
 
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
     <div class="vy3d-huvud" id="vy3d-huvud" data-lage="oversikt"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, eller välj Flytta och dra för att flytta vyn. Högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-modellera" aria-pressed="false" title="Rita och ändra volymer i skissen">Modellera</button><button type="button" class="knapp liten" id="vy3d-toppvy" aria-pressed="false" title="Rakt uppifrån med norr uppåt">Toppvy</button><button type="button" class="knapp liten" id="vy3d-flytta" aria-pressed="false">Flytta</button><button type="button" class="knapp liten" id="vy3d-ogon" aria-pressed="false">Ögonhöjd</button><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-aterstall">Återställ vy</button><span class="vy3d-bild" role="group" aria-label="Spara bild"><button type="button" class="knapp liten" id="vy3d-bild">Spara bild</button><button type="button" class="knapp liten" id="vy3d-ai">Bild för AI</button><label class="vy3d-farg">Storlek <select id="vy3d-skala"><option value="2">2 ×</option><option value="3" selected>3 ×</option><option value="4">4 ×</option></select></label></span><button type="button" class="knapp liten" id="vy3d-val" aria-expanded="false" aria-controls="vy3d-lager vy3d-sol">Val</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
-      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-konturer" aria-pressed="false" hidden>Konturer</button><button type="button" class="knapp liten" id="vy3d-takformer" aria-pressed="false" hidden title="Taken ur laserdatan i stället för platta tak. Ungefärliga, inte inmätta.">Takformer</button><label class="vy3d-farg" id="vy3d-tradniva-rad" hidden>Träd <select id="vy3d-tradniva"><option value="enkel">Enkla</option><option value="detaljerad">Detaljerade</option></select></label><button type="button" class="knapp liten" id="vy3d-skuggor" aria-pressed="false" hidden>Skuggor</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-husfarg-rad" hidden>Husfärg <input type="color" id="vy3d-husfarg" value="#b9b3aa"></label><label class="vy3d-farg" id="vy3d-konturfarg-rad" hidden>Konturfärg <input type="color" id="vy3d-konturfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-gransfarg-rad" hidden>Gränsfärg <input type="color" id="vy3d-gransfarg" value="#b0306a"></label><label class="vy3d-farg" id="vy3d-skissfarg-rad" hidden>Skissfärg <input type="color" id="vy3d-skissfarg" value="#e85528"></label></div>
+      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-konturer" aria-pressed="false" hidden>Konturer</button><button type="button" class="knapp liten" id="vy3d-takformer" aria-pressed="false" hidden title="Taken ur laserdatan i stället för platta tak. Ungefärliga, inte inmätta.">Takformer</button><label class="vy3d-farg" id="vy3d-tradniva-rad" hidden>Träd <select id="vy3d-tradniva"><option value="enkel">Enkla</option><option value="detaljerad">Detaljerade</option></select></label><button type="button" class="knapp liten" id="vy3d-skuggor" aria-pressed="false" hidden>Skuggor</button><button type="button" class="knapp liten" id="vy3d-dolda" hidden title="Visa igen alla träd och hus som du har dolt här">Visa dolda</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-husfarg-rad" hidden>Husfärg <input type="color" id="vy3d-husfarg" value="#b9b3aa"></label><label class="vy3d-farg" id="vy3d-konturfarg-rad" hidden>Konturfärg <input type="color" id="vy3d-konturfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-gransfarg-rad" hidden>Gränsfärg <input type="color" id="vy3d-gransfarg" value="#b0306a"></label><label class="vy3d-farg" id="vy3d-skissfarg-rad" hidden>Skissfärg <input type="color" id="vy3d-skissfarg" value="#e85528"></label></div>
       <div class="vy3d-sol" id="vy3d-sol" role="group" aria-label="Solen" hidden><label class="vy3d-farg">Datum <input type="date" id="vy3d-datum"></label><label class="vy3d-farg vy3d-tid">Tid <input type="range" id="vy3d-tid" min="0" max="1435" step="5" value="720"><output id="vy3d-tidtext" for="vy3d-tid">12:00</output></label><button type="button" class="knapp liten" id="vy3d-spela" aria-pressed="false">Spela dagen</button><button type="button" class="knapp liten" data-solhandelse="mars">Vårdagjämning</button><button type="button" class="knapp liten" data-solhandelse="juni">Midsommar</button><button type="button" class="knapp liten" data-solhandelse="dec">Vintersolstånd</button><button type="button" class="knapp liten" id="vy3d-tradskuggor" aria-pressed="true" hidden>Trädskuggor</button><span class="vy3d-solinfo" id="vy3d-solinfo" aria-live="polite"></span></div></div>
     <div class="vy3d-yta" id="vy3d-yta"></div>
     <aside class="vy3d-panel" id="vy3d-modell" hidden aria-label="Modellera">
@@ -464,34 +468,43 @@
       <div class="vy3d-rad"><label class="vy3d-falt">Takform <select id="tak-form"><option value="">Ur laserdatan</option><option value="sadeltak">Sadeltak</option><option value="valmat">Valmat</option><option value="pulpettak">Pulpettak</option><option value="platt">Platt</option></select></label><label class="vy3d-falt">Lutning, ° <input id="tak-lutning" inputmode="decimal" placeholder="ur laserdatan"></label></div>
       <div class="vy3d-rad"><label class="vy3d-falt">Nock <select id="tak-riktning"><option value="">Längs huset</option><option value="tvars">Tvärs huset</option></select></label><label class="vy3d-falt">Nockhöjd, RH 2000 <input id="tak-nock" inputmode="decimal" placeholder="ur laserdatan"></label></div>
       <label class="vy3d-kryss" id="tak-vand-rad" hidden><input type="checkbox" id="tak-vand"> Höga sidan åt andra hållet</label>
-      <div class="vy3d-verktyg"><button type="button" class="knapp liten" id="tak-aterstall">Ur laserdatan</button></div>
+      <div class="vy3d-verktyg"><button type="button" class="knapp liten" id="tak-aterstall">Ur laserdatan</button><button type="button" class="knapp liten" id="hus-dolj" title="Huset tas bort ur 3D-vyn, skuggorna, filerna och platsen till cad-apa">Dölj huset</button></div>
+    </aside>
+    <aside class="vy3d-panel vy3d-takpanel" id="vy3d-trad" hidden aria-label="Träd">
+      <div class="vy3d-panelhuvud"><strong>Träd</strong><button type="button" class="sp-stang" id="trad-stang" aria-label="Stäng">×</button></div>
+      <p class="vy3d-not" id="trad-info"></p>
+      <div class="vy3d-rad"><label class="vy3d-falt">Art <select id="trad-art"><option value="">Ur formen</option><option value="gran">Gran</option><option value="tall">Tall</option><option value="lov">Lövträd</option><option value="bjork">Björk</option></select></label><label class="vy3d-falt">Höjd, m <input id="trad-hojd" inputmode="decimal"></label></div>
+      <div class="vy3d-rad"><label class="vy3d-falt">Kronbredd, m <input id="trad-krona" inputmode="decimal"></label></div>
+      <div class="vy3d-verktyg"><button type="button" class="knapp liten" id="trad-aterstall">Ur laserdatan</button><button type="button" class="knapp liten" id="trad-dolj" title="Trädet tas bort ur 3D-vyn, skuggorna, filerna och platsen till cad-apa">Dölj trädet</button></div>
     </aside>
   </div>
 
-  <script src="config.js?v=0.10.1"></script>
-  <script src="vendor/leaflet/leaflet.js?v=0.10.1"></script>
-  <script src="vendor/proj4.js?v=0.10.1"></script>
-  <script src="vendor/geotiff.js?v=0.10.1"></script>
-  <script src="vendor/jszip.min.js?v=0.10.1"></script>
-  <script src="js/karna.js?v=0.10.1"></script>
-  <script src="js/dxf.js?v=0.10.1"></script>
-  <script src="js/sol.js?v=0.10.1"></script>
-  <script src="js/laser.js?v=0.10.1"></script>
-  <script src="js/ortofoto.js?v=0.10.1"></script>
-  <script src="js/kommunfil.js?v=0.10.1"></script>
-  <script src="js/marktacke.js?v=0.10.1"></script>
-  <script src="js/byggnad.js?v=0.10.1"></script>
-  <script src="js/ifc.js?v=0.10.1"></script>
-  <script src="js/fastighet.js?v=0.10.1"></script>
-  <script src="js/stompunkt.js?v=0.10.1"></script>
-  <script src="js/analys.js?v=0.10.1"></script>
-  <script src="js/vagar.js?v=0.10.1"></script>
-  <script src="js/platsanalys.js?v=0.10.1"></script>
-  <script src="js/geodata.js?v=0.10.1"></script>
-  <script src="js/utbyte.js?v=0.10.1"></script>
-  <script src="js/topowebb.js?v=0.10.1"></script>
-  <script src="js/utskrift.js?v=0.10.1"></script>
-  <script src="js/platsanalysblad.js?v=0.10.1"></script>
-  <script src="js/app.js?v=0.10.1"></script>
+  <script src="config.js?v=0.11.0"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.11.0"></script>
+  <script src="vendor/proj4.js?v=0.11.0"></script>
+  <script src="vendor/geotiff.js?v=0.11.0"></script>
+  <script src="vendor/jszip.min.js?v=0.11.0"></script>
+  <script src="js/karna.js?v=0.11.0"></script>
+  <script src="js/dxf.js?v=0.11.0"></script>
+  <script src="js/sol.js?v=0.11.0"></script>
+  <script src="js/laser.js?v=0.11.0"></script>
+  <script src="js/ortofoto.js?v=0.11.0"></script>
+  <script src="js/kommunfil.js?v=0.11.0"></script>
+  <script src="js/marktacke.js?v=0.11.0"></script>
+  <script src="js/byggnad.js?v=0.11.0"></script>
+  <script src="js/ifc.js?v=0.11.0"></script>
+  <script src="js/fastighet.js?v=0.11.0"></script>
+  <script src="js/stompunkt.js?v=0.11.0"></script>
+  <script src="js/analys.js?v=0.11.0"></script>
+  <script src="js/vagar.js?v=0.11.0"></script>
+  <script src="js/platsanalys.js?v=0.11.0"></script>
+  <script src="js/geodata.js?v=0.11.0"></script>
+  <script src="js/trad3d.js?v=0.11.0"></script>
+  <script src="js/objektval.js?v=0.11.0"></script>
+  <script src="js/utbyte.js?v=0.11.0"></script>
+  <script src="js/topowebb.js?v=0.11.0"></script>
+  <script src="js/utskrift.js?v=0.11.0"></script>
+  <script src="js/platsanalysblad.js?v=0.11.0"></script>
+  <script src="js/app.js?v=0.11.0"></script>
 </body>
 </html>

@@ -139,11 +139,13 @@
     // De detaljerade har flera varianter per art (0.10.0), en InstancedMesh per typ.
     // ------------------------------------------------------------------
     const Trad3D = window.Trad3D;
-    const trad = (data.trad || []).map(t => {
+    // ett träd i scenen; dolt (0.11.0) = användaren har dolt det, det ritas inte men finns kvar så att det kan visas igen
+    const tradIScen = t => {
       const v = Trad3D ? Trad3D.variation(t) : { vrid: 0, ljus: 1 };
       return { x: t.x - cx, z: -(t.y - cy), b: (t.zMark != null ? t.zMark : t.mark) - zmin, h: Math.max(1, t.hojd), kr: Math.max(1, t.krona),
-        art: Trad3D ? Trad3D.art(t) : 'lov', typ: Trad3D ? Trad3D.typ(t) : 'lov', vrid: v.vrid, ljus: v.ljus };
-    });
+        art: Trad3D ? Trad3D.art(t) : 'lov', typ: Trad3D ? Trad3D.typ(t) : 'lov', vrid: v.vrid, ljus: v.ljus, dolt: !!t.dolt };
+    };
+    const trad = (data.trad || []).map(tradIScen);
     const tradMat = new THREE.MeshLambertMaterial({ vertexColors: true });
     const NIVAER = ['enkel', 'detaljerad'];
     const tradMesh = { enkel: {}, detaljerad: {} };   // nivå → art eller typ → InstancedMesh
@@ -163,16 +165,13 @@
       tg.setAttribute('color', new THREE.BufferAttribute(m.farg, 3));
       return tg;
     };
-    if (tradLager) {
-      for (const art of Trad3D.ARTER) {
-        const antal = trad.filter(t => t.art === art).length;
-        if (antal) tradMesh.enkel[art] = instanser(geometri(Trad3D.modell(art, 'enkel')), tradMat, antal);
-      }
-      for (const typ of Trad3D.TYPER) {
-        const antal = trad.filter(t => t.typ === typ).length;
-        if (antal) tradMesh.detaljerad[typ] = instanser(geometri(Trad3D.modell(typ, 'detaljerad')), tradMat, antal);
-      }
-    }
+    /** Ser till att det finns en mesh för nivån och typen (eller arten) med plats för minst antal träd. */
+    const tradMeshFor = (niva, nyckel, antal) => {
+      const im = tradMesh[niva][nyckel];
+      if (im && im.instanceMatrix.count >= antal) return im;
+      if (im) { tradLager.remove(im); im.geometry.dispose(); im.dispose(); }
+      return (tradMesh[niva][nyckel] = instanser(geometri(Trad3D.modell(nyckel, niva)), tradMat, Math.max(antal, im ? Math.ceil(im.instanceMatrix.count * 1.5) : antal)));
+    };
     const allaTradMesh = () => Object.values(tradMesh.enkel).concat(Object.values(tradMesh.detaljerad));
     // detaljerade träd närmast kameran, enkla längre bort (mobilen orkar färre)
     const MAX_NARA = mobil ? 600 : 4000, NARA_MOBIL = 250;
@@ -184,12 +183,18 @@
       if (tradniva !== 'enkel') {
         // i toppvyn räknas avståndet från mitten av det som syns
         const fran = toppvy ? mal : kp;
-        const avst = trad.map((t, i) => [Math.hypot(t.x - fran.x, t.z - fran.z), i]).sort((a, b) => a[0] - b[0]);
+        const avst = trad.map((t, i) => [t.dolt ? Infinity : Math.hypot(t.x - fran.x, t.z - fran.z), i]).sort((a, b) => a[0] - b[0]);
         for (let n = 0; n < Math.min(MAX_NARA, avst.length); n++) { if (mobil && avst[n][0] > NARA_MOBIL) break; nara.add(avst[n][1]); }
       }
+      // först hur många av varje sort, så att varje mesh har plats
+      const sort = trad.map((t, i) => (t.dolt ? null : nara.has(i) ? ['detaljerad', t.typ] : ['enkel', t.art]));
+      const behov = new Map();
+      sort.forEach(k => { if (k) behov.set(k.join(':'), (behov.get(k.join(':')) || 0) + 1); });
+      for (const [k, n] of behov) { const [niva, nyckel] = k.split(':'); tradMeshFor(niva, nyckel, n); }
       const raknare = new Map();
       trad.forEach((t, i) => {
-        const im = nara.has(i) ? tradMesh.detaljerad[t.typ] : tradMesh.enkel[t.art];
+        if (!sort[i]) return;
+        const im = tradMesh[sort[i][0]][sort[i][1]];
         const n = raknare.get(im) || 0; raknare.set(im, n + 1);
         m.compose(new THREE.Vector3(t.x, t.b, t.z), q.setFromAxisAngle(ax, t.vrid), new THREE.Vector3(t.kr, t.h, t.kr));
         im.setMatrixAt(n, m); im.setColorAt(n, c.setScalar(t.ljus));
@@ -226,6 +231,8 @@
       nyttLager('fastigheter').add(l);
     }
     if (data.vagar && data.vagar.length) nyttLager('vagar').add(draperade(data.vagar, data.vag || '#6b6258', 0.15));
+    // gång- och cykelvägar i ett eget lager (0.11.0)
+    if (data.gangvagar && data.gangvagar.length) nyttLager('gangvagar').add(draperade(data.gangvagar, data.vagGang || '#8a7f72', 0.12));
 
     // konturer: svarta kanter på byggnaderna och skissen, av från början (0.9.0)
     const konturMat = new THREE.LineBasicMaterial({ color: data.konturfarg || '#000000' });
@@ -981,10 +988,17 @@
         if (valdId) { valdId = null; senasteSnapp = null; ritaSkiss(); bygOverlagg(); meddelaSkiss('val'); }
         return true;
       }
-      // utanför modelleringen: ett klick på ett befintligt hus väljer det (egen takform)
-      const t = husLager && traffA(e.clientX, e.clientY, husLager.children, 'hus');
-      husLyssnare.forEach(f => { try { f(t ? t.id : null); } catch (err) { console.error(err); } });
-      return !!t;
+      // utanför modelleringen: ett klick på ett befintligt hus väljer det (egen takform), på ett träd trädet (0.11.0)
+      return valjObjekt(e.clientX, e.clientY);
+    };
+    const valjObjekt = (sx, sy) => {
+      const t = husLager && traffA(sx, sy, husLager.children, 'hus');
+      const tr = traffTrad(sx, sy);
+      const husD = t ? straleFran(sx, sy).ray.origin.distanceTo(t.punkt) : Infinity;
+      const tradVald = !!tr && tr.d < husD;
+      husLyssnare.forEach(f => { try { f(t && !tradVald ? t.id : null); } catch (err) { console.error(err); } });
+      tradLyssnare.forEach(f => { try { f(tradVald ? tr.i : null); } catch (err) { console.error(err); } });
+      return !!t || tradVald;
     };
     const redigeraTangent = e => {
       if (!redigera || /^(INPUT|SELECT|TEXTAREA)$/.test((e.target && e.target.tagName) || '')) return;
@@ -1087,6 +1101,69 @@
       });
       markeratHus = id;
     };
+
+    // ------------------------------------------------------------------
+    // Enskilda träd och hus (0.11.0): välja, markera, ändra och dölja
+    // ------------------------------------------------------------------
+    /** Trädet som strålen träffar först: en lodrät cylinder per träd (nästan kronans radie), billigare än modellerna. */
+    const traffTrad = (sx, sy) => {
+      if (!tradLager || !synligt(tradLager)) return null;
+      const r = straleFran(sx, sy).ray, f = faktor;
+      const ox = r.origin.x, oy = r.origin.y / f, oz = r.origin.z, dx = r.direction.x, dy = r.direction.y / f, dz = r.direction.z;
+      let bast = null;
+      trad.forEach((t, i) => {
+        if (t.dolt) return;
+        const R = Math.max(0.6, t.kr * 0.45), ex = ox - t.x, ez = oz - t.z;
+        const a = dx * dx + dz * dz, b = 2 * (ex * dx + ez * dz), c = ex * ex + ez * ez - R * R;
+        const kand = [];
+        if (a > 1e-12) { const D = b * b - 4 * a * c; if (D >= 0) { const q = Math.sqrt(D); kand.push((-b - q) / (2 * a), (-b + q) / (2 * a)); } }
+        if (Math.abs(dy) > 1e-12) kand.push((t.b + t.h - oy) / dy);
+        for (const u of kand) {
+          if (!(u > 0) || (bast && u >= bast.d)) continue;
+          const px = ex + u * dx, pz = ez + u * dz, py = oy + u * dy;
+          if (px * px + pz * pz <= R * R + 1e-6 && py >= t.b - 0.1 && py <= t.b + t.h + 0.1) bast = { i, d: u };
+        }
+      });
+      return bast;
+    };
+    const tradLyssnare = [];
+    const tradMarkMat = new THREE.LineBasicMaterial({ color: '#ffb000', depthTest: false, transparent: true });
+    let tradMark = null, markeratTrad = null;
+    /** Ringar vid marken och toppen och fyra lodräta linjer runt det valda trädet. */
+    const markeraTrad = i => {
+      if (tradMark) { tradMark.parent.remove(tradMark); tradMark.geometry.dispose(); tradMark = null; }
+      markeratTrad = i == null ? null : i;
+      const t = i != null && trad[i];
+      if (!t || t.dolt || !tradLager) return;
+      const p = [], n = 32, R = t.kr / 2, y0 = t.b + 0.1, y1 = t.b + t.h;
+      const pk = a => [t.x + R * Math.cos(a), t.z + R * Math.sin(a)];
+      for (const y of [y0, y1]) for (let k = 0; k < n; k++) { const [a, b] = pk(k / n * 2 * Math.PI), [c, d] = pk((k + 1) / n * 2 * Math.PI); p.push(a, y, b, c, y, d); }
+      for (let k = 0; k < 4; k++) { const [a, b] = pk(k / 4 * 2 * Math.PI + 0.4); p.push(a, y0, b, a, y1, b); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+      tradMark = new THREE.LineSegments(g, tradMarkMat); tradMark.renderOrder = 10;
+      tradLager.add(tradMark);
+    };
+    /** Döljer eller visar ett befintligt hus: objekten tas ur lagret, så att de inte syns, kastar skugga eller kan väljas. */
+    const doldaHus = new Map();
+    const doljHus = (id, dolt) => {
+      if (!husLager) return false;
+      if (dolt) {
+        if (doldaHus.has(id)) return true;
+        const obj = husLager.children.filter(o => o.userData.hus === id);
+        if (!obj.length) return false;
+        obj.forEach(o => husLager.remove(o));
+        doldaHus.set(id, obj);
+        if (markeratHus === id) markeraHus(null);
+      } else {
+        const obj = doldaHus.get(id);
+        if (!obj) return false;
+        obj.forEach(o => husLager.add(o));
+        doldaHus.delete(id);
+      }
+      skuggaOm();
+      return true;
+    };
+    (data.doldaHus || []).forEach(id => doljHus(id, true));
 
     const storleksandring = () => { renderer.setSize(W(), H()); kamera.aspect = W() / H(); kamera.updateProjectionMatrix(); placera(); };
     window.addEventListener('resize', storleksandring);
@@ -1288,6 +1365,28 @@
         if (ok && markeratHus === id) markeraHus(id);
         return ok;
       },
+      // --- enskilda träd och hus (0.11.0)
+      /** Anropas med trädets index (i data.trad) när man klickar på ett träd, null utanför. */
+      lyssnaTrad(fn) { tradLyssnare.push(fn); },
+      /** Markerar ett träd (null tar bort markeringen). */
+      markeraTrad(i) { markeraTrad(i); },
+      /** Byter träd i (samma form som i data.trad, zonens koordinater); t.dolt döljer det. */
+      bytTrad(i, t) {
+        if (!trad[i] || !t) return false;
+        trad[i] = tradIScen(t);
+        placeraTrad();
+        if (markeratTrad === i) markeraTrad(trad[i].dolt ? null : i);
+        return true;
+      },
+      /** Döljer (dolt = true) eller visar ett befintligt hus. */
+      doljHus(id, dolt) { return doljHus(id, !!dolt); },
+      /** Klickar på ett träd som om man klickade i vyn (för testerna): siktar mitt på kronan. */
+      klickaTrad(i) {
+        const t = trad[i];
+        if (!t) return null;
+        const q = tillSkarm([t.x + cx, -t.z + cy, t.b + zmin + t.h * 0.7]), b = el.getBoundingClientRect();
+        return q ? valjObjekt(b.left + q.x, b.top + q.y) : null;
+      },
       /** Klickar på ett hus som om man klickade i vyn (för testerna); zonens koordinater. */
       klickaHus(x, y) {
         const p = tillSkarm([x, y, (markZ(x, y))]), b = el.getBoundingClientRect();
@@ -1389,5 +1488,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.10.1' };
+  window.Vy3D = { visa, version: '0.11.0' };
 }());

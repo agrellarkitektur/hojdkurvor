@@ -178,6 +178,16 @@
       doc.restoreGraphicsState();
     }
     // vägar
+    if (g.vagar && g.vagar.ytor) {
+      // vägytorna (0.11.0): ljus fyllning under linjerna, gårdar och rondeller som hål
+      doc.saveGraphicsState();
+      doc.setGState(new doc.GState({ opacity: 0.22 }));
+      doc.setFillColor(...F.vag);
+      for (const p of (g.vagar.ytor.bil || []).concat(g.vagar.ytor.gang || [])) { p.ringar.forEach(ring => L(ring, true)); doc.fillEvenOdd(); }
+      doc.restoreGraphicsState();
+      doc.setDrawColor(...F.vag); doc.setLineWidth(0.1);
+      for (const p of (g.vagar.ytor.bil || []).concat(g.vagar.ytor.gang || [])) p.ringar.forEach(ring => { L(ring, true); doc.stroke(); });
+    }
     if (g.vagar && g.vagar.linjer.length) {
       for (const l of g.vagar.linjer) {
         const st = VAGSTIL[l.lager] || VAGSTIL.VAG_OVRIG;
@@ -379,7 +389,9 @@
     if (g.volymer) rader.push([(x, y) => { doc.setDrawColor(...F.annot); doc.setLineWidth(0.35); doc.rect(x, y - 1.1, 7, 2.2, 'S'); }, 'Skissad volym']);
     if (g.trad) rader.push([(x, y) => { doc.setDrawColor(...F.trad); doc.setLineWidth(0.12); doc.circle(x + 3.5, y, 1.1, 'S'); }, 'Träd (krona)']);
     if (g.stompunkter) rader.push([(x, y) => { doc.setDrawColor(...F.sp); doc.setFillColor(255, 255, 255); doc.setLineWidth(0.3); doc.circle(x + 3.5, y, 0.9, 'FD'); }, 'Stompunkt']);
-    if (g.vagar) rader.push([(x, y) => { doc.setDrawColor(...F.vag); doc.setLineWidth(0.4); doc.line(x, y, x + 7, y); }, 'Väg, mittlinje (OSM)']);
+    if (g.vagar && g.vagar.linjer.some(l => l.lager !== 'VAG_GANG_CYKEL')) rader.push([(x, y) => { doc.setDrawColor(...F.vag); doc.setLineWidth(0.4); doc.line(x, y, x + 7, y); }, 'Väg, mittlinje (OSM)']);
+    if (g.vagar && g.vagar.linjer.some(l => l.lager === 'VAG_GANG_CYKEL')) rader.push([(x, y) => { doc.setDrawColor(...F.vag); doc.setLineWidth(VAGSTIL.VAG_GANG_CYKEL.b); doc.setLineDashPattern(VAGSTIL.VAG_GANG_CYKEL.streck || [], 0); doc.line(x, y, x + 7, y); doc.setLineDashPattern([], 0); }, 'Gång- och cykelväg (OSM)']);
+    if (g.vagar && g.vagar.ytor && (g.vagar.ytor.bil.length || g.vagar.ytor.gang.length)) rader.push([(x, y) => { doc.setFillColor(222, 219, 215); doc.setDrawColor(...F.vag); doc.setLineWidth(0.1); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Vägyta, utkast']);
     if (g.sektioner) rader.push([(x, y) => { doc.setDrawColor(...F.annot); doc.setLineWidth(0.22); doc.line(x, y, x + 7, y); }, 'Sektionslinje']);
     if (g.ram !== false) rader.push([(x, y) => { doc.setDrawColor(...F.ram); doc.setLineWidth(0.3); doc.line(x, y, x + 7, y); }, 'Utsnitt']);
     if (g.nollpunkt) rader.push([(x, y) => { doc.setDrawColor(...F.annot); doc.setLineWidth(0.25); doc.circle(x + 3.5, y, 0.9, 'S'); doc.line(x + 1.7, y, x + 5.3, y); doc.line(x + 3.5, y - 1.6, x + 3.5, y + 1.6); }, 'Lokal nollpunkt']);

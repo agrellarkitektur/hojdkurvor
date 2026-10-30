@@ -115,8 +115,16 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
       { "z": 114.5, "lager": "HOJDKURVA_050", "sluten": false, "pts": [[x, y], ...] }
     ]
   },
-  "trad": [ { "x": 0, "y": 0, "mark": 115.84, "hojd": 14.5, "krona": 4.6 } ],
-  "vagar": [ { "typ": "secondary", "lager": "VAG_HUVUDVAG", "namn": "Bygatan", "pts": [[x, y], ...] } ],
+  "trad": [ { "x": 0, "y": 0, "mark": 115.84, "hojd": 14.5, "krona": 4.6,
+              "art": "gran", "modell": "gran2", "vrid": 212.4, "ljus": 0.97 } ],   // art … ljus från 0.11.0
+  "tradmodeller": {       // de detaljerade trädmodellerna, från 0.11.0
+    "gran2": { "antal": 732, "pos": "<base64>", "farg": "<base64>" }
+  },
+  "vagar": [ { "typ": "secondary", "lager": "VAG_HUVUDVAG", "slag": "bil", "namn": "Bygatan", "pts": [[x, y], ...] } ],
+  "vagytor": {            // utkast till vägytorna, från 0.11.0
+    "bil": [ { "ringar": [[[x, y], ...], [[x, y], ...]], "yta": 1840.5 } ],
+    "gang": [ ... ]
+  },
   "stompunkter": [ { "namn": "Staren", "x": 0, "y": 0, "z": 114.218 } ],
   "volymer": [ /* samma form som i skissen, zonens koordinater */ ],
   "byggnader": [          // befintliga byggnader (Byggnad Nedladdning, vektor), från 0.6.0
@@ -167,8 +175,36 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   som data-URL (JPEG, delar utan bild är vita), parallell med zonens axlar.
   `x0`/`y1` är **mitten av övre vänstra pixeln**, som i en världsfil; `s` är
   pixelstorleken i meter, `W` × `H` storleken i pixlar och `ar` flygåret.
-  Höjdkurvor skalar ned bilden till högst 4 096 pixlar på längsta sidan.
-  cad-apa läser fältet från 0.10.31 (`PaketOrtofoto` i `src/core/siteOrtho.ts`).
+  Sedan höjdkurvor 0.11.0 är bilden i full upplösning, samma som i zip-filen
+  (högst 8 192 pixlar per sida, 0,16 m för mindre utsnitt); 0.10.1 skalade ned
+  till 4 096. Bilden kan alltså vara större än vad grafikkortet klarar som en
+  textur; skala ned vid behov. cad-apa läser fältet från 0.10.31
+  (`PaketOrtofoto` i `src/core/siteOrtho.ts`).
+- `trad` (fälten `art`, `modell`, `vrid`, `ljus` och `andrat` från höjdkurvor
+  0.11.0, version 1 gäller fortfarande): `art` är `gran`, `tall`, `lov` eller
+  `bjork`, gissad ur formen (höjd mot kronbredd) eller vald av användaren.
+  `modell` är nyckeln i `tradmodeller` (`gran`, `gran2`, `tall`, `tall2`,
+  `lov`, `lov2`, `bjork`). `vrid` är vridningen i grader moturs sett uppifrån,
+  `ljus` en faktor för färgen (0,85–1,15). `andrat: true` betyder att
+  användaren har rättat höjd, krona eller art; dolda träd är inte med.
+- `tradmodeller` (från 0.11.0): de detaljerade low-poly-modellerna som
+  träden använder, samma som i höjdkurvors 3D-vy. En modell är 1 m hög och
+  1 m bred med stammens fot i origo; x österut, y norrut, z uppåt (i zonens
+  riktningar). `pos` och `farg` är Float32 (little-endian, base64), tre värden
+  per hörn, `antal` hörn; tre hörn i rad är en triangel (moturs sedd utifrån),
+  ingen index. `farg` är linjär rgb 0–1 per hörn. Ett träd ritas med modellen
+  skalad `krona` × `krona` × `hojd`, vriden `vrid` grader moturs kring z, med
+  foten i (`x`, `y`, `mark`), och färgen gånger `ljus`. Ytorna är plana
+  (en normal per triangel).
+- `vagar` (fältet `slag` från 0.11.0): `bil` (lagren `VAG_HUVUDVAG`,
+  `VAG_LOKALGATA`, `VAG_OVRIG`) eller `gang` (`VAG_GANG_CYKEL`: gång- och
+  cykelvägar, stigar, trappor, trottoarer). Ett program som bara vill ha
+  bilvägarna kan välja dem på `slag`.
+- `vagytor` (från 0.11.0, när användaren har valt *Utkast till vägytor*):
+  vägytorna per slag, ihopslagna i korsningarna och klippta mot utsnittet.
+  `ringar[0]` är den yttre ringen och resten hål (slutna, utan upprepad första
+  punkt); `yta` i m². Bredden är ur OSM, en schablon eller mätt i ortofotot.
+  Ett utkast, inte en inmätning.
 
 ## Skiss (cad-apa → höjdkurvor)
 

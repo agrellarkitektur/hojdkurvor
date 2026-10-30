@@ -7,12 +7,7 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-### 2026-10-30
-
-- Kan man separera vägar och gångvägar från varandra i underlaget från OSM?
-- Skulle det gå att ha en funktion som räknar ut ett utkast till bilvägars bredd och form genom ortofotot och uppgifter från OSM, utan att användaren behöver ha AI-koppling?
-- Hade varit bra att kunna anpassa och dölja enskilda träd och byggnader om de ser uppenbart felaktiga ut.
-- Skicka ortofotot i så hög upplösning som möjligt till CAD-apa. Skicka även med de mer detaljerade träden.
+(tom)
 
 ## Att testa
 
@@ -22,6 +17,9 @@ flyttas till CHANGELOG.md.
 - 0.10.0 på Windows: de nya träden (Detaljerade) – ser de bättre ut, och blir vyn seg? Klicka på ett feltolkat hus och rätta taket (form, lutning, nock tvärs, nockhöjd); sparas valet till nästa gång? Modellera: Ny volym (rätblock, cylinder, prisma), flytta, vrida med ⟳ och skift, snäpp mot volym, hus och fastighetsgräns, avstånd efter snäpp, ovanpå, kedjan, volymer in i varandra, Toppvy, Ångra, Delete. Stäng vyn, välj Skapa igen och se att skuggstudien och DXF:en har med volymerna.
 - 0.10.1: kryssa i Ortofoto, Skapa, skicka till cad-apa och se att ortofotot ligger på marken i cad-apas 3D-vy, på rätt ställe (jämför med vägar och hus).
 - 0.10.0 på iPhone: de nya träden (fart), att knappen Modellera inte syns och att skissen ändå visas.
+- 0.11.0 vägar: kryssa i Vägar, Utkast till vägytor och Ortofoto på en plats med riktiga gator. Ligger ytorna rätt mot ortofotot (lagren Vägar och Gång- och cykelvägar på kartan), och hur ofta säger info-filen att bredden är mätt i bilden? Öppna `_vagar_lokal.dxf` och `_gangvagar_lokal.dxf` i Archicad.
+- 0.11.0 träd och hus: klicka på ett träd i 3D-vyn, byt art och höjd, dölj ett träd och ett hus, Visa dolda. Välj Skapa igen: är de dolda borta ur DXF:en och skuggstudien?
+- 0.11.0 till cad-apa: ortofotot i full upplösning (blir cad-apa seg?). Träden har nu art och modell i paketet, men cad-apa ritar dem inte förrän cad-apa läser `tradmodeller` (planerat i cad-apa 0.12.1).
 
 ## 0.10.x – modellera vidare
 

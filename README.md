@@ -4,7 +4,7 @@ Gör Lantmäteriets öppna geodata till underlag för Archicad, Revit och AutoCA
 direkt i webbläsaren: höjdkurvor och höjdpunkter (DXF), markmodell (XYZ och CSV),
 punktmoln ur Laserdata skog (LAS och XYZ), ortofoto (JPEG med världsfil),
 befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
-(DXF), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
+(DXF, bilvägar och gångvägar för sig, med utkast till vägytorna), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
 PDF med lutning, skyfall och skydd och risker. Skissade volymer kan prövas på
 platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
 [cad-apa](https://github.com/agrellarkitektur/cad-apa).
@@ -147,7 +147,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/ifc.js` (`Ifc`) – befintliga byggnader som IFC4 (extruderade volymer, egenskaper, stabila GlobalId)
 - `js/fastighet.js` – fastighetsgränser, gränspunkter och beteckningar, DXF
 - `js/stompunkt.js` – Stompunkt Direkt: sökning inom utsnittet, DXF och CSV
-- `js/vagar.js` – vägar från OpenStreetMap via Overpass, klassning och DXF
+- `js/vagar.js` – vägar från OpenStreetMap via Overpass: bilvägar och gångvägar, klassning, utkast till vägytor (bredd ur OSM, schablon eller mätt i ortofotot) och DXF
+- `js/objektval.js` (`Objektval`) – egna val för enskilda träd och hus: dölja, rätta trädens art, höjd och krona, skära bort dolda ur ytmodellen
 - `js/topowebb.js` – läser Topografisk webbkarta ur Lantmäteriets GeoPackage
   (172 GB) med HTTP Range, några få sidor åt gången
 - `js/analys.js` (`Analys`) – ytmodell ur laserdata, träd, skuggor, sektioner, horisont
@@ -161,7 +162,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   öppnas; lager som kan slås av och på, panorering, valbar kurvfärg, skuggor
   efter datum och tid, konturer, hus-, kontur-, gräns- och skissfärg, takformer
   ur laserdatan, ögonhöjd och bilder
-- `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter)
+- `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter), också till cad-apa; laddas med sidan
 - `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
@@ -223,7 +224,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - IndexedDB: marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt. Appen frågar Lantmäteriet om
   filen ändrats innan den används igen. Under 02 Underlag, "Sparat i
   webbläsaren", kan man ta bort enstaka filer eller tömma allt.
-- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`),
+- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`), dolda och rättade träd (`terrang-tradval`) och dolda hus (`terrang-husval`),
   formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
   om användaren väljer det, inloggningen.
 - sessionStorage: aktivt steg, sektionslinjer, horisontens betraktelsepunkt,
