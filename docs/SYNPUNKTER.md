@@ -7,6 +7,13 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
+### 2026-10-30
+
+- Kan man separera vägar och gångvägar från varandra i underlaget från OSM?
+- Skulle det gå att ha en funktion som räknar ut ett utkast till bilvägars bredd och form genom ortofotot och uppgifter från OSM, utan att användaren behöver ha AI-koppling?
+- Hade varit bra att kunna anpassa och dölja enskilda träd och byggnader om de ser uppenbart felaktiga ut.
+- Skicka ortofotot i så hög upplösning som möjligt till CAD-apa. Skicka även med de mer detaljerade träden.
+
 ## Att testa
 
 - iPhone: dra med två fingrar i 3D-vyn (0.8.0/0.8.1). Windows godkänt 2026-10-27.
