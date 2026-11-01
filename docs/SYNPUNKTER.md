@@ -7,7 +7,12 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-(tom)
+### 2026-11-01
+
+- Möjlighet att lägga in eget bildunderlag som överlagring.
+- Går det dessutom att generera skissvolymer efter eget inskannat underlag?
+- Flytta hela markeringen genom att dra i ramen.
+- Markera flera träd samtidigt med en lasso och dölja dem samtidigt.
 
 ## Att testa
 
