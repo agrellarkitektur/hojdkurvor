@@ -7,6 +7,13 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
+### 2026-11-13
+
+- Sätta ut en punkt och sedan välja "radie" (fast kvadrat) utifrån den när man väljer utsnitt.
+- Om det går: skicka med en html-fil i nedladdningsmappen bredvid info-texten som kan visa allt underlag som på webben, fast utan möjlighet att ändra utsnitt, både 2D och 3D.
+- En samlings-DXF i roten (vid infotexten) som visar alla DXF-underlag (och ortofoto-jpg) inlänkade tillsammans.
+- Förtydliga att vägkonturerna är en beräkning från ortofotot i 2D-förhandsvisningen och i lagernamnen i DXF:en. De beräknade kurvorna skulle kunna jämnas ut lite mer, särskilt på breda vägar där lokala förändringar kanske är mindre troliga.
+
 ### 2026-11-01
 
 - Möjlighet att lägga in eget bildunderlag som överlagring.
