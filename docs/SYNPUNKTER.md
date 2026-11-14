@@ -7,6 +7,10 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
+### 2026-11-15
+
+- Leverera lutnings- och skyfallslagren under platsanalys som separata jpg (lika ortofotot) och vektor-pdf.
+
 ### 2026-11-13
 
 - Sätta ut en punkt och sedan välja "radie" (fast kvadrat) utifrån den när man väljer utsnitt.
