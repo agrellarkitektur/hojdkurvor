@@ -5,8 +5,8 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 
 ## Läget
 
-- **0.12.0** 15 november (gren `v0.12.0`, inte sammanslagen med `main` och
-  alltså inte publicerad): inkorgen 1–15 november. Byggt: lutning och skyfall
+- **0.12.0** 15 november, publicerad samma dag på agrellarkitektur.se/terrang/:
+  inkorgen 1–15 november. Byggt: lutning och skyfall
   som JPEG + jgw och vektor-PDF, samlad DXF i roten, vägytorna märkta som
   beräknade och mer utjämnade, Punkt och radie, dra i ramen, lasso i 3D-vyn.
   Sorterat till planerna (se `docs/SYNPUNKTER.md`): eget bildunderlag
@@ -366,12 +366,11 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Slå ihop `v0.12.0` med `main` när Carl August säger till (det publicerar).
-2. Be om test av 0.10.0–0.12.0 (listan under Att testa). Rättelser blir
+1. Be om test av 0.10.0–0.12.0 (listan under Att testa). Rättelser blir
    0.12.1. Särskilt: vägytorna mot ett riktigt ortofoto, bilderna med
    världsfil i Archicad och dra i ramen på iPhone.
-3. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
-4. Flytten till apps.danaid.cloud när Lantmäteriet har godkänt adressen
+2. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
+3. Flytten till apps.danaid.cloud när Lantmäteriet har godkänt adressen
    (`docs/FLYTT.md`).
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
