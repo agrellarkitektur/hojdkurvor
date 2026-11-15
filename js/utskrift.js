@@ -1,6 +1,6 @@
 /*
  * Skalenlig utskrift (PDF) med samma lager som kartan, A4–A1, och skuggstudieblad.
- * Kräver jsPDF (window.jspdf). Grafiken följer höjdkurvor.se: blå ram, orange markeringar.
+ * Kräver jsPDF (window.jspdf). Grafiken följer Höjdkurvor: blå ram, orange markeringar.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -88,7 +88,7 @@
     const { format, liggande, skala, utsnitt: r } = opt;
     const [PW, PH] = papper(format, liggande);
     const { doc, font, mono } = nyttDokument(format, liggande, opt.fonter);
-    doc.setProperties({ title: `${opt.titel.projekt || 'Terrängunderlag'} 1:${skala}`, creator: 'höjdkurvor.se' });
+    doc.setProperties({ title: `${opt.titel.projekt || 'Terrängunderlag'} 1:${skala}`, creator: 'Höjdkurvor' });
     const k = 1000 / skala;
     const fx0 = MARG, fy0 = MARG, fw = PW - 2 * MARG, fh = PH - 2 * MARG;
     const mx = (r.xmin + r.xmax) / 2, my = (r.ymin + r.ymax) / 2;
@@ -150,7 +150,23 @@
       doc.restoreGraphicsState();
     }
     // lutning, bara inom utsnittet
-    if (g.lutning) {
+    if (g.lutning && g.lutning.konturer) {
+      // som vektor: en fyllning per klass (jämn–udda, så att hål blir hål)
+      klippUtsnitt();
+      const farger = { 1: [241, 215, 122], 2: [237, 162, 90], 3: [200, 85, 61] };
+      // flackare än 1:50 är grunden under de andra klasserna
+      doc.setFillColor(185, 215, 160);
+      L([[r.xmin, r.ymin], [r.xmax, r.ymin], [r.xmax, r.ymax], [r.xmin, r.ymax]], true); doc.fill();
+      doc.setLineWidth(0.05);
+      for (const kl of [1, 2, 3]) {
+        const ringar = g.lutning.konturer.filter(kt => kt.klass === kl);
+        if (!ringar.length) continue;
+        doc.setFillColor(...farger[kl]); doc.setDrawColor(...farger[kl]);
+        ringar.forEach(kt => L(kt.pts, true));
+        doc.fillStrokeEvenOdd();
+      }
+      doc.restoreGraphicsState();
+    } else if (g.lutning) {
       klippUtsnitt();
       const b = g.lutning, [x0, y0] = P(b.x0 - b.s / 2, b.y1 + b.s / 2);
       doc.saveGraphicsState(); doc.setGState(new doc.GState({ opacity: 0.8 }));
@@ -160,9 +176,11 @@
     }
     // skyfall: lågpunkter och flödesvägar
     if (g.skyfall) {
+      klippUtsnitt();
       doc.setFillColor(127, 178, 224); doc.setDrawColor(31, 111, 178); doc.setLineWidth(0.15);
       g.skyfall.lagpunkter.forEach(l => l.konturer.forEach(kt => { L(kt, true); doc.fillStroke(); }));
       g.skyfall.floden.forEach(f => { doc.setLineWidth(f.ack > 4 * (g.skyfall.troskel || 400) ? 0.45 : 0.28); L(f.pts, false); doc.stroke(); });
+      doc.restoreGraphicsState();
     }
     // skuggor
     if (g.skuggor && g.skuggor.konturer.length) {
@@ -383,7 +401,8 @@
     if (g.fastigheter) rader.push([(x, y) => { doc.setDrawColor(176, 48, 106); doc.setLineWidth(0.3); doc.line(x, y, x + 3, y); doc.setLineDashPattern([1, 0.7], 0); doc.line(x + 4, y, x + 7, y); doc.setLineDashPattern([], 0); }, 'Fastighetsgräns (streckad: osäker)']);
     if (g.hom) rader.push([(x, y) => { doc.setFillColor(120, 170, 110); doc.rect(x, y - 1.1, 7, 2.2, 'F'); }, 'Höjd över mark']);
     if (g.skuggor) rader.push([(x, y) => { doc.setFillColor(170, 170, 170); doc.rect(x, y - 1.1, 7, 2.2, 'F'); }, `Skugga ${g.skuggor.etikett || ''}`]);
-    if (g.lutning) rader.push([(x, y) => { [[241, 215, 122], [237, 162, 90], [200, 85, 61]].forEach((c, i) => { doc.setFillColor(...c); doc.rect(x + i * 2.34, y - 1.1, 2.34, 2.2, 'F'); }); }, 'Lutning 1:50 / 1:20 / 1:12']);
+    if (g.lutning && g.lutning.konturer) rader.push([(x, y) => { [[185, 215, 160], [241, 215, 122], [237, 162, 90], [200, 85, 61]].forEach((c, i) => { doc.setFillColor(...c); doc.rect(x + i * 1.75, y - 1.1, 1.75, 2.2, 'F'); }); }, 'Lutning: under 1:50, 1:50–1:20, 1:20–1:12, över 1:12']);
+    else if (g.lutning) rader.push([(x, y) => { [[241, 215, 122], [237, 162, 90], [200, 85, 61]].forEach((c, i) => { doc.setFillColor(...c); doc.rect(x + i * 2.34, y - 1.1, 2.34, 2.2, 'F'); }); }, 'Lutning 1:50 / 1:20 / 1:12']);
     if (g.skyfall) rader.push([(x, y) => { doc.setFillColor(127, 178, 224); doc.rect(x, y - 1.1, 3.2, 2.2, 'F'); doc.setDrawColor(31, 111, 178); doc.setLineWidth(0.35); doc.line(x + 4, y, x + 7, y); }, 'Lågpunkt och flödesväg']);
     if (g.hojdpunkter) rader.push([(x, y) => { doc.setFillColor(...F.annot); doc.circle(x + 3.5, y, 0.45, 'F'); }, 'Höjdpunkt']);
     if (g.volymer) rader.push([(x, y) => { doc.setDrawColor(...F.annot); doc.setLineWidth(0.35); doc.rect(x, y - 1.1, 7, 2.2, 'S'); }, 'Skissad volym']);
@@ -391,7 +410,7 @@
     if (g.stompunkter) rader.push([(x, y) => { doc.setDrawColor(...F.sp); doc.setFillColor(255, 255, 255); doc.setLineWidth(0.3); doc.circle(x + 3.5, y, 0.9, 'FD'); }, 'Stompunkt']);
     if (g.vagar && g.vagar.linjer.some(l => l.lager !== 'VAG_GANG_CYKEL')) rader.push([(x, y) => { doc.setDrawColor(...F.vag); doc.setLineWidth(0.4); doc.line(x, y, x + 7, y); }, 'Väg, mittlinje (OSM)']);
     if (g.vagar && g.vagar.linjer.some(l => l.lager === 'VAG_GANG_CYKEL')) rader.push([(x, y) => { doc.setDrawColor(...F.vag); doc.setLineWidth(VAGSTIL.VAG_GANG_CYKEL.b); doc.setLineDashPattern(VAGSTIL.VAG_GANG_CYKEL.streck || [], 0); doc.line(x, y, x + 7, y); doc.setLineDashPattern([], 0); }, 'Gång- och cykelväg (OSM)']);
-    if (g.vagar && g.vagar.ytor && (g.vagar.ytor.bil.length || g.vagar.ytor.gang.length)) rader.push([(x, y) => { doc.setFillColor(222, 219, 215); doc.setDrawColor(...F.vag); doc.setLineWidth(0.1); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Vägyta, utkast']);
+    if (g.vagar && g.vagar.ytor && (g.vagar.ytor.bil.length || g.vagar.ytor.gang.length)) rader.push([(x, y) => { doc.setFillColor(222, 219, 215); doc.setDrawColor(...F.vag); doc.setLineWidth(0.1); doc.rect(x, y - 1.1, 7, 2.2, 'FD'); }, 'Vägyta, beräknad ur ortofoto (utkast)']);
     if (g.sektioner) rader.push([(x, y) => { doc.setDrawColor(...F.annot); doc.setLineWidth(0.22); doc.line(x, y, x + 7, y); }, 'Sektionslinje']);
     if (g.ram !== false) rader.push([(x, y) => { doc.setDrawColor(...F.ram); doc.setLineWidth(0.3); doc.line(x, y, x + 7, y); }, 'Utsnitt']);
     if (g.nollpunkt) rader.push([(x, y) => { doc.setDrawColor(...F.annot); doc.setLineWidth(0.25); doc.circle(x + 3.5, y, 0.9, 'S'); doc.line(x + 1.7, y, x + 5.3, y); doc.line(x + 3.5, y - 1.6, x + 3.5, y + 1.6); }, 'Lokal nollpunkt']);
@@ -406,13 +425,10 @@
     text(t.system || '', bx + 3, ty, 6.5); ty += 3.5;
     text('Höjdsystem RH 2000', bx + 3, ty, 6.5); ty += 3.5;
     if (t.datum) text(t.datum, bx + 3, ty, 6.5, { mono: true });
-    // höjdkurvor.se
+    // Höjdkurvor
     marke(doc, bx + 3, by + bh - 7.2, 5, F.blck, F.annot);
     doc.setFont(font, 'bold'); doc.setFontSize(8.5); doc.setTextColor(...F.blck);
-    doc.text('höjdkurvor', bx + 9.4, by + bh - 4, { baseline: 'middle' });
-    const wl = doc.getTextWidth('höjdkurvor');
-    doc.setTextColor(...F.annot); doc.text('.', bx + 9.4 + wl, by + bh - 4, { baseline: 'middle' });
-    doc.setTextColor(...F.blck); doc.text('se', bx + 9.4 + wl + doc.getTextWidth('.'), by + bh - 4, { baseline: 'middle' });
+    doc.text('Höjdkurvor', bx + 9.4, by + bh - 4, { baseline: 'middle' });
     let ly = by + 4.2;
     for (const [rita, txt] of rader) { rita(bx + 67, ly); text(txt, bx + 76, ly, 5.8); ly += 3.3; }
     kallor.forEach((k, i) => text(k, bx + 67, by + bh - 2.6 - (kallor.length - 1 - i) * 2.3, 5));
@@ -434,7 +450,7 @@
     // opt.dok = { doc, font, mono }: rita som en ny sida i ett befintligt dokument
     const { doc, font, mono } = opt.dok || nyttDokument(format, liggande, opt.fonter);
     if (opt.dok) doc.addPage(format, 'landscape');
-    else doc.setProperties({ title: `Skuggstudie ${opt.titel.projekt || ''}`, creator: 'höjdkurvor.se' });
+    else doc.setProperties({ title: `Skuggstudie ${opt.titel.projekt || ''}`, creator: 'Höjdkurvor' });
     const text = (s, x, y, pt, o = {}) => { doc.setFont(o.mono ? mono : font, o.mono ? 'normal' : (o.vikt || 'normal')); doc.setFontSize(pt); doc.text(String(s), x, y, { align: o.ha || 'left', baseline: o.va || 'middle' }); };
     text(`Skuggstudie${opt.titel.projekt ? ' – ' + opt.titel.projekt : ''}`, MARG, MARG + 4, 16, { vikt: 'bold' });
     text([opt.titel.kommun, opt.titel.system].filter(Boolean).join('. '), MARG, MARG + 11, 7.5);
@@ -467,14 +483,11 @@
     doc.setFillColor(...F.blck); doc.triangle(nx, ny - 5, nx - 1.8, ny + 1.5, nx + 1.8, ny + 1.5, 'F');
     text('N', nx, ny - 7, 7, { ha: 'center', vikt: 'bold' });
     (opt.notis || []).forEach((n, i) => text(n, MARG, PH - MARG - 9 + i * 3.2, 6.2));
-    // höjdkurvor.se
+    // Höjdkurvor
     marke(doc, PW - MARG - 30, PH - MARG - 4.6, 4.5, F.blck, F.annot);
     doc.setFont(font, 'bold'); doc.setFontSize(8); doc.setTextColor(...F.blck);
     const x0 = PW - MARG - 24.4, y0 = PH - MARG - 1.8;
-    doc.text('höjdkurvor', x0, y0, { baseline: 'middle' });
-    const wl = doc.getTextWidth('höjdkurvor');
-    doc.setTextColor(...F.annot); doc.text('.', x0 + wl, y0, { baseline: 'middle' });
-    doc.setTextColor(...F.blck); doc.text('se', x0 + wl + doc.getTextWidth('.'), y0, { baseline: 'middle' });
+    doc.text('Höjdkurvor', x0, y0, { baseline: 'middle' });
     if (opt.dok) return doc;
     return doc.output('arraybuffer');
   }

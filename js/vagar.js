@@ -24,8 +24,9 @@
   };
   // vägytorna (0.11.0)
   const YTLAGER = {
-    VAG_YTA_BIL: { aci: 8, namn: 'Bilvägarnas ytor (utkast)' },
-    VAG_YTA_GANG: { aci: 3, namn: 'Gång- och cykelvägarnas ytor (utkast)' },
+    // namnen säger att ytorna är beräknade (0.12.0): ur ortofotot, OSM:s bredd eller en schablon
+    VAG_YTA_BIL_BERAKNAD: { aci: 8, namn: 'Bilvägarnas ytor, beräknade ur ortofotot (utkast)' },
+    VAG_YTA_GANG_BERAKNAD: { aci: 3, namn: 'Gång- och cykelvägarnas ytor, beräknade (utkast)' },
   };
   const SLAGNAMN = { bil: 'Bilvägar', gang: 'Gång- och cykelvägar' };
 
@@ -218,6 +219,14 @@
     });
     return { st, andel: st.length ? bada / st.length : 0 };
   }
+  /** Glidande medelvärde över ±n (efter medianen, så att trappstegen försvinner). */
+  function glid(v, n) {
+    return v.map((_, k) => {
+      let s = 0, c = 0;
+      for (let q = Math.max(0, k - n); q <= Math.min(v.length - 1, k + n); q++) if (v[q] === v[q]) { s += v[q]; c++; }
+      return c ? s / c : v[k];
+    });
+  }
   /** Rullande median över fönstret ±n, bara över värden som finns; luckor fylls av grannarna. */
   function rullande(v, n) {
     const ut = v.map((_, k) => median(v.slice(Math.max(0, k - n), k + n + 1).filter(x => x != null && x === x)));
@@ -241,8 +250,10 @@
     const m = matLinje(l.pts, bild, sch.bredd, { steg, tol: opt.tol });
     if (m.st.length < 3 || m.andel < 0.35) return rak();
     const lo = Math.max(2.5, sch.bredd * 0.6), hi = sch.bredd * 1.6 + 1;
-    const tot = rullande(m.st.map(p => (p.v != null && p.h != null ? p.v + p.h : null)), 7).map(b => Math.min(hi, Math.max(lo, b)));
-    const fors = rullande(m.st.map(p => (p.v != null && p.h != null ? (p.v - p.h) / 2 : null)), 7);
+    // bredare vägar jämnas ut över en längre sträcka (0.12.0): lokala språng är mindre troliga där
+    const n = Math.round(Math.min(16, 7 * Math.max(1, sch.bredd / 6))), nm = Math.ceil(n / 2);
+    const tot = glid(rullande(m.st.map(p => (p.v != null && p.h != null ? p.v + p.h : null)), n), nm).map(b => Math.min(hi, Math.max(lo, b)));
+    const fors = glid(rullande(m.st.map(p => (p.v != null && p.h != null ? (p.v - p.h) / 2 : null)), n), nm);
     const pts = m.st.map((p, k) => {
       const c = Math.max(-Math.min(1.5, tot[k] * 0.25), Math.min(Math.min(1.5, tot[k] * 0.25), fors[k] || 0));
       return [p.x + p.nx * c, p.y + p.ny * c];
@@ -330,7 +341,7 @@
       if (bara && slag(l.lager) !== bara) continue;
       lager[l.lager] = KLASSER[l.lager].aci; objekt.push({ typ: 'pl', lager: l.lager, pts: l.pts });
     }
-    if (res.ytor) for (const [sl, ln] of [['bil', 'VAG_YTA_BIL'], ['gang', 'VAG_YTA_GANG']]) {
+    if (res.ytor) for (const [sl, ln] of [['bil', 'VAG_YTA_BIL_BERAKNAD'], ['gang', 'VAG_YTA_GANG_BERAKNAD']]) {
       if (bara && sl !== bara) continue;
       for (const p of res.ytor[sl] || []) for (const ring of p.ringar) { lager[ln] = YTLAGER[ln].aci; objekt.push({ typ: 'pl', lager: ln, pts: ring, sluten: true }); }
     }

@@ -1,10 +1,24 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 30 oktober 2026, 0.11.0 (synpunkterna i inkorgen 30 oktober).
+överlämning; historiken finns i git. Senast: 15 november 2026, 0.12.0 (inkorgen 1–15 november, namnbyte och förberedd flytt).
 
 ## Läget
 
+- **0.12.0** 15 november (gren `v0.12.0`, inte sammanslagen med `main` och
+  alltså inte publicerad): inkorgen 1–15 november. Byggt: lutning och skyfall
+  som JPEG + jgw och vektor-PDF, samlad DXF i roten, vägytorna märkta som
+  beräknade och mer utjämnade, Punkt och radie, dra i ramen, lasso i 3D-vyn.
+  Sorterat till planerna (se `docs/SYNPUNKTER.md`): eget bildunderlag
+  (projektfilens bilagor), skissvolymer ur inskannat underlag, html-visaren och
+  DXF med xref/ortofoto. Appen heter bara **Höjdkurvor**; flytten till
+  `apps.danaid.cloud/hojdkurvor/` är förberedd i `docs/FLYTT.md` men inte gjord.
+  Enhetstester gröna, gränssnittstestet godkänt i alla tre teman, mobiltestet
+  godkänt. Carl August har inte testat 0.10.0–0.12.0.
+- **Versionsplanen flyttades ett steg** (15 november): 0.12.0 blev inkorgen,
+  projektfilen blir **0.13.0** och sol på fasaderna **0.14.0**. Planerna i
+  claude.ai-projektet (`plan-projektfil.md`, `overlamning-solanalys.md`) är
+  uppdaterade. Rättelser efter testet blir 0.12.x.
 - **0.11.0** 30 oktober (gren `v0.11.0`): Carl Augusts fyra synpunkter i
   inkorgen 30 oktober, alla inarbetade (inkorgen är tom):
   1. bilvägar och gångvägar var för sig (filer, kartlager, 3D-lager, utskrift,
@@ -25,6 +39,40 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## 0.12.0
+
+- **Lagren som bild och PDF**: `Platsanalys.bildRutnat(r, s, maxPx)` (x0/y1 =
+  mitten av övre vänstra pixeln, som världsfilen), `lutningBild(lt, r, 0,25)`
+  (alla fyra klasser, vit bakgrund) och `skyfallBild(sk, r, 0,25)`. `lagerBild`
+  i Skapa-flödet skriver `.jpg`, `_sweref.jgw` och `_lokal.jgw`. PDF:erna görs
+  före platsanalysbladet (då finns hus och gränser) med `Utskrift.plan`, A3
+  eller A1 om skalan blir grövre än 1:2 000. `lager.lutning = { konturer }`
+  ritar vektorytor (klass 0 som grund under utsnittet); den gamla rasterformen
+  `{ url, … }` finns kvar för kartutskriften. Skyfallet klipps mot utsnittet.
+- **Samlad DXF**: `Dxf.sammanfoga(texter)` läser R12-filerna (både `Dxf.skriv`
+  och `Terrang.dxf`), tar varje lager en gång (färgen från första filen) och
+  alla objekt, och den sammanlagda utbredningen. Alla `…/_lokal.dxf` resp.
+  `_sweref.dxf` i undermapparna, om de är minst två. Kontrollerat med ezdxf
+  (0 fel). Kurvorna gör filen stor (cirka 1 MB för testtomten).
+- **Vägar**: lagren `VAG_YTA_BIL_BERAKNAD`/`VAG_YTA_GANG_BERAKNAD`. I
+  `profil` är medianfönstret `n = round(min(16, 7 · max(1, bredd/6)))` följt av
+  `glid` (medel ±n/2). Ytorna på kartan är streckade och har ett verktygstips
+  (de är nu `interactive`).
+- **Utsnittet**: `ramGrepp` (osynlig polygon, bredd 16, Leaflet-canvas) →
+  `startaRamDrag`/`ramFlytt`/`ramSlut` med musen (`mousedown` på lagret,
+  `mousemove` på kartan, `mouseup` på dokumentet). Pekskärm är inte provad:
+  canvas-lagret får kanske inte `mousedown` från ett finger. Punkt och radie:
+  `satPunktlage`, `kvadratKring(x, y)` (mitten avrundas till 10 m),
+  `state.mitt` följer med när ramen dras och nollställs av handtagen, ny
+  ritning och koordinatfälten.
+- **Lasso**: `vy3d.tradPaSkarm()` (klientkoordinater mitt i kronan för träd
+  som syns och inte är dolda) och `markeraTrad([...])`. SVG över `#vy3d-yta`
+  som släpper pekaren när slingan är ritad. `#vy3d-lassopanel`, Esc stänger.
+- **Namnet**: höjdkurvor.se är ersatt överallt utom i CHANGELOG.md, som är
+  orörd (historik). PDF:ernas ordbild är bara `Höjdkurvor`.
+- **Flytten**: se `docs/FLYTT.md`. cad-apa har `HOJDKURVOR_ORIGINS` och
+  `HOJDKURVOR_URL` i `src/ui/app/site.ts`; de måste ändras i cad-apa-sessionen.
 
 ## Vägar (0.11.0, `js/vagar.js`)
 
@@ -318,10 +366,13 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Be Carl August om test av 0.10.0–0.11.0 (listan under Att testa).
-   Rättelser blir 0.11.1. Särskilt: vägytorna mot ett riktigt ortofoto.
-2. Därefter 0.11.x: urtag och egna takfotslinjer, när han har provat
-   modelleringen.
+1. Slå ihop `v0.12.0` med `main` när Carl August säger till (det publicerar).
+2. Be om test av 0.10.0–0.12.0 (listan under Att testa). Rättelser blir
+   0.12.1. Särskilt: vägytorna mot ett riktigt ortofoto, bilderna med
+   världsfil i Archicad och dra i ramen på iPhone.
+3. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
+4. Flytten till apps.danaid.cloud när Lantmäteriet har godkänt adressen
+   (`docs/FLYTT.md`).
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
@@ -363,8 +414,9 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 - Licensvillkoren för Riksantikvarieämbetets och MCF:s data och
   kommungränserna (`data/kommuner.json`) är inte kontrollerade.
 - Myndigheternas tjänster i kapitlet Skydd är bara testade mot låtsassvar.
-- Domänflytten till höjdkurvor.se kräver att Lantmäteriet godkänner den nya
-  adressen för CORS först (README).
+- Flytten till apps.danaid.cloud/hojdkurvor kräver att Lantmäteriet godkänner
+  den nya adressen för CORS först, och att cad-apa godtar ursprunget
+  (`docs/FLYTT.md`).
 
 ## Testmiljön
 

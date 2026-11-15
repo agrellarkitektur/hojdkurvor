@@ -1,7 +1,7 @@
 <?php
 /*
  * Tar emot synpunkter från formuläret Skicka synpunkter och mejlar dem vidare
- * (höjdkurvor.se 0.7.0). Samma upplägg som feedback.php i cad-apa.
+ * (Höjdkurvor 0.7.0). Samma upplägg som feedback.php i cad-apa.
  *
  * Mottagaren står inte här, eftersom koden är öppen. Den står i
  * feedback-config.php, samma fil som cad-apa använder. Den letas upp i mappen
@@ -99,7 +99,7 @@ $tider[] = $nu;
 $amne = '=?UTF-8?B?' . base64_encode("Synpunkt på $version") . '?=';
 $brod = $text . "\n\n—\nVersion: $version\nSida: $sida\nSkärm: $skarm\n" . ($epost !== '' ? "Svara till: $epost\n" : "Ingen e-post angiven (anonym).\n");
 $huvud = [
-  'From: =?UTF-8?B?' . base64_encode('höjdkurvor.se') . '?= <' . $fran . '>',
+  'From: =?UTF-8?B?' . base64_encode('Höjdkurvor') . '?= <' . $fran . '>',
   'MIME-Version: 1.0',
   'Content-Type: text/plain; charset=UTF-8',
   'Content-Transfer-Encoding: 8bit',

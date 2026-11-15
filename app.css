@@ -1,4 +1,4 @@
-/* höjdkurvor.se – stilmall. Färger som variabler per tema: ritning = Blueprint (standard), lugn = Ljust, mork = Mörkt.
+/* Höjdkurvor – stilmall. Färger som variabler per tema: ritning = Blueprint (standard), lugn = Ljust, mork = Mörkt.
    Kartans orange (--annot) är densamma i alla teman och har tillräcklig kontrast mot både ljus och mörk karta. */
 @font-face { font-family: "Familjen Grotesk"; src: url("vendor/fonts/familjen-grotesk-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Familjen Grotesk"; src: url("vendor/fonts/familjen-grotesk-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
@@ -106,7 +106,6 @@ code { font-family: var(--mono); font-size: .9em; background: var(--nav-on); pad
 .logga .ring { stroke: var(--mark); }
 .logga .kors { stroke: var(--brand); }
 .ordbild { font-family: var(--grotesk); font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
-.ordbild .punkt { color: var(--brand); }
 .logga:hover { color: var(--ink); }
 .logga:hover .ring { stroke: var(--brand); }
 .logga .ring { transition: stroke .15s; }
@@ -276,6 +275,10 @@ input[type=checkbox], input[type=radio] { accent-color: var(--kryss-farg); width
 .knapp[aria-pressed="true"]:hover { color: var(--bg); border-color: var(--brand); background: var(--brand); }
 .knapp[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .knapp.rita { width: 100%; margin-top: 12px; }
+.punkt-radie { display: flex; align-items: flex-end; gap: 10px; margin-top: 10px; }
+.punkt-radie .knapp.liten { margin-top: 0; flex: 1; }
+.punkt-radie label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; width: 92px; }
+.punkt-radie input { width: 100%; }
 .lank-knapp { font: inherit; font-size: 13px; background: none; border: 0; padding: 4px 0; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; letter-spacing: .04em; }
 .lank-knapp:hover { color: var(--brand); }
 
@@ -358,7 +361,8 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .leaflet-container .leaflet-interactive { cursor: pointer; }
 .leaflet-marker-icon.handtag-wrap.ns { cursor: ns-resize; }
 .leaflet-marker-icon.handtag-wrap.ew { cursor: ew-resize; }
-.ritlage #karta, .ritlage #karta .leaflet-interactive { cursor: crosshair; }
+.ritlage #karta, .ritlage #karta .leaflet-interactive, .punktlage #karta, .punktlage #karta .leaflet-interactive { cursor: crosshair; }
+.ramdrag #karta, .ramdrag #karta .leaflet-interactive { cursor: move; }
 
 /* lagerpanelen */
 .lagerpanel { width: 250px; max-width: calc(100vw - 80px); display: flex; flex-direction: column; overflow: hidden; background: var(--panel-bg); color: var(--panel-ink); border: 1px solid var(--panel-kant); font-family: var(--mono); font-size: 13px; }
@@ -538,6 +542,8 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .vy3d-spak[hidden] { display: none; }
 .vy3d-spak-knopp { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 1px 4px rgba(0,0,0,.35); pointer-events: none; }
 .vy3d-yta canvas { display: block; }
+.vy3d-lasso { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; cursor: crosshair; touch-action: none; }
+.vy3d-lasso path { fill: color-mix(in srgb, var(--brand) 12%, transparent); stroke: var(--brand); stroke-width: 1.5; stroke-dasharray: 5 4; }
 /* modellera och takform (0.10.0): paneler över 3D-vyn, kedjor och vridhandtag på volymerna */
 .vy3d { position: fixed; }
 .vy3d-panel { position: absolute; left: 16px; bottom: 16px; z-index: 2; width: min(330px, calc(100vw - 32px)); max-height: min(70vh, calc(100% - 140px)); overflow-y: auto;

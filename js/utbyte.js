@@ -38,7 +38,7 @@
    */
   function platspaket(o) {
     const p = {
-      format: PLATS, version: VERSION, skapad: new Date().toISOString(), kalla: o.kalla || 'höjdkurvor.se',
+      format: PLATS, version: VERSION, skapad: new Date().toISOString(), kalla: o.kalla || 'Höjdkurvor',
       projekt: { id: o.projektId || nyttId(), namn: o.projekt || '', kommun: o.kommun || '' },
       koordinatsystem: { plan: { epsg: o.epsg, namn: o.systemNamn || '' }, hojd: 'RH 2000', enhet: 'm' },
       utsnitt: { xmin: o.utsnitt.xmin, ymin: o.utsnitt.ymin, xmax: o.utsnitt.xmax, ymax: o.utsnitt.ymax },

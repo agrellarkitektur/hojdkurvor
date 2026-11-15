@@ -1,4 +1,4 @@
-# höjdkurvor.se på webbhotellet (0.8.1)
+# Höjdkurvor på webbhotellet (0.8.1)
 #
 # Webbläsaren ska fråga servern om sidorna har ändrats i stället för att
 # använda en gammal kopia, så att en ny version syns direkt. Skript och

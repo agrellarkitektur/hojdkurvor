@@ -192,7 +192,7 @@
     // opt.dok = { doc, font }: rita som en ny sida i ett befintligt dokument (platsanalysbladet)
     const doc = opt.dok ? opt.dok.doc : new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
     if (opt.dok) doc.addPage('a4', 'landscape');
-    else doc.setProperties({ title: `Soldiagram ${opt.ar}${opt.namn ? ' – ' + opt.namn : ''}`, creator: 'höjdkurvor.se' });
+    else doc.setProperties({ title: `Soldiagram ${opt.ar}${opt.namn ? ' – ' + opt.namn : ''}`, creator: 'Höjdkurvor' });
     let font = opt.dok ? opt.dok.font : 'helvetica';
     if (opt.fonter && !opt.dok) {
       doc.addFileToVFS('Familjen-Regular.ttf', opt.fonter.normal);

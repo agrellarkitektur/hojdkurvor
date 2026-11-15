@@ -84,6 +84,37 @@ with sync_playwright() as p:
     hx, hy = h['x'] + h['width'] / 2, h['y'] + h['height'] / 2
     pg.mouse.move(hx, hy); pg.mouse.down(); pg.mouse.move(hx + 25, hy, steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
     print('utsnitt:', [pg.input_value('#' + k) for k in ('xmin', 'xmax', 'ymin', 'ymax')], pg.locator('#storlek-text').inner_text(), '| mitt:', pg.locator('#latlon-text').inner_text())
+    fore_uts = {k: int(pg.input_value('#' + k)) for k in ('xmin', 'xmax', 'ymin', 'ymax')}
+    zon_uts = pg.input_value('#zon')
+    def skarm(x, y):
+        return pg.evaluate(f"(() => {{ const ll = Terrang.omvandlare({zon_uts}, 4326).forward([{x}, {y}]); return window.__punkt([ll[1], ll[0]]); }})()")
+    # 0.12.0: flytta området genom att dra i ramen (västra kanten, en bit från handtaget)
+    p0 = skarm(fore_uts['xmin'], fore_uts['ymin'] + (fore_uts['ymax'] - fore_uts['ymin']) * 0.25)
+    pg.mouse.move(p0[0], p0[1]); pg.mouse.down(); pg.mouse.move(p0[0] + 30, p0[1] - 20, steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
+    efter = {k: int(pg.input_value('#' + k)) for k in ('xmin', 'xmax', 'ymin', 'ymax')}
+    print('  ramen dragen:', efter)
+    assert efter['xmin'] > fore_uts['xmin'] and efter['ymin'] > fore_uts['ymin'], 'ramen flyttas'
+    assert efter['xmax'] - efter['xmin'] == fore_uts['xmax'] - fore_uts['xmin'] and efter['ymax'] - efter['ymin'] == fore_uts['ymax'] - fore_uts['ymin'], 'storleken står kvar'
+    assert efter['xmin'] % 10 == 0 and efter['ymin'] % 10 == 0, 'jämna 10 m'
+    # 0.12.0: punkt och radie
+    pg.fill('#radie', '60'); pg.dispatch_event('#radie', 'change')
+    pg.click('#punkt-radie')
+    mx, my = (fore_uts['xmin'] + fore_uts['xmax']) / 2, (fore_uts['ymin'] + fore_uts['ymax']) / 2
+    pm = skarm(mx, my)
+    pg.mouse.click(pm[0], pm[1]); pg.wait_for_timeout(400)
+    kv = {k: int(pg.input_value('#' + k)) for k in ('xmin', 'xmax', 'ymin', 'ymax')}
+    print('  punkt och radie 60 m:', kv, pg.input_value('#zon'))
+    assert kv['xmax'] - kv['xmin'] == 120 and kv['ymax'] - kv['ymin'] == 120, 'kvadrat med sidan två gånger radien'
+    assert abs((kv['xmin'] + kv['xmax']) / 2 - mx) <= 10 and abs((kv['ymin'] + kv['ymax']) / 2 - my) <= 10, 'punkten i mitten'
+    pg.fill('#radie', '40'); pg.dispatch_event('#radie', 'change'); pg.wait_for_timeout(300)
+    assert int(pg.input_value('#xmax')) - int(pg.input_value('#xmin')) == 80, 'ny radie ritar om kvadraten'
+    pg.screenshot(path=f'{UT}/01c_punkt_radie.png')
+    # tillbaka till utsnittet som resten av testet räknar med
+    pg.select_option('#zon', zon_uts)
+    for k, v in fore_uts.items():
+        pg.fill('#' + k, str(v)); pg.dispatch_event('#' + k, 'change')
+    pg.wait_for_timeout(800)
+    assert {k: int(pg.input_value('#' + k)) for k in fore_uts} == fore_uts
     pg.fill('#projekt', 'Staren 2')
     pg.fill('#anv', 'test'); pg.fill('#losen', 'hemligt-åäö'); pg.dispatch_event('#losen', 'change')
 
@@ -153,8 +184,17 @@ with sync_playwright() as p:
     gang = next((n for n in vagfiler if n.endswith('_gangvagar_sweref.dxf')), None)
     assert bil and gang, 'bilvägar och gångvägar i varsin fil'
     bt, gt = z.read(bil).decode('latin-1'), z.read(gang).decode('latin-1')
-    assert 'VAG_YTA_BIL' in bt and 'VAG_GANG_CYKEL' not in bt, 'bilvägarnas fil har ytorna och inga gångvägar'
+    assert 'VAG_YTA_BIL_BERAKNAD' in bt and 'VAG_GANG_CYKEL' not in bt, 'bilvägarnas fil har ytorna och inga gångvägar'
     assert 'VAG_GANG_CYKEL' in gt and 'VAG_LOKALGATA' not in gt, 'gångvägarnas fil har bara gångvägar'
+    # 0.12.0: lutning och skyfall som JPEG med världsfiler och som PDF, och den samlade DXF:en i roten
+    for lag in ('lutning', 'skyfall'):
+        for slut in ('.jpg', '_lokal.jgw', '_sweref.jgw', '.pdf'):
+            assert any(n.endswith(f'_{lag}{slut}') for n in namn_i_zip), f'{lag}{slut} finns i zip:en'
+    samlad = [n for n in namn_i_zip if '_samlad_' in n]
+    print('  samlad:', samlad)
+    assert len(samlad) == 2 and all('/' not in n for n in samlad), 'samlad DXF lokal och sweref i roten'
+    st = z.read(next(n for n in samlad if n.endswith('_lokal.dxf'))).decode('latin-1')
+    assert 'HOJDKURVA' in st and 'LUTNING_1_50_1_20' in st and 'VAG_YTA_BIL_BERAKNAD' in st, 'den samlade DXF:en har lagren från filerna'
     info = next((z.read(n).decode('utf-8', 'replace') for n in namn_i_zip if n.endswith('info.txt')), '')
     for rad in info.splitlines():
         if 'IFC' in rad or 'från en byggnad är borttagna' in rad or 'precis vid en byggnad' in rad or 'vägar:' in rad or 'VÄGYTOR' in rad: print('  info:', rad.strip()[:160])
@@ -370,6 +410,24 @@ with sync_playwright() as p:
         assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore and pg.locator('#vy3d-dolda').is_hidden(), 'Visa dolda visar dem igen'
         sparat = pg.evaluate("JSON.parse(localStorage.getItem('terrang-tradval') || '{}')")
         assert any(v.get('art') == 'bjork' and not v.get('dolt') for v in sparat.values()), 'de andra ändringarna står kvar'
+        # 0.12.0: lasso runt alla träd som syns, dölj dem, visa dem igen
+        if pg.locator('#vy3d-lasso').is_visible():
+            pg.click('#vy3d-lasso'); pg.wait_for_timeout(200)
+            yb = pg.locator('#vy3d-yta').bounding_box()
+            x0, y0, w, h = yb['x'] + 8, yb['y'] + 8, yb['width'] - 16, yb['height'] - 16
+            pg.mouse.move(x0, y0); pg.mouse.down()
+            for px, py in [(x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h), (x0, y0 + 2)]:
+                pg.mouse.move(px, py, steps=12)
+            pg.mouse.up(); pg.wait_for_timeout(300)
+            pa_skarm = pg.evaluate('TERRANG_TEST.vy3d.tradPaSkarm().length')
+            print('  lasso:', pg.inner_text('#lasso-info'), '| på skärmen:', pa_skarm)
+            pg.screenshot(path=f'{UT}/06r_3d_lasso.png')
+            assert pa_skarm > 0 and f'{pa_skarm} träd' in pg.inner_text('#lasso-info'), 'lassot fångar träden som syns'
+            fore = pg.evaluate('TERRANG_TEST.senaste().trad.length')
+            pg.click('#lasso-dolj'); pg.wait_for_timeout(300)
+            assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore - pa_skarm and pg.locator('#vy3d-lassopanel').is_hidden(), 'Dölj träden'
+            pg.click('#vy3d-dolda'); pg.wait_for_timeout(300)
+            assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore, 'Visa dolda efter lassot'
         pg.evaluate("localStorage.removeItem('terrang-tradval'); localStorage.removeItem('terrang-husval')")
 
     # 0.10.0: modellera volymer i 3D-vyn

@@ -25,7 +25,7 @@
   function skapa(opt) {
     const dok = U().nyttDokument('a3', true, opt.fonter);
     const { doc } = dok;
-    doc.setProperties({ title: `Platsanalys ${opt.titel.projekt || ''}`.trim(), creator: 'höjdkurvor.se' });
+    doc.setProperties({ title: `Platsanalys ${opt.titel.projekt || ''}`.trim(), creator: 'Höjdkurvor' });
     const sidor = ['Sammanställning'];
     if (opt.kapitel.sol && opt.sol) sidor.push('Sol');
     if (opt.kapitel.sol && opt.skuggor) sidor.push('Skuggor');
@@ -81,10 +81,7 @@
     text('BLAD', bx + 118, by + 14.5, 5.5, { mono: true, farg: F.gra }); text(`${nr} / ${ctx.sidor.length}`, bx + 118, by + 19, 6.5, { mono: true });
     U().marke(doc, bx + 73, by + 13.2, 5, F.blck, F.annot);
     doc.setFont(ctx.dok.font, 'bold'); doc.setFontSize(8.5); doc.setTextColor(...F.blck);
-    doc.text('höjdkurvor', bx + 79.5, by + 16.5, { baseline: 'middle' });
-    const wl = doc.getTextWidth('höjdkurvor');
-    doc.setTextColor(...F.annot); doc.text('.', bx + 79.5 + wl, by + 16.5, { baseline: 'middle' });
-    doc.setTextColor(...F.blck); doc.text('se', bx + 79.5 + wl + doc.getTextWidth('.'), by + 16.5, { baseline: 'middle' });
+    doc.text('Höjdkurvor', bx + 79.5, by + 16.5, { baseline: 'middle' });
   }
 
   /**
@@ -404,7 +401,7 @@
     (ctx.opt.kallor || []).forEach(k => { y = stycke(k, x, y, w, 8.5) + 1.8; });
     y += 6;
     text('VILLKOR', x, y, 6.5, { mono: true, farg: F.gra }); y += 5;
-    stycke('Platsanalysen är framtagen automatiskt med höjdkurvor.se, en gratis betatjänst från Agrell Arkitektur. Den är tänkt som underlag i tidiga skeden och tillhandahålls i befintligt skick, utan garantier. Kontrollera uppgifterna mot kommunen, länsstyrelsen och respektive myndighet innan de används för projektering, bygglov eller utsättning.', x, y, w, 8.5);
+    stycke('Platsanalysen är framtagen automatiskt med Höjdkurvor, en gratis betatjänst från Agrell Arkitektur. Den är tänkt som underlag i tidiga skeden och tillhandahålls i befintligt skick, utan garantier. Kontrollera uppgifterna mot kommunen, länsstyrelsen och respektive myndighet innan de används för projektering, bygglov eller utsättning.', x, y, w, 8.5);
   }
 
   return { skapa, strandText, oversvamningKort };

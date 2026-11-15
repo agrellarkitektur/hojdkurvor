@@ -38,7 +38,7 @@ const bygg = [
 ];
 
 Terrang.lokal.vrid = 0;
-const lok = Ifc.byggnader(bygg, { dx: X0, dy: Y0, dz: Z0, lokal: true, projekt: 'Testgården', projektId: 'p1', filnamn: 'test_lokal.ifc', kalla: 'höjdkurvor.se test' });
+const lok = Ifc.byggnader(bygg, { dx: X0, dy: Y0, dz: Z0, lokal: true, projekt: 'Testgården', projektId: 'p1', filnamn: 'test_lokal.ifc', kalla: 'Höjdkurvor test' });
 assert.strictEqual(lok.antal, 2);
 assert.strictEqual(lok.utanHojd, 1);
 const t = lok.text;

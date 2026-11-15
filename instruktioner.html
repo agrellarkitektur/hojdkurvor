@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Instruktioner – höjdkurvor.se</title>
+  <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.11.0"></script>
-  <script src="js/tema.js?v=0.11.0"></script>
-  <script src="js/synpunkter.js?v=0.11.0" defer></script>
+  <script src="js/version.js?v=0.12.0"></script>
+  <script src="js/tema.js?v=0.12.0"></script>
+  <script src="js/synpunkter.js?v=0.12.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.11.0">
+  <link rel="stylesheet" href="app.css?v=0.12.0">
 </head>
 <body class="sida">
   <header class="toppmeny">
-    <a class="logga" href="index.html" aria-label="höjdkurvor.se, till kartan">
+    <a class="logga" href="index.html" aria-label="Höjdkurvor, till kartan">
       <svg viewBox="0 0 64 64" aria-hidden="true"><g class="ring" fill="none" stroke-width="2.4" transform="rotate(-14 32 32)"><ellipse cx="30" cy="34" rx="27" ry="21"/><ellipse cx="34.5" cy="31" rx="17.5" ry="13.5"/><ellipse cx="38" cy="29" rx="8.5" ry="6.5"/></g><path class="kors" d="M36 27 h7 M39.5 23.5 v7" stroke-width="2.4"/></svg>
-      <span class="ordbild" aria-hidden="true">höjdkurvor<span class="punkt">.</span>se</span>
+      <span class="ordbild" aria-hidden="true">Höjdkurvor</span>
     </a>
     <nav class="huvudmeny" aria-label="Huvudmeny">
       <a href="index.html"><span class="blad">BLAD 01</span><span class="namn">KARTAN</span></a>
@@ -108,7 +108,7 @@
         <h2><span class="nr">04</span>Skapa underlaget</h2>
         <p>Panelen på kartsidan har fyra steg. Du kan gå mellan dem i vilken ordning du vill. Nederst i panelen ser du vad som är valt.</p>
         <ol>
-          <li><strong>01 Plats.</strong> Sök fram platsen, välj <em>Rita område på kartan</em> och dra upp en rektangel. Kanterna hamnar på jämna 10 m. Dra i handtagen mitt på sidorna för att ändra storleken, eller klicka på krysset i hörnet för att börja om. Kontrollera koordinatsystemet; Höjdkurvor föreslår det som kommunen använder. Här anger du också nollpunkt, vridning och inloggning.</li>
+          <li><strong>01 Plats.</strong> Sök fram platsen, välj <em>Rita område på kartan</em> och dra upp en rektangel. Eller välj <em>Punkt och radie</em>, ange radien och klicka på kartan: området blir en kvadrat med punkten i mitten. Kanterna hamnar på jämna 10 m. Dra i handtagen mitt på sidorna för att ändra storleken, dra i ramen för att flytta området, eller klicka på krysset i hörnet för att börja om. Kontrollera koordinatsystemet; Höjdkurvor föreslår det som kommunen använder. Här anger du också nollpunkt, vridning och inloggning.</li>
           <li><strong>02 Underlag.</strong> Välj ritprogram, så ställs formaten in efter det. Under Terräng, Laserdata, Kartdata och Sektioner väljer du vad zip-filen ska innehålla.</li>
           <li><strong>03 Analys.</strong> Kryssa i <em>Skapa platsanalysblad</em> om du vill ha platsanalysen, se nedan.</li>
           <li><strong>04 Skiss.</strong> Lägg till volymer om du vill pröva ett hus på platsen. Steget kan hoppas över.</li>
@@ -150,7 +150,7 @@
         <p><em>Skuggor</em> tänder solen. Välj datum och dra i tiden, eller välj <em>Vårdagjämning</em>, <em>Midsommar</em> eller <em>Vintersolstånd</em>. <em>Spela dagen</em> går från soluppgång till solnedgång. Terrängen, husen, volymerna och träden kastar skugga; <em>Trädskuggor</em> stänger av trädens om vyn blir seg. Solen räknas som i soldiagrammet.</p>
         <p><em>Konturer</em> ritar kanter på husen och volymerna. <em>Husfärg</em> och <em>Skissfärg</em> byter färg på befintliga byggnader och på dina volymer, <em>Konturfärg</em> på kanterna och <em>Gränsfärg</em> på fastighetsgränserna. <em>Takformer</em> ger husen ett enkelt tak, sadeltak, valmat eller platt, med nockhöjd och takvinkel ur laserdatan. Det visar ungefär hur taken ser ut; de är inte inmätta. Träden visas som granar, tallar, lövträd och björkar efter formen i laserdatan. Under <em>Träd</em> väljer du Enkla eller Detaljerade; de detaljerade gäller träden närmast dig.</p>
         <p><strong>Rätta ett tak.</strong> Klicka på ett befintligt hus i 3D-vyn. I rutan som öppnas väljer du takform (sadeltak, valmat, pulpettak eller platt), lutning, om nocken går längs eller tvärs huset och nockhöjden. Det du lämnar tomt tas ur laserdatan, och <em>Ur laserdatan</em> tar bort dina val. Valen sparas i webbläsaren och gäller nästa gång du öppnar samma hus. <em>Dölj huset</em> tar bort ett hus som inte finns eller är fel.</p>
-        <p><strong>Rätta eller dölj ett träd.</strong> Klicka på ett träd i 3D-vyn. Välj art (gran, tall, lövträd eller björk), höjd och kronbredd; det du lämnar tomt tas ur laserdatan. <em>Dölj trädet</em> tar bort det, till exempel en topp som egentligen är en flaggstång eller ett tak. <em>Visa dolda</em> bland knapparna överst visar alla dolda träd och hus igen. Ändringarna syns direkt på kartan och följer med till cad-apa. Välj <em>Skapa</em> igen för att få dem i filerna och skuggstudien. Valen sparas i webbläsaren och gäller nästa gång du skapar underlaget för samma plats.</p>
+        <p><strong>Rätta eller dölj ett träd.</strong> Klicka på ett träd i 3D-vyn. Välj art (gran, tall, lövträd eller björk), höjd och kronbredd; det du lämnar tomt tas ur laserdatan. <em>Dölj trädet</em> tar bort det, till exempel en topp som egentligen är en flaggstång eller ett tak. Vill du dölja många träd: välj <em>Lasso</em>, dra en slinga runt dem och välj <em>Dölj</em>. <em>Visa dolda</em> bland knapparna överst visar alla dolda träd och hus igen. Ändringarna syns direkt på kartan och följer med till cad-apa. Välj <em>Skapa</em> igen för att få dem i filerna och skuggstudien. Valen sparas i webbläsaren och gäller nästa gång du skapar underlaget för samma plats.</p>
         <p><strong>Modellera.</strong> På datorn kan du rita volymer direkt i 3D-vyn. Välj <em>Modellera</em> och <em>Ny volym</em>: ett rätblock, en cylinder eller ett prisma med tak, med mått i meter. Klicka där volymen ska stå. Klicka på en volym för att välja den och dra för att flytta den; dra i <span aria-hidden="true">⟳</span> för att vrida, och håll ned skift för steg om 15°. Mått, höjd, tak, vridning och golv ändrar du i rutan. <em>Toppvy</em> visar platsen rakt uppifrån med norr uppåt, så att du kan lägga ut volymerna exakt.</p>
         <ul>
           <li><strong>Snäpp.</strong> En volym som dras nära en annan volym, ett hus eller en fastighetsgräns lägger sig an mot den, sida mot sida, och hörnen ställer sig i linje. Därefter kan du skriva in avståndet till det den snäppte mot. Håll ned Alt för att slippa snäppet.</li>
@@ -180,9 +180,10 @@
           <dt>AutoCAD</dt><dd>DXF-filerna öppnas direkt och kan sparas som DWG. Varje typ ligger på ett eget lager.</dd>
           <dt>Ortofoto</dt><dd><code>_ortofoto.jpg</code> har två världsfiler, <code>_ortofoto_lokal.jgw</code> och <code>_ortofoto_sweref.jgw</code>. Byt namn på den du vill använda så att den heter <code>_ortofoto.jgw</code>, så hamnar bilden rätt när ritprogrammet läser in den. Pixelstorleken står i info-filen: 0,16 m för mindre utsnitt, grövre för större.</dd>
           <dt>Befintliga byggnader i 3D</dt><dd><code>_byggnader_lokal.ifc</code> och <code>_byggnader_sweref.ifc</code> har husen som volymer med platta tak, till höjden ur laserdatan. I Archicad: File › Interoperability › Merge, eller öppna filen och kopiera in husen. Varje hus är ett eget objekt med husnummer, ändamål och höjd i egenskaperna. Hus utan höjd kommer inte med, så kryssa i både <em>Befintliga byggnader</em> och <em>Höjd ur laserdatan</em>. Gör en ny export, så får samma hus samma id.</dd>
-          <dt>Vägar</dt><dd><code>_vagar_lokal.dxf</code> har bilvägarna och <code>_gangvagar_lokal.dxf</code> gång- och cykelvägarna, båda som mittlinjer från OpenStreetMap. Med <em>Utkast till vägytor</em> har de också vägytorna som slutna linjer (lagren VAG_YTA_BIL och VAG_YTA_GANG), ihopslagna i korsningarna. Bredden kommer från OpenStreetMap när den finns där, annars en vanlig bredd för vägtypen. Har du valt ortofoto mäts bilvägarnas bredd och läge i bilden: appen följer vägbanans färg från mitten ut till kanterna. Träd över vägen, skuggor och infarter gör mätningen osäker, så se ytorna som ett utkast att rätta. Info-filen säger hur varje väg fick sin bredd.</dd>
+          <dt>Vägar</dt><dd><code>_vagar_lokal.dxf</code> har bilvägarna och <code>_gangvagar_lokal.dxf</code> gång- och cykelvägarna, båda som mittlinjer från OpenStreetMap. Med <em>Utkast till vägytor</em> har de också vägytorna som slutna linjer (lagren VAG_YTA_BIL_BERAKNAD och VAG_YTA_GANG_BERAKNAD), ihopslagna i korsningarna. Kanterna är beräknade, inte inmätta; på kartan är de streckade. Bredden kommer från OpenStreetMap när den finns där, annars en vanlig bredd för vägtypen. Har du valt ortofoto mäts bilvägarnas bredd och läge i bilden: appen följer vägbanans färg från mitten ut till kanterna. Träd över vägen, skuggor och infarter gör mätningen osäker, så se ytorna som ett utkast att rätta. Info-filen säger hur varje väg fick sin bredd.</dd>
           <dt>Träd</dt><dd><code>_trad.csv</code> har position, höjd och kronbredd per träd, för att placera trädobjekt med till exempel Dynamo eller Grasshopper.</dd>
-          <dt>Platsanalys</dt><dd>Lutning och skyfall ligger i mappen <code>platsanalys</code> och höjdpunkterna i <code>terrang</code>, med ett lager per klass. Skissens volymer ligger i <code>skiss</code>.</dd>
+          <dt>Platsanalys</dt><dd>Lutning och skyfall ligger i mappen <code>platsanalys</code> och höjdpunkterna i <code>terrang</code>, med ett lager per klass. Lutning och skyfall finns också som bild (<code>_lutning.jpg</code> och <code>_skyfall.jpg</code> med världsfiler; byt namn på en <code>.jgw</code> som för ortofotot) och som PDF i vektor. Skissens volymer ligger i <code>skiss</code>.</dd>
+          <dt>Samlad DXF</dt><dd><code>_samlad_lokal.dxf</code> och <code>_samlad_sweref.dxf</code> i zip-filens rot har alla DXF-underlag i en fil, med samma lager som i de enskilda filerna. Ortofotot och bilderna lägger du in för sig med världsfilerna.</dd>
           <dt>Sann nord</dt><dd>Höjdkurvornas DXF har lagren NORR_RUTNAT och NORR_SANN. Vinkeln mellan dem står i info-filen. Under Nollpunkt och vridning i steg 01 kan de lokala filerna vridas mot sann nord eller en egen vinkel.</dd>
         </dl>
       </section>
@@ -229,7 +230,7 @@
         <caption class="dold">Ritningshuvud</caption>
         <tbody>
           <tr>
-            <td rowspan="2" style="width: 31%"><span class="lbl">PROJEKT</span><a class="proj" href="index.html">höjdkurvor<span class="punkt">.</span>se</a></td>
+            <td rowspan="2" style="width: 31%"><span class="lbl">PROJEKT</span><a class="proj" href="index.html">Höjdkurvor</a></td>
             <td><span class="lbl">INNEHÅLL</span>INSTRUKTIONER</td>
             <td><span class="lbl">BLAD</span>02 / 04</td>
             <td><span class="lbl">SKEDE</span><span class="beta">BETA</span></td>
@@ -245,7 +246,7 @@
   </div>
 
   <footer class="sidfot">
-    <a href="index.html"><strong>höjdkurvor.se</strong></a>
+    <a href="index.html"><strong>Höjdkurvor</strong></a>
     <span>Utvecklad av <a href="https://agrellarkitektur.se">Agrell Arkitektur</a></span>
     <span>Data © <a href="https://geotorget.lantmateriet.se">Lantmäteriet</a></span>
   </footer>

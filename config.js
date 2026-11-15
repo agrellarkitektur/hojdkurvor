@@ -1,5 +1,5 @@
 /*
- * Inställningar för den här installationen av höjdkurvor.se.
+ * Inställningar för den här installationen av Höjdkurvor.
  * Lämna ett värde tomt ('') eller null för att stänga av funktionen.
  */
 window.TERRANG_KONFIG = {

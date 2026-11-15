@@ -1130,15 +1130,19 @@
     const tradMarkMat = new THREE.LineBasicMaterial({ color: '#ffb000', depthTest: false, transparent: true });
     let tradMark = null, markeratTrad = null;
     /** Ringar vid marken och toppen och fyra lodräta linjer runt det valda trädet. */
+    /** i = ett index, en lista med index (lassot, 0.12.0) eller null. */
     const markeraTrad = i => {
       if (tradMark) { tradMark.parent.remove(tradMark); tradMark.geometry.dispose(); tradMark = null; }
-      markeratTrad = i == null ? null : i;
-      const t = i != null && trad[i];
-      if (!t || t.dolt || !tradLager) return;
-      const p = [], n = 32, R = t.kr / 2, y0 = t.b + 0.1, y1 = t.b + t.h;
-      const pk = a => [t.x + R * Math.cos(a), t.z + R * Math.sin(a)];
-      for (const y of [y0, y1]) for (let k = 0; k < n; k++) { const [a, b] = pk(k / n * 2 * Math.PI), [c, d] = pk((k + 1) / n * 2 * Math.PI); p.push(a, y, b, c, y, d); }
-      for (let k = 0; k < 4; k++) { const [a, b] = pk(k / 4 * 2 * Math.PI + 0.4); p.push(a, y0, b, a, y1, b); }
+      markeratTrad = i == null || Array.isArray(i) ? null : i;
+      const lista = (Array.isArray(i) ? i : i == null ? [] : [i]).map(k => trad[k]).filter(t => t && !t.dolt);
+      if (!lista.length || !tradLager) return;
+      const p = [];
+      for (const t of lista) {
+        const n = lista.length > 50 ? 12 : 32, R = t.kr / 2, y0 = t.b + 0.1, y1 = t.b + t.h;
+        const pk = a => [t.x + R * Math.cos(a), t.z + R * Math.sin(a)];
+        for (const y of [y0, y1]) for (let k = 0; k < n; k++) { const [a, b] = pk(k / n * 2 * Math.PI), [c, d] = pk((k + 1) / n * 2 * Math.PI); p.push(a, y, b, c, y, d); }
+        for (let k = 0; k < 4; k++) { const [a, b] = pk(k / 4 * 2 * Math.PI + 0.4); p.push(a, y0, b, a, y1, b); }
+      }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
       tradMark = new THREE.LineSegments(g, tradMarkMat); tradMark.renderOrder = 10;
       tradLager.add(tradMark);
@@ -1368,8 +1372,17 @@
       // --- enskilda träd och hus (0.11.0)
       /** Anropas med trädets index (i data.trad) när man klickar på ett träd, null utanför. */
       lyssnaTrad(fn) { tradLyssnare.push(fn); },
-      /** Markerar ett träd (null tar bort markeringen). */
+      /** Markerar ett träd, flera (lista med index) eller inget (null). */
       markeraTrad(i) { markeraTrad(i); },
+      /** Träden som syns, med läget på skärmen (klientkoordinater) mitt i kronan, för lassot (0.12.0). */
+      tradPaSkarm() {
+        const b = el.getBoundingClientRect();
+        return trad.map((t, i) => {
+          if (t.dolt) return null;
+          const q = tillSkarm([t.x + cx, -t.z + cy, t.b + zmin + t.h * 0.6]);
+          return q.syns ? { i, x: b.left + q.x, y: b.top + q.y } : null;
+        }).filter(Boolean);
+      },
       /** Byter träd i (samma form som i data.trad, zonens koordinater); t.dolt döljer det. */
       bytTrad(i, t) {
         if (!trad[i] || !t) return false;
@@ -1488,5 +1501,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.11.0' };
+  window.Vy3D = { visa, version: '0.12.0' };
 }());

@@ -1,15 +1,17 @@
-# höjdkurvor.se
+# Höjdkurvor
 
 Gör Lantmäteriets öppna geodata till underlag för Archicad, Revit och AutoCAD,
 direkt i webbläsaren: höjdkurvor och höjdpunkter (DXF), markmodell (XYZ och CSV),
 punktmoln ur Laserdata skog (LAS och XYZ), ortofoto (JPEG med världsfil),
 befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
 (DXF, bilvägar och gångvägar för sig, med utkast till vägytorna), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
-PDF med lutning, skyfall och skydd och risker. Skissade volymer kan prövas på
+PDF med lutning, skyfall och skydd och risker (lutning och skyfall också som DXF, JPEG med
+världsfil och PDF i vektor), och en samlad DXF med alla DXF-underlag. Skissade volymer kan prövas på
 platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
 [cad-apa](https://github.com/agrellarkitektur/cad-apa).
 
-Live: <https://agrellarkitektur.se/terrang/> (blir höjdkurvor.se).
+Live: <https://agrellarkitektur.se/terrang/>. Flyttar till
+<https://apps.danaid.cloud/hojdkurvor/>, se `docs/FLYTT.md`.
 Utvecklad av Carl August Agrell, [Agrell Arkitektur](https://agrellarkitektur.se).
 Licens: GPL-3.0 eller senare, se `LICENSE`. Tredjepartskod och data: `THIRD_PARTY.md`.
 
@@ -35,7 +37,7 @@ servern skrivs över.
 
 Det går fortfarande att göra en zip: när en release publiceras med en tagg som
 `v0.6.0` lägger `.github/workflows/release.yml` filen `hojdkurvor-vX.Y.Z.zip`
-på releasen, med en mapp `terrang` som innehåller samma filer.
+på releasen, med en mapp `hojdkurvor` som innehåller samma filer.
 
 Utan GitHub: ladda upp hela mappen (utom `test/`, `docs/`, `.github/` och
 textfilerna, som inte behövs men inte heller skadar) till webbhotellet, till
@@ -47,11 +49,9 @@ omskrivningar. Ingen databas behövs. PHP behövs bara för reservvägarna
 
 Lantmäteriets server släpper bara igenom anrop från godkända webbplatser.
 `https://agrellarkitektur.se` är godkänd. Om sidan nås från en annan adress,
-till exempel med `www.` eller från en ny domän som höjdkurvor.se, stoppas
+till exempel med `www.` eller från den nya adressen apps.danaid.cloud, stoppas
 hämtningen tills Lantmäteriet har godkänt även den adressen. Ansök om det
-innan sidan flyttas. Internationaliserade domäner skickas som punycode
-(`xn--hjdkurvor-07a.se`), så ange både den formen och `hojdkurvor.se` i
-ansökan.
+innan sidan flyttas (se `docs/FLYTT.md`).
 
 ## Sidor
 
@@ -153,7 +153,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   (172 GB) med HTTP Range, några få sidor åt gången
 - `js/analys.js` (`Analys`) – ytmodell ur laserdata, träd, skuggor, sektioner, horisont
 - `js/platsanalys.js` (`Platsanalys`) – höjdpunkter, lutning, skyfall
-  (sänkfyllning och flödesackumulering), skissade volymer och tak
+  (sänkfyllning och flödesackumulering), lagren som bild, skissade volymer och tak
 - `js/geodata.js` (`Geodata`) – skyddad natur, lämningar, översvämning och
   vatten från andra myndigheter och OpenStreetMap
 - `js/platsanalysblad.js` – platsanalysens A3-häfte (PDF)
@@ -167,7 +167,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
-- `js/dxf.js` – DXF-skrivare
+- `js/dxf.js` – DXF-skrivare och sammanslagning till en samlad DXF
 - `js/bestall.js` – beställningsformuläret
 - `js/synpunkter.js` – BETA-knappen och formuläret Skicka synpunkter, på alla sidor
 - `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, felrapport
@@ -218,6 +218,9 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
+- Planerat (se `docs/SYNPUNKTER.md`): projektfil (0.13.0), sol på fasaderna (0.14.0), eget
+  bildunderlag som överlagring, skissvolymer ur inskannat underlag, en html-visare i
+  nedladdningsmappen och DXF med inlänkade filer (xref) och ortofoto.
 
 ## Data som sparas i webbläsaren
 

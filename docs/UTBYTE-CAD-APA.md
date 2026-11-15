@@ -1,4 +1,4 @@
-# Utbyte mellan höjdkurvor.se och cad-apa
+# Utbyte mellan Höjdkurvor och cad-apa
 
 Version 1 av utbytet. Höjdkurvor-sidan är byggd (`js/utbyte.js`, `js/app.js`).
 cad-apa-sidan ska byggas i cad-apa-projektet efter den här beskrivningen.
@@ -22,7 +22,7 @@ Som reserv kan båda sidor spara och öppna filer.
 
 ## Adresser
 
-- höjdkurvor: `https://agrellarkitektur.se/terrang/` (senare `https://höjdkurvor.se/`)
+- höjdkurvor: `https://agrellarkitektur.se/terrang/` (flyttar till `https://apps.danaid.cloud/hojdkurvor/`, se `docs/FLYTT.md`)
 - cad-apa: `https://agrellarkitektur.se/cad-apa/`
 
 Höjdkurvor läser cad-apas adress ur `config.js` (`cadApaUrl`, standard `../cad-apa/`).
@@ -95,7 +95,7 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   "format": "hojdkurvor-plats",
   "version": 1,
   "skapad": "2026-10-18T09:12:00.000Z",
-  "kalla": "höjdkurvor.se 0.5.0",
+  "kalla": "Höjdkurvor 0.5.0",
   "projekt": { "id": "uuid", "namn": "Staren 2", "kommun": "Kinda" },
   "koordinatsystem": {
     "plan": { "epsg": 3009, "namn": "SWEREF 99 15 00" },

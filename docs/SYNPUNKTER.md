@@ -7,23 +7,7 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-### 2026-11-15
-
-- Leverera lutnings- och skyfallslagren under platsanalys som separata jpg (lika ortofotot) och vektor-pdf.
-
-### 2026-11-13
-
-- Sätta ut en punkt och sedan välja "radie" (fast kvadrat) utifrån den när man väljer utsnitt.
-- Om det går: skicka med en html-fil i nedladdningsmappen bredvid info-texten som kan visa allt underlag som på webben, fast utan möjlighet att ändra utsnitt, både 2D och 3D.
-- En samlings-DXF i roten (vid infotexten) som visar alla DXF-underlag (och ortofoto-jpg) inlänkade tillsammans.
-- Förtydliga att vägkonturerna är en beräkning från ortofotot i 2D-förhandsvisningen och i lagernamnen i DXF:en. De beräknade kurvorna skulle kunna jämnas ut lite mer, särskilt på breda vägar där lokala förändringar kanske är mindre troliga.
-
-### 2026-11-01
-
-- Möjlighet att lägga in eget bildunderlag som överlagring.
-- Går det dessutom att generera skissvolymer efter eget inskannat underlag?
-- Flytta hela markeringen genom att dra i ramen.
-- Markera flera träd samtidigt med en lasso och dölja dem samtidigt.
+(Tom. Punkterna från 1, 13 och 15 november är inarbetade i 0.12.0 eller sorterade nedan.)
 
 ## Att testa
 
@@ -36,11 +20,27 @@ flyttas till CHANGELOG.md.
 - 0.11.0 vägar: kryssa i Vägar, Utkast till vägytor och Ortofoto på en plats med riktiga gator. Ligger ytorna rätt mot ortofotot (lagren Vägar och Gång- och cykelvägar på kartan), och hur ofta säger info-filen att bredden är mätt i bilden? Öppna `_vagar_lokal.dxf` och `_gangvagar_lokal.dxf` i Archicad.
 - 0.11.0 träd och hus: klicka på ett träd i 3D-vyn, byt art och höjd, dölj ett träd och ett hus, Visa dolda. Välj Skapa igen: är de dolda borta ur DXF:en och skuggstudien?
 - 0.11.0 till cad-apa: ortofotot i full upplösning (blir cad-apa seg?). Träden har nu art och modell i paketet, men cad-apa ritar dem inte förrän cad-apa läser `tradmodeller` (planerat i cad-apa 0.12.1).
+- 0.12.0 lutning och skyfall: kryssa i Lutning och Skyfall, Skapa. Lägg in `_lutning.jpg` och `_skyfall.jpg` i Archicad med världsfilen (byt namn på `_lokal.jgw`) och se att de hamnar rätt mot `_lutning_lokal.dxf`. Öppna `_lutning.pdf` och `_skyfall.pdf`: är skalan och teckenförklaringen begripliga?
+- 0.12.0 samlad DXF: öppna `_samlad_lokal.dxf` i Archicad. Kommer alla lager med, och blir filen för tung med kurvorna?
+- 0.12.0 punkt och radie: välj Punkt och radie, klicka på kartan, byt radie. Dra i ramen (inte i handtagen) och se att området flyttas i steg om 10 m. På iPhone: går det att dra i ramen med fingret?
+- 0.12.0 lasso: i 3D-vyn, välj Lasso, ringa in några träd, Dölj. Visa dolda tar tillbaka dem.
+- 0.12.0 vägytor: är de streckade ytorna på kartan och de nya lagernamnen tydliga nog, och är utjämningen lagom på breda vägar?
 
 ## 0.10.x – modellera vidare
 
 - (2026-10-27) Bästa hade varit om man kunde sänka linjer individuellt runt takfoten för att skapa sin egen takform. (Egna takfotslinjer.)
 - (2026-10-29) Volymer ska kunna läggas i varandra för att skapa mer specifika geometrier. Union kom i 0.10.0; bortskärning (urtag) återstår.
+
+## 0.13.0 – projektfil (plan-projektfil.md i claude.ai-projektet)
+
+- (2026-11-01) Möjlighet att lägga in eget bildunderlag som överlagring. Hör till projektfilens etapp 4 (bilagor): bilden i `bilagor/`, inpassad med två eller tre passpunkter.
+- (2026-11-13) Sätta ut en punkt och välja radie: klart i 0.12.0. Projektfilen ska spara `mitt` och `radie` (fälten finns i planen).
+
+## Efter projektfilen
+
+- (2026-11-01) Generera skissvolymer efter eget inskannat underlag. Bygger på överlagringen: rita fotavtryck ovanpå bilden (halvautomatiskt, med snäpp mot linjer i bilden) snarare än att tolka planen helt automatiskt.
+- (2026-11-13) En html-fil i nedladdningsmappen som visar allt underlag som på webben, 2D och 3D, utan att kunna ändra utsnittet. Läser projektfilens `projekt.json` och filerna i zip:en. Kräver att visaren fungerar från en lokal fil (`file://`), där webbläsaren stoppar `fetch` – underlaget måste därför bäddas in eller läsas med en filväljare. Villkoren för Lantmäteriets data i en fil som sprids ska kontrolleras först.
+- (2026-11-13) Samlings-DXF med *inlänkade* filer (xref) och ortofotot som bild: 0.12.0 gör en samlad DXF med allt kopierat in. Länkar och bilder kräver DXF 2000 (handtag, OBJECTS, IMAGEDEF) och måste provas i Archicad först.
 
 ## Senare / avvaktar
 

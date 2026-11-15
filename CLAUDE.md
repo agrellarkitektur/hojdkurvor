@@ -1,4 +1,4 @@
-# höjdkurvor.se
+# Höjdkurvor
 
 Webbapp som gör Lantmäteriets öppna geodata till ritunderlag och platsanalyser,
 helt i webbläsaren. Vanlig JavaScript utan byggsteg. GPL-3.0 eller senare.
@@ -89,6 +89,10 @@ node test/volym3d.test.js
 ```
 
 ```
+node test/dxf.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 
@@ -129,8 +133,10 @@ sedan via `geodata.php`).
    appen behöver, se till att urvalet (`git archive … ':!test' …`) stämmer i
    både `publicera.yml` och `release.yml`.
 
-Flyttar sidan till en ny domän (höjdkurvor.se) måste Lantmäteriet godkänna den
-för CORS först, se `README.md`.
+Appen heter bara Höjdkurvor (inte höjdkurvor.se). Den ska flytta till
+<https://apps.danaid.cloud/hojdkurvor/>; Lantmäteriet måste godkänna den nya
+adressen för CORS först, och cad-apa måste godta det nya ursprunget. Se
+`docs/FLYTT.md`.
 
 ## Systerprojekt att använda som referens
 

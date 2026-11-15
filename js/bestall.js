@@ -39,7 +39,7 @@
     const innehall = [...document.querySelectorAll('input[name=b-innehall]:checked')].map(c => '– ' + c.value);
     const rad = (etikett, v) => (v ? `${etikett}: ${v}` : '');
     return [
-      'Hej,', '', 'Jag vill beställa ett underlag från höjdkurvor.se.', '',
+      'Hej,', '', 'Jag vill beställa ett underlag från Höjdkurvor.', '',
       rad('Namn', $('b-namn').value.trim()), rad('E-post', $('b-epost').value.trim()), rad('Företag', $('b-org').value.trim()),
       rad('Projekt', $('b-projekt').value.trim()), '',
       'Område:', $('b-koord').value.trim(), '',

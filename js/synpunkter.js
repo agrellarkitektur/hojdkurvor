@@ -61,7 +61,7 @@
     if (epost && !f.email.checkValidity()) { status.textContent = 'E-postadressen ser inte rätt ut.'; f.email.focus(); return; }
     const kropp = {
       message: text, email: epost, website: f.website.value, elapsed: Date.now() - oppnad,
-      version: 'höjdkurvor.se ' + version(), sida: sida(), screen: `${window.innerWidth}×${window.innerHeight}`,
+      version: 'Höjdkurvor ' + version(), sida: sida(), screen: `${window.innerWidth}×${window.innerHeight}`,
     };
     knapp.disabled = true;
     status.textContent = 'Skickar …';

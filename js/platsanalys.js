@@ -273,6 +273,54 @@
     }
     return c;
   }
+  /**
+   * Rutnät för en bild av utsnittet r med s meter per pixel (högst maxPx per sida).
+   * x0, y1 är mitten av övre vänstra pixeln, som i en världsfil.
+   */
+  function bildRutnat(r, s, maxPx = 8192) {
+    while (Math.max((r.xmax - r.xmin) / s, (r.ymax - r.ymin) / s) > maxPx) s *= 2;
+    const W = Math.max(1, Math.round((r.xmax - r.xmin) / s)), H = Math.max(1, Math.round((r.ymax - r.ymin) / s));
+    return { W, H, s, x0: r.xmin + s / 2, y1: r.ymax - s / 2 };
+  }
+  /**
+   * Lutningen som ogenomskinlig bild (vit bakgrund, för JPEG) över utsnittet r.
+   * Klasserna ritas med full färg, en kvadrat per nod, s meter per pixel.
+   */
+  function lutningBild(lt, r, s = 0.25) {
+    const b = bildRutnat(r, s);
+    const c = document.createElement('canvas'); c.width = b.W; c.height = b.H;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, b.W, b.H);
+    const k = lt.s / b.s;
+    for (let j = 0; j < lt.H; j++) for (let i = 0; i < lt.W; i++) {
+      const kl = lt.klass[j * lt.W + i];
+      if (kl === 255) continue;
+      cx.fillStyle = `rgb(${LUTNING[kl].rgb.join(',')})`;
+      // noden ligger mitt i sin kvadrat
+      const px = (lt.x0 + i * lt.s - lt.s / 2 - r.xmin) / b.s, py = (r.ymax - (lt.y1 - j * lt.s) - lt.s / 2) / b.s;
+      cx.fillRect(Math.floor(px), Math.floor(py), Math.ceil(k) + 1, Math.ceil(k) + 1);
+    }
+    return Object.assign(b, { canvas: c });
+  }
+  /** Lågpunkter och flödesvägar som ogenomskinlig bild (vit bakgrund) över utsnittet r. */
+  function skyfallBild(sk, r, s = 0.25) {
+    const b = bildRutnat(r, s);
+    const c = document.createElement('canvas'); c.width = b.W; c.height = b.H;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, b.W, b.H);
+    const P = ([x, y]) => [(x - r.xmin) / b.s, (r.ymax - y) / b.s];
+    const vag = (pts, stang) => {
+      cx.beginPath();
+      pts.forEach((p, i) => { const [x, y] = P(p); if (i) cx.lineTo(x, y); else cx.moveTo(x, y); });
+      if (stang) cx.closePath();
+    };
+    cx.lineJoin = 'round'; cx.lineCap = 'round';
+    cx.fillStyle = 'rgb(127,178,224)'; cx.strokeStyle = 'rgb(31,111,178)'; cx.lineWidth = Math.max(1, 0.15 / b.s);
+    sk.lagpunkter.forEach(l => l.konturer.forEach(kt => { vag(kt, true); cx.fill('evenodd'); cx.stroke(); }));
+    const T0 = sk.troskel || 400;
+    sk.floden.forEach(f => { cx.lineWidth = Math.max(1.5, (f.ack > 4 * T0 ? 0.9 : 0.55) / b.s); vag(f.pts, false); cx.stroke(); });
+    return Object.assign(b, { canvas: c });
+  }
   function dxfSkyfall(sk, r, dx, dy) {
     const o = [];
     sk.lagpunkter.forEach((l, i) => {
@@ -446,7 +494,7 @@
   return {
     hojdpunkter, dxfHojdpunkter, hojdText,
     LUTNING, lutning, lutningCanvas, lutningKonturer, dxfLutning,
-    fyll, skyfall, dxfSkyfall, inuti,
+    fyll, skyfall, dxfSkyfall, inuti, bildRutnat, lutningBild, skyfallBild,
     takhojd, nockhojd, branInVolymer, dxfVolymer, tyngdpunkt, area, langsida, lasDxfFotavtryck,
     narmasteVatten,
   };

@@ -54,6 +54,10 @@ node test/vagar.test.js
 node test/objektval.test.js
 ```
 
+```
+node test/dxf.test.js
+```
+
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
@@ -66,6 +70,9 @@ beräkningarna för bilderna: djupet, djupkartan, kantlinjerna och storleken.
 Vägtestet (0.11.0) prövar bil- och gångvägar, bredden ur OSM:s taggar och
 schablonen, mätningen av bredden och läget i ett låtsat ortofoto (grå väg på
 grönt) och vägytorna: en korsning blir en yta och en rondell får ett hål.
+DXF-testet (0.12.0) prövar den samlade DXF:en: lager en gång, alla objekt, utbredningen
+och att höjdkurvornas egen skrivare går att slå ihop med de andra. Med `DXF_UT=mapp`
+sparas filen, så att den kan läsas med ezdxf.
 Objektvalstestet (0.11.0) prövar att dölja och rätta träd och hus, att ett träd
 känns igen på nytt inom 0,6 m och att dolda träd och hus skärs bort ur
 ytmodellen.

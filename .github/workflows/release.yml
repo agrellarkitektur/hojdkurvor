@@ -7,7 +7,7 @@
 # under körningens Artifacts i stället.
 #
 # Appen har inget byggsteg. Arbetsflödet kontrollerar koden, kör enhetstestet och
-# packar filerna i en mapp som heter terrang, utan tester och dokumentation.
+# packar filerna i en mapp som heter hojdkurvor, utan tester och dokumentation.
 
 name: Bygg för webbhotellet
 
@@ -62,27 +62,27 @@ jobs:
         run: |
           NAME="hojdkurvor-${GITHUB_REF_NAME:-manuell}"
           NAME="${NAME//\//-}"
-          # Zip-filen innehåller en mapp som heter terrang, färdig att lägga
-          # i public_html så att adressen blir …/terrang/.
-          mkdir -p package/terrang
-          git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C package/terrang
-          cat > package/terrang/LASMIG.txt <<TXT
-          höjdkurvor.se ${GITHUB_REF_NAME}
+          # Zip-filen innehåller en mapp som heter hojdkurvor, färdig att lägga
+          # på webbservern så att adressen blir …/hojdkurvor/ (se docs/FLYTT.md).
+          mkdir -p package/hojdkurvor
+          git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C package/hojdkurvor
+          cat > package/hojdkurvor/LASMIG.txt <<TXT
+          Höjdkurvor ${GITHUB_REF_NAME}
 
-          Ladda upp innehållet i mappen terrang till public_html/terrang/ på
-          webbhotellet och ersätt de gamla filerna. Sidan finns sedan på
-          https://agrellarkitektur.se/terrang/
+          Ladda upp innehållet i mappen hojdkurvor till appens mapp på
+          webbservern och ersätt de gamla filerna. Sidan finns sedan på
+          https://apps.danaid.cloud/hojdkurvor/
 
           config.js följer med utan nycklar. Har du ändrat den på servern (till
           exempel lagt in en Esri-nyckel): ladda inte upp config.js, eller för
           över ändringen till den nya filen först.
 
           Vill du behålla en äldre version: döp om den gamla mappen på servern
-          först (till exempel terrang-0.5.0) innan du laddar upp den nya.
+          först (till exempel hojdkurvor-0.5.0) innan du laddar upp den nya.
 
           Ändringar: https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md
           TXT
-          (cd package && zip -r -9 "../$NAME.zip" terrang)
+          (cd package && zip -r -9 "../$NAME.zip" hojdkurvor)
           echo "file=$NAME.zip" >> "$GITHUB_OUTPUT"
 
       - name: Lägg zip-filen på releasen

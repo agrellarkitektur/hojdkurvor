@@ -91,5 +91,69 @@
     return o.join('\r\n') + '\r\n';
   }
 
-  return { skriv, lagernamn, kortaNamn, MAX_NAMN };
+  /**
+   * Slår ihop flera DXF R12-texter från skriv() till en: alla lager och alla objekt.
+   * Lager med samma namn blir ett (färgen från den första filen). Utbredningen blir
+   * den sammanlagda.
+   */
+  function sammanfoga(texter) {
+    const lager = new Map(), delar = [];
+    let ext = null;
+    for (const t of texter) {
+      const r = t.split(/\r?\n/);
+      const par = [];
+      for (let i = 0; i + 1 < r.length; i += 2) par.push([r[i].trim(), r[i + 1]]);
+      let sektion = null, i = 0;
+      const exHamta = (namn) => {
+        const k = par.findIndex(p => p[0] === '9' && p[1] === namn);
+        return k < 0 ? null : [Number(par[k + 1][1]), Number(par[k + 2][1])];
+      };
+      const a = exHamta('$EXTMIN'), b = exHamta('$EXTMAX');
+      if (a && b) ext = ext ? { xmin: Math.min(ext.xmin, a[0]), ymin: Math.min(ext.ymin, a[1]), xmax: Math.max(ext.xmax, b[0]), ymax: Math.max(ext.ymax, b[1]) } : { xmin: a[0], ymin: a[1], xmax: b[0], ymax: b[1] };
+      for (; i < par.length; i++) {
+        const [k, v] = par[i];
+        if (k === '2' && i > 0 && par[i - 1][1] === 'SECTION') { sektion = v; continue; }
+        if (sektion === 'TABLES' && k === '0' && v === 'LAYER') {
+          let namn = null, farg = 7;
+          for (let j = i + 1; j < par.length && par[j][0] !== '0'; j++) {
+            if (par[j][0] === '2') namn = par[j][1];
+            if (par[j][0] === '62') farg = Number(par[j][1]);
+          }
+          if (namn && !lager.has(namn)) lager.set(namn, farg);
+        }
+        if (sektion === 'ENTITIES' && k === '2' && v === 'ENTITIES') continue;
+        if (sektion === 'ENTITIES') {
+          if (k === '0' && v === 'ENDSEC') { sektion = null; continue; }
+          delar.push(par[i][0], par[i][1]);
+        }
+      }
+    }
+    const o = [];
+    const g = (k, v) => { o.push(String(k), String(v)); };
+    const f = v => (Math.round(v * 1000) / 1000).toFixed(3);
+    g(0, 'SECTION'); g(2, 'HEADER');
+    g(9, '$ACADVER'); g(1, 'AC1009');
+    g(9, '$DWGCODEPAGE'); g(3, 'ANSI_1252');
+    g(9, '$INSUNITS'); g(70, 6);
+    if (ext) {
+      g(9, '$EXTMIN'); g(10, f(ext.xmin)); g(20, f(ext.ymin)); g(30, 0);
+      g(9, '$EXTMAX'); g(10, f(ext.xmax)); g(20, f(ext.ymax)); g(30, 0);
+    }
+    g(0, 'ENDSEC');
+    g(0, 'SECTION'); g(2, 'TABLES');
+    g(0, 'TABLE'); g(2, 'LTYPE'); g(70, 1);
+    g(0, 'LTYPE'); g(2, 'CONTINUOUS'); g(70, 0); g(3, 'Solid line'); g(72, 65); g(73, 0); g(40, 0);
+    g(0, 'ENDTAB');
+    g(0, 'TABLE'); g(2, 'LAYER'); g(70, lager.size);
+    for (const [n, c] of lager) { g(0, 'LAYER'); g(2, n); g(70, 0); g(62, c); g(6, 'CONTINUOUS'); }
+    g(0, 'ENDTAB');
+    g(0, 'TABLE'); g(2, 'STYLE'); g(70, 1);
+    g(0, 'STYLE'); g(2, 'STANDARD'); g(70, 0); g(40, 0); g(41, 1); g(50, 0); g(71, 0); g(42, 2.5); g(3, 'txt'); g(4, '');
+    g(0, 'ENDTAB');
+    g(0, 'ENDSEC');
+    g(0, 'SECTION'); g(2, 'ENTITIES');
+    return o.join('\r\n') + '\r\n' + (delar.length ? delar.join('\r\n') + '\r\n' : '') + '0\r\nENDSEC\r\n0\r\nEOF\r\n';
+  }
+
+  return { skriv, sammanfoga, lagernamn, kortaNamn, MAX_NAMN };
 }));

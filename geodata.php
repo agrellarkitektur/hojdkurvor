@@ -41,7 +41,7 @@ $ctx = stream_context_create(['http' => [
     'ignore_errors' => true,
     'follow_location' => 1,
     'max_redirects' => 2,
-    'header' => "User-Agent: hojdkurvor.se\r\nAccept: application/json, image/png, */*\r\n",
+    'header' => "User-Agent: Hojdkurvor\r\nAccept: application/json, image/png, */*\r\n",
 ]]);
 $svar = @file_get_contents($u, false, $ctx, 0, $MAX + 1);
 if ($svar === false) fel(502, 'Kunde inte nå tjänsten');

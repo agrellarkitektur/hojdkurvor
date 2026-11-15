@@ -116,7 +116,7 @@
       e('IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.)'), e('IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.)'),
       e('IFCSIUNIT(*,.VOLUMEUNIT.,$,.CUBIC_METRE.)'), e('IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.)'),
     ])})`);
-    const projekt = e(`IFCPROJECT('${guid(nyckel + ':projekt')}',$,${text(opt.projekt || 'Plats')},${text(`Befintliga byggnader från ${opt.kalla || 'höjdkurvor.se'}`)},$,$,$,(${ctx}),${enheter})`);
+    const projekt = e(`IFCPROJECT('${guid(nyckel + ':projekt')}',$,${text(opt.projekt || 'Plats')},${text(`Befintliga byggnader från ${opt.kalla || 'Höjdkurvor'}`)},$,$,$,(${ctx}),${enheter})`);
     const platsPl = e(`IFCLOCALPLACEMENT($,${wcs})`);
     const site = e(`IFCSITE('${guid(nyckel + ':site')}',$,${text(opt.projekt || 'Platsen')},${text(opt.lokal
       ? `Lokala koordinater: nollpunkt och Z0 = ${tal(dz)} (RH 2000) enligt info-filen`
@@ -175,7 +175,7 @@
       'ISO-10303-21;',
       'HEADER;',
       "FILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');",
-      `FILE_NAME(${text(opt.filnamn || 'byggnader.ifc')},'${nu}',(''),(''),${text(opt.kalla || 'höjdkurvor.se')},${text(opt.kalla || 'höjdkurvor.se')},'');`,
+      `FILE_NAME(${text(opt.filnamn || 'byggnader.ifc')},'${nu}',(''),(''),${text(opt.kalla || 'Höjdkurvor')},${text(opt.kalla || 'Höjdkurvor')},'');`,
       "FILE_SCHEMA(('IFC4'));",
       'ENDSEC;',
       'DATA;',

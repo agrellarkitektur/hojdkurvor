@@ -3,6 +3,51 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.12.0 – 2026-11-15
+
+Carl Augusts synpunkter från 1, 13 och 15 november, och förberedelser för flytten
+till apps.danaid.cloud. Appen heter nu bara Höjdkurvor.
+
+- **Lutning och skyfall som egna filer**: förutom DXF får båda lagren en JPEG
+  med världsfiler (`_lutning.jpg`, `_skyfall.jpg` med `_lokal.jgw` och
+  `_sweref.jgw`, som ortofotot) och en PDF i vektor (`_lutning.pdf`,
+  `_skyfall.pdf`) i mappen `platsanalys`. Bilderna har 0,25 m per pixel och
+  vit bakgrund (högst 8 192 px per sida). PDF:en är en A3 (A1 om skalan annars
+  blir grövre än 1:2 000) i största standardskala som får plats, med
+  befintliga hus och fastighetsgränser för orientering. Lutningen ritas som
+  ytor per klass (`Utskrift.plan` med `lager.lutning.konturer`), också klassen
+  flackare än 1:50. Skyfallets flödesvägar klipps nu mot utsnittet i
+  utskriften. `Platsanalys.lutningBild`, `skyfallBild`, `bildRutnat`.
+- **Samlad DXF**: `<namn>_samlad_lokal.dxf` och `_samlad_sweref.dxf` i zip:ens
+  rot, bredvid info-filen, med alla DXF-underlag och deras lager kopierade in i
+  en fil (`Dxf.sammanfoga`, `test/dxf.test.js`). Ortofotot och bilderna ingår
+  inte; de läggs in med sina världsfiler. Inlänkade referenser (xref) och
+  bilder i DXF:en kräver DXF 2000 och är inte gjorda.
+- **Vägytorna är beräknade**: lagren heter `VAG_YTA_BIL_BERAKNAD` och
+  `VAG_YTA_GANG_BERAKNAD`, ytorna är streckade på kartan och har en
+  verktygstips, och teckenförklaringen säger *beräknad ur ortofoto*. Bredden
+  och sidförskjutningen jämnas ut mer: medianfönstret växer med vägens bredd
+  (±7 stationer upp till ±16 för breda vägar) och följs av ett glidande
+  medelvärde, så att trappstegen försvinner.
+- **Punkt och radie**: i steg 01 Plats ger *Punkt och radie* och ett klick på
+  kartan en kvadrat med punkten i mitten och sidan två gånger radien (förval
+  50 m, kanterna på jämna 10 m). Byts radien ritas kvadraten om kring samma
+  punkt.
+- **Flytta området genom att dra i ramen**: en osynlig bred linje längs ramen
+  (`ramGrepp`) går att gripa; området flyttas i steg om 10 m och storleken
+  står kvar.
+- **Lasso i 3D-vyn**: knappen *Lasso* ringar in flera träd, som markeras, och
+  *Dölj n träd* döljer dem på en gång (samma val som *Dölj trädet*).
+  `vy3d.tradPaSkarm()`, `vy3d.markeraTrad([…])`.
+- **Namnet**: appen heter Höjdkurvor överallt (sidorna, PDF:erna, IFC, info-
+  filen, platspaketets `kalla`, synpunkterna). Domänen höjdkurvor.se används
+  inte. Release-zippen har mappen `hojdkurvor`.
+- **Flytten förberedd**: `docs/FLYTT.md` beskriver vad som krävs för
+  `https://apps.danaid.cloud/hojdkurvor/` (Lantmäteriets godkännande för CORS,
+  cad-apas ursprung, `cadApaUrl`, PHP och e-post, publiceringens secrets och
+  `SIDA_URL`, omdirigering av gamla länkar). Appen publiceras fortfarande till
+  agrellarkitektur.se/terrang/.
+
 ## 0.11.0 – 2026-10-30
 
 Carl Augusts synpunkter från 30 oktober: vägar och gångvägar var för sig, ett
