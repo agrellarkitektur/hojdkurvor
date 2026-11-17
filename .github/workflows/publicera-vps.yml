@@ -99,6 +99,10 @@ jobs:
             exit 0
           fi
           fel=0
+          # Startsidan utan filnamn ska ge appen, inte PHP:s "File not found.".
+          if ! curl -sf "${SIDA}?$k" -o /tmp/fil || ! cmp -s /tmp/fil index.html; then
+            echo "::error::${SIDA} visar inte index.html"; fel=1
+          fi
           while IFS= read -r -d '' f; do
             f=${f#./}
             case "$f" in *.php|.htaccess) continue ;; esac
