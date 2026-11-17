@@ -404,9 +404,10 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 Flytten: appen ligger på <https://hojdkurvor.danaid.cloud/> och på
 agrellarkitektur.se/terrang/, och publiceras till båda vid varje push. Läget
 per steg i `docs/FLYTT.md`. Synpunkterna (steg 5) är bestämda: e-post till
-kontakt@agrellarkitektur.se, skickad genom one.com från ett eget konto
-(`noreply@agrellarkitektur.se`) så att vidarebefordran till Gmail håller.
-Carl August gör stegen a–e i FLYTT.md; fråga hur det gick. Kvar sedan: cad-apa
+kontakt@agrellarkitektur.se, skickad av msmtp på VPS:en genom Loopias SMTP med
+kontakt@:s inloggning och `noreply@` som avsändare (domänen och e-posten ligger
+hos Loopia, inte one.com). Godtar Loopia inte noreply@ blir kontakt@ avsändare.
+Carl August gör stegen a–d i FLYTT.md; fråga hur det gick. Kvar sedan: cad-apa
 (steg 2 och 3) när cad-apa flyttar, omdirigeringen och att stänga av FTP.
 
 1. **Fråga om 0.12.1** (Att testa i `docs/SYNPUNKTER.md`): blev soldiagrammet

@@ -54,26 +54,28 @@ hit*.
      eller en gång för alla jokerposten `*`;
    - `sudo apps-drift nyckel hojdkurvor www/hojdkurvor` på servern, och
      utskriften som secret `APPS_SSH_KEY` i det här repot (steg 6).
-5. **Synpunkter. Bestämt 17 november: till kontakt@agrellarkitektur.se med e-post.**
-   Carl August läser kontakt@ i Gmail genom vidarebefordran från one.com, och
-   Gmail stoppar gärna vidarebefordrade brev som inte går att kontrollera.
-   Därför skickas breven *genom one.com* (inloggat, som ett vanligt e-postkonto
-   på agrellarkitektur.se) och inte direkt från VPS:en. Då är avsändaren äkta,
-   one.com signerar brevet (DKIM) och signaturen håller även när brevet
-   vidarebefordras. Avsändaren ska vara ett **eget konto**, t.ex.
-   `noreply@agrellarkitektur.se`, inte kontakt@ själv: står kontakt@ som
-   *Skicka som* i Gmail läggs brev *från* den adressen i Skickat, inte i
-   Inkorgen. Den som skrev synpunkten står i Reply-To, så Svara går till hen.
-   `synpunkter.php` är oförändrad; den sätter From och kuvertavsändaren (`-f`)
-   till `from` i `feedback-config.php`.
+5. **Synpunkter. Bestämt 17 november: e-post till kontakt@agrellarkitektur.se,
+   skickad genom Loopia.** Domänen och e-posten ligger hos Loopia;
+   kontakt@ är ett riktigt konto där och vidarebefordrar allt till Gmail.
+   Brev direkt från VPS:en med en agrellarkitektur.se-avsändare skulle se
+   förfalskade ut (VPS:en får inte skicka för domänen) och fastna i Gmail,
+   särskilt efter vidarebefordran. På webbhotellet fungerade `noreply@` utan
+   konto, eftersom Loopias egna servrar skickade. Därför loggar msmtp på
+   VPS:en in på Loopias utgående server (`mailcluster.loopia.se`, port 465)
+   som kontakt@, och brevet går vidare därifrån som ett vanligt brev från
+   domänen. `synpunkter.php` är oförändrad: From och kuvertavsändaren (`-f`)
+   är `from` i `feedback-config.php`, och den som skrev synpunkten står i
+   Reply-To. msmtp på servern gäller alla appar där (t.ex. Tyck till i Sisyfos).
 
-   Det Carl August gör (en gång):
+   Avsändare: i första hand `noreply@agrellarkitektur.se` med kontakt@:s
+   inloggning (inget eget konto). Godtar inte Loopia en annan avsändare än
+   kontot används `kontakt@` som avsändare; då ska kontakt@ inte längre vara
+   *Skicka som* i Gmail, annars läggs breven i Skickat i stället för Inkorgen
+   (Carl August har sagt att det går bra att ta bort).
 
-   a. Skapa e-postkontot `noreply@agrellarkitektur.se` i one.com:s kontrollpanel
-      (E-post → Nytt konto) och notera lösenordet. Kontrollera under DNS att
-      DKIM är på för agrellarkitektur.se.
+   Det Carl August gör (en gång), på VPS:en:
 
-   b. På VPS:en, `/etc/msmtprc` (msmtp är installerat av `apps-drift installera`):
+   a. `/etc/msmtprc`:
 
       ```
       sudo nano /etc/msmtprc
@@ -86,18 +88,19 @@ hit*.
       tls_trust_file /etc/ssl/certs/ca-certificates.crt
       syslog LOG_MAIL
 
-      account onecom
-      host send.one.com
+      account loopia
+      host mailcluster.loopia.se
       port 465
       tls_starttls off
       from noreply@agrellarkitektur.se
-      user noreply@agrellarkitektur.se
+      user kontakt@agrellarkitektur.se
       password LÖSENORDET
 
-      account default : onecom
+      account default : loopia
       ```
 
-      PHP körs som `www-data`, som måste kunna läsa filen men ingen annan:
+      Lösenordet är kontakt@:s. PHP körs som `www-data`, som måste kunna läsa
+      filen men ingen annan:
 
       ```
       sudo chown root:www-data /etc/msmtprc
@@ -107,29 +110,35 @@ hit*.
       sudo chmod 640 /etc/msmtprc
       ```
 
-   c. Mottagaren, i appens mapp (publiceringen hoppar över `*-config.php`):
+   b. Mottagaren och avsändaren, i appens mapp (publiceringen hoppar över
+      `*-config.php`):
 
       ```
       printf "<?php\nreturn ['to' => 'kontakt@agrellarkitektur.se', 'from' => 'noreply@agrellarkitektur.se'];\n" | sudo tee /srv/apps/www/hojdkurvor/feedback-config.php
       ```
 
-   d. Prova från servern, som PHP gör:
+   c. Prova från servern, som PHP gör:
 
       ```
-      printf "Subject: Prov från hojdkurvor\n\nProv." | sudo -u www-data msmtp -f noreply@agrellarkitektur.se kontakt@agrellarkitektur.se
+      printf "Subject: Prov från hojdkurvor\nFrom: noreply@agrellarkitektur.se\n\nProv." | sudo -u www-data msmtp -f noreply@agrellarkitektur.se kontakt@agrellarkitektur.se
       ```
 
-      Brevet ska komma till Gmails inkorg. Öppna det, *Visa original*: SPF,
-      DKIM och DMARC ska stå som PASS (DKIM är det som räknas efter
-      vidarebefordran). Hamnar det i Skräppost: markera *Inte skräppost* och
-      gör ett filter på avsändaren med *Skicka aldrig till skräppost*. Fel
-      står i `sudo journalctl -t msmtp -n 20`.
+      - Inget fel: brevet ska komma till Gmails inkorg. Öppna det, *Visa
+        original*: SPF eller DKIM ska stå som PASS. Hamnar det i Skräppost:
+        markera *Inte skräppost* och gör ett filter på avsändaren med *Skicka
+        aldrig till skräppost*.
+      - Fel om avsändaren (t.ex. *Sender address rejected* eller *not owned
+        by user*): byt `noreply@` mot `kontakt@` på raden `from` i
+        `/etc/msmtprc` och i `feedback-config.php` (kör b igen med kontakt@),
+        ta bort kontakt@ som *Skicka som* i Gmail, och prova igen.
+      - Andra fel: `sudo journalctl -t msmtp -n 20`.
 
-   e. Öppna <https://hojdkurvor.danaid.cloud/synpunkter.php>: ska svara
+   d. Öppna <https://hojdkurvor.danaid.cloud/synpunkter.php>: ska svara
       `"ok":true`. Skicka sedan en synpunkt med formuläret i appen.
 
-   Annan väg som övervägts: synpunkterna direkt till Inkorgen i ett projekt i
-   danaid. Kräver en öppen väg med egen spärr mot skräp; inte aktuellt nu.
+   Annan väg som övervägts: att appen skickar synpunkterna till
+   `synpunkter.php` på webbhotellet, som redan fungerar. Valdes bort, eftersom
+   filen då måste ligga kvar där och de andra apparna på VPS:en inte får e-post.
 6. **Publiceringen. Klar 17 november.** `.github/workflows/publicera-vps.yml`
    lägger appen på VPS:en med rsync över SSH (mallen `drift/publicera-app.yml` i
    agrellarkitektur/apps) vid varje push till `main`, med samma kontroller och

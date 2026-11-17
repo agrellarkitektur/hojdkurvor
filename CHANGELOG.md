@@ -33,7 +33,7 @@ i leveransen.
   XML-fel (ServiceException) ger nu *svarade med ett fel i stället för data*
   i stället för ett JSON-fel.
 - **Synpunkter på hojdkurvor.danaid.cloud**: hur e-posten sätts upp (msmtp via
-  one.com, egen avsändare) står i `docs/FLYTT.md`, steg 5.
+  Loopias SMTP) står i `docs/FLYTT.md`, steg 5.
 
 ## 0.12.0 – 2026-11-15
 
