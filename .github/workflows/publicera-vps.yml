@@ -1,0 +1,112 @@
+# Kontrollerar appen och lägger den på VPS:en (https://hojdkurvor.danaid.cloud/)
+# med rsync över SSH vid varje push till main (ändringar som bara rör
+# dokumentationen hoppas över). Kan också köras för hand under Actions →
+# "Publicera på VPS:en" → "Run workflow". Ersätter publicera.yml (FTP till
+# webbhotellet) när flytten är klar, se docs/FLYTT.md.
+#
+# Byggd på mallen drift/publicera-app.yml i agrellarkitektur/apps:
+#   - secret APPS_SSH_KEY: nyckeln från  sudo apps-drift nyckel hojdkurvor www/hojdkurvor
+#     Den är låst till rsync i /srv/apps/www/hojdkurvor och kan inte köra kommandon.
+#   - .github/known_hosts: serverns nycklar, kopierade från drift/known_hosts i apps.
+#   - Caddy-sajten för hojdkurvor.danaid.cloud ligger i drift/apps.caddy i apps.
+#
+# Samma urval som publicera.yml och release.yml: allt utom test, docs, .github,
+# CLAUDE.md och .gitignore. Serverns egna filer (feedback-config.php och annat
+# *-config.php, data/) skickas aldrig och tas aldrig bort. .htaccess följer inte
+# med; Caddy läser den inte, och inställningarna står i apps.caddy.
+#
+# Efter uppladdningen hämtas varje fil från webbplatsen och jämförs med urvalet.
+
+name: Publicera på VPS:en
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'test/**'
+  workflow_dispatch:
+
+concurrency:
+  group: publicera-vps
+  cancel-in-progress: false
+
+env:
+  HOST: apps.danaid.cloud
+  USER: appsdeploy
+  SIDA: https://hojdkurvor.danaid.cloud/
+
+jobs:
+  publicera:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Kontrollera koden
+        run: |
+          for f in js/*.js config.js; do node --check "$f"; done
+          command -v php >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q php-cli; }
+          for f in *.php; do php -l "$f"; done
+
+      - name: Enhetstest
+        run: for f in test/*.test.js; do node "$f"; done
+
+      - name: Kontrollera inställningarna
+        run: |
+          # Inga nycklar eller inloggningar får följa med till servern.
+          node -e "
+            global.window = {};
+            require('./config.js');
+            const k = window.TERRANG_KONFIG;
+            if (k.esriNyckel || k.inloggning) { console.error('config.js innehåller en nyckel eller inloggning'); process.exit(1); }
+          "
+
+      - name: Packa urvalet
+        run: |
+          mkdir -p ut
+          git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C ut
+
+      - name: Ladda upp till VPS:en
+        env:
+          KEY: ${{ secrets.APPS_SSH_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::notice::APPS_SSH_KEY saknas – hoppar över."; exit 0; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          cp .github/known_hosts ~/.ssh/known_hosts
+          # Nyckeln är låst till /srv/apps/www/hojdkurvor – därför står målet som "./".
+          rsync -rlz --checksum --delete --chmod=D755,F644 \
+            --exclude '*-config.php' --exclude 'data/' --exclude '.htaccess' \
+            -e "ssh -i $HOME/.ssh/id_deploy -o StrictHostKeyChecking=yes" \
+            ut/ "$USER@$HOST:./"
+
+      - name: Kontrollera webbplatsen
+        env:
+          KEY: ${{ secrets.APPS_SSH_KEY }}
+        run: |
+          [ -n "$KEY" ] || exit 0
+          cd ut
+          k="kontroll=$GITHUB_RUN_ID"
+          kod=$(curl -s -o /dev/null -w '%{http_code}' "${SIDA}index.html?$k")
+          if [ "$kod" = "000" ]; then
+            echo "::warning::${SIDA} gick inte att nå (saknas DNS-posten hojdkurvor?). Filerna är uppladdade men inte kontrollerade."
+            exit 0
+          fi
+          fel=0
+          while IFS= read -r -d '' f; do
+            f=${f#./}
+            case "$f" in *.php|.htaccess) continue ;; esac
+            if ! curl -sf "${SIDA}${f}?$k" -o /tmp/fil || ! cmp -s /tmp/fil "$f"; then
+              echo "::error::$f stämmer inte på servern"; fel=1
+            fi
+          done < <(find . -type f -print0)
+          for f in stac.php geodata.php synpunkter.php; do
+            echo "$f svarar $(curl -s -o /dev/null -w '%{http_code}' "${SIDA}$f")"
+          done
+          [ $fel = 0 ] && echo "Alla filer stämmer på ${SIDA}"
+          exit $fel

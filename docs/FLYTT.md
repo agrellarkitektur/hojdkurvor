@@ -63,19 +63,20 @@ hit*.
    Alternativ som övervägs: att synpunkterna går direkt till Inkorgen i ett
    projekt i danaid, som danaids egen knapp. danaids väg kräver i dag ett
    inloggat konto, så en öppen väg med egen spärr mot skräp behövs först.
-6. **Publiceringen.** FTP till webbhotellet ersätts av rsync över SSH enligt
-   mallen `drift/publicera-app.yml` i agrellarkitektur/apps
-   (`.github/workflows/publicera-vps.yml` här, `APP_ID: hojdkurvor`, och
-   `drift/known_hosts` därifrån som `.github/known_hosts`). Urvalet av filer ska
-   vara detsamma som `git archive … ':!test' …` i `publicera.yml`, och
-   kontrollen efter uppladdningen (`kontrollera-webbplatsen.sh`) ska köras mot
-   `https://hojdkurvor.danaid.cloud/`. FTP-publiceringen stängs av när den nya
-   fungerar.
+6. **Publiceringen. Klar 17 november.** `.github/workflows/publicera-vps.yml`
+   lägger appen på VPS:en med rsync över SSH (mallen `drift/publicera-app.yml` i
+   agrellarkitektur/apps) vid varje push till `main`, med samma kontroller och
+   samma urval som `publicera.yml`. Secret `APPS_SSH_KEY` är nyckeln från
+   `sudo apps-drift nyckel hojdkurvor www/hojdkurvor`; `.github/known_hosts` är
+   kopierad från `drift/known_hosts` i apps. Efter uppladdningen hämtas varje
+   fil från `https://hojdkurvor.danaid.cloud/` och jämförs. Tills flytten är
+   klar publiceras appen till båda ställena; `publicera.yml` (FTP) tas bort
+   när den gamla adressen bara är en omdirigering.
 
 ## Själva flytten
 
-1. Publicera till den nya adressen (secret `APPS_SSH_KEY`, kör arbetsflödet för
-   hand).
+1. Publicera till den nya adressen (sker vid varje push; för hand under Actions
+   → Publicera på VPS:en).
 2. Prova där: inloggning, Skapa med ortofoto, byggnader och fastigheter, Skicka
    synpunkter. Fortsätt rita i cad-apa och skissen tillbaka provas när cad-apa
    har flyttat (steg 2 och 3).
@@ -93,8 +94,8 @@ hit*.
    ```
 
 4. Uppdatera adressen i `README.md`, `CLAUDE.md`, `docs/UTBYTE-CAD-APA.md`,
-   `docs/OVERLAMNING.md` och kontrollens adress i publiceringen, och `url` i
-   katalogposten `apps/hojdkurvor/app.json` i agrellarkitektur/apps.
+   `docs/OVERLAMNING.md` och `CLAUDE.md` (steg 6 under Leverera), ta bort
+   `publicera.yml`, och ändra `url` i katalogposten `apps/hojdkurvor/app.json` i agrellarkitektur/apps.
 
 ## Det som inte följer med
 
