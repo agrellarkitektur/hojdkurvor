@@ -1,10 +1,17 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 17 november 2026, 0.12.1 (inkorgen 17 november: horisonten och leveransen).
+överlämning; historiken finns i git. Senast: 17 november 2026, 0.12.2 (skuggstudien med ram och husens konturer).
 
 ## Läget
 
+- **0.12.2** 17 november: skuggstudien i platsanalysen på ett A3-blad med ram
+  och ritningshuvud, husens fotavtryck och skissade volymer som linjer i
+  skuggrutorna (båda skugg-PDF:erna). `docs/SYNPUNKTER.md` har fått löpnummer
+  (AA, AB …) och är grupperad efter version. Ägarens namn är borttaget ur
+  dokumentationen; skriv det inte i repot (se CLAUDE.md). Synpunkterna går med
+  e-post från VPS:en (FLYTT.md steg 5, klart). 0.12.1 är provad: soldiagrammet
+  med horisont fungerar.
 - **0.12.1** 17 november: inkorgen 17 november utom fastighetsnamnet (står kvar
   i inkorgen). Soldiagrammet med horisont, platsanalysen i zip:ens rot,
   solbladet på A3 med ram, ingen DXF för skuggor, lutning och skyfall. Se
@@ -19,12 +26,12 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   DXF med xref/ortofoto. Appen heter bara **Höjdkurvor**; flytten till
   `hojdkurvor.danaid.cloud` är förberedd i `docs/FLYTT.md` men inte gjord.
   Enhetstester gröna, gränssnittstestet godkänt i alla tre teman, mobiltestet
-  godkänt. Carl August har inte testat 0.10.0–0.12.0.
+  godkänt.
 - **Versionsplanen flyttades ett steg** (15 november): 0.12.0 blev inkorgen,
   projektfilen blir **0.13.0** och sol på fasaderna **0.14.0**. Planerna i
   claude.ai-projektet (`plan-projektfil.md`, `overlamning-solanalys.md`) är
   uppdaterade. Rättelser efter testet blir 0.12.x.
-- **0.11.0** 30 oktober (gren `v0.11.0`): Carl Augusts fyra synpunkter i
+- **0.11.0** 30 oktober (gren `v0.11.0`): fyra synpunkter i
   inkorgen 30 oktober, alla inarbetade (inkorgen är tom):
   1. bilvägar och gångvägar var för sig (filer, kartlager, 3D-lager, utskrift,
      `slag` i platspaketet),
@@ -33,17 +40,29 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   4. ortofotot till cad-apa i full upplösning och träden med art, modell och
      de detaljerade modellerna (`tradmodeller`).
   Se avsnitten nedan. Enhetstester gröna; gränssnittstestet godkänt i alla tre
-  teman och mobiltestet. Carl August har inte testat; listan står under *Att
+  teman och mobiltestet. Inte testad av ägaren; listan står under *Att
   testa* i `docs/SYNPUNKTER.md`.
 - **0.10.1** 30 oktober: ortofotot i platspaketet. Nedskalningen till 4 096 px
   togs bort i 0.11.0.
 - **0.10.0** 29 oktober: modellera volymer i 3D-vyn, egen takform per
-  befintligt hus och stiliserade träd. Inte testad av honom än.
+  befintligt hus och stiliserade träd. Inte testad av ägaren än.
 - **0.9.0–0.9.2** (29 oktober): skuggor, konturer, färger, ögonhöjd, bilder,
-  takformer ur laserdatan. Carl August har provat 0.9.2 på Windows: taken ser
+  takformer ur laserdatan. 0.9.2 är provad på Windows: taken ser
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## 0.12.2
+
+- `Utskrift.skuggblad(opt)`: med `opt.dok` och `opt.ruta = { x, y, w, h }`
+  ritas rutnätet i rutan på den öppna sidan, utan sidbyte, rubrik och ordbild;
+  nordpilen hamnar i rutans övre högra hörn och noterna längst ner i rutan.
+  `Platsanalysblad.skuggsida` gör sidan med `sida()` och lämnar rutan ovanför
+  ritningshuvudet; noterna hamnar till vänster om huvudet.
+- `opt.byggnader` och `opt.volymer` (fotavtryck) ritas som linjer efter
+  skuggor och kurvor, och varje ruta klipps mot utsnittet. `app.js` lägger dem
+  i `skuggOpt` (`senaste.byggnader` är utan dolda hus).
+- Provat genom att rendera båda PDF:erna med påhittade hus och skuggor i Node.
 
 ## 0.12.1
 
@@ -53,18 +72,18 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   har ett eget `try` runt horisonten: misslyckas den görs soldiagrammet utan
   horisont och varningen säger det. Rutorna i `fel` står i varningen, i
   info-filen och i noten på soldiagrammet (`luckor`).
-- **Orsaken är inte bekräftad.** Carl Augusts prov mot en ruta som inte finns,
-  *utan* inloggning, gav 401 med CORS-huvuden. Med inloggning är svaret
-  okontrollerat; troligen 404 utan CORS-huvuden, vilket testservern nu
-  efterliknar för saknade `.tif` (det gav exakt hans fel med den gamla koden).
+- **Orsaken är inte klarlagd.** Ett prov mot en ruta som inte finns gav
+  `access-control-allow-origin` både utan och med inloggning (17 november), så
+  404 utan CORS-huvuden var det inte. Testservern efterliknar ändå det fallet
+  för saknade `.tif`. Med 0.12.1 blir soldiagrammet av med horisont; det
+  räcker.
   Samma sak kan fälla `lasHojder` (själva utsnittet) vid kusten eller
   riksgränsen; den är inte ändrad, eftersom ett nätverksfel där inte ska
   tolkas som hav.
 - **Solbladet**: `Platsanalysblad.solsida` ritar ram och ritningshuvud med
   `sida()` och sedan `Sol.soldiagramPdf` med `ruta = { x, y, k }` (A4-diagrammet
-  skalat till k ≈ 1,10 mellan rubriken och ritningshuvudet). Skuggstudien i
-  platsanalysen är fortfarande ett eget blad utan ram (A4 eller A3) – samma
-  ändring kan göras där om han vill.
+  skalat till k ≈ 1,10 mellan rubriken och ritningshuvudet). Skuggstudien fick
+  samma ram i 0.12.2.
 - **Leveransen**: `<namn>_platsanalys.pdf` i roten. Inga `_skuggor_*.dxf`,
   `_lutning_*.dxf` eller `_skyfall_*.dxf`; funktionerna finns kvar i modulerna.
 - **`Geodata.hamta`**: ett XML-fel med status 200 ger *svarade med ett fel i
@@ -177,11 +196,11 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   Beskrivet i `docs/UTBYTE-CAD-APA.md`.
 - **cad-apa läser inte de nya fälten än** (träden ritas som förut;
   trädmodeller står i cad-apas plan för 0.12.1). Ändra inget i cad-apa
-  härifrån; nämn det för Carl August så att cad-apa-sessionen kan ta det.
+  härifrån; nämn det för ägaren så att cad-apa-sessionen kan ta det.
 
 ## Modellera i 3D-vyn (0.10.0)
 
-Beslutat 29 oktober (Carl August valde Claudes förslag): primitiver med exakta
+Beslutat 29 oktober (ägaren valde Claudes förslag): primitiver med exakta
 mått, modelleras i 3D-vyn med en ortografisk toppvy, bara på dator. Analyserna
 får volymerna som förut: fotavtryck + golv + takfot + takform.
 
@@ -402,33 +421,38 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 ## Nästa session
 
 Flytten: appen ligger på <https://hojdkurvor.danaid.cloud/> och på
-agrellarkitektur.se/terrang/, och publiceras till båda vid varje push. Läget
-per steg i `docs/FLYTT.md`. Synpunkterna (steg 5) är bestämda: e-post till
-kontakt@agrellarkitektur.se, skickad av msmtp på VPS:en genom Loopias SMTP med
-kontakt@:s inloggning och `noreply@` som avsändare (domänen och e-posten ligger
-hos Loopia, inte one.com). Godtar Loopia inte noreply@ blir kontakt@ avsändare.
-Carl August gör stegen a–d i FLYTT.md; fråga hur det gick. Kvar sedan: cad-apa
-(steg 2 och 3) när cad-apa flyttar, omdirigeringen och att stänga av FTP.
+agrellarkitektur.se/terrang/, och publiceras till båda vid varje push. Steg 1,
+4, 5 och 6 i `docs/FLYTT.md` är klara. Kvar: cad-apa (steg 2 och 3) när
+cad-apa flyttar, och därefter omdirigeringen, adresserna i dokumentationen och
+att stänga av FTP (*Själva flytten* steg 3–4). Vänta med omdirigeringen tills
+cad-apa har flyttat, annars går det inte att fortsätta rita i cad-apa.
 
-1. **Fråga om 0.12.1** (Att testa i `docs/SYNPUNKTER.md`): blev soldiagrammet
-   av med horisont, och kom en varning om rutor? Var låg platsen? Be gärna om
-   provet *med* inloggning mot en ruta som inte finns, för att bekräfta
-   orsaken (PowerShell, byt ANV och LÖSEN):
+1. **Fastighetsnamn ur kartan (AX)**: förslaget nedan är lagt fram; fråga om
+   det ska byggas och i vilken version (0.13.0 tillsammans med projektfilen,
+   eller en egen version före).
+2. **0.13.0 projektfil** enligt `plan-projektfil.md` i claude.ai-projektet;
+   ägaren har sagt ja.
+3. Be om test av listan under *Att testa* i `docs/SYNPUNKTER.md`, nyast först
+   (AY, AW). Särskilt: vägytorna mot ett riktigt ortofoto (AJ), bilderna med
+   världsfil i Archicad (AR) och dra i ramen på iPhone (AT).
 
-   ```
-   curl.exe -s -D - -o NUL -u ANV:LÖSEN "https://dl1.lantmateriet.se/hojd/data/grid/mhm/99_9/m999_99.tif" -H "Origin: https://hojdkurvor.danaid.cloud" -H "Range: bytes=0-15"
-   ```
+### Förslag: fastighetsnamn ur kartan (AX)
 
-   Saknas `access-control-allow-origin` i svaret är orsaken bekräftad.
-2. **Fastighetsnamn ur kartan** (inkorgen): ny funktion, alltså 0.13.0 eller
-   senare. Fastighetsindelningen finns i kommunfilen (kräver inloggning och
-   att filen hämtats, `js/kommunfil.js`, sparas i IndexedDB). Undersök om
-   klicket kan läsa den sparade filen och vad som händer när den inte är
-   hämtad. Föreslå och fråga innan bygget.
-3. Be om test av 0.10.0–0.12.1 (listan under Att testa). Särskilt: vägytorna
-   mot ett riktigt ortofoto, bilderna med världsfil i Archicad och dra i ramen
-   på iPhone.
-4. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
+Fastighetsindelningen läses redan som vektor (`js/fastighet.js`): varje yta har
+ringar och beteckning (*Vimmerby 3:269*), och `Fastighet.iYta` finns. Kartlagret
+Fastigheter efter Skapa visar samma data. Topografiska webbkartans etiketter är
+en bild och går inte att läsa.
+
+- En liten knapp vid fältet *Projekt eller fastighet*: *Hämta från kartan*.
+  Nästa klick på kartan ger fastigheten under punkten, och fältet fylls i
+  (går att ändra).
+- Källa i tur och ordning: (1) `state.senaste.fastigheter` om punkten ligger i
+  det senaste utsnittet, (2) kommunfilen i IndexedDB (`Kommunfil.lasUtsnitt`
+  med en ruta på några meter kring punkten, utan att fråga), (3) inte hämtad:
+  samma fråga om storleken som vid Skapa, och kräver inloggning. Inte inloggad:
+  statusraden säger det.
+- Tillägg att fråga om: är fältet tomt och Fastigheter ikryssat vid Skapa,
+  föreslå den fastighet som har störst del av utsnittet (`fi.fastigheter[0]`).
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
@@ -444,7 +468,7 @@ Carl August gör stegen a–d i FLYTT.md; fråga hur det gick. Kvar sedan: cad-a
 - **Ortofoto**: 735 samlingar i `/stac-bild/v1`, en per område och år. Svar för
   Vimmerby i `test/data/stac-bild-sok-vimmerby.json`. Rutor 2,5 × 2,5 km
   (0,16 och 0,25 m) eller 5 × 5 km (0,5 m).
-- Riktiga filer för Vimmerby finns inte i repot. Be Carl August om dem om de
+- Riktiga filer för Vimmerby finns inte i repot. Be ägaren om dem om de
   behövs.
 
 ## Idéer som inte är beslutade
@@ -465,7 +489,7 @@ Carl August gör stegen a–d i FLYTT.md; fråga hur det gick. Kvar sedan: cad-a
   vägar, stompunkter, byggnader och fastighetsgränser), kontrollerat 27 oktober.
   Ändra inget i cad-apa härifrån. Fälten är beskrivna i `docs/UTBYTE-CAD-APA.md`.
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller står som KOMMER.
-- Avvaktar enligt Carl August: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för
+- Avvaktar enligt ägaren: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för
   terrängen och skissen, exempelprojekt.
 - Licensvillkoren för Riksantikvarieämbetets och MCF:s data och
   kommungränserna (`data/kommuner.json`) är inte kontrollerade.
@@ -473,7 +497,7 @@ Carl August gör stegen a–d i FLYTT.md; fråga hur det gick. Kvar sedan: cad-a
 - Flytten till hojdkurvor.danaid.cloud: Lantmäteriet behöver inte godkänna
   adressen (kontrollerat 17 november). cad-apa godtar inte det nya ursprunget
   förrän cad-apa själv flyttar, så Fortsätt rita ligger nere en tid på den nya
-  adressen (godkänt av Carl August). Se `docs/FLYTT.md`.
+  adressen (godkänt av ägaren). Se `docs/FLYTT.md`.
 
 ## Testmiljön
 

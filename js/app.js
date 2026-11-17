@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.12.1';
+  const FILVERSION = '0.12.2';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -1776,11 +1776,11 @@
               };
             });
             const skuggOpt = {
-              utsnitt: r, rader, kurvor: res.kurvor, fonter,
+              utsnitt: r, rader, kurvor: res.kurvor, fonter, byggnader: senaste.byggnader, volymer: senaste.volymer,
               titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
               notis: [(pz ? `Skuggor från terräng, träd och byggnader enligt laserdata ${laserDatum}. Träd räknas som täta.` : 'Skuggor från terrängen (ingen laserdata).') +
                 (senaste.volymer.length ? ' Skissade volymer ingår.' : '') + ` Skuggor från objekt mer än ${MARG_SKUGGA} m utanför utsnittet ingår inte.`,
-                'Grått: skugga på marken. Rutnätsnord uppåt. Underlag för tidiga skeden.'],
+                `Grått: skugga på marken${senaste.byggnader && senaste.byggnader.length ? ', svart linje: befintliga hus' : ''}${senaste.volymer.length ? ', orange linje: skissade volymer' : ''}. Rutnätsnord uppåt. Underlag för tidiga skeden.`],
             };
             senaste.skuggOpt = skuggOpt;
             filer[`skuggor/${namn}_skuggstudie.pdf`] = Utskrift.skuggblad(skuggOpt);

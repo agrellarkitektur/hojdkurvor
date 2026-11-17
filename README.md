@@ -12,7 +12,7 @@ platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritpr
 
 Live: <https://agrellarkitektur.se/terrang/>. Flyttar till
 <https://hojdkurvor.danaid.cloud/>, se `docs/FLYTT.md`.
-Utvecklad av Carl August Agrell, [Agrell Arkitektur](https://agrellarkitektur.se).
+Utvecklad av [Agrell Arkitektur](https://agrellarkitektur.se).
 Licens: GPL-3.0 eller senare, se `LICENSE`. Tredjepartskod och data: `THIRD_PARTY.md`.
 
 Allt räknas i besökarens webbläsare. Inloggningen till Lantmäteriet går direkt

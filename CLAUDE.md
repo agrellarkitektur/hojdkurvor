@@ -7,18 +7,21 @@ något, och `docs/UTBYTE-CAD-APA.md` innan du rör utbytet med cad-apa.
 **Börja varje session med `docs/OVERLAMNING.md`**: läget, vad som ska göras
 härnäst och vad som väntar. Skriv om den när sessionen slutar.
 
-## Arbetssätt med Carl August
+## Arbetssätt
 
-- Carl August Agrell, arkitekt, Agrell Arkitektur. Kontakt i appen:
+- Appen drivs av arkitektkontoret Agrell Arkitektur; *ägaren* nedan är den som
+  driver den. Kontakt i appen:
   kontakt@agrellarkitektur.se.
 - Svara på svenska. Skriv svenska texter i appen klart och enkelt, utan
   utfyllnad. I det här projektet får du skriva färdiga texter direkt.
 - Ge kommandon ett och ett, i var sin kodruta.
-- Han testar på iPhone 13 Pro med Chrome och Windows 11 med Chrome. Mobilen
+- Ägaren testar på iPhone 13 Pro med Chrome och Windows 11 med Chrome. Mobilen
   används mest för att läsa och markera områden; ritandet sker på datorn.
-- Föreslå gärna förbättringar, men vänta med större bygget tills han har sagt
-  vilka som ska göras. Saker han sagt att vi avvaktar med står under Kommande i
+- Föreslå gärna förbättringar, men vänta med större bygget tills ägaren har sagt
+  vilka som ska göras. Saker ägaren sagt att vi avvaktar med står under Kommande i
   `README.md`.
+- Skriv inte ägarens namn i repot (dokumentation, kod, commits). Skriv
+  *ägaren* eller formulera om, t.ex. *Synpunkter från egen användning*.
 
 ## Koden
 
@@ -111,7 +114,7 @@ python3 test/mobil_test.py test/ut
 Kör enhetstestet efter ändringar i beräkningarna och gränssnittstesterna efter
 ändringar i panelen. Titta på skärmbilderna i alla tre teman, och rendera
 PDF:erna (`pdftoppm`) och titta på dem. WebKit saknas i testmiljön, så be
-honom kontrollera större gränssnittsändringar på iPhone.
+ägaren kontrollera större gränssnittsändringar på iPhone.
 
 Webbplatsens externa tjänster går inte att nå från testmiljön. Kontrollera
 nya datakällor med webbsökning och dokumentation, och bygg dem så att appen
@@ -144,7 +147,7 @@ måste godta det nya ursprunget när cad-apa flyttar. Se `docs/FLYTT.md`.
 
 ## Systerprojekt att använda som referens
 
-Carl Augusts andra appar ligger öppet på GitHub och kan läsas (klona med
+Agrell Arkitekturs andra appar ligger öppet på GitHub och kan läsas (klona med
 `git clone --depth 1`) för att se hur saker redan är lösta, till exempel
 synpunktsformuläret, menyraden och publiceringen. Ändra inget i dem härifrån.
 

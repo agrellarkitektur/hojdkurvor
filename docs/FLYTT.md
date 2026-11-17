@@ -45,17 +45,18 @@ hit*.
    agrellarkitektur.se. Med underdomäner blir det
    `cadApaUrl: 'https://cad-apa.danaid.cloud/'` (och standardvärdet i
    `js/app.js` likaså).
-4. **Servern.** VPS:en kör Caddy med PHP-FPM, så `stac.php`, `geodata.php` och
+4. **Servern. Klar 17 november.** VPS:en kör Caddy med PHP-FPM, så `stac.php`, `geodata.php` och
    `synpunkter.php` fungerar. `.htaccess` läses inte av Caddy; dess
    inställningar (`Cache-Control: no-cache` för html, js, css och json, och
    UTF-8 som teckenkodning) står i stället i appens sajt i `drift/apps.caddy` i
-   repot agrellarkitektur/apps. Det som återstår för Carl August:
+   repot agrellarkitektur/apps. Gjort 17 november:
    - en DNS-post `hojdkurvor` hos one.com som pekar på VPS:en (samma som `apps`),
      eller en gång för alla jokerposten `*`;
    - `sudo apps-drift nyckel hojdkurvor www/hojdkurvor` på servern, och
      utskriften som secret `APPS_SSH_KEY` i det här repot (steg 6).
-5. **Synpunkter. Bestämt 17 november: e-post till kontakt@agrellarkitektur.se,
-   skickad genom Loopia.** Domänen och e-posten ligger hos Loopia;
+5. **Synpunkter. Klart 17 november: e-post till kontakt@agrellarkitektur.se,
+   skickad genom Loopia med `noreply@` som avsändare.** Provat från servern
+   och med formuläret; breven kommer fram till Gmail. Domänen och e-posten ligger hos Loopia;
    kontakt@ är ett riktigt konto där och vidarebefordrar allt till Gmail.
    Brev direkt från VPS:en med en agrellarkitektur.se-avsändare skulle se
    förfalskade ut (VPS:en får inte skicka för domänen) och fastna i Gmail,
@@ -67,13 +68,13 @@ hit*.
    är `from` i `feedback-config.php`, och den som skrev synpunkten står i
    Reply-To. msmtp på servern gäller alla appar där (t.ex. Tyck till i Sisyfos).
 
-   Avsändare: i första hand `noreply@agrellarkitektur.se` med kontakt@:s
-   inloggning (inget eget konto). Godtar inte Loopia en annan avsändare än
+   Avsändare: `noreply@agrellarkitektur.se` med kontakt@:s inloggning (inget
+   eget konto); Loopia godtar det. Godtar inte Loopia en annan avsändare än
    kontot används `kontakt@` som avsändare; då ska kontakt@ inte längre vara
    *Skicka som* i Gmail, annars läggs breven i Skickat i stället för Inkorgen
-   (Carl August har sagt att det går bra att ta bort).
+   (det går bra att ta bort).
 
-   Det Carl August gör (en gång), på VPS:en:
+   Så gjordes det (en gång), på VPS:en:
 
    a. `/etc/msmtprc`:
 

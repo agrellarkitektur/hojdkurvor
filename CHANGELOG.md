@@ -3,6 +3,24 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.12.2 – 2026-11-17
+
+Synpunkter 17 november: skuggstudien i platsanalysen.
+
+- **Skuggstudien på ett A3-blad med ram**: i platsanalysen ritas skuggstudien
+  på ett blad med samma ram och ritningshuvud som de andra
+  (`Platsanalysblad.skuggsida`). `Utskrift.skuggblad` har fått
+  `opt.ruta = { x, y, w, h }`, som ritar rutnätet i en ruta på den sida som
+  redan är öppen, utan egen rubrik och ordbild. Den fristående
+  `skuggor/_skuggstudie.pdf` är som förut.
+- **Husens fotavtryck i skuggrutorna**: `opt.byggnader` (svart linje) och
+  `opt.volymer` (skissade volymer, orange linje) ritas ovanpå skuggorna, i
+  båda PDF:erna. Bara konturen, så att skugga på taken fortfarande syns. Varje
+  ruta klipps nu mot utsnittet. Noten förklarar linjerna.
+- **Dokumentationen**: `docs/SYNPUNKTER.md` har löpnummer (AA, AB …) och är
+  grupperad efter version; synpunkterna skickas nu med e-post från VPS:en
+  (`docs/FLYTT.md` steg 5).
+
 ## 0.12.1 – 2026-11-17
 
 Inkorgen 17 november: felet med soldiagrammet och horisonten, och tre ändringar
@@ -16,7 +34,7 @@ i leveransen.
   info-filen och noten på soldiagrammet. Misslyckas horisonten ändå skapas
   soldiagrammet utan horisont, med en varning. Trolig orsak: en ruta som inte
   finns svarar 404 utan CORS-huvuden, och webbläsaren ser då ett nätverksfel
-  (Carl Augusts prov utan inloggning gav 401 *med* CORS-huvuden, så det
+  (ett prov utan inloggning gav 401 *med* CORS-huvuden, så det
   oinloggade svaret är det inte). Testservern svarar nu så för saknade
   `.tif`, och `test/horisont.test.js` prövar läsningen.
 - **Platsanalysen i roten**: `<namn>_platsanalys.pdf` ligger i zip:ens rot
@@ -37,7 +55,7 @@ i leveransen.
 
 ## 0.12.0 – 2026-11-15
 
-Carl Augusts synpunkter från 1, 13 och 15 november, och förberedelser för flytten
+Synpunkter från 1, 13 och 15 november, och förberedelser för flytten
 till apps.danaid.cloud. Appen heter nu bara Höjdkurvor.
 
 - **Lutning och skyfall som egna filer**: förutom DXF får båda lagren en JPEG
@@ -82,7 +100,7 @@ till apps.danaid.cloud. Appen heter nu bara Höjdkurvor.
 
 ## 0.11.0 – 2026-10-30
 
-Carl Augusts synpunkter från 30 oktober: vägar och gångvägar var för sig, ett
+Synpunkter från 30 oktober: vägar och gångvägar var för sig, ett
 utkast till vägytorna, dölja och rätta enskilda träd och hus, och mer till
 cad-apa.
 
@@ -195,7 +213,7 @@ Volymer i 3D-vyn, egen takform på befintliga hus och nya träd.
 
 ## 0.9.1 – 2026-10-29
 
-Rättelser och tillägg efter Carl Augusts första prov av 3D-vyn.
+Rättelser och tillägg efter det första provet av 3D-vyn.
 
 - **Konturfärg och Gränsfärg**: färgväljare för husens konturer (och
   fotavtrycken för hus utan höjd) och för fastighetsgränserna, som Kurvfärg.

@@ -441,48 +441,66 @@
   // Skuggstudie som översiktsblad
   // ------------------------------------------------------------------
   /**
-   * opt: { utsnitt, rader: [{namn, tider: [{etikett, konturer}]}], kurvor, titel, fonter, notis }
+   * opt: { utsnitt, rader: [{namn, tider: [{etikett, konturer}]}], kurvor, titel, fonter, notis,
+   *        byggnader: [{ fotavtryck }], volymer: [{ fotavtryck }] }
+   * opt.dok = { doc, font, mono }: rita som en ny sida i ett befintligt dokument.
+   * opt.ruta = { x, y, w, h } (mm, kräver opt.dok): rita i rutan på den sida som redan är öppen,
+   * utan egen rubrik och ordbild (platsanalysens blad har ram och ritningshuvud).
    */
   function skuggblad(opt) {
     const r = opt.utsnitt, nr = opt.rader.length, nk = Math.max(...opt.rader.map(x => x.tider.length));
     const liggande = true, format = nk > 4 || nr > 3 ? 'a3' : 'a4';
     const [PW, PH] = papper(format, liggande);
-    // opt.dok = { doc, font, mono }: rita som en ny sida i ett befintligt dokument
     const { doc, font, mono } = opt.dok || nyttDokument(format, liggande, opt.fonter);
-    if (opt.dok) doc.addPage(format, 'landscape');
-    else doc.setProperties({ title: `Skuggstudie ${opt.titel.projekt || ''}`, creator: 'Höjdkurvor' });
-    const text = (s, x, y, pt, o = {}) => { doc.setFont(o.mono ? mono : font, o.mono ? 'normal' : (o.vikt || 'normal')); doc.setFontSize(pt); doc.text(String(s), x, y, { align: o.ha || 'left', baseline: o.va || 'middle' }); };
-    text(`Skuggstudie${opt.titel.projekt ? ' – ' + opt.titel.projekt : ''}`, MARG, MARG + 4, 16, { vikt: 'bold' });
-    text([opt.titel.kommun, opt.titel.system].filter(Boolean).join('. '), MARG, MARG + 11, 7.5);
-    const top = MARG + 18, vanster = MARG + 28, botten = PH - MARG - 14;
-    const cw = (PW - MARG - vanster) / nk, ch = (botten - top) / nr;
+    const ruta = opt.dok && opt.ruta;
+    if (opt.dok && !ruta) doc.addPage(format, 'landscape');
+    else if (!opt.dok) doc.setProperties({ title: `Skuggstudie ${opt.titel.projekt || ''}`, creator: 'Höjdkurvor' });
+    const text = (s, x, y, pt, o = {}) => { doc.setFont(o.mono ? mono : font, o.mono ? 'normal' : (o.vikt || 'normal')); doc.setFontSize(pt); doc.setTextColor(...(o.farg || F.blck)); doc.text(String(s), x, y, { align: o.ha || 'left', baseline: o.va || 'middle' }); };
+    // ytan som rutnätet ritas i
+    const B = ruta ? { x: ruta.x, y: ruta.y, w: ruta.w, h: ruta.h } : { x: MARG, y: MARG + 18, w: PW - 2 * MARG, h: PH - 2 * MARG - 18 };
+    if (!ruta) {
+      text(`Skuggstudie${opt.titel.projekt ? ' – ' + opt.titel.projekt : ''}`, MARG, MARG + 4, 16, { vikt: 'bold' });
+      text([opt.titel.kommun, opt.titel.system].filter(Boolean).join('. '), MARG, MARG + 11, 7.5);
+    }
+    const top = B.y, vanster = B.x + 28, botten = B.y + B.h - 14, hoger = B.x + B.w - (ruta ? 8 : 0);
+    const cw = (hoger - vanster) / nk, ch = (botten - top) / nr;
     const rw = r.xmax - r.xmin, rh = r.ymax - r.ymin;
     const k = Math.min((cw - 6) / rw, (ch - 9) / rh);
+    const fot = f => f && f.length > 2;
     opt.rader.forEach((rd, i) => {
       const y0 = top + i * ch;
-      text(rd.namn, MARG, y0 + ch / 2 - 2, 8, { vikt: 'bold' });
-      if (rd.under) text(rd.under, MARG, y0 + ch / 2 + 2.5, 6.5);
+      text(rd.namn, B.x, y0 + ch / 2 - 2, 8, { vikt: 'bold' });
+      if (rd.under) text(rd.under, B.x, y0 + ch / 2 + 2.5, 6.5);
       rd.tider.forEach((ti, j) => {
         const x0 = vanster + j * cw + (cw - rw * k) / 2, yy0 = y0 + 6;
         const P = (x, y) => [x0 + (x - r.xmin) * k, yy0 + (r.ymax - y) * k];
         const L = (pts, stang) => { const [a, b] = P(pts[0][0], pts[0][1]); doc.moveTo(a, b); for (let q = 1; q < pts.length; q++) { const [x, y] = P(pts[q][0], pts[q][1]); doc.lineTo(x, y); } if (stang) doc.close(); };
         text(ti.etikett, x0, y0 + 3, 7, { mono: true });
+        doc.saveGraphicsState();
+        doc.rect(x0, yy0, rw * k, rh * k, null); doc.clip(); doc.discardPath();
         if (ti.konturer && ti.konturer.length) {
           doc.setFillColor(150, 150, 150); ti.konturer.forEach(l => L(l.pts, true)); doc.fillEvenOdd();
         }
-        if (ti.text) text(ti.text, x0 + rw * k / 2, yy0 + rh * k / 2, 7, { ha: 'center' });
         if (opt.kurvor) {
           doc.setDrawColor(...F.kurva); doc.setLineWidth(0.08);
           opt.kurvor.filter(kv => kv.lager !== 'HOJDKURVA_0_5M' && kv.lager !== 'HOJDKURVA_0_25M').forEach(kv => { L(kv.pts, kv.sluten); doc.stroke(); });
         }
+        // husens och skissens fotavtryck ovanpå skuggorna, bara konturen så att skuggan på taket syns
+        doc.setDrawColor(...F.blck); doc.setLineWidth(0.12);
+        (opt.byggnader || []).filter(b => fot(b.fotavtryck)).forEach(b => { L(b.fotavtryck, true); doc.stroke(); });
+        doc.setDrawColor(...F.annot); doc.setLineWidth(0.25);
+        (opt.volymer || []).filter(v => fot(v.fotavtryck)).forEach(v => { L(v.fotavtryck, true); doc.stroke(); });
+        doc.restoreGraphicsState();
+        if (ti.text) text(ti.text, x0 + rw * k / 2, yy0 + rh * k / 2, 7, { ha: 'center' });
         doc.setDrawColor(...F.ram); doc.setLineWidth(0.25); doc.rect(x0, yy0, rw * k, rh * k, 'S');
       });
     });
     // nordpil
-    const nx = PW - MARG - 4, ny = MARG + 6;
-    doc.setFillColor(...F.blck); doc.triangle(nx, ny - 5, nx - 1.8, ny + 1.5, nx + 1.8, ny + 1.5, 'F');
-    text('N', nx, ny - 7, 7, { ha: 'center', vikt: 'bold' });
-    (opt.notis || []).forEach((n, i) => text(n, MARG, PH - MARG - 9 + i * 3.2, 6.2));
+    const nx = ruta ? B.x + B.w - 4 : PW - MARG - 4, ny = ruta ? B.y + 2 : MARG + 6;
+    doc.setFillColor(...F.blck); doc.triangle(nx, ny - 5 + (ruta ? 7 : 0), nx - 1.8, ny + 1.5 + (ruta ? 7 : 0), nx + 1.8, ny + 1.5 + (ruta ? 7 : 0), 'F');
+    text('N', nx, ny - 7 + (ruta ? 7 : 0), 7, { ha: 'center', vikt: 'bold' });
+    (opt.notis || []).forEach((n, i) => text(n, B.x, B.y + B.h - 9 + i * 3.2, 6.2));
+    if (ruta) return doc;
     // Höjdkurvor
     marke(doc, PW - MARG - 30, PH - MARG - 4.6, 4.5, F.blck, F.annot);
     doc.setFont(font, 'bold'); doc.setFontSize(8); doc.setTextColor(...F.blck);

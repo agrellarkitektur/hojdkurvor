@@ -36,7 +36,7 @@
 
     sammanstallning(ctx);
     if (opt.kapitel.sol && opt.sol) solsida(ctx);
-    if (opt.kapitel.sol && opt.skuggor) U().skuggblad(Object.assign({}, opt.skuggor, { dok }));
+    if (opt.kapitel.sol && opt.skuggor) skuggsida(ctx);
     if (opt.kapitel.terrang || opt.kapitel.vatten) terrangOchVatten(ctx);
     if (opt.kapitel.skydd) skyddOchRisker(ctx);
     kallor(ctx);
@@ -95,6 +95,17 @@
     const k = (botten - topp) / 210;
     const x = M + (PW - 2 * M - 297 * k) / 2;
     S().soldiagramPdf(Object.assign({}, ctx.opt.sol, { dok: ctx.dok, farg: 'svart', ruta: { x, y: topp, k } }));
+  }
+
+  /**
+   * Skuggstudien på ett A3-blad med samma ram och ritningshuvud som de andra bladen. Rutnätet
+   * slutar ovanför ritningshuvudet; noterna hamnar till vänster om det.
+   */
+  function skuggsida(ctx) {
+    sida(ctx, ctx.sidor.indexOf('Skuggor') + 1, 'Skuggor');
+    const x = M + 6, y = M + 23, w = PW - 2 * M - 12, h = PH - M - 22 - 2 - y + 12;
+    U().skuggblad(Object.assign({ byggnader: ctx.opt.byggnader, volymer: ctx.opt.volymer }, ctx.opt.skuggor,
+      { dok: ctx.dok, ruta: { x, y, w, h } }));
   }
 
   /**
