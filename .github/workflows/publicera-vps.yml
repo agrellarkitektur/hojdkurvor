@@ -12,8 +12,9 @@
 #
 # Samma urval som publicera.yml och release.yml: allt utom test, docs, .github,
 # CLAUDE.md och .gitignore. Serverns egna filer (feedback-config.php och annat
-# *-config.php, data/) skickas aldrig och tas aldrig bort. .htaccess följer inte
-# med; Caddy läser den inte, och inställningarna står i apps.caddy.
+# *-config.php) skickas aldrig och tas aldrig bort. Appens data/ är offentlig
+# (kommuner.json) och följer med; apps.caddy släpper igenom data/*.json för
+# Höjdkurvor. .htaccess följer inte med; Caddy läser den inte.
 #
 # Efter uppladdningen hämtas varje fil från webbplatsen och jämförs med urvalet.
 
@@ -81,7 +82,7 @@ jobs:
           cp .github/known_hosts ~/.ssh/known_hosts
           # Nyckeln är låst till /srv/apps/www/hojdkurvor – därför står målet som "./".
           rsync -rlz --checksum --delete --chmod=D755,F644 \
-            --exclude '*-config.php' --exclude 'data/' --exclude '.htaccess' \
+            --exclude '*-config.php' --exclude '.htaccess' \
             -e "ssh -i $HOME/.ssh/id_deploy -o StrictHostKeyChecking=yes" \
             ut/ "$USER@$HOST:./"
 
