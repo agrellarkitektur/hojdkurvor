@@ -40,9 +40,10 @@
   // ------------------------------------------------------------------
   function db() {
     return new Promise((ok, fel) => {
-      const r = indexedDB.open('terrangunderlag', 1);
-      r.onupgradeneeded = () => r.result.createObjectStore('filer');
-      r.onsuccess = () => ok(r.result);
+      // version 2 (0.13.0): också objektlagringen projekt, se projekt.js (samma uppgradering där)
+      const r = indexedDB.open('terrangunderlag', 2);
+      r.onupgradeneeded = () => { for (const n of ['filer', 'projekt']) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n); };
+      r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); ok(r.result); };
       r.onerror = () => fel(r.error);
     });
   }

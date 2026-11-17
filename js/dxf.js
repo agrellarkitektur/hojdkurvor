@@ -36,7 +36,8 @@
    * objekt: [{ typ: 'pl', lager, pts: [[x,y],...], sluten, z }
    *          { typ: 'punkt', lager, x, y, z }
    *          { typ: 'cirkel', lager, x, y, z, r }
-   *          { typ: 'text', lager, x, y, z, h, text }]
+   *          { typ: 'text', lager, x, y, z, h, text }
+   *          { typ: 'yta', lager, pts: [[x,y,z] × 3 eller 4] } (3DFACE)]
    * dx, dy, dz dras av från koordinaterna.
    */
   function skriv(lager, objekt, { dx = 0, dy = 0, dz = 0, ext = null } = {}) {
@@ -82,6 +83,11 @@
         g(0, 'CIRCLE'); g(8, L(e.lager)); g(10, f(X(e.x, e.y))); g(20, f(Y(e.x, e.y))); g(30, f((e.z || 0) - (e.z != null ? dz : 0))); g(40, f(e.r));
       } else if (e.typ === 'punkt') {
         g(0, 'POINT'); g(8, L(e.lager)); g(10, f(X(e.x, e.y))); g(20, f(Y(e.x, e.y))); g(30, f((e.z || 0) - (e.z != null ? dz : 0)));
+      } else if (e.typ === 'yta') {
+        // 3DFACE (0.13.0): tre eller fyra hörn [x, y, z]; med tre upprepas det sista
+        const p = e.pts.length === 3 ? e.pts.concat([e.pts[2]]) : e.pts;
+        g(0, '3DFACE'); g(8, L(e.lager));
+        p.forEach(([x, y, z], i) => { g(10 + i, f(X(x, y))); g(20 + i, f(Y(x, y))); g(30 + i, f(z - dz)); });
       } else if (e.typ === 'text') {
         g(0, 'TEXT'); g(8, L(e.lager)); g(10, f(X(e.x, e.y))); g(20, f(Y(e.x, e.y))); g(30, f((e.z || 0) - (e.z != null ? dz : 0)));
         g(40, e.h || 1); g(1, textKod(e.text));

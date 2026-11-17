@@ -8,7 +8,8 @@ befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
 PDF med lutning, skyfall och skydd och risker (lutning och skyfall också som JPEG med
 världsfil och PDF i vektor), och en samlad DXF med alla DXF-underlag. Skissade volymer kan prövas på
 platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
-[cad-apa](https://github.com/agrellarkitektur/cad-apa).
+[cad-apa](https://github.com/agrellarkitektur/cad-apa). Det man matar in sparas som ett
+projekt i webbläsaren och kan sparas som projektfil (`.hojdkurvor`, se `docs/PROJEKTFIL.md`).
 
 Live: <https://agrellarkitektur.se/terrang/>. Flyttar till
 <https://hojdkurvor.danaid.cloud/>, se `docs/FLYTT.md`.
@@ -157,19 +158,22 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   vatten från andra myndigheter och OpenStreetMap
 - `js/platsanalysblad.js` – platsanalysens A3-häfte (PDF)
 - `js/utbyte.js` (`Utbyte`) – utbytet med cad-apa, se `docs/UTBYTE-CAD-APA.md`
+- `js/projekt.js` (`Projekt`) – projektet: formatet för projektfilen (`.hojdkurvor`, zip med
+  `projekt.json`), läsning och migrering, okända fält som bevaras, omräkning av volymer och
+  trädval mellan zon och SWEREF 99 TM, och lagringen i IndexedDB; se `docs/PROJEKTFIL.md`
 - `js/vy3d.js` (`Vy3D`) – 3D-förhandsvisning med three.js, laddas först när den
   öppnas; lager som kan slås av och på, panorering, valbar kurvfärg, skuggor
   efter datum och tid, konturer, hus-, kontur-, gräns- och skissfärg, takformer
   ur laserdatan, ögonhöjd och bilder
 - `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter), också till cad-apa; laddas med sidan
-- `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer
+- `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer; laddas med sidan (takytorna används också i skissens DXF)
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
 - `js/dxf.js` – DXF-skrivare och sammanslagning till en samlad DXF
 - `js/bestall.js` – beställningsformuläret
 - `js/synpunkter.js` – BETA-knappen och formuläret Skicka synpunkter, på alla sidor
-- `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, felrapport
+- `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, projektet, felrapport
 - `data/kommuner.json` – förenklade kommungränser med kommunkod och föreslagen
   SWEREF 99-zon (fältet `epsg`; Kiruna saknar värde eftersom kommunen använder
   flera zoner)
@@ -217,20 +221,25 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
-- Planerat (se `docs/SYNPUNKTER.md`): projektfil (0.13.0), sol på fasaderna (0.14.0), eget
-  bildunderlag som överlagring, skissvolymer ur inskannat underlag, en html-visare i
-  nedladdningsmappen och DXF med inlänkade filer (xref) och ortofoto.
+- Planerat (se `docs/SYNPUNKTER.md`): sol på fasaderna (0.14.0), förslag och sparade vyer i
+  projektet, eget bildunderlag som överlagring (projektfilens bilagor), skissvolymer ur
+  inskannat underlag, en html-visare i nedladdningsmappen och DXF med inlänkade filer (xref)
+  och ortofoto.
 
 ## Data som sparas i webbläsaren
 
-- IndexedDB: marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt. Appen frågar Lantmäteriet om
-  filen ändrats innan den används igen. Under 02 Underlag, "Sparat i
-  webbläsaren", kan man ta bort enstaka filer eller tömma allt.
+- IndexedDB (databasen `terrangunderlag`, version 2): marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt
+  (objektlagringen `filer`). Appen frågar Lantmäteriet om
+  filen ändrats innan den används igen. Projekten (objektlagringen `projekt`, 0.13.0): utsnitt, val och
+  inmatning, sparade en halv sekund efter varje ändring. Under 02 Underlag, "Sparat i
+  webbläsaren", kan man ta bort enstaka filer och projekt eller tömma filerna.
 - localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`), dolda och rättade träd (`terrang-tradval`) och dolda hus (`terrang-husval`),
   formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
   om användaren väljer det, inloggningen.
-- sessionStorage: aktivt steg, sektionslinjer, horisontens betraktelsepunkt,
-  skissens volymer, projekt-id, dolda lager, skuggor och soltid i 3D-vyn, bara så länge fliken är öppen.
+- sessionStorage: aktivt steg, vilket projekt fliken har öppet (`terrang-projekt-aktivt`),
+  dolda lager (följer också med i projektet), skuggor och soltid i 3D-vyn, bara så länge fliken är öppen.
+  Sektionslinjer, horisontens punkt, skissens volymer och projekt-id låg här före 0.13.0 och
+  flyttas in i ett projekt första gången sidan öppnas.
 
 ## Licenser för datan
 

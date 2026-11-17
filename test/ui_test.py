@@ -193,6 +193,15 @@ with sync_playwright() as p:
     samlad = [n for n in namn_i_zip if '_samlad_' in n]
     print('  samlad:', samlad)
     assert len(samlad) == 2 and all('/' not in n for n in samlad), 'samlad DXF lokal och sweref i roten'
+    # 0.13.0: projektfilen i roten, och skissen som volymer (3DFACE) i DXF:en
+    pf = [n for n in namn_i_zip if n.endswith('.hojdkurvor')]
+    assert len(pf) == 1 and '/' not in pf[0], 'projektfilen i roten'
+    pj = json.loads(zipfile.ZipFile(io.BytesIO(z.read(pf[0]))).read('projekt.json'))
+    print('  projektfil:', pf[0], pj['projekt']['namn'], len(pj['inmatning']['volymer']), 'volymer', len(pj['inmatning']['sektioner']), 'sektioner', [k['produkt'] for k in pj['underlag']['kallor']][:3])
+    assert pj['format'] == 'hojdkurvor-projekt' and pj['inmatning']['volymer'] and len(pj['inmatning']['sektioner']) == 2
+    assert pj['underlag']['senastSkapat'] and pj['underlag']['kallor'], 'källorna i projektfilen'
+    skiss_dxf = z.read(next(n for n in namn_i_zip if n.startswith('skiss/') and n.endswith('_lokal.dxf'))).decode('latin-1')
+    assert '3DFACE' in skiss_dxf and 'SKISS_VOLYM' in skiss_dxf, 'skissen som volymer i DXF:en'
     st = z.read(next(n for n in samlad if n.endswith('_lokal.dxf'))).decode('latin-1')
     assert 'HOJDKURVA' in st and 'VAG_YTA_BIL_BERAKNAD' in st, 'den samlade DXF:en har lagren från filerna'
     # 0.12.1: ingen DXF för skuggor, lutning och skyfall; platsanalysen i roten

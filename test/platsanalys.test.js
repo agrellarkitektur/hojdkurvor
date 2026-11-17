@@ -50,6 +50,17 @@ const zb = P.branInVolymer(g, z, [v]);
 const q = (2150 - 2105) * W + (1110 - 1000);
 assert.ok(zb[q] > 113, 'volymen bränns in');
 assert.ok(P.dxfVolymer([v], r, 1000, 2000, 0).includes('SKISS_FOTAVTRYCK'));
+// 0.13.0: volymen som ytor (3DFACE) – fyra väggar, två takfall och två gavlar (sadeltak), ett L-format platt tak
+{
+  const dv = P.dxfVolymer([v], r, 1000, 2000, 0), ytor = dv.split('\r\n').filter(x => x === '3DFACE').length;
+  assert.ok(dv.includes('SKISS_VOLYM'));
+  assert.ok(ytor >= 4 + 2 + 2, '3DFACE: ' + ytor);
+  const L = { namn: 'L', fotavtryck: [[0, 0], [20, 0], [20, 8], [8, 8], [8, 20], [0, 20]], golv: 100, takfot: 3, takform: 'platt', taklutning: 0 };
+  const dl = P.dxfVolymer([L], r, 0, 0, 0), n = dl.split('\r\n').filter(x => x === '3DFACE').length;
+  assert.strictEqual(n, 6 + 4, 'sex väggar och fyra trianglar i L-taket');
+  // golv saknas (null eller NaN): ingen volym i DXF:en
+  assert.ok(!P.dxfVolymer([Object.assign({}, v, { golv: null }), Object.assign({}, v, { golv: NaN })], r, 0, 0, 0).includes('3DFACE'));
+}
 
 // DXF: fotavtryck ut och in igen
 const dxf = Dxf.skriv({ HUS: 7 }, [{ typ: 'pl', lager: 'HUS', sluten: true, pts: v.fotavtryck }]);

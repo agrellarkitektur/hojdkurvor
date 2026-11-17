@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **AY**.
+Senast använda nummer: **AÅ**.
 
 ## Inkorg
 
@@ -16,6 +16,11 @@ Senast använda nummer: **AY**.
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.13.0
+
+- **AZ** Projekt: rita ett område, lägg till en volym och en sektion, ladda om sidan. Finns allt kvar? *Spara projektfil*, *Nytt projekt*, och öppna det första igen under *Senaste projekt*. Öppna projektfilen på den andra datorn (eller dra den till kartan) och välj Skapa: blir underlaget detsamma? Ändra något och öppna filen igen: är frågan om vilken version som gäller begriplig? Ligger `.hojdkurvor` i zip:ens rot?
+- **AÅ** Skissen i DXF:en (rättelse efter AG): modellera några volymer i 3D-vyn (också prisma med tak), stäng vyn och välj Skapa. Öppna `skiss/_volymer_lokal.dxf` och `_samlad_lokal.dxf` i Archicad: syns volymerna med väggar och tak (lagret `SKISS_VOLYM`), på rätt höjd? Vilken fil var det som saknade skissen vid testet?
 
 ### 0.12.2
 
@@ -39,23 +44,9 @@ Grupperat efter den version där testbehovet uppstod.
 - **AK** Träd och hus: klicka på ett träd i 3D-vyn, byt art och höjd, dölj ett träd och ett hus, Visa dolda. Välj Skapa igen: är de dolda borta ur DXF:en och skuggstudien?
 - **AL** Till cad-apa: ortofotot i full upplösning (blir cad-apa seg?). Träden har nu art och modell i paketet, men cad-apa ritar dem inte förrän cad-apa läser `tradmodeller` (planerat i cad-apa 0.12.1).
 
-### 0.10.1
-
-- **AI** Kryssa i Ortofoto, Skapa, skicka till cad-apa och se att ortofotot ligger på marken i cad-apas 3D-vy, på rätt ställe (jämför med vägar och hus).
-
-### 0.10.0
-
-- **AG** På Windows: de nya träden (Detaljerade) – ser de bättre ut, och blir vyn seg? Klicka på ett feltolkat hus och rätta taket (form, lutning, nock tvärs, nockhöjd); sparas valet till nästa gång? Modellera: Ny volym (rätblock, cylinder, prisma), flytta, vrida med ⟳ och skift, snäpp mot volym, hus och fastighetsgräns, avstånd efter snäpp, ovanpå, kedjan, volymer in i varandra, Toppvy, Ångra, Delete. Stäng vyn, välj Skapa igen och se att skuggstudien och DXF:en har med volymerna.
-- **AH** På iPhone: de nya träden (fart), att knappen Modellera inte syns och att skissen ändå visas.
-
-### 0.9.0–0.9.2
-
-- **AD** På Windows: skuggor (datum, tid, snabbval, Spela dagen), Konturer, Husfärg och Skissfärg, Ögonhöjd (W A S D, skift, Esc), Spara bild och Bild för AI (prova bilderna i Visoid).
-- **AE** På iPhone: knappen Val, skuggor och tidsreglaget, ögonhöjd med spaken, Takformer, att vyn inte blir för seg med skuggor och detaljerade träd (annars Trädskuggor av), Spara bild.
-
-### 0.8.0–0.8.1
-
-- **AA** iPhone: dra med två fingrar i 3D-vyn. Windows är godkänt.
+Klart vid testet 18 november (strukna, se CHANGELOG.md under 0.13.0): AD, AG (utom
+DXF:en, se AÅ) och AI godkända. AA, AE och AH är inte längre aktuella: på telefon finns
+bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 
 ## Önskemål
 
@@ -66,12 +57,27 @@ Grupperat efter den version där de är planerade.
 - **AB** Bästa hade varit om man kunde sänka linjer individuellt runt takfoten för att skapa sin egen takform. (Egna takfotslinjer.)
 - **AF** Volymer ska kunna läggas i varandra för att skapa mer specifika geometrier. Union kom i 0.10.0; bortskärning (urtag) återstår.
 
-### 0.13.0 – projektfil (`plan-projektfil.md` i claude.ai-projektet)
+### Projektfilen, etapp 3–6 (`plan-projektfil.md` i claude.ai-projektet)
+
+Etapp 1 och 2 (webbläsarlagring och projektfil) kom i 0.13.0, se `docs/PROJEKTFIL.md`.
+AO (punkt och radie sparas i projektet) är klar och struken. Kvar, i planens ordning:
+
+1. **Förslag och sparade vyer** (etapp 3): volymerna i Basfall, Förslag A, B …, ett aktivt
+   i taget; analyserna räknas för det aktiva. 3D-kamera, soltid och lager under ett namn.
+   Samma förslags-id som i cad-apa. Helst före eller med solanalysen (0.14.0), som jämför
+   basfall mot pagoda.
+2. **Bilagor** (etapp 4): AM nedan, och anteckningar från platsbesök med foton (GPS).
+3. **Egna punkter** (etapp 5): berg- och jorddjupspunkter enligt geologiplanen, i
+   `inmatning.punkter`.
+4. **Senare** (etapp 6): jämförelse när underlaget skapas igen (*1 ny byggnad sedan förra
+   gången*), underlag i filen för visning utan nät (AP, villkoren först), inmätta punkter
+   från nybyggnadskarta. Projektuppgifter (fastighet, uppdragsnummer, anteckning) finns i
+   formatet men har inga fält i panelen än; de ska till utskriftens rubrikfält och
+   platsanalysbladet.
 
 - **AM** Möjlighet att lägga in eget bildunderlag som överlagring. Hör till projektfilens etapp 4 (bilagor): bilden i `bilagor/`, inpassad med två eller tre passpunkter.
-- **AO** Sätta ut en punkt och välja radie: klart i 0.12.0. Projektfilen ska spara `mitt` och `radie` (fälten finns i planen).
 
-### Efter 0.13.0, version inte bestämd
+### Version inte bestämd
 
 - **AN** Generera skissvolymer efter eget inskannat underlag. Bygger på överlagringen (AM): rita fotavtryck ovanpå bilden (halvautomatiskt, med snäpp mot linjer i bilden) snarare än att tolka planen helt automatiskt.
 - **AP** En html-fil i nedladdningsmappen som visar allt underlag som på webben, 2D och 3D, utan att kunna ändra utsnittet. Läser projektfilens `projekt.json` och filerna i zip:en. Kräver att visaren fungerar från en lokal fil (`file://`), där webbläsaren stoppar `fetch` – underlaget måste därför bäddas in eller läsas med en filväljare. Villkoren för Lantmäteriets data i en fil som sprids ska kontrolleras först.

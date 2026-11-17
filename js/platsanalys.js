@@ -392,16 +392,64 @@
     }
     return ut;
   }
+  /**
+   * Skissens volymer som DXF: fotavtryck och takfot som polylinjer och, sedan 0.13.0, volymen som ytor
+   * (3DFACE) på lagret SKISS_VOLYM: väggar från golvet till takfoten, taket som plana takfall och
+   * gavlar (Volym3D.takytor) eller platt. Då syns skissen som volymer i ritprogrammets 3D-vy.
+   */
   function dxfVolymer(volymer, r, dx, dy, dz) {
-    const o = [];
+    const o = [], V3 = typeof Volym3D !== 'undefined' ? Volym3D : (typeof require === 'function' ? require('./volym3d.js') : null);
     volymer.forEach(v => {
+      if (!(v.golv === v.golv) || v.golv == null || !v.fotavtryck || v.fotavtryck.length < 3) return;
       o.push({ typ: 'pl', lager: 'SKISS_FOTAVTRYCK', sluten: true, pts: v.fotavtryck, z: v.golv });
       o.push({ typ: 'pl', lager: 'SKISS_TAKFOT', sluten: true, pts: v.fotavtryck, z: v.golv + v.takfot });
+      o.push(...volymYtor(v, V3));
       const c = tyngdpunkt(v.fotavtryck);
       o.push({ typ: 'text', lager: 'SKISS_TEXT', x: c[0], y: c[1], z: v.golv, h: 1, text: `${v.namn || 'Volym'} FG ${hojdText(v.golv, dz)}` });
     });
     o.push(ram(r));
-    return D().skriv({ SKISS_FOTAVTRYCK: 6, SKISS_TAKFOT: 6, SKISS_TEXT: 6, UTSNITT: 3 }, o, { dx, dy, dz, ext: r });
+    return D().skriv({ SKISS_VOLYM: 30, SKISS_FOTAVTRYCK: 6, SKISS_TAKFOT: 6, SKISS_TEXT: 6, UTSNITT: 3 }, o, { dx, dy, dz, ext: r });
+  }
+  /** Väggar och tak som 3DFACE. Utan Volym3D, eller för inbuktade fotavtryck med lutande tak, blir taket platt på takfotens höjd. */
+  function volymYtor(v, V3) {
+    const ut = [], fot = v.fotavtryck, z0 = v.golv, z1 = v.golv + v.takfot, L = 'SKISS_VOLYM';
+    for (let i = 0; i < fot.length; i++) {
+      const a = fot[i], b = fot[(i + 1) % fot.length];
+      if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 1e-6) continue;
+      ut.push({ typ: 'yta', lager: L, pts: [[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]] });
+    }
+    const tak = V3 && V3.takytor ? V3.takytor(v) : null;
+    if (tak) {
+      const p = tak.pos, q = k => [p[3 * k], p[3 * k + 1], p[3 * k + 2]];
+      for (let i = 0; i + 2 < tak.index.length; i += 3) ut.push({ typ: 'yta', lager: L, pts: [q(tak.index[i]), q(tak.index[i + 1]), q(tak.index[i + 2])] });
+    } else {
+      for (const t of trianglar(fot)) ut.push({ typ: 'yta', lager: L, pts: t.map(p => [p[0], p[1], z1]) });
+    }
+    return ut;
+  }
+  /** Triangulering av en enkel polygon (öronklippning), för platta tak och golv. */
+  function trianglar(pts) {
+    let p = pts.slice();
+    if (p.length > 3 && Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1]) < 1e-9) p.pop();
+    const o = p[0], yta2 = p.reduce((s, q, i) => { const b = p[(i + 1) % p.length]; return s + (q[0] - o[0]) * (b[1] - o[1]) - (b[0] - o[0]) * (q[1] - o[1]); }, 0);
+    if (yta2 < 0) p = p.reverse();
+    const kors = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    const inne = (q, a, b, c) => kors(a, b, q) >= 0 && kors(b, c, q) >= 0 && kors(c, a, q) >= 0;
+    const ut = [];
+    let varv = 0;
+    while (p.length > 3 && varv < 10000) {
+      varv++;
+      let klippt = false;
+      for (let i = 0; i < p.length; i++) {
+        const a = p[(i + p.length - 1) % p.length], b = p[i], c = p[(i + 1) % p.length];
+        if (kors(a, b, c) <= 1e-12) continue;
+        if (p.some(q => q !== a && q !== b && q !== c && inne(q, a, b, c))) continue;
+        ut.push([a, b, c]); p.splice(i, 1); klippt = true; break;
+      }
+      if (!klippt) break;
+    }
+    if (p.length === 3) ut.push(p);
+    return ut;
   }
   function tyngdpunkt(p) {
     // relativt första hörnet: zonens stora koordinater ger annars avrundningsfel på metern (0.10.0)

@@ -3,6 +3,56 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.13.0 – 2026-11-18
+
+Projektfilen, etapp 1 och 2 i planen (`plan-projektfil.md` i claude.ai-projektet),
+och test av 0.8.0–0.10.1. Formatet beskrivs i `docs/PROJEKTFIL.md`.
+
+- **Projekt i webbläsaren** (`js/projekt.js`, blocket *Projektet* i `app.js`):
+  utsnittet, valen, skissens volymer, sektionerna, horisontens punkt, Punkt och
+  radie och rättelserna av tak, träd och hus sparas en halv sekund efter varje
+  ändring i IndexedDB (databasen `terrangunderlag`, version 2, objektlagringen
+  `projekt`). Volymer, sektioner, horisontens punkt och projekt-id låg förut i
+  sessionStorage och försvann när fliken stängdes. Efter omladdning öppnas samma
+  projekt igen.
+- **Senaste projekt och Nytt projekt** under Projekt i steg 01, med en liten bild
+  av utsnittet och volymerna. Under Sparat i webbläsaren (02) listas projekten med
+  storlek och kan tas bort ett och ett.
+- **Projektfilen** `<namn>.hojdkurvor`: en zip med `projekt.json` och
+  `bilagor/`. *Spara projektfil* och *Öppna projektfil* i steg 01, eller dra
+  filen till kartan. En prick på knappen när något är ändrat sedan filen sparades.
+  Projektfilen ligger också i nedladdningszippens rot. Är filen och webbläsaren
+  oense om samma projekt får man välja filens version, webbläsarens eller att
+  öppna filen som kopia. En fil från en nyare version ger ett tydligt besked.
+  Okända fält bevaras när filen sparas igen.
+- **Koordinaterna**: geometrin i projektet är i SWEREF 99 TM, utsnittet och
+  nollpunkten i arbetszonen. Volymerna räknas om med primitivens mitt, vridning
+  och nockriktning (`Projekt.flyttaVolym`). Förut följde bara fotavtrycket med
+  när zonen byttes, så att en volym som modellerats i 3D hamnade fel när
+  fotavtrycket räknades om ur primitiven.
+- **Inmatning utanför utsnittet** flaggas: *1 volym och 1 sektion ligger utanför
+  utsnittet. De finns kvar i projektet.*
+- **Flera flikar**: ändras samma projekt i en annan flik visar fliken *Läs in
+  igen* och sparar inget förrän man har valt (`BroadcastChannel`).
+- **Flytt från 0.12**: det som låg i sessionStorage, och första gången det
+  senaste utsnittet, blir ett projekt.
+- **cad-apa**: `projekt.id` i platspaketet är projektets id. En skiss med ett
+  annat projekt-id öppnar det projektet eller ett nytt med samma id.
+- **Skissen i DXF:en som volymer (AG)**: `skiss/_volymer_*.dxf` har nu väggar och
+  tak som 3DFACE på lagret `SKISS_VOLYM` (takfall och gavlar ur
+  `Volym3D.takytor`, platta tak trianglade), utöver fotavtryck och takfot som
+  polylinjer. `Dxf.skriv` har fått `typ: 'yta'`. Volymer utan golvnivå (`null`
+  efter att ha sparats) fick förut golvet 0 i analyserna; nu står de på marken.
+  `volym3d.js` laddas med sidan.
+- **Test 0.8.0–0.10.1**: skuggor, konturer, färger, ögonhöjd och bilder (AD),
+  träd, rättade tak och modelleringen (AG) och ortofotot i cad-apa (AI) godkända.
+  3D-vyn på telefon (AA, AE, AH) är inte längre aktuell: mobilen har bara det
+  enklare flödet (markera, skicka till datorn, beställ).
+- **Tester**: `test/projekt.test.js` (format, migrering, okända fält, spara →
+  öppna → spara, omräkningarna, zip) och `test/projekt_test.py` (hela flödet i
+  webbläsaren). `ui_test.py` kontrollerar projektfilen i zip:en och volymerna i
+  skissens DXF.
+
 ## 0.12.2 – 2026-11-17
 
 Synpunkter 17 november: skuggstudien i platsanalysen.

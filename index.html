@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Höjdkurvor – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.12.2"></script>
-  <script src="js/tema.js?v=0.12.2"></script>
-  <script src="js/synpunkter.js?v=0.12.2" defer></script>
+  <script src="js/version.js?v=0.13.0"></script>
+  <script src="js/tema.js?v=0.13.0"></script>
+  <script src="js/synpunkter.js?v=0.13.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.12.2">
-  <link rel="stylesheet" href="app.css?v=0.12.2">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.13.0">
+  <link rel="stylesheet" href="app.css?v=0.13.0">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -84,6 +84,28 @@
         <!-- 01 PLATS -->
         <section class="steg-panel" id="steg-plats" role="tabpanel" aria-labelledby="flik-plats">
           <p class="ingress">Rita ett utsnitt och välj koordinatsystem. Sedan väljer du underlag, platsanalys och skiss i stegen ovan. Allt räknas i din webbläsare.</p>
+
+          <div class="del" id="steg-projekt">
+            <h2 class="del-rubrik">Projekt</h2>
+            <div class="knapprad projekt-knappar">
+              <button type="button" class="knapp liten" id="projekt-nytt">Nytt projekt</button>
+              <button type="button" class="knapp liten" id="projekt-oppna">Öppna projektfil</button>
+              <button type="button" class="knapp liten" id="projekt-spara">Spara projektfil</button>
+            </div>
+            <input type="file" id="projekt-fil" accept=".hojdkurvor,.json" hidden>
+            <p class="hjalp" id="projekt-status" aria-live="polite">Det du gör sparas i webbläsaren medan du arbetar.</p>
+            <div class="projekt-annan-flik" id="projekt-annan-flik" hidden>
+              <button type="button" class="knapp liten" id="projekt-las-igen">Läs in igen</button>
+              <button type="button" class="lank-knapp" id="projekt-behall">Behåll den här fliken</button>
+            </div>
+            <p class="hjalp varning" id="projekt-utanfor" hidden></p>
+            <p class="hjalp varning" id="projekt-lagringsfel" hidden></p>
+            <details class="projekt-senaste" id="projekt-senaste" hidden>
+              <summary>Senaste projekt<span id="projekt-senaste-antal"></span></summary>
+              <ul class="projekt-lista" id="projekt-lista"></ul>
+            </details>
+            <p class="hjalp">Projektfilen har utsnittet, valen och det du matat in, men inget underlag. Dra den till kartan för att öppna. <a href="instruktioner.html#projekt">Mer om projekt</a></p>
+          </div>
 
           <div class="del" id="steg-omrade">
             <h2 class="del-rubrik">Område</h2>
@@ -315,6 +337,8 @@
             <p class="hjalp" id="lagring-status">Inget sparat.</p>
             <ul class="lagring-lista" id="lagring-lista"></ul>
             <button type="button" class="knapp liten" id="lagring-tom" hidden>Töm sparade filer</button>
+            <p class="hjalp" id="lagring-projekt-rubrik" hidden>Projekt. De ligger kvar tills du tar bort dem eller rensar webbplatsdata, så spara en projektfil av det du vill behålla.</p>
+            <ul class="lagring-lista" id="lagring-projekt"></ul>
           </details>
         </section>
 
@@ -381,7 +405,7 @@
           <div class="knapprad">
             <button type="button" class="knapp" id="skiss-cadapa">Rita i cad-apa</button>
             <button type="button" class="knapp" id="skiss-importera">Importera fil</button>
-            <input type="file" id="skiss-fil" accept=".json,.dxf,application/json" class="dold">
+            <input type="file" id="skiss-fil" accept=".json,.dxf,.hojdkurvor,application/json" class="dold">
           </div>
           <p class="hjalp" id="skiss-status" aria-live="polite">Skiss från cad-apa (.json) eller slutna polylinjer i DXF.</p>
           <div id="skiss-dxf" hidden>
@@ -439,6 +463,20 @@
     </form>
   </dialog>
 
+  <dialog class="koorddialog" id="projektdialog" aria-labelledby="pd-rubrik">
+    <form method="dialog" novalidate>
+      <div class="sp-huvud"><h2 id="pd-rubrik">Två versioner av projektet</h2><button type="button" class="sp-stang" id="pd-stang" aria-label="Stäng">×</button></div>
+      <p id="pd-text"></p>
+      <div class="pd-val">
+        <button type="button" class="knapp liten" id="pd-fil">Öppna filens version</button>
+        <button type="button" class="knapp liten" id="pd-webb">Behåll webbläsarens</button>
+        <button type="button" class="knapp liten" id="pd-kopia">Öppna filen som kopia</button>
+      </div>
+      <p class="hjalp">Som kopia får filens projekt ett nytt namn och båda finns kvar i webbläsaren.</p>
+      <div class="knapprad sp-knappar"><button type="button" class="knapp liten" id="pd-avbryt">Avbryt</button></div>
+    </form>
+  </dialog>
+
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
     <div class="vy3d-huvud" id="vy3d-huvud" data-lage="oversikt"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, eller välj Flytta och dra för att flytta vyn. Högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-modellera" aria-pressed="false" title="Rita och ändra volymer i skissen">Modellera</button><button type="button" class="knapp liten" id="vy3d-toppvy" aria-pressed="false" title="Rakt uppifrån med norr uppåt">Toppvy</button><button type="button" class="knapp liten" id="vy3d-flytta" aria-pressed="false">Flytta</button><button type="button" class="knapp liten" id="vy3d-ogon" aria-pressed="false">Ögonhöjd</button><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-aterstall">Återställ vy</button><span class="vy3d-bild" role="group" aria-label="Spara bild"><button type="button" class="knapp liten" id="vy3d-bild">Spara bild</button><button type="button" class="knapp liten" id="vy3d-ai">Bild för AI</button><label class="vy3d-farg">Storlek <select id="vy3d-skala"><option value="2">2 ×</option><option value="3" selected>3 ×</option><option value="4">4 ×</option></select></label></span><button type="button" class="knapp liten" id="vy3d-val" aria-expanded="false" aria-controls="vy3d-lager vy3d-sol">Val</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
       <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-konturer" aria-pressed="false" hidden>Konturer</button><button type="button" class="knapp liten" id="vy3d-takformer" aria-pressed="false" hidden title="Taken ur laserdatan i stället för platta tak. Ungefärliga, inte inmätta.">Takformer</button><label class="vy3d-farg" id="vy3d-tradniva-rad" hidden>Träd <select id="vy3d-tradniva"><option value="enkel">Enkla</option><option value="detaljerad">Detaljerade</option></select></label><button type="button" class="knapp liten" id="vy3d-skuggor" aria-pressed="false" hidden>Skuggor</button><button type="button" class="knapp liten" id="vy3d-lasso" aria-pressed="false" hidden title="Ringa in flera träd och dölj dem samtidigt">Lasso</button><button type="button" class="knapp liten" id="vy3d-dolda" hidden title="Visa igen alla träd och hus som du har dolt här">Visa dolda</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-husfarg-rad" hidden>Husfärg <input type="color" id="vy3d-husfarg" value="#b9b3aa"></label><label class="vy3d-farg" id="vy3d-konturfarg-rad" hidden>Konturfärg <input type="color" id="vy3d-konturfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-gransfarg-rad" hidden>Gränsfärg <input type="color" id="vy3d-gransfarg" value="#b0306a"></label><label class="vy3d-farg" id="vy3d-skissfarg-rad" hidden>Skissfärg <input type="color" id="vy3d-skissfarg" value="#e85528"></label></div>
@@ -488,32 +526,34 @@
     </aside>
   </div>
 
-  <script src="config.js?v=0.12.2"></script>
-  <script src="vendor/leaflet/leaflet.js?v=0.12.2"></script>
-  <script src="vendor/proj4.js?v=0.12.2"></script>
-  <script src="vendor/geotiff.js?v=0.12.2"></script>
-  <script src="vendor/jszip.min.js?v=0.12.2"></script>
-  <script src="js/karna.js?v=0.12.2"></script>
-  <script src="js/dxf.js?v=0.12.2"></script>
-  <script src="js/sol.js?v=0.12.2"></script>
-  <script src="js/laser.js?v=0.12.2"></script>
-  <script src="js/ortofoto.js?v=0.12.2"></script>
-  <script src="js/kommunfil.js?v=0.12.2"></script>
-  <script src="js/marktacke.js?v=0.12.2"></script>
-  <script src="js/byggnad.js?v=0.12.2"></script>
-  <script src="js/ifc.js?v=0.12.2"></script>
-  <script src="js/fastighet.js?v=0.12.2"></script>
-  <script src="js/stompunkt.js?v=0.12.2"></script>
-  <script src="js/analys.js?v=0.12.2"></script>
-  <script src="js/vagar.js?v=0.12.2"></script>
-  <script src="js/platsanalys.js?v=0.12.2"></script>
-  <script src="js/geodata.js?v=0.12.2"></script>
-  <script src="js/trad3d.js?v=0.12.2"></script>
-  <script src="js/objektval.js?v=0.12.2"></script>
-  <script src="js/utbyte.js?v=0.12.2"></script>
-  <script src="js/topowebb.js?v=0.12.2"></script>
-  <script src="js/utskrift.js?v=0.12.2"></script>
-  <script src="js/platsanalysblad.js?v=0.12.2"></script>
-  <script src="js/app.js?v=0.12.2"></script>
+  <script src="config.js?v=0.13.0"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.13.0"></script>
+  <script src="vendor/proj4.js?v=0.13.0"></script>
+  <script src="vendor/geotiff.js?v=0.13.0"></script>
+  <script src="vendor/jszip.min.js?v=0.13.0"></script>
+  <script src="js/karna.js?v=0.13.0"></script>
+  <script src="js/dxf.js?v=0.13.0"></script>
+  <script src="js/sol.js?v=0.13.0"></script>
+  <script src="js/laser.js?v=0.13.0"></script>
+  <script src="js/ortofoto.js?v=0.13.0"></script>
+  <script src="js/kommunfil.js?v=0.13.0"></script>
+  <script src="js/marktacke.js?v=0.13.0"></script>
+  <script src="js/byggnad.js?v=0.13.0"></script>
+  <script src="js/ifc.js?v=0.13.0"></script>
+  <script src="js/fastighet.js?v=0.13.0"></script>
+  <script src="js/stompunkt.js?v=0.13.0"></script>
+  <script src="js/analys.js?v=0.13.0"></script>
+  <script src="js/vagar.js?v=0.13.0"></script>
+  <script src="js/platsanalys.js?v=0.13.0"></script>
+  <script src="js/geodata.js?v=0.13.0"></script>
+  <script src="js/trad3d.js?v=0.13.0"></script>
+  <script src="js/objektval.js?v=0.13.0"></script>
+  <script src="js/volym3d.js?v=0.13.0"></script>
+  <script src="js/projekt.js?v=0.13.0"></script>
+  <script src="js/utbyte.js?v=0.13.0"></script>
+  <script src="js/topowebb.js?v=0.13.0"></script>
+  <script src="js/utskrift.js?v=0.13.0"></script>
+  <script src="js/platsanalysblad.js?v=0.13.0"></script>
+  <script src="js/app.js?v=0.13.0"></script>
 </body>
 </html>

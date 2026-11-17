@@ -654,3 +654,30 @@ body.mobilflode .handtag-wrap { transform-origin: center; }
 /* Varning när webbläsaren eller webbhotellet har gamla filer kvar (0.8.1) */
 .gamla-filer { position: relative; z-index: 3000; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
   margin: 0; padding: 10px 16px; font-size: 14px; color: var(--fel); background: var(--bg); box-shadow: inset 0 0 0 999px var(--fel-bg); }
+
+/* Projekt (0.13.0): knappar, status, Senaste projekt och frågan när filen och webbläsaren är oense */
+.projekt-knappar { margin-top: 4px; }
+#projekt-spara.osparad::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 7px; border-radius: 50%; background: var(--brand); vertical-align: 1px; }
+.hjalp.varning { color: var(--fel); }
+.projekt-annan-flik { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
+.projekt-annan-flik .knapp.liten { margin-top: 0; }
+.projekt-senaste { margin-top: 10px; }
+.projekt-senaste summary { cursor: pointer; font-size: 13px; color: var(--panel-ink); }
+.projekt-senaste summary span { color: var(--panel-muted); }
+.projekt-lista { list-style: none; margin: 6px 0 0; padding: 0; }
+.projekt-lista li { border-bottom: 1px solid var(--rule); }
+.projekt-post { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 2px; text-align: left; color: var(--panel-ink); background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; }
+.projekt-post:hover, .projekt-post:focus-visible { background: var(--nav-on); }
+.projekt-post.aktivt { cursor: default; }
+.projekt-post.aktivt strong::after { content: " ●"; color: var(--brand); font-size: 10px; vertical-align: 1px; }
+.projekt-post .fh { flex: 0 0 48px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
+.projekt-post .fh svg { max-width: 48px; max-height: 48px; }
+.projekt-post .pp-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.projekt-post .pp-text strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projekt-post small { color: var(--panel-muted); }
+.fh-ram { fill: none; stroke: var(--panel-muted); stroke-width: 1; }
+.fh-volym { fill: var(--brand); fill-opacity: .35; stroke: var(--brand); stroke-width: .8; }
+.fh-sektion { stroke: var(--panel-ink); stroke-width: .9; stroke-dasharray: 2 1.5; }
+.pd-val { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin: 12px 0 4px; }
+.pd-val .knapp.liten { margin-top: 0; text-align: left; }
+body.slapp-fil #karta { outline: 3px dashed var(--brand); outline-offset: -6px; }

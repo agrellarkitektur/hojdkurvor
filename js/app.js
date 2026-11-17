@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.12.2';
+  const FILVERSION = '0.13.0';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -40,6 +40,8 @@
     ortho: false,
     horPunkt: null,     // [lat, lon] för horisonten, annars utsnittets mitt
     skuggaVal: 0,
+    proj: null,         // projektet (0.13.0), se blocket Projektet
+    projektKlar: false, // sant när projektet är inläst vid start; först då sparas ändringar
   };
 
   // ------------------------------------------------------------------
@@ -47,8 +49,8 @@
   // ------------------------------------------------------------------
   const lager = {
     las(typ, nyckel) { try { return JSON.parse(window[typ].getItem(nyckel)); } catch (e) { return null; } },
-    spara(typ, nyckel, v) { try { window[typ].setItem(nyckel, JSON.stringify(v)); } catch (e) { /* ignoreras */ } },
-    ta(typ, nyckel) { try { window[typ].removeItem(nyckel); } catch (e) { /* ignoreras */ } },
+    spara(typ, nyckel, v) { try { window[typ].setItem(nyckel, JSON.stringify(v)); } catch (e) { /* ignoreras */ } planeraSpara(); },
+    ta(typ, nyckel) { try { window[typ].removeItem(nyckel); } catch (e) { /* ignoreras */ } planeraSpara(); },
   };
   const farg = n => Tema.farg(n);
 
@@ -527,6 +529,7 @@
     $('steg-omrade').classList.remove('klar');
     ritKnapp.textContent = 'Rita område på kartan';
     visaStatus('Välj ett område för att börja.');
+    planeraSpara(); flaggaUtanfor();
   }
 
   function visaUtsnitt() {
@@ -536,6 +539,8 @@
     $('koord-kopiera').hidden = false;
     sparaUtsnittForBestallning();
     $('kopiera-projektlank').disabled = false;
+    if (state.volymEpsg && state.volymEpsg !== state.epsg) ritaVolymer();   // ett annat system: räkna om volymerna
+    planeraSpara(); flaggaUtanfor();
     if (typeof uppdateraMobil === 'function') setTimeout(uppdateraMobil, 0);
     const b = r.xmax - r.xmin, h = r.ymax - r.ymin;
     $('utsnitt').hidden = false;
@@ -1240,7 +1245,7 @@
   // ------------------------------------------------------------------
   // Sektionslinjer
   // ------------------------------------------------------------------
-  state.sektioner = lager.las('sessionStorage', 'terrang-sektioner') || [];
+  state.sektioner = [];   // sparas i projektet (0.13.0), förut i sessionStorage
   let sektionRitar = false, sektionStart = null, sektionTemp = null;
   const sektionLager = L.layerGroup();
   if (synlig('sektioner')) sektionLager.addTo(karta);
@@ -1292,7 +1297,7 @@
     sparaSektioner(); ritaSektioner();
     if (state.senaste && state.senaste.sektioner) nollstallResultat();
   }
-  function sparaSektioner() { lager.spara('sessionStorage', 'terrang-sektioner', state.sektioner); }
+  function sparaSektioner() { planeraSpara(); }
   function satSektionslage(pa) {
     sektionRitar = pa; sektionStart = null;
     if (sektionTemp) { sektionTemp.remove(); sektionTemp = null; }
@@ -1323,7 +1328,7 @@
   // ------------------------------------------------------------------
   // Betraktelsepunkt för horisonten
   // ------------------------------------------------------------------
-  state.horPunkt = lager.las('sessionStorage', 'terrang-horpunkt');
+  state.horPunkt = null;   // sparas i projektet (0.13.0)
   let horValjer = false, horMarkor = null;
   function satHorisontlage(pa) {
     horValjer = pa;
@@ -1339,10 +1344,10 @@
       draggable: true, keyboard: false, title: 'Betraktelsepunkt för horisonten',
       icon: L.divIcon({ className: 'horpunkt', iconSize: [22, 22], iconAnchor: [11, 11], html: '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8"/><circle class="prick" cx="11" cy="11" r="2.5"/></svg>' }),
     }).addTo(karta);
-    horMarkor.on('dragend', () => { const ll = horMarkor.getLatLng(); state.horPunkt = [ll.lat, ll.lng]; lager.spara('sessionStorage', 'terrang-horpunkt', state.horPunkt); ritaHorPunkt(); nollstallResultat(); });
+    horMarkor.on('dragend', () => { const ll = horMarkor.getLatLng(); state.horPunkt = [ll.lat, ll.lng]; planeraSpara(); ritaHorPunkt(); nollstallResultat(); });
     const [x, y] = franLatLng(state.epsg)(state.horPunkt);
     p.innerHTML = `Vald punkt: X ${fmt(x)}, Y ${fmt(y)}. <button type="button" class="lank-ta-bort" id="hor-aterstall">Använd utsnittets mitt</button>`;
-    $('hor-aterstall').addEventListener('click', () => { state.horPunkt = null; lager.ta('sessionStorage', 'terrang-horpunkt'); ritaHorPunkt(); nollstallResultat(); });
+    $('hor-aterstall').addEventListener('click', () => { state.horPunkt = null; planeraSpara(); ritaHorPunkt(); nollstallResultat(); });
   }
   $('hor-valj').addEventListener('click', () => { if (sektionRitar) satSektionslage(false); satHorisontlage(!horValjer); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && horValjer) satHorisontlage(false); });
@@ -1350,7 +1355,7 @@
   karta.on('click', e => {
     if (horValjer) {
       state.horPunkt = [e.latlng.lat, e.latlng.lng];
-      lager.spara('sessionStorage', 'terrang-horpunkt', state.horPunkt);
+      planeraSpara();
       satHorisontlage(false);
       ritaHorPunkt();
       const kryss = document.querySelector('input[name=tillval][value=horisont]');
@@ -1369,7 +1374,7 @@
     if (karta.distance(sektionStart, slut) > 2000) { visaStatus('En sektion kan vara högst 2 km lång.', true); return; }
     const anv = new Set(state.sektioner.map(s => s.namn));
     const namn = 'ABCDEFGHJKLMNPRSTUVXYZ'.split('').find(c => !anv.has(c)) || String(state.sektioner.length + 1);
-    state.sektioner.push({ namn, a: sektionStart, b: slut, vand: false });
+    state.sektioner.push({ id: Utbyte.nyttId(), namn, a: sektionStart, b: slut, vand: false });
     sparaSektioner();
     satSektionslage(false);
     ritaSektioner();
@@ -1402,6 +1407,7 @@
       li.append(b); ul.append(li);
     });
     $('lagring-tom').hidden = !lista.length;
+    visaSparadeProjekt();
   }
   $('lagring-tom').addEventListener('click', async () => {
     if (!window.confirm('Ta bort alla sparade filer? De hämtas på nytt nästa gång de behövs.')) return;
@@ -1690,9 +1696,9 @@
       }
       // skissade volymer utan golvnivå står på marken i fotavtryckets tyngdpunkt
       volymer.forEach(v => {
-        if (!(v.golv === v.golv) && dtmZ) { const c = Platsanalys.tyngdpunkt(v.fotavtryck); v.golv = Math.round(Analys.nod(dtmZ, dtmZ.z, c[0], c[1]) * 100) / 100; }
+        if ((v.golv == null || !(v.golv === v.golv)) && dtmZ) { const c = Platsanalys.tyngdpunkt(v.fotavtryck); v.golv = Math.round(Analys.nod(dtmZ, dtmZ.z, c[0], c[1]) * 100) / 100; }
       });
-      senaste.volymer = volymer.filter(v => v.golv === v.golv);
+      senaste.volymer = volymer.filter(v => v.golv != null && v.golv === v.golv);
       if (behoverYta && (pz || val.skugga)) {
         try {
           delFramsteg('analys', 0, 'Bygger ytmodell');
@@ -2212,6 +2218,15 @@
           sammanExtra.push(['Platsanalys', 'blad i PDF']);
         } catch (e) { console.error(e); varningar.push('Platsanalysbladet: ' + e.message); }
       }
+      // --- Projektfilen i roten (0.13.0): mappen räcker för att öppna projektet och skapa underlaget igen
+      try {
+        projektEfterSkapa(senaste, val);
+        filer[`${namn}${Projekt.ANDELSE}`] = await projektfilData('uint8array');
+        extraInfo.push('', 'PROJEKTFIL',
+          `  ${namn}${Projekt.ANDELSE} innehåller utsnittet, valen och det du har matat in (volymer, sektioner, rättelser),`,
+          '  men inget underlag från Lantmäteriet. Öppna den i Höjdkurvor med Öppna projektfil under 01 Plats,',
+          '  eller dra den till kartan, och välj Skapa för att hämta underlaget igen.');
+      } catch (e) { console.error(e); varningar.push('Projektfilen: ' + e.message); }
       // --- Samlad DXF i roten: alla DXF-underlag i en fil, en för lokala koordinater och en för SWEREF
       for (const sys of ['lokal', 'sweref']) {
         const delar = Object.keys(filer).filter(f => f.includes('/') && f.endsWith(`_${sys}.dxf`)).sort();
@@ -2470,17 +2485,17 @@
   // ------------------------------------------------------------------
   const volymLager = L.featureGroup();
   if (synlig('volymer')) volymLager.addTo(karta);
-  (() => {
-    const sparat = lager.las('sessionStorage', 'terrang-volymer');
-    state.volymer = sparat && sparat.volymer ? sparat.volymer : [];
-    state.volymEpsg = sparat ? sparat.epsg : null;
-  })();
-  function sparaVolymer() { lager.spara('sessionStorage', 'terrang-volymer', { epsg: state.epsg, volymer: state.volymer }); }
-  /** Byter koordinatsystem på volymerna om utsnittets system har ändrats. */
+  state.volymer = [];          // sparas i projektet (0.13.0), förut i sessionStorage
+  state.volymEpsg = null;      // systemet som volymernas koordinater är i
+  function sparaVolymer() { state.volymEpsg = state.volymEpsg || state.epsg; planeraSpara(); }
+  /**
+   * Byter koordinatsystem på volymerna om utsnittets system har ändrats. Sedan 0.13.0 följer också
+   * primitivens mitt och vridning och nockriktningen med (Projekt.flyttaVolym).
+   */
   function volymerIZon() {
     if (state.volymEpsg && state.volymEpsg !== state.epsg && state.volymer.length) {
       const f = T.omvandlare(state.volymEpsg, state.epsg).forward;
-      state.volymer.forEach(v => { v.fotavtryck = v.fotavtryck.map(p => f(p)); });
+      state.volymer = state.volymer.map(v => { const n = Projekt.flyttaVolym(v, f); if (n.golv == null) n.golv = NaN; return n; });
     }
     state.volymEpsg = state.epsg;
   }
@@ -2518,12 +2533,23 @@
     ritaLagerlista();
     sammanfatta();
   }
-  /** Tar emot en skiss ({ plats, volymer }) och öppnar platsen om den inte redan är öppen. */
-  function laddaSkiss(sk, kalla) {
+  /**
+   * Tar emot en skiss ({ plats, volymer }) och öppnar platsen om den inte redan är öppen. Hör skissen
+   * till ett annat projekt (0.13.0) öppnas det projektet först, eller ett nytt med samma id.
+   */
+  async function laddaSkiss(sk, kalla) {
     const p = sk.plats;
     if (p && p.utsnitt && p.koordinatsystem && p.koordinatsystem.plan) {
       const e = Number(p.koordinatsystem.plan.epsg), u = p.utsnitt;
-      const samma = state.utsnitt && state.epsg === e && ['xmin', 'ymin', 'xmax', 'ymax'].every(k => Math.abs(state.utsnitt[k] - u[k]) < 0.5);
+      let samma = state.utsnitt && state.epsg === e && ['xmin', 'ymin', 'xmax', 'ymax'].every(k => Math.abs(state.utsnitt[k] - u[k]) < 0.5);
+      const id = p.projekt && p.projekt.id;
+      if (id && state.proj && id !== state.proj.d.projekt.id) {
+        await sparaProjektNu();
+        const post = await Projekt.dbLas(id).catch(() => null);
+        if (post) oppnaPost(post);
+        else oppnaProjekt(Object.assign(Projekt.nytt({ id, app: VERSION }), { val: lasVal() }));
+        samma = state.utsnitt && state.epsg === e && ['xmin', 'ymin', 'xmax', 'ymax'].every(k => Math.abs(state.utsnitt[k] - u[k]) < 0.5);
+      }
       if (!samma && T.ZONER.some(z => z.epsg === e)) {
         state.epsg = e; state.zonManuell = true; zonVal.value = e;
         state.utsnitt = { xmin: u.xmin, ymin: u.ymin, xmax: u.xmax, ymax: u.ymax };
@@ -2532,13 +2558,13 @@
           document.querySelector('input[name=nollpunkt][value=egen]').checked = true; $('egen-nollpunkt').hidden = false;
           $('np-x').value = p.nollpunkt.x; $('np-y').value = p.nollpunkt.y; $('np-z').value = p.nollpunkt.z || '';
         }
-        if (p.projekt && p.projekt.id) state.projektId = p.projekt.id;
         satGeoFranUtsnitt(); uppdateraKommun(); visaUtsnitt(); passaKartan();
       }
     }
     state.volymEpsg = state.epsg;
-    state.volymer = sk.volymer;
+    state.volymer = sk.volymer.map(v => Object.assign({}, v, { id: v.id || Utbyte.nyttId() }));
     sparaVolymer(); nollstallResultat(); ritaVolymer();
+    if (state.proj) Projekt.logga(state.proj.d, `Skiss från ${kalla} (${sk.volymer.length} ${sk.volymer.length === 1 ? 'volym' : 'volymer'})`);
     visaSteg('skiss');
     const pa = document.querySelector('input[name=tillval][value=platsanalys]');
     $('skiss-status').textContent = `${sk.volymer.length} ${sk.volymer.length === 1 ? 'volym' : 'volymer'} från ${kalla}. ` + (pa.checked ? 'Välj Skapa för att räkna om platsanalysen med skissen.' : 'Slå på platsanalysen under 03 Analys och välj Skapa för att pröva skissen.');
@@ -2551,10 +2577,12 @@
     $('skiss-fil').value = '';
     if (!fil) return;
     try {
+      if (/\.hojdkurvor$/i.test(fil.name)) { await oppnaProjektfil(fil); return; }
       const text = await fil.text();
       if (/^\s*\{/.test(text)) {
         const d = JSON.parse(text);
         if (d.format === Utbyte.PLATS) throw new Error('det här är en platsfil från Höjdkurvor. Den öppnas i cad-apa.');
+        if (d.format === Projekt.FORMAT) { await oppnaProjektfil(fil); return; }
         laddaSkiss(Utbyte.lasSkiss(d), 'filen');
       } else {
         const fa = Platsanalys.lasDxfFotavtryck(text);
@@ -2634,7 +2662,7 @@
     const np = lasNollpunkt();
     const n0 = s && s.nollpunkt ? { x: s.nollpunkt.x, y: s.nollpunkt.y, z: s.Z0 || 0 } : (np.varde || { x: r.xmin, y: r.ymin, z: 0 });
     const m = utsnittsMitt();
-    if (!state.projektId) { state.projektId = Utbyte.nyttId(); lager.spara('sessionStorage', 'terrang-projektid', state.projektId); }
+    if (!state.projektId) state.projektId = state.proj ? state.proj.d.projekt.id : Utbyte.nyttId();
     return Utbyte.platspaket({
       projekt: $('projekt').value.trim(), kommun: kommunText(), projektId: state.projektId,
       epsg: state.epsg, systemNamn: T.zon(state.epsg).namn, utsnitt: r, nollpunkt: n0,
@@ -2678,7 +2706,6 @@
     if (mal === AVBRUTET) return;
     await skrivFil(mal, new Blob([JSON.stringify(platspaket())], { type: 'application/json' }), namn);
   });
-  state.projektId = lager.las('sessionStorage', 'terrang-projektid');
   Utbyte.lyssnaPaCadApa(CADAPA, data => laddaSkiss(Utbyte.lasSkiss(data), 'cad-apa'));
 
   // ------------------------------------------------------------------
@@ -2717,8 +2744,8 @@
       [$('np-x').value, $('np-y').value, $('np-z').value] = p.np.map(String);
     }
     if (p.vr) { $('vrid').value = p.vr[0]; $('vrid-grader').value = p.vr[1] || ''; $('vrid-egen-rad').hidden = p.vr[0] !== 'egen'; }
-    if (p.s) { state.sektioner = p.s.map(x => ({ namn: x[0], a: [x[1], x[2]], b: [x[3], x[4]], vand: !!x[5] })); sparaSektioner(); }
-    if (p.h) { state.horPunkt = p.h; lager.spara('sessionStorage', 'terrang-horpunkt', p.h); }
+    if (p.s) { state.sektioner = p.s.map(x => ({ id: Utbyte.nyttId(), namn: x[0], a: [x[1], x[2]], b: [x[3], x[4]], vand: !!x[5] })); sparaSektioner(); }
+    if (p.h) state.horPunkt = p.h;
     state.epsg = p.e; state.zonManuell = true; zonVal.value = p.e;
     state.utsnitt = { xmin: p.r[0], ymin: p.r[1], xmax: p.r[2], ymax: p.r[3] };
     satGeoFranUtsnitt(); uppdateraKommun(); visaUtsnitt();
@@ -2733,6 +2760,504 @@
     const ok = await kopieraText(l);
     $('projektlank-status').textContent = ok ? 'Länken är kopierad. Den innehåller område och val, men ingen inloggning.' : 'Kopiera länken: ' + l;
   });
+
+  // ------------------------------------------------------------------
+  // Projektet (0.13.0): det man har matat in och valt sparas i webbläsaren medan man arbetar
+  // (Projekt.db…, IndexedDB) och kan sparas som projektfil (<namn>.hojdkurvor). Se docs/PROJEKTFIL.md.
+  // Geometrin ligger i SWEREF 99 TM i projektet; utsnittet, mitten och nollpunkten i arbetszonen.
+  // ------------------------------------------------------------------
+  const FLIK = Utbyte.nyttId();
+  const KANAL = typeof BroadcastChannel === 'function' ? new BroadcastChannel('hojdkurvor-projekt') : null;
+  const tillTM = epsg => (epsg === 3006 ? (p => p.slice()) : T.omvandlare(epsg, 3006).forward);
+  const franTM = epsg => (epsg === 3006 ? (p => p.slice()) : T.omvandlare(3006, epsg).forward);
+  const runda3 = p => [Projekt.runda(p[0]), Projekt.runda(p[1])];
+  const talEllerNull = v => { const x = tal(v); return isFinite(x) ? x : null; };
+  /** Nytt tillstånd för projektet d. */
+  function nyttProjektlage(d, o = {}) {
+    return {
+      d, iDb: !!o.iDb, laser: false, timer: 0, senastInnehall: o.senastInnehall || null,
+      filInnehall: o.filInnehall || null, sparadFil: o.sparadFil || null, bilagor: o.bilagor || {},
+      kandaHus: new Set(Object.keys(d.inmatning.rattelser.tak || {}).concat(Object.keys(d.inmatning.rattelser.hus || {}))),
+      annanFlik: false,
+    };
+  }
+
+  /** Valen som de står i panelen. */
+  function lasVal() {
+    const lista = o => Object.keys(o).filter(x => o[x]);
+    return {
+      tillval: lista(tillval()), kapitel: lista(kapitel()), format: lista(formatVal()),
+      intervall: $('intervall').value, mesh: $('mesh').value, hojdpunktSteg: $('hojdpunkt-steg').value,
+      utjamning: utjamning(), ritprogram: state.ritprogram || null,
+      analys: {
+        skuggdatum: [...document.querySelectorAll('input[name=skuggdatum]:checked')].map(c => c.value),
+        skuggtider: $('skuggtider').value, ogonhojd: $('ogonhojd').value, horisontTom: $('hor-tomt').checked,
+      },
+      utskrift: lager.las('localStorage', 'terrang-utskrift') || {},
+      dolda3d: lager.las('sessionStorage', 'terrang-3d-dolda') || [],
+    };
+  }
+  /** Ställer in panelen efter sparade val. Bara det som finns i v ändras. */
+  function tillampaVal(v) {
+    if (!v) return;
+    const satt = (namn, lista) => {
+      if (!Array.isArray(lista)) return;
+      document.querySelectorAll(`input[name=${namn}]`).forEach(c => {
+        const ska = lista.includes(c.value);
+        if (!c.disabled && c.checked !== ska) { c.checked = ska; c.dispatchEvent(new Event('change', { bubbles: true })); }
+      });
+    };
+    satt('tillval', v.tillval); satt('kapitel', v.kapitel); satt('format', v.format);
+    if (v.intervall) $('intervall').value = v.intervall;
+    if (v.mesh) $('mesh').value = v.mesh;
+    if (v.hojdpunktSteg) $('hojdpunkt-steg').value = v.hojdpunktSteg;
+    if (v.utjamning != null) { const r = document.querySelector(`input[name=utjamning][value="${v.utjamning}"]`); if (r) r.checked = true; }
+    if (v.ritprogram !== undefined) { state.ritprogram = v.ritprogram; visaRitprogram(); }
+    const a = v.analys;
+    if (a) {
+      if (Array.isArray(a.skuggdatum)) document.querySelectorAll('input[name=skuggdatum]').forEach(c => { c.checked = a.skuggdatum.includes(c.value); });
+      if (a.skuggtider != null) $('skuggtider').value = a.skuggtider;
+      if (a.ogonhojd != null) $('ogonhojd').value = a.ogonhojd;
+      if (a.horisontTom != null) $('hor-tomt').checked = !!a.horisontTom;
+      sparaExtra();
+    }
+    if (v.utskrift && Object.keys(v.utskrift).length) {
+      ['pr-format', 'pr-orient', 'pr-bg'].forEach(id => { if (v.utskrift[id]) $(id).value = v.utskrift[id]; });
+      ['pr-siffror', 'pr-rutnat', 'pr-noll'].forEach(id => { if (id in v.utskrift) $(id).checked = !!v.utskrift[id]; });
+      sparaPr();
+    }
+    if (Array.isArray(v.dolda3d)) lager.spara('sessionStorage', 'terrang-3d-dolda', v.dolda3d);
+    sparaInst();
+  }
+  /** Platsen: utsnitt, mitt och nollpunkt i arbetszonen, horisontens punkt i SWEREF 99 TM. */
+  function lasPlats() {
+    const r = state.utsnitt, egen = nollpunktsVal() === 'egen';
+    return {
+      crs: 'EPSG:3006', zon: state.epsg, zonManuell: !!state.zonManuell,
+      utsnitt: r ? { xmin: r.xmin, ymin: r.ymin, xmax: r.xmax, ymax: r.ymax } : null,
+      mitt: state.mitt ? state.mitt.slice() : null, radie: Number($('radie').value) || null,
+      nollpunkt: egen ? { typ: 'egen', x: talEllerNull($('np-x').value), y: talEllerNull($('np-y').value), z: talEllerNull($('np-z').value) } : { typ: 'auto' },
+      vridning: { typ: $('vrid').value, grader: talEllerNull($('vrid-grader').value) || 0 },
+      horisontpunkt: state.horPunkt ? runda3(franLatLng(3006)(state.horPunkt)) : null,
+    };
+  }
+  /** Rättelserna som hör till projektet: hus och tak som projektet känner till, träd inom utsnittet. */
+  function samlaRattelser() {
+    const tv = takval(), hv = husval(), ut = { tak: {}, trad: {}, hus: {} };
+    for (const id of state.proj.kandaHus) {
+      if (tv[id]) ut.tak[id] = tv[id];
+      if (hv[id]) ut.hus[id] = hv[id];
+    }
+    const r = state.utsnitt, M = 20;
+    if (r) ut.trad = Projekt.flyttaTradval(tradval(), tillTM(state.epsg), (x, y) => x >= r.xmin - M && x <= r.xmax + M && y >= r.ymin - M && y <= r.ymax + M);
+    else ut.trad = Object.assign({}, (state.proj.d.inmatning.rattelser || {}).trad);
+    return ut;
+  }
+  function lasInmatning(g) {
+    volymerIZon();
+    const f = tillTM(state.epsg), ll = franLatLng(3006), gi = g.inmatning;
+    const forslag = gi.forslag && gi.forslag.length ? gi.forslag : [{ id: Utbyte.nyttId(), namn: 'Basfall', aktivt: true }];
+    const aktivt = (forslag.find(x => x.aktivt) || forslag[0]).id;
+    state.volymer.forEach(v => { if (!v.id) v.id = Utbyte.nyttId(); });
+    state.sektioner.forEach(s => { if (!s.id) s.id = Utbyte.nyttId(); });
+    return {
+      forslag,
+      volymer: state.volymer.map(v => Object.assign(Projekt.flyttaVolym(v, f), { forslag: v.forslag || aktivt })),
+      sektioner: state.sektioner.map(s => ({ id: s.id, namn: s.namn, a: runda3(ll(s.a)), b: runda3(ll(s.b)), vand: !!s.vand })),
+      rattelser: samlaRattelser(),
+    };
+  }
+  /** Projektet som det ser ut nu, med okända fält ur det som lästes in. */
+  function byggProjekt() {
+    const g = state.proj.d;
+    const ny = {
+      format: Projekt.FORMAT, version: Projekt.VERSION, app: VERSION, skapad: g.skapad, sparad: g.sparad || null,
+      projekt: {
+        id: g.projekt.id, namn: $('projekt').value.trim(), kommun: state.kommun ? state.kommun.namn : (g.projekt.kommun || ''),
+        fastighet: g.projekt.fastighet || '', uppdrag: g.projekt.uppdrag || '', anteckning: g.projekt.anteckning || '',
+      },
+      plats: lasPlats(), val: lasVal(), inmatning: lasInmatning(g), underlag: g.underlag, historik: g.historik,
+    };
+    return Projekt.bevara(g, ny);
+  }
+
+  /** Planerar att spara projektet i webbläsaren en halv sekund efter den senaste ändringen. */
+  function planeraSpara() {
+    if (!state.projektKlar || !state.proj || state.proj.laser) return;
+    clearTimeout(state.proj.timer);
+    state.proj.timer = setTimeout(() => { sparaProjektNu().catch(e => console.error(e)); }, 500);
+  }
+  const arTomt = d => !d.plats.utsnitt && !d.inmatning.volymer.length && !d.inmatning.sektioner.length && !d.plats.horisontpunkt;
+  /** Sparar projektet i webbläsaren nu, om något har ändrats (eller tvinga). */
+  async function sparaProjektNu(tvinga) {
+    const pr = state.proj;
+    if (!state.projektKlar || !pr || pr.laser) return;
+    clearTimeout(pr.timer);
+    const d = byggProjekt(), inn = Projekt.innehall(d);
+    if (!tvinga && inn === pr.senastInnehall) { pr.d = d; visaProjektStatus(); return; }
+    if (arTomt(d) && !pr.iDb) { pr.d = d; visaProjektStatus(); return; }
+    if (pr.annanFlik) { visaProjektStatus(); return; }
+    const forra = pr.d.plats.utsnitt;
+    if (pr.senastInnehall && d.plats.utsnitt && forra && Projekt.stabil(forra) !== Projekt.stabil(d.plats.utsnitt)) Projekt.logga(d, 'Utsnittet ändrat');
+    pr.d = d; pr.senastInnehall = inn;
+    const post = {
+      id: d.projekt.id, namn: d.projekt.namn, kommun: d.projekt.kommun, andrad: Date.now(), sparadFil: pr.sparadFil,
+      filInnehall: pr.filInnehall, forhand: forhandsbild(), antal: Projekt.sammanfatta(d), data: d, bilagor: pr.bilagor,
+    };
+    post.storlek = Projekt.storlek(post);
+    try {
+      await Projekt.dbSpara(post);
+      pr.iDb = true;
+      lager.spara('sessionStorage', 'terrang-projekt-aktivt', d.projekt.id);
+      if (!state.persistBegard && navigator.storage && navigator.storage.persist) { state.persistBegard = true; navigator.storage.persist().catch(() => {}); }
+      if (KANAL) KANAL.postMessage({ id: d.projekt.id, flik: FLIK });
+      $('projekt-lagringsfel').hidden = true;
+    } catch (e) {
+      console.error(e);
+      pr.senastInnehall = null;
+      $('projekt-lagringsfel').hidden = false;
+      $('projekt-lagringsfel').textContent = 'Projektet kunde inte sparas i webbläsaren: ' + e.message + ' Spara en projektfil så att inget går förlorat.';
+    }
+    visaProjektStatus();
+    ritaProjektlista();
+  }
+  /** En liten bild av utsnittet med volymer och sektioner (SVG), för listan Senaste projekt. */
+  function forhandsbild() {
+    const r = state.utsnitt;
+    if (!r) return '';
+    const b = r.xmax - r.xmin, h = r.ymax - r.ymin, k = 44 / Math.max(b, h), m = 2;
+    const X = x => (m + (x - r.xmin) * k).toFixed(1), Y = y => (m + (r.ymax - y) * k).toFixed(1);
+    const f = franLatLng(state.epsg);
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${(b * k + 2 * m).toFixed(1)} ${(h * k + 2 * m).toFixed(1)}" width="48" height="48" aria-hidden="true">`;
+    svg += `<rect class="fh-ram" x="${m}" y="${m}" width="${(b * k).toFixed(1)}" height="${(h * k).toFixed(1)}"/>`;
+    for (const v of state.volymer) svg += `<polygon class="fh-volym" points="${v.fotavtryck.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}"/>`;
+    for (const s of state.sektioner) { const a = f(s.a), c = f(s.b); svg += `<line class="fh-sektion" x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(c[0])}" y2="${Y(c[1])}"/>`; }
+    return svg + '</svg>';
+  }
+
+  /** Öppnar projektet d: panelen, utsnittet och inmatningen byts mot projektets. */
+  function oppnaProjekt(d, o = {}) {
+    if (state.proj) clearTimeout(state.proj.timer);
+    if (sektionRitar) satSektionslage(false);
+    if (horValjer) satHorisontlage(false);
+    if (ritar) satRitlage(false);
+    if (punktlage) satPunktlage(false);
+    state.proj = nyttProjektlage(d, o);
+    state.proj.laser = true;
+    try {
+      nollstallResultat();
+      state.projektId = d.projekt.id;
+      tillampaVal(d.val);
+      namnAndrat = false;
+      $('projekt').value = d.projekt.namn || '';
+      $('namn').value = slug($('projekt').value) || 'terrang';
+      const pl = d.plats;
+      if (pl.zon && T.ZONER.some(z => z.epsg === pl.zon)) { state.epsg = pl.zon; zonVal.value = pl.zon; state.zonManuell = !!pl.zonManuell; }
+      const np = pl.nollpunkt || { typ: 'auto' }, egen = np.typ === 'egen';
+      document.querySelector(`input[name=nollpunkt][value=${egen ? 'egen' : 'horn'}]`).checked = true;
+      $('egen-nollpunkt').hidden = !egen;
+      const sTal = v => (v == null ? '' : String(v));
+      $('np-x').value = egen ? sTal(np.x) : ''; $('np-y').value = egen ? sTal(np.y) : ''; $('np-z').value = egen && np.z ? sTal(np.z) : '';
+      const vr = pl.vridning || {};
+      if (['ingen', 'sann', 'egen'].includes(vr.typ)) $('vrid').value = vr.typ;
+      $('vrid-grader').value = vr.typ === 'egen' && vr.grader ? String(vr.grader).replace('.', ',') : '';
+      $('vrid-egen-rad').hidden = $('vrid').value !== 'egen';
+      if (pl.radie) $('radie').value = pl.radie;
+      // inmatningen, i arbetszonen
+      const f = franTM(state.epsg), ll = tillLatLng(3006), im = d.inmatning;
+      state.volymer = im.volymer.map(v => { const n = Projekt.flyttaVolym(v, f); if (n.golv == null) n.golv = NaN; return n; });
+      state.volymEpsg = state.epsg;
+      state.sektioner = im.sektioner.filter(s => s.a && s.b).map(s => ({ id: s.id || Utbyte.nyttId(), namn: s.namn, a: ll(s.a), b: ll(s.b), vand: !!s.vand }));
+      state.horPunkt = pl.horisontpunkt ? ll(pl.horisontpunkt) : null;
+      // rättelserna gäller samma hus och träd i alla projekt, så de förs in bland de globala
+      const rt = im.rattelser || {};
+      const tak = takval(), hus = husval(), trad = tradval();
+      Object.assign(tak, rt.tak || {}); Object.assign(hus, rt.hus || {}); Object.assign(trad, Projekt.flyttaTradval(rt.trad || {}, f));
+      lager.spara('localStorage', TAKVAL, tak); lager.spara('localStorage', HUSVAL, hus); lager.spara('localStorage', TRADVAL, trad);
+      if (pl.utsnitt) {
+        state.utsnitt = Object.assign({}, pl.utsnitt);
+        satGeoFranUtsnitt(); uppdateraKommun(); visaUtsnitt();
+        karta.whenReady(() => setTimeout(passaKartan, 50));
+      } else if (state.utsnitt) rensaUtsnitt();
+      state.mitt = Array.isArray(pl.mitt) && pl.utsnitt ? pl.mitt.slice() : null;
+      ritaVolymer(); ritaSektioner(); ritaHorPunkt();
+      sammanfatta();
+    } finally { state.proj.laser = false; }
+    lager.spara('sessionStorage', 'terrang-projekt-aktivt', d.projekt.id);
+    // det som byggs nu är projektet som det öppnades
+    const nu = byggProjekt();
+    state.proj.d = nu;
+    const inn = Projekt.innehall(nu);
+    if (o.franFil) state.proj.filInnehall = inn;
+    if (o.franDb) state.proj.senastInnehall = inn;
+    visaProjektStatus(); flaggaUtanfor(); ritaProjektlista();
+  }
+  /** Öppnar en post ur webbläsaren. */
+  function oppnaPost(post) {
+    const d = Projekt.las(post.data);
+    oppnaProjekt(d, { iDb: true, franDb: true, filInnehall: post.filInnehall, sparadFil: post.sparadFil, bilagor: post.bilagor || {} });
+    // filInnehall i posten jämförs mot det som byggs nu; samma innehåll = inga osparade ändringar
+  }
+  async function oppnaFranDb(id) {
+    await sparaProjektNu();
+    const post = await Projekt.dbLas(id);
+    if (!post) { visaStatus('Projektet finns inte längre i webbläsaren.', true); ritaProjektlista(); return; }
+    oppnaPost(post);
+    visaSteg('plats');
+    visaStatus(`Projektet ${post.namn || 'utan namn'} är öppnat.`);
+  }
+  async function nyttProjekt() {
+    await sparaProjektNu();
+    const d = Projekt.nytt({ app: VERSION });
+    d.val = lasVal();
+    oppnaProjekt(d);
+    lager.ta('sessionStorage', 'terrang-projekt-aktivt');
+    visaSteg('plats');
+    visaStatus('Nytt projekt. Rita ett område, eller öppna ett sparat projekt.');
+  }
+
+  /** Projektfilen som Blob eller Uint8Array. Sätter tiden då den sparades. */
+  async function projektfilData(typ) {
+    await sparaProjektNu();
+    const d = byggProjekt();
+    d.sparad = new Date().toISOString();
+    return Projekt.packa(d, state.proj.bilagor, JSZip, typ);
+  }
+  async function sparaProjektfil() {
+    const namn = `${slug($('projekt').value) || 'projekt'}${Projekt.ANDELSE}`;
+    const mal = await valjFil(namn, 'application/zip', 'Projektfil för Höjdkurvor');
+    if (mal === AVBRUTET) return;
+    try {
+      Projekt.logga(state.proj.d, 'Projektfilen sparad');
+      const blob = await projektfilData('blob');
+      await skrivFil(mal, blob, namn);
+      state.proj.d.sparad = new Date().toISOString();
+      state.proj.filInnehall = Projekt.innehall(state.proj.d);
+      state.proj.sparadFil = Date.now();
+      await sparaProjektNu(true);
+      $('projekt-status').textContent = `Projektfilen ${namn} är sparad.`;
+    } catch (e) { console.error(e); visaStatus('Projektfilen kunde inte sparas: ' + e.message, true); }
+  }
+  /** Öppnar en projektfil (.hojdkurvor eller .json). Finns projektet redan i webbläsaren med annat innehåll: fråga. */
+  async function oppnaProjektfil(fil) {
+    try {
+      const { data, bilagor } = await Projekt.lasFil(await fil.arrayBuffer(), JSZip);
+      await sparaProjektNu();
+      let d = data;
+      const fore = await Projekt.dbLas(d.projekt.id).catch(() => null);
+      if (fore && Projekt.innehall(Projekt.las(fore.data)) !== Projekt.innehall(d)) {
+        const svar = await fragaOenighet(d, fore);
+        if (!svar) return;
+        if (svar === 'webblasare') { oppnaPost(fore); visaStatus(`Webbläsarens version av ${fore.namn || 'projektet'} är öppnad. Filen är inte inläst.`); return; }
+        if (svar === 'kopia') d = Projekt.somKopia(d);
+      }
+      Projekt.logga(d, `Öppnat från ${fil.name}`);
+      oppnaProjekt(d, { franFil: d.projekt.id === data.projekt.id, sparadFil: d.sparad ? Date.parse(d.sparad) : null, bilagor });
+      await sparaProjektNu(true);
+      visaSteg('plats');
+      visaStatus(`Projektet ${d.projekt.namn || 'utan namn'} är öppnat från ${fil.name}.` + (state.utsnitt ? ' Välj Skapa för att hämta underlaget.' : ''));
+    } catch (e) {
+      console.error(e);
+      visaStatus(e instanceof Projekt.NyareVersion ? e.message : 'Projektfilen kunde inte öppnas: ' + e.message, true);
+    }
+  }
+  /** Frågar vilken version som gäller när filen och webbläsaren är oense. 'fil', 'webblasare', 'kopia' eller null. */
+  function fragaOenighet(d, fore) {
+    const dlg = $('projektdialog');
+    const tid = ms => { if (!ms) return 'okänt när'; const t = new Date(ms); return `${datumKort(ms).replace(/ \d{4}$/, '')} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`; };
+    $('pd-text').textContent = `Projektet ${d.projekt.namn || 'utan namn'} finns redan i webbläsaren, med annat innehåll än i filen.`;
+    $('pd-fil').textContent = `Öppna filens version (sparad ${d.sparad ? tid(Date.parse(d.sparad)) : 'okänt när'})`;
+    $('pd-webb').textContent = `Behåll webbläsarens (ändrad ${tid(fore.andrad)})`;
+    return new Promise(ok => {
+      const klar = v => { dlg.close(); ['pd-fil', 'pd-webb', 'pd-kopia', 'pd-avbryt', 'pd-stang'].forEach(id => { $(id).onclick = null; }); ok(v); };
+      $('pd-fil').onclick = () => klar('fil'); $('pd-webb').onclick = () => klar('webblasare');
+      $('pd-kopia').onclick = () => klar('kopia'); $('pd-avbryt').onclick = () => klar(null); $('pd-stang').onclick = () => klar(null);
+      dlg.oncancel = () => klar(null);
+      dlg.showModal();
+    });
+  }
+
+  /** Visar om projektet är sparat i en fil och om något är ändrat sedan dess. */
+  function visaProjektStatus() {
+    const pr = state.proj;
+    if (!pr) return;
+    const d = pr.d, tomt = arTomt(d), knapp = $('projekt-spara');
+    const osparad = !tomt && pr.filInnehall !== Projekt.innehall(d);
+    knapp.classList.toggle('osparad', osparad);
+    knapp.title = osparad ? 'Osparade ändringar sedan senaste projektfil' : '';
+    const namn = d.projekt.namn || 'Projekt utan namn';
+    let text;
+    if (tomt && !pr.iDb) text = 'Nytt projekt. Det sparas i webbläsaren så snart du har ritat ett område.';
+    else if (!pr.filInnehall) text = `${namn}. Sparas i webbläsaren medan du arbetar. Ingen projektfil är sparad.`;
+    else if (osparad) text = `${namn}. Ändrat sedan projektfilen sparades${pr.sparadFil ? ' ' + datumKort(pr.sparadFil) : ''}. Allt finns kvar i webbläsaren.`;
+    else text = `${namn}. Samma som projektfilen${pr.sparadFil ? ' från ' + datumKort(pr.sparadFil) : ''}.`;
+    if (pr.annanFlik) text = 'Projektet har ändrats i en annan flik. Ändringar här sparas inte förrän du väljer.';
+    $('projekt-status').textContent = text;
+    $('projekt-annan-flik').hidden = !pr.annanFlik;
+  }
+  /** Säger till om volymer eller sektioner hamnat utanför utsnittet. De ligger kvar i projektet. */
+  function flaggaUtanfor() {
+    const el = $('projekt-utanfor');
+    if (!el || !state.proj) return;
+    const f = franLatLng(state.epsg);
+    volymerIZon();
+    const u = Projekt.utanfor(state.volymer, state.sektioner.map(s => [f(s.a), f(s.b)]), state.utsnitt);
+    el.textContent = state.utsnitt ? Projekt.utanforText(u) : '';
+    el.hidden = !el.textContent;
+  }
+  /** Listan Senaste projekt under 01 Plats. */
+  let listaTimer = 0;
+  function ritaProjektlista() {
+    clearTimeout(listaTimer);
+    listaTimer = setTimeout(async () => {
+      let alla = [];
+      try { alla = await Projekt.dbAlla(); } catch (e) { $('projekt-senaste').hidden = true; return; }
+      const ul = $('projekt-lista'), aktivt = state.proj && state.proj.d.projekt.id;
+      ul.innerHTML = '';
+      const visa = alla.slice(0, 8);
+      visa.forEach(p => {
+        const li = document.createElement('li');
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'projekt-post' + (p.id === aktivt ? ' aktivt' : '');
+        const tid = new Date(p.andrad);
+        b.innerHTML = `<span class="fh">${p.forhand || ''}</span><span class="pp-text"><strong>${esc(p.namn || 'Utan namn')}</strong>` +
+          `<small>${p.kommun ? esc(p.kommun) + ' · ' : ''}${datumKort(p.andrad)} ${String(tid.getHours()).padStart(2, '0')}:${String(tid.getMinutes()).padStart(2, '0')}</small>` +
+          `<small>${esc(Projekt.sammanfattningText(p.antal || {}))}${p.id === aktivt ? ' · öppet' : ''}</small></span>`;
+        if (p.id === aktivt) b.setAttribute('aria-current', 'true');
+        b.addEventListener('click', () => { if (p.id !== aktivt) oppnaFranDb(p.id); });
+        li.append(b); ul.append(li);
+      });
+      $('projekt-senaste').hidden = !alla.length;
+      $('projekt-senaste-antal').textContent = alla.length > visa.length ? ` (${visa.length} av ${alla.length}, alla under 02 Underlag › Sparat i webbläsaren)` : ` (${alla.length})`;
+      if ($('g-sparat').open) visaSparadeProjekt(alla);
+    }, 50);
+  }
+  /** Projekten under Sparat i webbläsaren, med storlek och Ta bort. */
+  async function visaSparadeProjekt(alla) {
+    if (!alla) { try { alla = await Projekt.dbAlla(); } catch (e) { alla = []; } }
+    const ul = $('lagring-projekt');
+    ul.innerHTML = '';
+    alla.forEach(p => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>Projekt ${esc(p.namn || 'utan namn')}, ${storlekText(p.storlek || 0)}<br><small>ändrat ${datumKort(p.andrad)}${p.sparadFil ? ', projektfil ' + datumKort(p.sparadFil) : ', ingen projektfil'}</small></span>`;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'lank-ta-bort'; b.textContent = 'Ta bort';
+      b.setAttribute('aria-label', `Ta bort projektet ${p.namn || 'utan namn'}`);
+      b.addEventListener('click', async () => {
+        const oppet = state.proj && p.id === state.proj.d.projekt.id;
+        if (!window.confirm(`Ta bort projektet ${p.namn || 'utan namn'} ur webbläsaren?` + (oppet ? ' Det är öppet, så ett nytt, tomt projekt öppnas.' : '') + ' En sparad projektfil påverkas inte.')) return;
+        await Projekt.dbTaBort(p.id);
+        if (oppet) { state.proj.iDb = false; state.proj.senastInnehall = Projekt.innehall(state.proj.d); await nyttProjekt(); }
+        ritaProjektlista(); visaSparadeProjekt();
+      });
+      li.append(b); ul.append(li);
+    });
+    $('lagring-projekt-rubrik').hidden = !alla.length;
+  }
+  /** Efter Skapa: husen i utsnittet hör till projektet (för rättelserna) och källorna noteras. */
+  function projektEfterSkapa(s, val) {
+    if (!state.proj) return;
+    for (const b of s.byggnaderAlla || []) if (b && b.id != null) state.proj.kandaHus.add(String(b.id));
+    const dag = new Date().toISOString().slice(0, 10);
+    const prod = [['Markhöjdmodell Nedladdning', true], ['Laserdata Nedladdning, skog', val.laser || val.trad || val.hom || val.byggnadshojd],
+      ['Ortofoto Nedladdning', val.ortofoto], ['Byggnad Nedladdning, vektor', val.byggnader], ['Fastighetsindelning Nedladdning, vektor', val.fastigheter],
+      ['Marktäcke Nedladdning, vektor', val.marktacke], ['Stompunkt Direkt', val.stompunkter], ['OpenStreetMap (Overpass)', val.vagar],
+      ['Naturvårdsverket, Riksantikvarieämbetet och MCF', val.skydd]];
+    const d = state.proj.d;
+    d.underlag = Object.assign({}, d.underlag, { senastSkapat: new Date().toISOString(), kallor: prod.filter(p => p[1]).map(p => ({ produkt: p[0], hamtad: dag })) });
+    Projekt.logga(d, 'Underlaget skapat');
+    planeraSpara();
+  }
+
+  // --- knappar, fil och dra-och-släpp
+  $('projekt-nytt').addEventListener('click', nyttProjekt);
+  $('projekt-spara').addEventListener('click', sparaProjektfil);
+  $('projekt-oppna').addEventListener('click', () => $('projekt-fil').click());
+  $('projekt-fil').addEventListener('change', () => {
+    const fil = $('projekt-fil').files[0];
+    $('projekt-fil').value = '';
+    if (fil) oppnaProjektfil(fil);
+  });
+  $('projekt-las-igen').addEventListener('click', () => { if (state.proj) { state.proj.annanFlik = false; oppnaFranDb(state.proj.d.projekt.id); } });
+  $('projekt-behall').addEventListener('click', () => { if (state.proj) { state.proj.annanFlik = false; sparaProjektNu(true); } });
+  const kartYta = karta.getContainer();
+  const harFil = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  kartYta.addEventListener('dragover', e => { if (!harFil(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; document.body.classList.add('slapp-fil'); });
+  kartYta.addEventListener('dragleave', () => document.body.classList.remove('slapp-fil'));
+  kartYta.addEventListener('drop', e => {
+    if (!harFil(e)) return;
+    e.preventDefault();
+    document.body.classList.remove('slapp-fil');
+    const fil = e.dataTransfer.files[0];
+    if (!fil) return;
+    if (/\.(hojdkurvor|json|zip)$/i.test(fil.name)) oppnaProjektfil(fil);
+    else visaStatus(`${fil.name} är ingen projektfil. Dra en fil som slutar på ${Projekt.ANDELSE} till kartan.`, true);
+  });
+  // ändringar i panelen sparas (det mesta går också via lager.spara)
+  document.addEventListener('change', planeraSpara, true);
+  $('projekt').addEventListener('input', planeraSpara);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') sparaProjektNu().catch(() => {}); });
+  if (KANAL) KANAL.onmessage = e => {
+    const m = e.data || {};
+    if (!state.proj || m.flik === FLIK) return;
+    if (m.id === state.proj.d.projekt.id) { state.proj.annanFlik = true; visaProjektStatus(); }
+    ritaProjektlista();
+  };
+
+  /**
+   * Vid start: projektet som var öppet i fliken (efter omladdning), annars det som låg i
+   * sessionStorage och localStorage före 0.13.0, annars ett nytt. En projektlänk ger ett nytt projekt.
+   */
+  async function startaProjekt(franLank) {
+    let d = null;
+    try {
+      if (!franLank) {
+        const aktivt = lager.las('sessionStorage', 'terrang-projekt-aktivt');
+        const post = aktivt ? await Projekt.dbLas(aktivt) : null;
+        if (post) { oppnaPost(post); state.projektKlar = true; visaProjektStatus(); return; }
+        d = flyttaGamlaData();
+      }
+    } catch (e) { console.error(e); }
+    if (!state.proj) state.proj = nyttProjektlage(Object.assign(Projekt.nytt({ app: VERSION }), { val: lasVal() }));
+    if (d) { state.proj = nyttProjektlage(d); }
+    if (franLank) Projekt.logga(state.proj.d, 'Öppnat från en projektlänk');
+    state.projektId = state.proj.d.projekt.id;
+    state.projektKlar = true;
+    state.proj.d = byggProjekt();
+    if (d || franLank) await sparaProjektNu(true);
+    visaProjektStatus(); flaggaUtanfor(); ritaProjektlista();
+  }
+  /** Det som sparades före 0.13.0 förs in i ett projekt, en gång. Returnerar projektet eller null. */
+  function flyttaGamlaData() {
+    const vol = lager.las('sessionStorage', 'terrang-volymer'), sek = lager.las('sessionStorage', 'terrang-sektioner');
+    const hp = lager.las('sessionStorage', 'terrang-horpunkt'), pid = lager.las('sessionStorage', 'terrang-projektid');
+    const uts = lager.las('localStorage', 'terrang-projekt-flyttat') ? null : lager.las('localStorage', 'terrang-utsnitt');
+    ['terrang-volymer', 'terrang-sektioner', 'terrang-horpunkt', 'terrang-projektid'].forEach(k => { try { sessionStorage.removeItem(k); } catch (e) { /* ignoreras */ } });
+    try { localStorage.setItem('terrang-projekt-flyttat', 'true'); } catch (e) { /* ignoreras */ }
+    const harVol = vol && Array.isArray(vol.volymer) && vol.volymer.length, harSek = Array.isArray(sek) && sek.length;
+    const harUts = uts && uts.r && T.ZONER.some(z => z.epsg === uts.epsg);
+    if (!harVol && !harSek && !hp && !harUts) return null;
+    const d = Projekt.nytt({ id: typeof pid === 'string' ? pid : undefined, app: VERSION });
+    d.val = lasVal();
+    state.proj = nyttProjektlage(d);
+    if (harUts && !state.utsnitt) {
+      state.epsg = uts.epsg; zonVal.value = uts.epsg; state.zonManuell = true;
+      state.utsnitt = { xmin: uts.r.xmin, ymin: uts.r.ymin, xmax: uts.r.xmax, ymax: uts.r.ymax };
+      if (uts.projekt) { $('projekt').value = uts.projekt; $('namn').value = slug(uts.projekt) || 'terrang'; }
+      satGeoFranUtsnitt(); uppdateraKommun(); visaUtsnitt();
+      karta.whenReady(() => setTimeout(passaKartan, 50));
+    }
+    if (harVol) {
+      state.volymer = vol.volymer.map(v => Object.assign({}, v, { golv: v.golv == null ? NaN : v.golv }));
+      state.volymEpsg = vol.epsg || state.epsg;
+    }
+    if (harSek) state.sektioner = sek.filter(s => s && s.a && s.b).map(s => Object.assign({ id: Utbyte.nyttId() }, s));
+    if (hp) state.horPunkt = hp;
+    ritaVolymer(); ritaSektioner(); ritaHorPunkt();
+    Projekt.logga(d, 'Fört över från en tidigare version av Höjdkurvor');
+    visaStatus('Det du hade sparat i webbläsaren är nu ett projekt. Det sparas medan du arbetar, och du kan spara det som projektfil under 01 Plats.');
+    return d;
+  }
 
   // ------------------------------------------------------------------
   // Felrapport
@@ -2843,7 +3368,7 @@
     $('vy3d').hidden = false;
     document.body.classList.add('vy3d-oppen');
     try {
-      await Promise.all([!window.Trad3D && 'js/trad3d.js', 'js/bild3d.js', 'js/volym3d.js'].filter(Boolean).map(laddaSkript));
+      await Promise.all([!window.Trad3D && 'js/trad3d.js', 'js/bild3d.js', !window.Volym3D && 'js/volym3d.js'].filter(Boolean).map(laddaSkript));
       await laddaSkript('js/vy3d.js');
       varnaGamlaFiler('vy3d.js', Vy3D.version);
       if (vy3d) vy3d.stang();
@@ -3532,4 +4057,5 @@
   visaSteg(franLankProj ? 'plats' : (lager.las('sessionStorage', 'terrang-steg') || 'plats'));
   satMobil(mobilVald());
   sammanfatta();
+  startaProjekt(franLankProj);
 })();

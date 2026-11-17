@@ -62,6 +62,10 @@ node test/dxf.test.js
 node test/horisont.test.js
 ```
 
+```
+node test/projekt.test.js
+```
+
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
@@ -77,6 +81,12 @@ grönt) och vägytorna: en korsning blir en yta och en rondell får ett hål.
 DXF-testet (0.12.0) prövar den samlade DXF:en: lager en gång, alla objekt, utbredningen
 och att höjdkurvornas egen skrivare går att slå ihop med de andra. Med `DXF_UT=mapp`
 sparas filen, så att den kan läsas med ezdxf.
+Projekttestet (0.13.0) prövar projektfilen (`docs/PROJEKTFIL.md`): ett nytt projekt,
+läsning, migrering och en fil från en nyare version, att okända fält bevaras men borttagna
+rättelser inte kommer tillbaka, att tider och historik inte räknas som innehåll, volymer
+(läge, vridning, nockriktning, golv på marken) och trädval mellan SWEREF 99 12 00 och TM,
+inmatning utanför utsnittet, och zip-filen: spara → öppna → spara ger samma `projekt.json`,
+bilagorna följer med och ren JSON går också att öppna.
 Horisonttestet (0.12.1) prövar att den grova höjdmodellen för horisonten hoppar över
 rutor som inte går att läsa (nätverksfel, 404, 401) och bara ger upp när ingen ruta går
 att läsa. Testservern svarar 404 *utan* CORS-huvuden för höjdrutor som saknas, som vi
@@ -190,6 +200,17 @@ python3 test/ui_test.py test/ut ritning
 ```
 python3 test/mobil_test.py test/ut
 ```
+
+```
+python3 test/projekt_test.py test/ut ritning
+```
+
+`projekt_test.py` (0.13.0) prövar projektet i webbläsaren: autospar, att allt finns kvar
+efter omladdning, Spara projektfil, Nytt projekt, Senaste projekt, Öppna projektfil och
+dra-och-släpp, frågan när filen och webbläsaren är oense (kopia, filens version,
+webbläsarens), en fil från en nyare version, inmatning utanför utsnittet, Ta bort under
+Sparat i webbläsaren, en annan flik som ändrar samma projekt och flytten från sessionStorage.
+Andra argumentet är temat.
 
 `ui_test.py` går igenom hela flödet på en dator: BETA-knappen och formuläret
 Skicka synpunkter (anropet till `synpunkter.php` fångas upp i testet), rita och

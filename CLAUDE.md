@@ -43,6 +43,11 @@ härnäst och vad som väntar. Skriv om den när sessionen slutar.
   testservern.
 - Tester pekar om adresserna med `window.TERRANG_*` (se `test/README.md`). Låt
   krokarna vara kvar, de gör inget när de inte är satta.
+- Projektet (inmatning och val) sparas i IndexedDB och som projektfil, se
+  `docs/PROJEKTFIL.md`. Nya saker som användaren matar in ska in i projektet
+  (`byggProjekt`/`oppnaProjekt` i `app.js`), inte i sessionStorage. Ändras
+  formatet så att äldre filer inte kan läsas: höj `Projekt.VERSION` och skriv en
+  migrering.
 - PDF:er byggs med jsPDF och typsnitten i `vendor/fonts/` via
   `Utskrift.nyttDokument`. Platsanalysbladet lägger till soldiagram och
   skuggstudie i samma dokument med `opt.dok`.
@@ -100,6 +105,10 @@ node test/horisont.test.js
 ```
 
 ```
+node test/projekt.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 
@@ -109,6 +118,10 @@ python3 test/ui_test.py test/ut ritning
 
 ```
 python3 test/mobil_test.py test/ut
+```
+
+```
+python3 test/projekt_test.py test/ut ritning
 ```
 
 Kör enhetstestet efter ändringar i beräkningarna och gränssnittstesterna efter

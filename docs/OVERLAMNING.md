@@ -1,9 +1,20 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 17 november 2026, 0.12.2 (skuggstudien med ram och husens konturer).
+överlämning; historiken finns i git. Senast: 18 november 2026, 0.13.0 (projektfilen).
 
 ## Läget
+
+- **0.13.0** 18 november: projektfilen, etapp 1 och 2 i `plan-projektfil.md`
+  (claude.ai-projektet). Projekt i IndexedDB med autospar, Senaste projekt,
+  Nytt projekt, projektfil `.hojdkurvor` (zip med `projekt.json` och
+  `bilagor/`), dra-och-släpp, projektfilen i nedladdningszippen, frågan när fil
+  och webbläsare är oense, flera flikar, flytt från sessionStorage. Formatet i
+  `docs/PROJEKTFIL.md`. Dessutom AG: skissens DXF har väggar och tak (3DFACE).
+  Testresultaten 18 november (AA, AD, AE, AG, AH, AI) är införda i
+  `docs/SYNPUNKTER.md`; 3D på telefon är inte längre aktuellt. Enhetstester
+  gröna, gränssnittstestet och `projekt_test.py` godkända i alla tre teman,
+  mobiltestet godkänt. Inte testad av ägaren (AZ, AÅ).
 
 - **0.12.2** 17 november: skuggstudien i platsanalysen på ett A3-blad med ram
   och ritningshuvud, husens fotavtryck och skissade volymer som linjer i
@@ -51,6 +62,41 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## 0.13.0 (`js/projekt.js`, blocket *Projektet* i `app.js`)
+
+- `Projekt` är ren data utom `db*`: `nytt`, `las` (kontroll, `MIGRERA`, fyller
+  i det som saknas), `bevara(gammal, ny)` (okända fält; `EGNA` = rättelserna,
+  källorna och historiken bevaras inte), `innehall` (stabil JSON av projekt,
+  plats, val, inmatning), `logga`, `somKopia`, `flyttaVolym(v, f)` (fotavtryck,
+  primitivens x/y och vrid, nockriktning; vinkeln i mitten; avrundat till mm och
+  1e-6°), `flyttaTradval`, `utanfor`, `packa`/`lasFil` (JSZip), `dbSpara`,
+  `dbLas`, `dbTaBort`, `dbAlla`. Databasen `terrangunderlag` är version 2 både
+  här och i `kommunfil.js` (samma uppgradering, båda stänger vid
+  `versionchange`).
+- `app.js`: `state.proj = { d, iDb, senastInnehall, filInnehall, sparadFil,
+  bilagor, kandaHus, annanFlik }`. `byggProjekt()` = `lasPlats` + `lasVal` +
+  `lasInmatning` (volymerna och sektionerna får id) + `bevara`.
+  `oppnaProjekt(d, o)` ställer in panelen (`tillampaVal` skickar `change` på
+  kryssrutor som ändras), räknar om till zonen och för in rättelserna bland de
+  globala. `planeraSpara()` anropas från `lager.spara`/`lager.ta`, alla
+  `change` i dokumentet, `visaUtsnitt`, `rensaUtsnitt`, volymer och sektioner;
+  `sparaProjektNu` sparar bara om innehållet ändrats och inte för ett tomt
+  projekt. Inget sparas förrän `startaProjekt` har kört (`state.projektKlar`).
+- Rättelserna: hus och tak med id i `kandaHus` (husen i senaste Skapa, och de
+  som redan fanns i projektet), träd inom utsnittet + 20 m. Trädens nycklar i
+  localStorage är fortfarande i zonen; byter man zon känns de inte igen (som
+  förut).
+- Volymer, sektioner, horisontpunkt och projekt-id ligger inte längre i
+  sessionStorage. `terrang-3d-dolda` gör det fortfarande, men följer med i
+  `val.dolda3d`.
+- `volym3d.js` laddas nu med sidan (för takytorna i DXF:en);
+  `Platsanalys.dxfVolymer` skriver `SKISS_VOLYM` med 3DFACE (`Dxf.skriv` typ
+  `yta`). Volymer med `golv: null` står på marken (förut 0).
+- **AG oklart**: vid testet saknades skissen i "DXF:en", men skiss-DXF:en och
+  den samlade hade lagren `SKISS_*` redan i 0.12.2 (då som linjer). Troligen
+  var det volymerna som saknades som volymer, eller så avsågs
+  skuggstudiens DXF som togs bort i 0.12.1. AÅ frågar vilken fil det gällde.
 
 ## 0.12.2
 
@@ -427,14 +473,17 @@ cad-apa flyttar, och därefter omdirigeringen, adresserna i dokumentationen och
 att stänga av FTP (*Själva flytten* steg 3–4). Vänta med omdirigeringen tills
 cad-apa har flyttat, annars går det inte att fortsätta rita i cad-apa.
 
-1. **Fastighetsnamn ur kartan (AX)**: förslaget nedan är lagt fram; fråga om
-   det ska byggas och i vilken version (0.13.0 tillsammans med projektfilen,
-   eller en egen version före).
-2. **0.13.0 projektfil** enligt `plan-projektfil.md` i claude.ai-projektet;
-   ägaren har sagt ja.
-3. Be om test av listan under *Att testa* i `docs/SYNPUNKTER.md`, nyast först
-   (AY, AW). Särskilt: vägytorna mot ett riktigt ortofoto (AJ), bilderna med
-   världsfil i Archicad (AR) och dra i ramen på iPhone (AT).
+Ägaren fyller på med fler testresultat i nästa vända (resten av *Att testa* i
+`docs/SYNPUNKTER.md`).
+
+1. För in testresultaten. Rättelser blir 0.13.x.
+2. **Fastighetsnamn ur kartan (AX)**: förslaget nedan är lagt fram; fråga om
+   det ska byggas och i vilken version.
+3. **0.14.0 sol på fasaderna** (`overlamning-solanalys.md` i claude.ai-projektet).
+   Planen säger att förslagen (projektfilens etapp 3) helst kommer före eller med
+   solanalysen; fråga ägaren om ordningen.
+4. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i
+   panelen.
 
 ### Förslag: fastighetsnamn ur kartan (AX)
 
