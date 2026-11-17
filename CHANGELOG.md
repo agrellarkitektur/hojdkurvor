@@ -3,6 +3,38 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.12.1 – 2026-11-17
+
+Inkorgen 17 november: felet med soldiagrammet och horisonten, och tre ändringar
+i leveransen.
+
+- **Soldiagram med horisont**: `T.lasHojderGrov` läser Markhöjdmodellen 5 km
+  runt platsen, också rutor som utsnittet inte rör. En ruta som inte gick att
+  läsa fällde hela soldiagrammet med *Kunde inte nå Lantmäteriets server*. Nu
+  hoppas varje sådan ruta över (NaN, id i `fel` resp. `saknas`), och bara om
+  ingen ruta går att läsa kastas felet. Rutorna som saknas står i varningen,
+  info-filen och noten på soldiagrammet. Misslyckas horisonten ändå skapas
+  soldiagrammet utan horisont, med en varning. Trolig orsak: en ruta som inte
+  finns svarar 404 utan CORS-huvuden, och webbläsaren ser då ett nätverksfel
+  (Carl Augusts prov utan inloggning gav 401 *med* CORS-huvuden, så det
+  oinloggade svaret är det inte). Testservern svarar nu så för saknade
+  `.tif`, och `test/horisont.test.js` prövar läsningen.
+- **Platsanalysen i roten**: `<namn>_platsanalys.pdf` ligger i zip:ens rot
+  bredvid info-filen och den samlade DXF:en.
+- **Soldiagrammet på ett A3-blad**: i platsanalysen ritas soldiagrammet på ett
+  blad med samma ram och ritningshuvud som de andra (`Platsanalysblad.solsida`).
+  `Sol.soldiagramPdf` har fått `opt.ruta = { x, y, k }` som placerar och skalar
+  A4-diagrammet på en befintlig sida. Filerna i `soldiagram/` är oförändrade.
+- **Ingen DXF för skuggor, lutning och skyfall**: de förvirrade när de
+  öppnades. Skuggstudien är PDF, lutning och skyfall PDF och JPEG med
+  världsfil. De ingår därför inte heller i den samlade DXF:en. Funktionerna
+  (`Analys.dxfSkuggor`, `Platsanalys.dxfLutning`, `dxfSkyfall`) finns kvar.
+- **Karttjänster som svarar med fel**: en WFS/WMS som svarar 200 med ett
+  XML-fel (ServiceException) ger nu *svarade med ett fel i stället för data*
+  i stället för ett JSON-fel.
+- **Synpunkter på hojdkurvor.danaid.cloud**: hur e-posten sätts upp (msmtp via
+  one.com, egen avsändare) står i `docs/FLYTT.md`, steg 5.
+
 ## 0.12.0 – 2026-11-15
 
 Carl Augusts synpunkter från 1, 13 och 15 november, och förberedelser för flytten

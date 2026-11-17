@@ -54,15 +54,82 @@ hit*.
      eller en gång för alla jokerposten `*`;
    - `sudo apps-drift nyckel hojdkurvor www/hojdkurvor` på servern, och
      utskriften som secret `APPS_SSH_KEY` i det här repot (steg 6).
-5. **Synpunkter.** På VPS:en går PHP:s `mail()` via msmtp, som behöver
-   `/etc/msmtprc` med ett e-postkonto hos one.com första gången.
-   `feedback-config.php` ska ligga i `/srv/apps/www/hojdkurvor/` eller mappen
-   ovanför; publiceringen rör den aldrig och Caddy visar den aldrig. `from`
-   måste vara en adress som servern får skicka från (SPF/DMARC), annars fastnar
-   breven. Kontrollera genom att öppna `…/synpunkter.php` i webbläsaren.
-   Alternativ som övervägs: att synpunkterna går direkt till Inkorgen i ett
-   projekt i danaid, som danaids egen knapp. danaids väg kräver i dag ett
-   inloggat konto, så en öppen väg med egen spärr mot skräp behövs först.
+5. **Synpunkter. Bestämt 17 november: till kontakt@agrellarkitektur.se med e-post.**
+   Carl August läser kontakt@ i Gmail genom vidarebefordran från one.com, och
+   Gmail stoppar gärna vidarebefordrade brev som inte går att kontrollera.
+   Därför skickas breven *genom one.com* (inloggat, som ett vanligt e-postkonto
+   på agrellarkitektur.se) och inte direkt från VPS:en. Då är avsändaren äkta,
+   one.com signerar brevet (DKIM) och signaturen håller även när brevet
+   vidarebefordras. Avsändaren ska vara ett **eget konto**, t.ex.
+   `noreply@agrellarkitektur.se`, inte kontakt@ själv: står kontakt@ som
+   *Skicka som* i Gmail läggs brev *från* den adressen i Skickat, inte i
+   Inkorgen. Den som skrev synpunkten står i Reply-To, så Svara går till hen.
+   `synpunkter.php` är oförändrad; den sätter From och kuvertavsändaren (`-f`)
+   till `from` i `feedback-config.php`.
+
+   Det Carl August gör (en gång):
+
+   a. Skapa e-postkontot `noreply@agrellarkitektur.se` i one.com:s kontrollpanel
+      (E-post → Nytt konto) och notera lösenordet. Kontrollera under DNS att
+      DKIM är på för agrellarkitektur.se.
+
+   b. På VPS:en, `/etc/msmtprc` (msmtp är installerat av `apps-drift installera`):
+
+      ```
+      sudo nano /etc/msmtprc
+      ```
+
+      ```
+      defaults
+      auth on
+      tls on
+      tls_trust_file /etc/ssl/certs/ca-certificates.crt
+      syslog LOG_MAIL
+
+      account onecom
+      host send.one.com
+      port 465
+      tls_starttls off
+      from noreply@agrellarkitektur.se
+      user noreply@agrellarkitektur.se
+      password LÖSENORDET
+
+      account default : onecom
+      ```
+
+      PHP körs som `www-data`, som måste kunna läsa filen men ingen annan:
+
+      ```
+      sudo chown root:www-data /etc/msmtprc
+      ```
+
+      ```
+      sudo chmod 640 /etc/msmtprc
+      ```
+
+   c. Mottagaren, i appens mapp (publiceringen hoppar över `*-config.php`):
+
+      ```
+      printf "<?php\nreturn ['to' => 'kontakt@agrellarkitektur.se', 'from' => 'noreply@agrellarkitektur.se'];\n" | sudo tee /srv/apps/www/hojdkurvor/feedback-config.php
+      ```
+
+   d. Prova från servern, som PHP gör:
+
+      ```
+      printf "Subject: Prov från hojdkurvor\n\nProv." | sudo -u www-data msmtp -f noreply@agrellarkitektur.se kontakt@agrellarkitektur.se
+      ```
+
+      Brevet ska komma till Gmails inkorg. Öppna det, *Visa original*: SPF,
+      DKIM och DMARC ska stå som PASS (DKIM är det som räknas efter
+      vidarebefordran). Hamnar det i Skräppost: markera *Inte skräppost* och
+      gör ett filter på avsändaren med *Skicka aldrig till skräppost*. Fel
+      står i `sudo journalctl -t msmtp -n 20`.
+
+   e. Öppna <https://hojdkurvor.danaid.cloud/synpunkter.php>: ska svara
+      `"ok":true`. Skicka sedan en synpunkt med formuläret i appen.
+
+   Annan väg som övervägts: synpunkterna direkt till Inkorgen i ett projekt i
+   danaid. Kräver en öppen väg med egen spärr mot skräp; inte aktuellt nu.
 6. **Publiceringen. Klar 17 november.** `.github/workflows/publicera-vps.yml`
    lägger appen på VPS:en med rsync över SSH (mallen `drift/publicera-app.yml` i
    agrellarkitektur/apps) vid varje push till `main`, med samma kontroller och

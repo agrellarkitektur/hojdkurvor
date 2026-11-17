@@ -93,6 +93,10 @@ node test/dxf.test.js
 ```
 
 ```
+node test/horisont.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 

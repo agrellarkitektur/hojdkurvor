@@ -197,7 +197,11 @@ class H(BaseHTTPRequestHandler):
             self.send_response(401); self.cors(); self.send_header('WWW-Authenticate', 'Basic realm="x"'); self.end_headers(); return
         p = os.path.join(DATA, os.path.basename(path))
         if not os.path.exists(p):
-            self.send_response(404); self.cors(); self.end_headers(); return
+            # En höjdruta som inte finns svarar 404 utan CORS-huvuden, som vi tror att
+            # Lantmäteriet gör (0.12.1). Webbläsaren ser då ett nätverksfel, inte 404.
+            self.send_response(404)
+            if not path.endswith('.tif'): self.cors()
+            self.end_headers(); return
         size = os.path.getsize(p)
         etag = '"' + hashlib.md5(f'{p}{os.path.getmtime(p)}'.encode()).hexdigest() + '"'
         rng = self.headers.get('Range')

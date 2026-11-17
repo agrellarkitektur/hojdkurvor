@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.12.0"></script>
-  <script src="js/tema.js?v=0.12.0"></script>
-  <script src="js/synpunkter.js?v=0.12.0" defer></script>
+  <script src="js/version.js?v=0.12.1"></script>
+  <script src="js/tema.js?v=0.12.1"></script>
+  <script src="js/synpunkter.js?v=0.12.1" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.12.0">
+  <link rel="stylesheet" href="app.css?v=0.12.1">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -182,7 +182,7 @@
           <dt>Befintliga byggnader i 3D</dt><dd><code>_byggnader_lokal.ifc</code> och <code>_byggnader_sweref.ifc</code> har husen som volymer med platta tak, till höjden ur laserdatan. I Archicad: File › Interoperability › Merge, eller öppna filen och kopiera in husen. Varje hus är ett eget objekt med husnummer, ändamål och höjd i egenskaperna. Hus utan höjd kommer inte med, så kryssa i både <em>Befintliga byggnader</em> och <em>Höjd ur laserdatan</em>. Gör en ny export, så får samma hus samma id.</dd>
           <dt>Vägar</dt><dd><code>_vagar_lokal.dxf</code> har bilvägarna och <code>_gangvagar_lokal.dxf</code> gång- och cykelvägarna, båda som mittlinjer från OpenStreetMap. Med <em>Utkast till vägytor</em> har de också vägytorna som slutna linjer (lagren VAG_YTA_BIL_BERAKNAD och VAG_YTA_GANG_BERAKNAD), ihopslagna i korsningarna. Kanterna är beräknade, inte inmätta; på kartan är de streckade. Bredden kommer från OpenStreetMap när den finns där, annars en vanlig bredd för vägtypen. Har du valt ortofoto mäts bilvägarnas bredd och läge i bilden: appen följer vägbanans färg från mitten ut till kanterna. Träd över vägen, skuggor och infarter gör mätningen osäker, så se ytorna som ett utkast att rätta. Info-filen säger hur varje väg fick sin bredd.</dd>
           <dt>Träd</dt><dd><code>_trad.csv</code> har position, höjd och kronbredd per träd, för att placera trädobjekt med till exempel Dynamo eller Grasshopper.</dd>
-          <dt>Platsanalys</dt><dd>Lutning och skyfall ligger i mappen <code>platsanalys</code> och höjdpunkterna i <code>terrang</code>, med ett lager per klass. Lutning och skyfall finns också som bild (<code>_lutning.jpg</code> och <code>_skyfall.jpg</code> med världsfiler; byt namn på en <code>.jgw</code> som för ortofotot) och som PDF i vektor. Skissens volymer ligger i <code>skiss</code>.</dd>
+          <dt>Platsanalys</dt><dd>Den samlade platsanalysen (<code>_platsanalys.pdf</code>, A3) ligger i zip-filens rot. Lutning och skyfall ligger i mappen <code>platsanalys</code> som bild (<code>_lutning.jpg</code> och <code>_skyfall.jpg</code> med världsfiler; byt namn på en <code>.jgw</code> som för ortofotot) och som PDF i vektor. Skuggstudien finns som PDF. Höjdpunkterna ligger i <code>terrang</code> och skissens volymer i <code>skiss</code>, som DXF.</dd>
           <dt>Samlad DXF</dt><dd><code>_samlad_lokal.dxf</code> och <code>_samlad_sweref.dxf</code> i zip-filens rot har alla DXF-underlag i en fil, med samma lager som i de enskilda filerna. Ortofotot och bilderna lägger du in för sig med världsfilerna.</dd>
           <dt>Sann nord</dt><dd>Höjdkurvornas DXF har lagren NORR_RUTNAT och NORR_SANN. Vinkeln mellan dem står i info-filen. Under Nollpunkt och vridning i steg 01 kan de lokala filerna vridas mot sann nord eller en egen vinkel.</dd>
         </dl>

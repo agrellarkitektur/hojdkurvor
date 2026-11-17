@@ -58,6 +58,10 @@ node test/objektval.test.js
 node test/dxf.test.js
 ```
 
+```
+node test/horisont.test.js
+```
+
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
@@ -73,6 +77,10 @@ grönt) och vägytorna: en korsning blir en yta och en rondell får ett hål.
 DXF-testet (0.12.0) prövar den samlade DXF:en: lager en gång, alla objekt, utbredningen
 och att höjdkurvornas egen skrivare går att slå ihop med de andra. Med `DXF_UT=mapp`
 sparas filen, så att den kan läsas med ezdxf.
+Horisonttestet (0.12.1) prövar att den grova höjdmodellen för horisonten hoppar över
+rutor som inte går att läsa (nätverksfel, 404, 401) och bara ger upp när ingen ruta går
+att läsa. Testservern svarar 404 *utan* CORS-huvuden för höjdrutor som saknas, som vi
+tror att Lantmäteriet gör; gränssnittstestet kontrollerar att horisonten ändå kommer med.
 Objektvalstestet (0.11.0) prövar att dölja och rätta träd och hus, att ett träd
 känns igen på nytt inom 0,6 m och att dolda träd och hus skärs bort ur
 ytmodellen.

@@ -1,10 +1,15 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 15 november 2026, 0.12.0 (inkorgen 1–15 november, namnbyte och förberedd flytt).
+överlämning; historiken finns i git. Senast: 17 november 2026, 0.12.1 (inkorgen 17 november: horisonten och leveransen).
 
 ## Läget
 
+- **0.12.1** 17 november: inkorgen 17 november utom fastighetsnamnet (står kvar
+  i inkorgen). Soldiagrammet med horisont, platsanalysen i zip:ens rot,
+  solbladet på A3 med ram, ingen DXF för skuggor, lutning och skyfall. Se
+  avsnittet nedan. Enhetstester gröna, gränssnittstestet godkänt i alla tre
+  teman, mobiltestet godkänt. Publiceras på båda adresserna.
 - **0.12.0** 15 november, publicerad samma dag på agrellarkitektur.se/terrang/:
   inkorgen 1–15 november. Byggt: lutning och skyfall
   som JPEG + jgw och vektor-PDF, samlad DXF i roten, vägytorna märkta som
@@ -39,6 +44,36 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## 0.12.1
+
+- **Horisonten**: `T.lasHojderGrov` läser varje ruta i ett eget `try`; en ruta
+  som inte går att läsa (även 401) hamnar i `fel`, en som svarar 404 i
+  `saknas`. Bara om ingen ruta går att läsa kastas det sista felet. `app.js`
+  har ett eget `try` runt horisonten: misslyckas den görs soldiagrammet utan
+  horisont och varningen säger det. Rutorna i `fel` står i varningen, i
+  info-filen och i noten på soldiagrammet (`luckor`).
+- **Orsaken är inte bekräftad.** Carl Augusts prov mot en ruta som inte finns,
+  *utan* inloggning, gav 401 med CORS-huvuden. Med inloggning är svaret
+  okontrollerat; troligen 404 utan CORS-huvuden, vilket testservern nu
+  efterliknar för saknade `.tif` (det gav exakt hans fel med den gamla koden).
+  Samma sak kan fälla `lasHojder` (själva utsnittet) vid kusten eller
+  riksgränsen; den är inte ändrad, eftersom ett nätverksfel där inte ska
+  tolkas som hav.
+- **Solbladet**: `Platsanalysblad.solsida` ritar ram och ritningshuvud med
+  `sida()` och sedan `Sol.soldiagramPdf` med `ruta = { x, y, k }` (A4-diagrammet
+  skalat till k ≈ 1,10 mellan rubriken och ritningshuvudet). Skuggstudien i
+  platsanalysen är fortfarande ett eget blad utan ram (A4 eller A3) – samma
+  ändring kan göras där om han vill.
+- **Leveransen**: `<namn>_platsanalys.pdf` i roten. Inga `_skuggor_*.dxf`,
+  `_lutning_*.dxf` eller `_skyfall_*.dxf`; funktionerna finns kvar i modulerna.
+- **`Geodata.hamta`**: ett XML-fel med status 200 ger *svarade med ett fel i
+  stället för data: <ExceptionText>* och prövas inte via `geodata.php` (det
+  hjälper inte). Varningarna 17 november (Skyddad natur med `<Exception`,
+  Strandskydd och Vägar 502) kom från tjänsterna själva: Strandskydd och
+  Vägar frågar Overpass direkt, och Naturvårdsverket svarade med ett
+  XML-fel. `geodata.php` på VPS:en är ändå inte kontrollerad härifrån
+  (testmiljön når inte servern).
 
 ## 0.12.0
 
@@ -366,36 +401,33 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-Flytten (17 november): appen ligger nu också på <https://hojdkurvor.danaid.cloud/>
-och publiceras dit med `publicera-vps.yml` vid varje push, parallellt med FTP
-till webbhotellet. Läget per steg står i `docs/FLYTT.md`. Kvar: steg 5
-(synpunkterna: msmtp eller danaids Inkorg, inte bestämt), cad-apa (steg 2 och 3)
-när cad-apa flyttar, omdirigeringen och att stänga av FTP.
+Flytten: appen ligger på <https://hojdkurvor.danaid.cloud/> och på
+agrellarkitektur.se/terrang/, och publiceras till båda vid varje push. Läget
+per steg i `docs/FLYTT.md`. Synpunkterna (steg 5) är bestämda: e-post till
+kontakt@agrellarkitektur.se, skickad genom one.com från ett eget konto
+(`noreply@agrellarkitektur.se`) så att vidarebefordran till Gmail håller.
+Carl August gör stegen a–e i FLYTT.md; fråga hur det gick. Kvar sedan: cad-apa
+(steg 2 och 3) när cad-apa flyttar, omdirigeringen och att stänga av FTP.
 
-1. **Inkorgen från 17 november** (`docs/SYNPUNKTER.md`): felet med soldiagrammet
-   och horisonten, och tre ändringar i leveransen. Föreslå versionsnummer
-   (0.12.1 för felet och leveransen? fastighetsnamnet är en ny funktion) och
-   fråga innan bygget.
-   - **Soldiagram med horisont.** `T.lasHojderGrov` (`js/karna.js`) läser
-     Markhöjdmodellen 5 km åt alla håll, alltså också grannrutor som
-     utsnittet själv aldrig rör. Felet kommer från `provaInloggning`, där
-     `fetch` kastar, och det händer när webbläsaren inte får läsa svaret.
-     Trolig orsak: en ruta som inte finns (hav, utomlands, ej levererad) ger
-     404 *utan* CORS-huvuden. Då blir det nätverksfel i stället för 404, och
-     hela soldiagrammet faller (`try` runt allt i `app.js` vid
-     "Soldiagram, med horisont"). Be Carl August köra ett OPTIONS/GET med
-     `Origin` mot en ruta som inte finns för att bekräfta. Rätta oavsett
-     orsak: en ruta som inte går att läsa hoppas över (NaN) i
-     `lasHojderGrov`, och misslyckas horisonten ska soldiagrammet ändå skapas
-     utan horisont, med en varning.
-   - **Fastighetsnamn ur kartan.** Fastighetsindelningen finns i kommunfilen
-     (kräver inloggning och att filen hämtats, `js/kommunfil.js`, sparas i
-     IndexedDB). Undersök om klicket kan läsa den sparade filen, och vad som
-     händer när den inte är hämtad än.
-2. Be om test av 0.10.0–0.12.0 (listan under Att testa). Rättelser blir
-   0.12.1. Särskilt: vägytorna mot ett riktigt ortofoto, bilderna med
-   världsfil i Archicad och dra i ramen på iPhone.
-3. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
+1. **Fråga om 0.12.1** (Att testa i `docs/SYNPUNKTER.md`): blev soldiagrammet
+   av med horisont, och kom en varning om rutor? Var låg platsen? Be gärna om
+   provet *med* inloggning mot en ruta som inte finns, för att bekräfta
+   orsaken (PowerShell, byt ANV och LÖSEN):
+
+   ```
+   curl.exe -s -D - -o NUL -u ANV:LÖSEN "https://dl1.lantmateriet.se/hojd/data/grid/mhm/99_9/m999_99.tif" -H "Origin: https://hojdkurvor.danaid.cloud" -H "Range: bytes=0-15"
+   ```
+
+   Saknas `access-control-allow-origin` i svaret är orsaken bekräftad.
+2. **Fastighetsnamn ur kartan** (inkorgen): ny funktion, alltså 0.13.0 eller
+   senare. Fastighetsindelningen finns i kommunfilen (kräver inloggning och
+   att filen hämtats, `js/kommunfil.js`, sparas i IndexedDB). Undersök om
+   klicket kan läsa den sparade filen och vad som händer när den inte är
+   hämtad. Föreslå och fråga innan bygget.
+3. Be om test av 0.10.0–0.12.1 (listan under Att testa). Särskilt: vägytorna
+   mot ett riktigt ortofoto, bilderna med världsfil i Archicad och dra i ramen
+   på iPhone.
+4. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 

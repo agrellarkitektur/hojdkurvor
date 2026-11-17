@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.12.0';
+  const FILVERSION = '0.12.1';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -1766,8 +1766,6 @@
             const sk = Analys.skuggor(y, r, synliga, { konv: mitt.konvergens, maxAvst: MARG_SKUGGA });
             synliga.forEach((t, i) => { t.konturer = Analys.maskKonturer(sk, sk.masker[i]); t.andel = sk.masker[i].reduce((a, v) => a + v, 0) / sk.masker[i].length; });
             senaste.skuggor = synliga;
-            filer[`skuggor/${namn}_skuggor_lokal.dxf`] = Analys.dxfSkuggor(synliga, r, X0, Y0);
-            filer[`skuggor/${namn}_skuggor_sweref.dxf`] = Analys.dxfSkuggor(synliga, r, 0, 0);
             await laddaPdf();
             const DNAMN = { mars: 'Vårdagjämning', juni: 'Sommarsolstånd', sept: 'Höstdagjämning', dec: 'Vintersolstånd' };
             const rader = ['mars', 'juni', 'sept', 'dec'].filter(x => skuggDatum.includes(x)).map(k => {
@@ -1789,8 +1787,8 @@
             extraInfo.push('', 'SKUGGSTUDIE',
               `  Skuggor på marken från terräng, träd och byggnader, ${synliga.length} tidpunkter. Träd räknas som täta.`,
               `  Objekt upp till ${MARG_SKUGGA} m utanför utsnittet är med. Upplösning 1 m.`,
-              '  DXF-lager SKUGGA_MMDD_HHMM (svensk tid), slutna polylinjer runt skuggade ytor:',
-              ...synliga.map(t => `    ${t.lager}: solhöjd ${fmt(t.h, 1)}°, azimut ${fmt(t.az)}°, skugga på ${fmt(t.andel * 100)} % av utsnittet`),
+              '  Fil: _skuggstudie.pdf. Tidpunkter (svensk tid):',
+              ...synliga.map(t => `    ${t.lager.replace(/^SKUGGA_(\d\d)(\d\d)_.*$/, (_, mm, dd) => `${+dd}/${+mm}`)} kl ${t.etikett}: solhöjd ${fmt(t.h, 1)}°, azimut ${fmt(t.az)}°, skugga på ${fmt(t.andel * 100)} % av utsnittet`),
               ...(tider.length > synliga.length ? [`  ${tider.length - synliga.length} tidpunkter hoppades över eftersom solen stod lägre än 2°.`] : []));
             sammanExtra.push(['Skuggstudie', `${synliga.length} tidpunkter`]);
             state.skuggaVal = Math.max(0, synliga.findIndex(t => t.k === 'mars' && t.etikett === '12:00'));
@@ -1832,13 +1830,11 @@
             const konturer = Platsanalys.lutningKonturer(lt);
             const bild = { url: Platsanalys.lutningCanvas(lt).toDataURL('image/png'), x0: lt.x0, y1: lt.y1, s: lt.s, W: lt.W, H: lt.H };
             senaste.lutning = { lt: { andel: ltHel.andel }, konturer, bild };
-            filer[`platsanalys/${namn}_lutning_lokal.dxf`] = Platsanalys.dxfLutning(konturer, r, X0, Y0);
-            filer[`platsanalys/${namn}_lutning_sweref.dxf`] = Platsanalys.dxfLutning(konturer, r, 0, 0);
             const ltBild = await lagerBild(Platsanalys.lutningBild(lt, r), `platsanalys/${namn}_lutning`);
             extraInfo.push('', 'LUTNING',
-              `  Filer: _lutning_lokal.dxf och _sweref.dxf (ytor per klass), _lutning.jpg (${ltBild}, med .jgw som ortofotot) och _lutning.pdf (vektor).`,
+              `  Filer: _lutning.jpg (${ltBild}, med .jgw som ortofotot) och _lutning.pdf (vektor).`,
               '  Lutning ur Markhöjdmodell (1 m), räknad över 2 m. Klasser efter tillgänglighet:',
-              ...Platsanalys.LUTNING.map((k, i) => `    ${k.namn}: ${fmt(ltHel.andel[i] * 100)} % av utsnittet` + (i ? ` (DXF-lager ${k.lager})` : '')));
+              ...Platsanalys.LUTNING.map((k, i) => `    ${k.namn}: ${fmt(ltHel.andel[i] * 100)} % av utsnittet`));
             sammanExtra.push(['Lutning', `${fmt((ltHel.andel[0] + ltHel.andel[1]) * 100)} % flackare än 1:20`]);
             visaRasterLager('lutning', bild, epsg, 0.75);
           }
@@ -1853,14 +1849,11 @@
             await new Promise(ok => setTimeout(ok, 0));
             const sk = Platsanalys.skyfall(gs, r);
             senaste.skyfall = sk;
-            filer[`platsanalys/${namn}_skyfall_lokal.dxf`] = Platsanalys.dxfSkyfall(sk, r, X0, Y0);
-            filer[`platsanalys/${namn}_skyfall_sweref.dxf`] = Platsanalys.dxfSkyfall(sk, r, 0, 0);
             const skBild = await lagerBild(Platsanalys.skyfallBild(sk, r), `platsanalys/${namn}_skyfall`);
             extraInfo.push('', 'SKYFALL',
-              `  Filer: _skyfall_lokal.dxf och _sweref.dxf, _skyfall.jpg (${skBild}, med .jgw som ortofotot) och _skyfall.pdf (vektor).`,
+              `  Filer: _skyfall.jpg (${skBild}, med .jgw som ortofotot) och _skyfall.pdf (vektor).`,
               `  Lågpunkter (instängda områden) och flödesvägar ur Markhöjdmodell (${sSky} m), ${MARG_SKYFALL} m runt utsnittet.` + (senaste.volymer.length ? ' Skissade volymer räknas som hinder.' : '') + (befSpar.length ? ` ${befSpar.length} befintliga byggnader räknas som hinder.` : ''),
               '  Ingen hänsyn till ledningar, trummor, infiltration eller regnets mängd.',
-              '  DXF-lager: SKYFALL_LAGPUNKT (slutna polylinjer), SKYFALL_FLODESVAG, SKYFALL_TEXT (nummer och största djup).',
               ...sk.lagpunkter.map((l, i) => `    L${i + 1}: ${fmt(l.yta)} m², största djup ${fmt(l.maxDjup, 2)} m, ${fmt(l.volym, 1)} m³`));
             sammanExtra.push(['Skyfall', `${sk.lagpunkter.length} lågpunkter, ${sk.floden.length} flödesvägar`]);
             visaSkyfall(sk, epsg);
@@ -2114,42 +2107,55 @@
         try {
           delFramsteg('sol', 0, val.horisont ? 'Räknar horisont' : 'Ritar soldiagram');
           let extra = {};
+          let horFel = null;
           if (val.horisont) {
-            const rTM = tmRuta(r, epsg, 0);
-            const medTomt = $('hor-tomt').checked;
-            const utesluts = medTomt ? null : (E, N) => E >= rTM.xmin && E <= rTM.xmax && N >= rTM.ymin && N <= rTM.ymax;
-            const bara = { ...mos, s: 1 };
-            let nara = pTM ? Analys.ytmodellTM(mos, pTM, { utesluts }) : bara;
-            if (senaste.volymer.length) {   // skissen räknas med i horisonten
-              const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
-              const volTM = senaste.volymer.map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
-              nara = Object.assign({}, nara, { data: Platsanalys.branInVolymer({ x0: nara.E0 + 0.5, y1: nara.N1 - 0.5, s: 1, W: nara.w, H: nara.h }, nara.data, volTM) });
+            // Misslyckas horisonten skapas soldiagrammet ändå, utan horisont (0.12.1).
+            try {
+              const rTM = tmRuta(r, epsg, 0);
+              const medTomt = $('hor-tomt').checked;
+              const utesluts = medTomt ? null : (E, N) => E >= rTM.xmin && E <= rTM.xmax && N >= rTM.ymin && N <= rTM.ymax;
+              const bara = { ...mos, s: 1 };
+              let nara = pTM ? Analys.ytmodellTM(mos, pTM, { utesluts }) : bara;
+              if (senaste.volymer.length) {   // skissen räknas med i horisonten
+                const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
+                const volTM = senaste.volymer.map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
+                nara = Object.assign({}, nara, { data: Platsanalys.branInVolymer({ x0: nara.E0 + 0.5, y1: nara.N1 - 0.5, s: 1, W: nara.w, H: nara.h }, nara.data, volTM) });
+              }
+              // står punkten i ett hus eller under en krona räknas det objektet bort
+              const rensat = pTM ? Analys.rensaVidPunkt(nara, mos, mittTM[0], mittTM[1]) : 0;
+              const fjarr = await T.lasHojderGrov({ xmin: mittTM[0] - 5000, xmax: mittTM[0] + 5000, ymin: mittTM[1] - 5000, ymax: mittTM[1] + 5000 }, 8, auth);
+              const luckor = fjarr.fel.length ? ` ${fjarr.fel.length} av Markhöjdmodellens rutor runt platsen gick inte att läsa (${fjarr.fel.join(', ')}); horisonten saknar terrängen där.` : '';
+              if (luckor) varningar.push('Horisont:' + luckor);
+              const z0 = T.sampla(mos, mittTM[0], mittTM[1]) + ogon;
+              const konvH = konvergens(3006, horLL.lat, horLL.lon);
+              const varText = state.horPunkt ? 'i vald punkt' : 'i utsnittets mitt';
+              const hor = Analys.horisont(mittTM[0], mittTM[1], z0, nara, fjarr, konvH);
+              const horMark = pTM ? Analys.horisont(mittTM[0], mittTM[1], z0, bara, fjarr, konvH) : null;
+              const ogonTxt = String(ogon).replace('.', ',');
+              const rensatTxt = rensat ? ` Ett träd eller en byggnad (${fmt(rensat)} m²) står på punkten och räknas inte.` : '';
+              extra = {
+                horisont: hor,
+                horisontMark: horMark,
+                horisontPunkt: `${ogonTxt} m över mark ${varText}`,
+                horisontText: `Horisont: terräng, sedd ${ogonTxt} m över mark ${varText}.`,
+                horisontNot: `Horisont ur Markhöjdmodell (5 km)${pTM ? ` och Laserdata skog ${laserDatum} (400 m)` : ''}.` +
+                  (pTM ? (medTomt ? ' Träd och byggnader inom utsnittet ingår.' : ' Träd och byggnader inom utsnittet ingår inte.') + rensatTxt : ' Laserdata saknas, så bara terrängen ingår.') + luckor,
+              };
+              senaste.horisont = hor;
+              extraInfo.push('', 'HORISONT',
+                `  Sedd ${state.horPunkt ? `från vald punkt (X ${fmt(franLL(state.horPunkt)[0])}, Y ${fmt(franLL(state.horPunkt)[1])})` : 'från utsnittets mitt'}, ${ogonTxt} m över mark (${fmt(z0, 2)} m i RH 2000).`,
+                `  Terräng inom 5 km (8 m upplösning) och ${pTM ? 'träd och byggnader inom 400 m' : 'ingen laserdata'}. Jordkrökning och refraktion är med.`,
+                ...(rensat ? [`  Punkten står i eller under ett träd eller en byggnad (${fmt(rensat)} m²). Det objektet räknas inte.`] : []),
+                ...(luckor ? ['  ' + luckor.trim()] : []),
+                `  Horisontens höjdvinkel var 15:e grad (azimut: ${horMark ? 'terräng / med träd och byggnader' : 'vinkel'}):`,
+                '    ' + Array.from({ length: 24 }, (_, i) => `${i * 15}°: ${horMark ? fmt(Math.max(0, horMark[i * 30]), 1) + ' / ' : ''}${fmt(Math.max(0, hor[i * 30]), 1)}°`).join(', '));
+            } catch (e) {
+              console.error(e);
+              horFel = e.message;
+              extra = {};
+              senaste.horisont = null;
+              varningar.push('Horisont: ' + e.message + ' Soldiagrammet är gjort utan horisont.');
             }
-            // står punkten i ett hus eller under en krona räknas det objektet bort
-            const rensat = pTM ? Analys.rensaVidPunkt(nara, mos, mittTM[0], mittTM[1]) : 0;
-            const fjarr = await T.lasHojderGrov({ xmin: mittTM[0] - 5000, xmax: mittTM[0] + 5000, ymin: mittTM[1] - 5000, ymax: mittTM[1] + 5000 }, 8, auth);
-            const z0 = T.sampla(mos, mittTM[0], mittTM[1]) + ogon;
-            const konvH = konvergens(3006, horLL.lat, horLL.lon);
-            const varText = state.horPunkt ? 'i vald punkt' : 'i utsnittets mitt';
-            const hor = Analys.horisont(mittTM[0], mittTM[1], z0, nara, fjarr, konvH);
-            const horMark = pTM ? Analys.horisont(mittTM[0], mittTM[1], z0, bara, fjarr, konvH) : null;
-            const ogonTxt = String(ogon).replace('.', ',');
-            const rensatTxt = rensat ? ` Ett träd eller en byggnad (${fmt(rensat)} m²) står på punkten och räknas inte.` : '';
-            extra = {
-              horisont: hor,
-              horisontMark: horMark,
-              horisontPunkt: `${ogonTxt} m över mark ${varText}`,
-              horisontText: `Horisont: terräng, sedd ${ogonTxt} m över mark ${varText}.`,
-              horisontNot: `Horisont ur Markhöjdmodell (5 km)${pTM ? ` och Laserdata skog ${laserDatum} (400 m)` : ''}.` +
-                (pTM ? (medTomt ? ' Träd och byggnader inom utsnittet ingår.' : ' Träd och byggnader inom utsnittet ingår inte.') + rensatTxt : ' Laserdata saknas, så bara terrängen ingår.'),
-            };
-            senaste.horisont = hor;
-            extraInfo.push('', 'HORISONT',
-              `  Sedd ${state.horPunkt ? `från vald punkt (X ${fmt(franLL(state.horPunkt)[0])}, Y ${fmt(franLL(state.horPunkt)[1])})` : 'från utsnittets mitt'}, ${ogonTxt} m över mark (${fmt(z0, 2)} m i RH 2000).`,
-              `  Terräng inom 5 km (8 m upplösning) och ${pTM ? 'träd och byggnader inom 400 m' : 'ingen laserdata'}. Jordkrökning och refraktion är med.`,
-              ...(rensat ? [`  Punkten står i eller under ett träd eller en byggnad (${fmt(rensat)} m²). Det objektet räknas inte.`] : []),
-              `  Horisontens höjdvinkel var 15:e grad (azimut: ${horMark ? 'terräng / med träd och byggnader' : 'vinkel'}):`,
-              '    ' + Array.from({ length: 24 }, (_, i) => `${i * 15}°: ${horMark ? fmt(Math.max(0, horMark[i * 30]), 1) + ' / ' : ''}${fmt(Math.max(0, hor[i * 30]), 1)}°`).join(', '));
           }
           const sd = await skapaSoldiagram(extra);
           senaste.solOpt = sd.opt;
@@ -2158,7 +2164,7 @@
           extraInfo.push('', 'SOLDIAGRAM',
             `  Dagjämningar och solstånd ${SOL_AR} för utsnittets mitt, ${fmt(mitt.lat, 4)}° N ${fmt(mitt.lon, 4)}° Ö.`,
             '  Beräknat med NOAA:s solalgoritm och Meeus, kontrollerat mot NREL SPA.');
-          sammanExtra.push(['Soldiagram', `${SOL_AR}${val.horisont ? ', med horisont' : ''}`]);
+          sammanExtra.push(['Soldiagram', `${SOL_AR}${extra.horisont ? ', med horisont' : (horFel ? ', utan horisont (fel)' : '')}`]);
         } catch (e) { console.error(e); varningar.push('Soldiagram: ' + e.message); }
       }
       // --- Lutning och skyfall som egna PDF:er (vektor), med hus och gränser för orientering
@@ -2193,7 +2199,7 @@
           if (val.skydd) kallor.push(...Object.values(Geodata.KALLOR));
           if (val.sol) kallor.push('Solens läge: NOAA:s solalgoritm och Meeus, kontrollerat mot NREL SPA.');
           kallor.push(`Skapat ${idag()} med Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}.`);
-          filer[`platsanalys/${namn}_platsanalys.pdf`] = Platsanalysblad.skapa({
+          filer[`${namn}_platsanalys.pdf`] = Platsanalysblad.skapa({
             fonter, r, kurvor: res.kurvor, markhojd: { lo: res.lo, hi: res.hi },
             titel: { projekt: projekt || namn, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000`, datum: idag() },
             kapitel: { sol: kap.sol, terrang: kap.terrang, vatten: kap.vatten, skydd: kap.skydd },

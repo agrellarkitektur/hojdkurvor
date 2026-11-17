@@ -7,14 +7,12 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-- (2026-11-17) **Fel: inget soldiagram när Horisont från terräng, träd och byggnader är ikryssad.** Varningen blir *Soldiagram: Kunde inte nå Lantmäteriets server. Kontrollera nätverket.* Utan horisonten, eller med Ladda ner bara soldiagrammet, skapas diagrammet. Felet finns både på agrellarkitektur.se/terrang och på hojdkurvor.danaid.cloud, så det hör inte till flytten. Samma körning gav också *Skyddad natur: kunde inte hämtas (Unexpected token '<', "<Exception"... is not valid JSON)*, *Strandskydd: kunde inte hämtas (svarade 502)* och *Vägar: OpenStreetMap svarade 502* (kanske tillfälligt hos tjänsterna, men kontrollera att `geodata.php` fungerar på VPS:en).
-- (2026-11-17) Den samlade platsanalysen på A3 ska ligga i zip:ens rotmapp.
-- (2026-11-17) Soldiagrammet i platsanalyspresentationen ska ligga på en sida med samma format och ritningsram som de andra bladen. I mappen `soldiagram/` får de gärna vara kvar utan ram.
 - (2026-11-17) Vid projektnamnet på blad 1: ett val *klicka i kartan för att hämta fastighetsnamn*.
-- (2026-11-17) Skuggor, lutning och skyfall behöver inte exporteras som DXF. Det förvirrar när man öppnar dem, och PDF och bilder räcker.
 
 ## Att testa
 
+- 0.12.1 soldiagram: kryssa i Soldiagram och Horisont från terräng, träd och byggnader, Skapa. Blir soldiagrammet av, med horisont? Kommer en varning om rutor som inte gick att läsa, och var låg platsen (nära hav, länsgräns, riksgräns)?
+- 0.12.1 leveransen: ligger `_platsanalys.pdf` i zip:ens rot, har solbladet samma ram och ritningshuvud som de andra bladen, och är DXF:erna för skuggor, lutning och skyfall borta?
 - iPhone: dra med två fingrar i 3D-vyn (0.8.0/0.8.1). Windows godkänt 2026-10-27.
 - 0.9.0 på Windows: skuggor (datum, tid, snabbval, Spela dagen), Konturer, Husfärg och Skissfärg, Ögonhöjd (W A S D, skift, Esc), Spara bild och Bild för AI (prova bilderna i Visoid).
 - 0.9.0–0.9.2 på iPhone: knappen Val, skuggor och tidsreglaget, ögonhöjd med spaken, Takformer, att vyn inte blir för seg med skuggor och detaljerade träd (annars Trädskuggor av), Spara bild.

@@ -48,7 +48,14 @@
       try {
         const svar = await fetch(u, { signal: ctrl.signal, method: metod, body: kropp, headers: kropp ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined });
         if (!svar.ok) throw new Error(`svarade ${svar.status}`);
-        return typ === 'json' ? await svar.json() : typ === 'blob' ? await svar.blob() : await svar.text();
+        if (typ !== 'json') return typ === 'blob' ? await svar.blob() : await svar.text();
+        const text = await svar.text();
+        try { return JSON.parse(text); } catch (e) {
+          // WFS/WMS svarar ofta 200 med ett XML-fel (ServiceException) när tjänsten har problem (0.12.1)
+          const fel = /<(?:\w+:)?(?:ExceptionText|ServiceException)[^>]*>([^<]{1,200})/.exec(text);
+          if (/^\s*</.test(text)) throw new Error('svarade med ett fel i stället för data' + (fel ? `: ${fel[1].trim()}` : '') + '. Försök igen senare.');
+          throw e;
+        }
       } finally { clearTimeout(t); }
     };
     try {

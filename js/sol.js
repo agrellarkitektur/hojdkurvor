@@ -186,13 +186,17 @@
   /**
    * opt: { lat, lon, ar, namn, kommun, zonNamn, konvergens, farg: 'svart'|'vit', fonter: {normal, bold} (base64 TTF) }
    * Returnerar ArrayBuffer.
+   * opt.dok = { doc, font }: rita i ett befintligt dokument. Med opt.ruta = { x, y, k } ritas
+   * diagrammet (297 × 210 mm) på den sida som redan är öppen, med övre vänstra hörnet i (x, y)
+   * och skalan k – så hamnar det i platsanalysens ritningsram. Utan ruta läggs en A4-sida till.
    */
   function soldiagramPdf(opt) {
     const { jsPDF } = (typeof window !== 'undefined' ? window.jspdf : require('jspdf'));
     // opt.dok = { doc, font }: rita som en ny sida i ett befintligt dokument (platsanalysbladet)
     const doc = opt.dok ? opt.dok.doc : new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
-    if (opt.dok) doc.addPage('a4', 'landscape');
-    else doc.setProperties({ title: `Soldiagram ${opt.ar}${opt.namn ? ' – ' + opt.namn : ''}`, creator: 'Höjdkurvor' });
+    if (opt.dok && !opt.ruta) doc.addPage('a4', 'landscape');
+    else if (!opt.dok) doc.setProperties({ title: `Soldiagram ${opt.ar}${opt.namn ? ' – ' + opt.namn : ''}`, creator: 'Höjdkurvor' });
+    const k = opt.ruta ? opt.ruta.k : 1, ox = opt.ruta ? opt.ruta.x : 0, oy = opt.ruta ? opt.ruta.y : 0;
     let font = opt.dok ? opt.dok.font : 'helvetica';
     if (opt.fonter && !opt.dok) {
       doc.addFileToVFS('Familjen-Regular.ttf', opt.fonter.normal);
@@ -204,18 +208,21 @@
     const rgb = opt.farg === 'vit' ? [255, 255, 255] : [0, 0, 0];
     doc.setDrawColor(...rgb); doc.setTextColor(...rgb); doc.setFillColor(...rgb);
     doc.setLineCap('round'); doc.setLineJoin('round');
-    const Y = y => H - y;                       // ritar med y uppåt
-    const lw = pt => doc.setLineWidth(pt * PT);
+    const X = x => ox + k * x;
+    const Y = y => oy + k * (H - y);             // ritar med y uppåt
+    const lw = pt => doc.setLineWidth(pt * PT * k);
     const text = (s, x, y, pt, { vikt = 'normal', ha = 'left', va = 'middle' } = {}) => {
-      doc.setFont(font, vikt); doc.setFontSize(pt);
-      doc.text(String(s), x, Y(y), { align: ha, baseline: va });
+      doc.setFont(font, vikt); doc.setFontSize(pt * k);
+      doc.text(String(s), X(x), Y(y), { align: ha, baseline: va });
     };
     const linje = (pts) => {
-      doc.moveTo(pts[0][0], Y(pts[0][1]));
-      for (let i = 1; i < pts.length; i++) doc.lineTo(pts[i][0], Y(pts[i][1]));
+      doc.moveTo(X(pts[0][0]), Y(pts[0][1]));
+      for (let i = 1; i < pts.length; i++) doc.lineTo(X(pts[i][0]), Y(pts[i][1]));
       doc.stroke();
     };
-    const cirkel = (x, y, r, fylld) => doc.circle(x, Y(y), r, fylld ? 'F' : 'S');
+    const cirkel = (x, y, r, fylld) => doc.circle(X(x), Y(y), r * k, fylld ? 'F' : 'S');
+    /** Radbryter i diagrammets mm (teckenstorleken skalas med k). */
+    const radbryt = (st, pt, bredd) => { doc.setFont(font, 'normal'); doc.setFontSize(pt * k); return doc.splitTextToSize(st, bredd * k); };
     const proj = (az, h) => {
       const r = R * (90 - h) / 90;
       return [CX + r * Math.sin(az * RAD), CY + r * Math.cos(az * RAD)];
@@ -225,13 +232,13 @@
 
     // --- Rutnät
     lw(0.25);
-    for (let h = 10; h < 90; h += 10) doc.circle(CX, Y(CY), R * (90 - h) / 90, 'S');
+    for (let h = 10; h < 90; h += 10) cirkel(CX, CY, R * (90 - h) / 90, false);
     for (let az = 0; az < 360; az += 30) linje([proj(az, 80), proj(az, 0)]);
     for (let az = 0; az < 360; az += 5) {
       const L = az % 30 === 0 ? 3 : (az % 10 === 0 ? 2 : 1.2), a = az * RAD;
       linje([[CX + R * Math.sin(a), CY + R * Math.cos(a)], [CX + (R + L) * Math.sin(a), CY + (R + L) * Math.cos(a)]]);
     }
-    lw(1.0); doc.circle(CX, Y(CY), R, 'S');
+    lw(1.0); cirkel(CX, CY, R, false);
     for (let az = 0; az < 360; az += 30) {
       const a = az * RAD;
       if (az % 90 === 0) text({ 0: 'N', 90: 'Ö', 180: 'S', 270: 'V' }[az], CX + (R + 8) * Math.sin(a), CY + (R + 8) * Math.cos(a), 13, { vikt: 'bold', ha: 'center' });
@@ -317,7 +324,7 @@
     data.forEach((d, i) => {
       const g = gx0 + i * gw;
       lw(0.6);
-      if (d.sommartid) doc.circle(g + 1.6, Y(y - 1.4), 0.9, 'S'); else cirkel(g + 1.6, y - 1.4, 0.9, true);
+      if (d.sommartid) cirkel(g + 1.6, y - 1.4, 0.9, false); else cirkel(g + 1.6, y - 1.4, 0.9, true);
       text(d.namn, g + 3.6, y, 6.6, { vikt: 'bold', va: 'top' });
       text(`${d.lokal.dag} ${KORT[d.lokal.man - 1]} kl ${hhmm(d.ms)}`, g + 0.6, y - 3.4, fs, { va: 'top' });
       text(d.sommartid ? 'sommartid' : 'normaltid', g + 0.6, y - 6.4, fs, { va: 'top' });
@@ -384,14 +391,13 @@
     }
     if (hor) {
       // hur horisonten läses
-      doc.setFont(font, 'normal'); doc.setFontSize(6.3);
       const bredd = W - 12 - (X0 + 10);
       const las = [
         `Strecken visar den del av himlen som skyms, sedd ${opt.horisontPunkt || 'från platsen'}. Ju längre in strecken når, desto högre är horisonten åt det hållet.`,
         'Där solbanan går genom strecken är solen skymd. Där banan går i den vita ytan når solen punkten.',
       ];
       y2 -= 0.6;
-      for (const st of las) for (const rad of doc.splitTextToSize(st, bredd)) { text(rad, X0 + 10, y2, 6.3); y2 -= 3; }
+      for (const st of las) for (const rad of radbryt(st, 6.3, bredd)) { text(rad, X0 + 10, y2, 6.3); y2 -= 3; }
       y2 -= 1.2;
     }
     text('Klockslaget står innanför banan, för höstdagjämningen utanför.', X0 + 10, y2, 6.3);
@@ -411,8 +417,7 @@
       ...(hor ? ['Träd räknas som täta. Underlag för tidiga skeden.'] : []),
     ];
     let yy = y - (hor ? 17 : 20);
-    doc.setFont(font, 'normal'); doc.setFontSize(5.5);
-    for (const n of noter) for (const rad of doc.splitTextToSize(n, W - 10 - X0)) { text(rad, X0, yy, 5.5, { va: 'top' }); yy -= 2.6; }
+    for (const n of noter) for (const rad of radbryt(n, 5.5, W - 10 - X0)) { text(rad, X0, yy, 5.5, { va: 'top' }); yy -= 2.6; }
 
     if (opt.dok) { doc.setDrawColor(0, 0, 0); doc.setTextColor(0, 0, 0); doc.setFillColor(0, 0, 0); return doc; }
     return doc.output('arraybuffer');

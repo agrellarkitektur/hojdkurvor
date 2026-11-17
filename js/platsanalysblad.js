@@ -35,7 +35,7 @@
     const ctx = { opt, dok, sidor };
 
     sammanstallning(ctx);
-    if (opt.kapitel.sol && opt.sol) S().soldiagramPdf(Object.assign({}, opt.sol, { dok, farg: 'svart' }));
+    if (opt.kapitel.sol && opt.sol) solsida(ctx);
     if (opt.kapitel.sol && opt.skuggor) U().skuggblad(Object.assign({}, opt.skuggor, { dok }));
     if (opt.kapitel.terrang || opt.kapitel.vatten) terrangOchVatten(ctx);
     if (opt.kapitel.skydd) skyddOchRisker(ctx);
@@ -82,6 +82,19 @@
     U().marke(doc, bx + 73, by + 13.2, 5, F.blck, F.annot);
     doc.setFont(ctx.dok.font, 'bold'); doc.setFontSize(8.5); doc.setTextColor(...F.blck);
     doc.text('Höjdkurvor', bx + 79.5, by + 16.5, { baseline: 'middle' });
+  }
+
+  /**
+   * Soldiagrammet (ritat för A4 liggande, 297 × 210 mm) på ett A3-blad med samma ram och
+   * ritningshuvud som de andra bladen. Skalan väljs så att diagrammet slutar ovanför
+   * ritningshuvudet; det centreras i sidled.
+   */
+  function solsida(ctx) {
+    sida(ctx, ctx.sidor.indexOf('Sol') + 1, 'Sol');
+    const topp = M + 21, botten = PH - M - 22 - 2;
+    const k = (botten - topp) / 210;
+    const x = M + (PW - 2 * M - 297 * k) / 2;
+    S().soldiagramPdf(Object.assign({}, ctx.opt.sol, { dok: ctx.dok, farg: 'svart', ruta: { x, y: topp, k } }));
   }
 
   /**

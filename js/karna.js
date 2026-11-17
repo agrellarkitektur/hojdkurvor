@@ -196,23 +196,40 @@
 
   /**
    * Grov höjdmodell (t.ex. 8 m) över ett stort område i SWEREF 99 TM, via filernas
-   * översiktsnivåer. Används för horisonten. Rutor som saknas lämnas som NaN.
-   * Returnerar {E0, N1, s, w, h, data} med pixel (i, j) centrerad i E0+(i+0.5)s, N1−(j+0.5)s.
+   * översiktsnivåer. Används för horisonten. Rutor som saknas eller inte går att läsa
+   * lämnas som NaN (id i `saknas` resp. `fel`); bara om ingen ruta gick att läsa kastas felet.
+   * Returnerar {E0, N1, s, w, h, data, saknas, fel} med pixel (i, j) centrerad i E0+(i+0.5)s, N1−(j+0.5)s.
    */
   async function lasHojderGrov(tmBox, s, auth, opts = {}) {
     const urlFor = opts.urlFor || (r => dlUrl(r.url));
     const E0 = Math.floor(tmBox.xmin / s) * s, N1 = Math.ceil(tmBox.ymax / s) * s;
     const w = Math.ceil((tmBox.xmax - E0) / s), h = Math.ceil((N1 - tmBox.ymin) / s);
     const data = new Float32Array(w * h).fill(NaN);
-    for (const r of rutor(tmBox)) {
+    const lista = rutor(tmBox), saknas = [], fel = [];
+    let sistaFel = null;
+    for (const r of lista) {
       const url = urlFor(r);
-      if (!(await provaInloggning(url, auth))) continue;
+      // En ruta som inte går att läsa (finns inte, hav, utomlands, nätverket, eller ett
+      // felsvar utan CORS-huvuden) hoppas över; horisonten blir då lägre åt det hållet.
+      try {
+        if (!(await provaInloggning(url, auth))) { saknas.push(r.id); continue; }
+        await lasGrovRuta(url);
+      } catch (e) {
+        // även 401: inloggningen är redan prövad mot utsnittets egna rutor
+        fel.push(r.id); sistaFel = e;
+      }
+    }
+    if (fel.length + saknas.length === lista.length)
+      throw sistaFel || new Error('Inga höjdrutor finns runt platsen.');
+    return { E0, N1, s, w, h, data, saknas, fel };
+
+    async function lasGrovRuta(url) {
       const tiff = await G().fromUrl(url, { headers: { Authorization: auth }, allowFullFile: false });
       const img = await tiff.getImage(0);
       const [bx0, by0, bx1, by1] = img.getBoundingBox();
       const ix0 = Math.max(0, Math.ceil((bx0 - E0) / s)), ix1 = Math.min(w, Math.floor((bx1 - E0) / s));
       const iy0 = Math.max(0, Math.ceil((N1 - by1) / s)), iy1 = Math.min(h, Math.floor((N1 - by0) / s));
-      if (ix1 <= ix0 || iy1 <= iy0) continue;
+      if (ix1 <= ix0 || iy1 <= iy0) return;
       const nd = img.getGDALNoData();
       const ras = await tiff.readRasters({
         bbox: [E0 + ix0 * s, N1 - iy1 * s, E0 + ix1 * s, N1 - iy0 * s],
@@ -225,7 +242,6 @@
         data[j * w + i] = v;
       }
     }
-    return { E0, N1, s, w, h, data };
   }
 
   /** Bilinjär interpolation mellan pixelcentrum; NaN om någon granne saknas. */

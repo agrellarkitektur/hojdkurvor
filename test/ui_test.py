@@ -194,8 +194,16 @@ with sync_playwright() as p:
     print('  samlad:', samlad)
     assert len(samlad) == 2 and all('/' not in n for n in samlad), 'samlad DXF lokal och sweref i roten'
     st = z.read(next(n for n in samlad if n.endswith('_lokal.dxf'))).decode('latin-1')
-    assert 'HOJDKURVA' in st and 'LUTNING_1_50_1_20' in st and 'VAG_YTA_BIL_BERAKNAD' in st, 'den samlade DXF:en har lagren från filerna'
+    assert 'HOJDKURVA' in st and 'VAG_YTA_BIL_BERAKNAD' in st, 'den samlade DXF:en har lagren från filerna'
+    # 0.12.1: ingen DXF för skuggor, lutning och skyfall; platsanalysen i roten
+    for lag in ('skuggor', 'lutning', 'skyfall'):
+        assert not any(n.endswith(f'_{lag}_lokal.dxf') or n.endswith(f'_{lag}_sweref.dxf') for n in namn_i_zip), f'ingen DXF för {lag}'
+    assert 'LUTNING_' not in st and 'SKYFALL_' not in st and 'SKUGGA_' not in st, 'den samlade DXF:en saknar skuggor, lutning och skyfall'
+    pa = [n for n in namn_i_zip if n.endswith('_platsanalys.pdf')]
+    assert len(pa) == 1 and '/' not in pa[0], 'platsanalysen ligger i roten'
+    assert any(n.startswith('soldiagram/') for n in namn_i_zip), 'soldiagrammen ligger kvar i soldiagram/'
     info = next((z.read(n).decode('utf-8', 'replace') for n in namn_i_zip if n.endswith('info.txt')), '')
+    assert 'HORISONT' in info and 'gick inte att läsa' in info, 'soldiagrammet har horisont trots rutor utan CORS (0.12.1)'
     for rad in info.splitlines():
         if 'IFC' in rad or 'från en byggnad är borttagna' in rad or 'precis vid en byggnad' in rad or 'vägar:' in rad or 'VÄGYTOR' in rad: print('  info:', rad.strip()[:160])
 

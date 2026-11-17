@@ -5,7 +5,7 @@ direkt i webbläsaren: höjdkurvor och höjdpunkter (DXF), markmodell (XYZ och C
 punktmoln ur Laserdata skog (LAS och XYZ), ortofoto (JPEG med världsfil),
 befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
 (DXF, bilvägar och gångvägar för sig, med utkast till vägytorna), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
-PDF med lutning, skyfall och skydd och risker (lutning och skyfall också som DXF, JPEG med
+PDF med lutning, skyfall och skydd och risker (lutning och skyfall också som JPEG med
 världsfil och PDF i vektor), och en samlad DXF med alla DXF-underlag. Skissade volymer kan prövas på
 platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
 [cad-apa](https://github.com/agrellarkitektur/cad-apa).
