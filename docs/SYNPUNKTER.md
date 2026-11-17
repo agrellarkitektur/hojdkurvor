@@ -7,7 +7,11 @@ flyttas till CHANGELOG.md.
 
 ## Inkorg
 
-(Tom. Punkterna från 1, 13 och 15 november är inarbetade i 0.12.0 eller sorterade nedan.)
+- (2026-11-17) **Fel: inget soldiagram när Horisont från terräng, träd och byggnader är ikryssad.** Varningen blir *Soldiagram: Kunde inte nå Lantmäteriets server. Kontrollera nätverket.* Utan horisonten, eller med Ladda ner bara soldiagrammet, skapas diagrammet. Felet finns både på agrellarkitektur.se/terrang och på hojdkurvor.danaid.cloud, så det hör inte till flytten. Samma körning gav också *Skyddad natur: kunde inte hämtas (Unexpected token '<', "<Exception"... is not valid JSON)*, *Strandskydd: kunde inte hämtas (svarade 502)* och *Vägar: OpenStreetMap svarade 502* (kanske tillfälligt hos tjänsterna, men kontrollera att `geodata.php` fungerar på VPS:en).
+- (2026-11-17) Den samlade platsanalysen på A3 ska ligga i zip:ens rotmapp.
+- (2026-11-17) Soldiagrammet i platsanalyspresentationen ska ligga på en sida med samma format och ritningsram som de andra bladen. I mappen `soldiagram/` får de gärna vara kvar utan ram.
+- (2026-11-17) Vid projektnamnet på blad 1: ett val *klicka i kartan för att hämta fastighetsnamn*.
+- (2026-11-17) Skuggor, lutning och skyfall behöver inte exporteras som DXF. Det förvirrar när man öppnar dem, och PDF och bilder räcker.
 
 ## Att testa
 

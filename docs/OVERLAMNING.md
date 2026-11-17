@@ -366,12 +366,36 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-1. Be om test av 0.10.0–0.12.0 (listan under Att testa). Rättelser blir
+Flytten (17 november): appen ligger nu också på <https://hojdkurvor.danaid.cloud/>
+och publiceras dit med `publicera-vps.yml` vid varje push, parallellt med FTP
+till webbhotellet. Läget per steg står i `docs/FLYTT.md`. Kvar: steg 5
+(synpunkterna: msmtp eller danaids Inkorg, inte bestämt), cad-apa (steg 2 och 3)
+när cad-apa flyttar, omdirigeringen och att stänga av FTP.
+
+1. **Inkorgen från 17 november** (`docs/SYNPUNKTER.md`): felet med soldiagrammet
+   och horisonten, och tre ändringar i leveransen. Föreslå versionsnummer
+   (0.12.1 för felet och leveransen? fastighetsnamnet är en ny funktion) och
+   fråga innan bygget.
+   - **Soldiagram med horisont.** `T.lasHojderGrov` (`js/karna.js`) läser
+     Markhöjdmodellen 5 km åt alla håll, alltså också grannrutor som
+     utsnittet själv aldrig rör. Felet kommer från `provaInloggning`, där
+     `fetch` kastar, och det händer när webbläsaren inte får läsa svaret.
+     Trolig orsak: en ruta som inte finns (hav, utomlands, ej levererad) ger
+     404 *utan* CORS-huvuden. Då blir det nätverksfel i stället för 404, och
+     hela soldiagrammet faller (`try` runt allt i `app.js` vid
+     "Soldiagram, med horisont"). Be Carl August köra ett OPTIONS/GET med
+     `Origin` mot en ruta som inte finns för att bekräfta. Rätta oavsett
+     orsak: en ruta som inte går att läsa hoppas över (NaN) i
+     `lasHojderGrov`, och misslyckas horisonten ska soldiagrammet ändå skapas
+     utan horisont, med en varning.
+   - **Fastighetsnamn ur kartan.** Fastighetsindelningen finns i kommunfilen
+     (kräver inloggning och att filen hämtats, `js/kommunfil.js`, sparas i
+     IndexedDB). Undersök om klicket kan läsa den sparade filen, och vad som
+     händer när den inte är hämtad än.
+2. Be om test av 0.10.0–0.12.0 (listan under Att testa). Rättelser blir
    0.12.1. Särskilt: vägytorna mot ett riktigt ortofoto, bilderna med
    världsfil i Archicad och dra i ramen på iPhone.
-2. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
-3. Flytten till hojdkurvor.danaid.cloud (`docs/FLYTT.md`). Lantmäteriet behöver
-   inte godkänna adressen; steg 4 (servern) är påbörjat.
+3. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
