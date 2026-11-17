@@ -71,7 +71,7 @@ jobs:
 
           Ladda upp innehållet i mappen hojdkurvor till appens mapp på
           webbservern och ersätt de gamla filerna. Sidan finns sedan på
-          https://apps.danaid.cloud/hojdkurvor/
+          https://hojdkurvor.danaid.cloud/
 
           config.js följer med utan nycklar. Har du ändrat den på servern (till
           exempel lagt in en Esri-nyckel): ladda inte upp config.js, eller för

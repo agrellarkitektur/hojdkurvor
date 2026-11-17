@@ -134,9 +134,9 @@ sedan via `geodata.php`).
    både `publicera.yml` och `release.yml`.
 
 Appen heter bara Höjdkurvor (inte höjdkurvor.se). Den ska flytta till
-<https://apps.danaid.cloud/hojdkurvor/>; Lantmäteriet måste godkänna den nya
-adressen för CORS först, och cad-apa måste godta det nya ursprunget. Se
-`docs/FLYTT.md`.
+<https://hojdkurvor.danaid.cloud/> på VPS:en (egen underdomän, som reglerna i
+agrellarkitektur/apps säger). Lantmäteriet behöver inte godkänna adressen; cad-apa
+måste godta det nya ursprunget när cad-apa flyttar. Se `docs/FLYTT.md`.
 
 ## Systerprojekt att använda som referens
 

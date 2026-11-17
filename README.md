@@ -11,7 +11,7 @@ platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritpr
 [cad-apa](https://github.com/agrellarkitektur/cad-apa).
 
 Live: <https://agrellarkitektur.se/terrang/>. Flyttar till
-<https://apps.danaid.cloud/hojdkurvor/>, se `docs/FLYTT.md`.
+<https://hojdkurvor.danaid.cloud/>, se `docs/FLYTT.md`.
 Utvecklad av Carl August Agrell, [Agrell Arkitektur](https://agrellarkitektur.se).
 Licens: GPL-3.0 eller senare, se `LICENSE`. Tredjepartskod och data: `THIRD_PARTY.md`.
 
@@ -47,11 +47,10 @@ omskrivningar. Ingen databas behövs. PHP behövs bara för reservvägarna
 `stac.php` och `geodata.php` och för formuläret Skicka synpunkter
 (`synpunkter.php`), se nedan.
 
-Lantmäteriets server släpper bara igenom anrop från godkända webbplatser.
-`https://agrellarkitektur.se` är godkänd. Om sidan nås från en annan adress,
-till exempel med `www.` eller från den nya adressen apps.danaid.cloud, stoppas
-hämtningen tills Lantmäteriet har godkänt även den adressen. Ansök om det
-innan sidan flyttas (se `docs/FLYTT.md`).
+Lantmäteriets servrar (dl1.lantmateriet.se och api.lantmateriet.se) tillåter
+anrop från webbläsaren oavsett webbplats: de svarar med det ursprung som
+skickas. Appen kan alltså ligga på vilken adress som helst utan att något
+behöver godkännas (kontrollerat 17 november 2026, se `docs/FLYTT.md`).
 
 ## Sidor
 

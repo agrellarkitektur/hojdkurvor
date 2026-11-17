@@ -12,7 +12,7 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   Sorterat till planerna (se `docs/SYNPUNKTER.md`): eget bildunderlag
   (projektfilens bilagor), skissvolymer ur inskannat underlag, html-visaren och
   DXF med xref/ortofoto. Appen heter bara **Höjdkurvor**; flytten till
-  `apps.danaid.cloud/hojdkurvor/` är förberedd i `docs/FLYTT.md` men inte gjord.
+  `hojdkurvor.danaid.cloud` är förberedd i `docs/FLYTT.md` men inte gjord.
   Enhetstester gröna, gränssnittstestet godkänt i alla tre teman, mobiltestet
   godkänt. Carl August har inte testat 0.10.0–0.12.0.
 - **Versionsplanen flyttades ett steg** (15 november): 0.12.0 blev inkorgen,
@@ -370,8 +370,8 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
    0.12.1. Särskilt: vägytorna mot ett riktigt ortofoto, bilderna med
    världsfil i Archicad och dra i ramen på iPhone.
 2. Därefter 0.13.0 projektfil enligt `plan-projektfil.md` i claude.ai-projektet.
-3. Flytten till apps.danaid.cloud när Lantmäteriet har godkänt adressen
-   (`docs/FLYTT.md`).
+3. Flytten till hojdkurvor.danaid.cloud (`docs/FLYTT.md`). Lantmäteriet behöver
+   inte godkänna adressen; steg 4 (servern) är påbörjat.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
@@ -413,9 +413,10 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 - Licensvillkoren för Riksantikvarieämbetets och MCF:s data och
   kommungränserna (`data/kommuner.json`) är inte kontrollerade.
 - Myndigheternas tjänster i kapitlet Skydd är bara testade mot låtsassvar.
-- Flytten till apps.danaid.cloud/hojdkurvor kräver att Lantmäteriet godkänner
-  den nya adressen för CORS först, och att cad-apa godtar ursprunget
-  (`docs/FLYTT.md`).
+- Flytten till hojdkurvor.danaid.cloud: Lantmäteriet behöver inte godkänna
+  adressen (kontrollerat 17 november). cad-apa godtar inte det nya ursprunget
+  förrän cad-apa själv flyttar, så Fortsätt rita ligger nere en tid på den nya
+  adressen (godkänt av Carl August). Se `docs/FLYTT.md`.
 
 ## Testmiljön
 

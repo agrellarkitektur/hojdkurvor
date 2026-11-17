@@ -1,56 +1,84 @@
-# Flytt till apps.danaid.cloud/hojdkurvor
+# Flytt till hojdkurvor.danaid.cloud
 
 Beslut 15 november 2026: Höjdkurvor flyttar från
-`https://agrellarkitektur.se/terrang/` till
-`https://apps.danaid.cloud/hojdkurvor/`. Appen heter bara **Höjdkurvor**; den
-tidigare tänkta domänen höjdkurvor.se används inte.
+`https://agrellarkitektur.se/terrang/` till VPS:en på danaid.cloud. Appen heter
+bara **Höjdkurvor**; den tidigare tänkta domänen höjdkurvor.se används inte.
+
+Beslut 17 november 2026: adressen blir en egen underdomän,
+`https://hojdkurvor.danaid.cloud/` (inte en mapp under apps.danaid.cloud), som
+reglerna i repot agrellarkitektur/apps (`APPS.md`) säger. Varje underdomän får
+egen lagring i webbläsaren, så apparna kan inte läsa varandras data. cad-apa
+flyttar senare på samma sätt till `https://cad-apa.danaid.cloud/`.
 
 Förberett i 0.12.0: namnet är bytt i appen, PDF:erna, filerna och
 dokumentationen, och release-zippen har mappen `hojdkurvor`. Själva flytten är
 inte gjord. Appen publiceras fortfarande till webbhotellet tills stegen nedan är
 klara.
 
+Driften på VPS:en (Caddy, PHP-FPM, msmtp, publicering med rsync) beskrivs i
+README i agrellarkitektur/apps under *Så fungerar driften* och *Flytta en app
+hit*.
+
 ## Innan flytten
 
-1. **Lantmäteriet (CORS).** dl1.lantmateriet.se släpper bara igenom anrop från
-   godkända ursprung. Ansök om att `https://apps.danaid.cloud` godkänns, för
-   alla produkter appen använder: Markhöjdmodell och Laserdata skog (STAC och
-   filer), Ortofoto, Byggnad och Fastighetsindelning Nedladdning. Utan det
-   stoppas hämtningen. Behåll `https://agrellarkitektur.se` som godkänt under
-   övergången.
-2. **cad-apa.** cad-apa tar bara emot platspaket från ursprungen i
-   `HOJDKURVOR_ORIGINS` och skickar skissen tillbaka till `HOJDKURVOR_URL`
-   (`src/ui/app/site.ts` i cad-apa). Lägg till `https://apps.danaid.cloud` och
-   byt adressen till `https://apps.danaid.cloud/hojdkurvor/`. Det görs i
-   cad-apa-sessionen, inte härifrån.
-3. **cad-apas adress i Höjdkurvor.** `config.js` har `cadApaUrl: '../cad-apa/'`.
-   Det fungerar bara om cad-apa också ligger på apps.danaid.cloud
-   (`/cad-apa/`). Ligger cad-apa kvar på agrellarkitektur.se: sätt
-   `cadApaUrl: 'https://agrellarkitektur.se/cad-apa/'`.
-4. **Servern.** PHP behövs för `stac.php`, `geodata.php` och
-   `synpunkter.php` (med `mail()` eller en annan väg att skicka e-post).
-   `.htaccess` förutsätter Apache med mod_headers och mod_mime; på nginx görs
-   motsvarande inställningar i serverkonfigurationen (`Cache-Control:
-   no-cache` för html, js, css och json, och UTF-8 som teckenkodning).
-5. **Synpunkter.** `feedback-config.php` ska ligga i mappen ovanför appen eller
-   i appens mapp. `from` måste vara en adress som servern får skicka från
-   (SPF/DMARC för domänen), annars fastnar breven. Kontrollera genom att öppna
-   `…/hojdkurvor/synpunkter.php` i webbläsaren.
-6. **Publiceringen.** `.github/workflows/publicera.yml` läser allt ur
-   inställningar i repot:
-   - secrets `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` och `FTP_DIR` (den nya
-     mappen på servern),
-   - variabeln `SIDA_URL` = `https://apps.danaid.cloud/hojdkurvor/`, som
-     kontrollen efter uppladdningen jämför mot.
-   Arbetsflödet laddar upp med FTPS. Har servern bara SFTP måste steget bytas
-   (till exempel mot rsync över SSH med en nyckel som secret).
+1. **Lantmäteriet (CORS). Klart, inget att göra.** Det finns ingen lista över
+   godkända webbplatser. dl1.lantmateriet.se och api.lantmateriet.se svarar med
+   det ursprung webbläsaren skickar. Kontrollerat 17 november 2026 med
+   `OPTIONS` och `Origin: https://apps.danaid.cloud` mot en fil i Markhöjdmodell
+   (dl1, GET med `Authorization` och `Range`) och mot Stompunkt Direkt (api,
+   POST med `Authorization` och `Content-Type`). Båda svarade med
+   `access-control-allow-origin` lika med det skickade ursprunget. Samma prov
+   kan köras igen i PowerShell (skriv `curl.exe`, inte `curl`):
+
+   ```
+   curl.exe -s -D - -o NUL -X OPTIONS "https://dl1.lantmateriet.se/hojd/data/grid/mhm/64_5/m642_53.tif" -H "Origin: https://hojdkurvor.danaid.cloud" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization,range"
+   ```
+
+2. **cad-apa godtar det nya ursprunget. Väntar till cad-apa flyttar.** cad-apa
+   tar bara emot platspaket från ursprungen i `HOJDKURVOR_ORIGINS` och skickar
+   skissen tillbaka till `HOJDKURVOR_URL` (`src/ui/app/site.ts` i cad-apa).
+   Lägg till `https://hojdkurvor.danaid.cloud` och byt adressen till
+   `https://hojdkurvor.danaid.cloud/`. Det görs i cad-apa-sessionen. Tills dess
+   fungerar inte Fortsätt rita i cad-apa från den nya adressen; det är godkänt.
+3. **cad-apas adress i Höjdkurvor. Väntar till cad-apa flyttar.** `config.js`
+   har `cadApaUrl: '../cad-apa/'`, som bara fungerar så länge båda ligger på
+   agrellarkitektur.se. Med underdomäner blir det
+   `cadApaUrl: 'https://cad-apa.danaid.cloud/'` (och standardvärdet i
+   `js/app.js` likaså).
+4. **Servern.** VPS:en kör Caddy med PHP-FPM, så `stac.php`, `geodata.php` och
+   `synpunkter.php` fungerar. `.htaccess` läses inte av Caddy; dess
+   inställningar (`Cache-Control: no-cache` för html, js, css och json, och
+   UTF-8 som teckenkodning) står i stället i appens sajt i `drift/apps.caddy` i
+   repot agrellarkitektur/apps. Det som återstår för Carl August:
+   - en DNS-post `hojdkurvor` hos one.com som pekar på VPS:en (samma som `apps`),
+     eller en gång för alla jokerposten `*`;
+   - `sudo apps-drift nyckel hojdkurvor www/hojdkurvor` på servern, och
+     utskriften som secret `APPS_SSH_KEY` i det här repot (steg 6).
+5. **Synpunkter.** På VPS:en går PHP:s `mail()` via msmtp, som behöver
+   `/etc/msmtprc` med ett e-postkonto hos one.com första gången.
+   `feedback-config.php` ska ligga i `/srv/apps/www/hojdkurvor/` eller mappen
+   ovanför; publiceringen rör den aldrig och Caddy visar den aldrig. `from`
+   måste vara en adress som servern får skicka från (SPF/DMARC), annars fastnar
+   breven. Kontrollera genom att öppna `…/synpunkter.php` i webbläsaren.
+   Alternativ som övervägs: att synpunkterna går direkt till Inkorgen i ett
+   projekt i danaid, som danaids egen knapp. danaids väg kräver i dag ett
+   inloggat konto, så en öppen väg med egen spärr mot skräp behövs först.
+6. **Publiceringen.** FTP till webbhotellet ersätts av rsync över SSH enligt
+   mallen `drift/publicera-app.yml` i agrellarkitektur/apps
+   (`.github/workflows/publicera-vps.yml` här, `APP_ID: hojdkurvor`, och
+   `drift/known_hosts` därifrån som `.github/known_hosts`). Urvalet av filer ska
+   vara detsamma som `git archive … ':!test' …` i `publicera.yml`, och
+   kontrollen efter uppladdningen (`kontrollera-webbplatsen.sh`) ska köras mot
+   `https://hojdkurvor.danaid.cloud/`. FTP-publiceringen stängs av när den nya
+   fungerar.
 
 ## Själva flytten
 
-1. Publicera till den nya adressen (ändra secrets och `SIDA_URL`, kör
-   arbetsflödet för hand).
-2. Prova där: inloggning, Skapa med ortofoto, byggnader och fastigheter,
-   Fortsätt rita i cad-apa och skissen tillbaka, Skicka synpunkter.
+1. Publicera till den nya adressen (secret `APPS_SSH_KEY`, kör arbetsflödet för
+   hand).
+2. Prova där: inloggning, Skapa med ortofoto, byggnader och fastigheter, Skicka
+   synpunkter. Fortsätt rita i cad-apa och skissen tillbaka provas när cad-apa
+   har flyttat (steg 2 och 3).
 3. Lägg en omdirigering på den gamla adressen, så att sparade länkar och
    projektlänkar (`#p=…`) fungerar. Webbläsaren skickar inte med det som står
    efter `#` till servern, så omdirigeringen görs med en liten sida som för
@@ -60,12 +88,13 @@ klara.
    <!doctype html>
    <meta charset="utf-8">
    <title>Höjdkurvor har flyttat</title>
-   <script>location.replace('https://apps.danaid.cloud/hojdkurvor/' + location.pathname.replace(/^.*\/terrang\/?/, '') + location.search + location.hash);</script>
-   <p>Höjdkurvor har flyttat till <a href="https://apps.danaid.cloud/hojdkurvor/">apps.danaid.cloud/hojdkurvor</a>.</p>
+   <script>location.replace('https://hojdkurvor.danaid.cloud/' + location.pathname.replace(/^.*\/terrang\/?/, '') + location.search + location.hash);</script>
+   <p>Höjdkurvor har flyttat till <a href="https://hojdkurvor.danaid.cloud/">hojdkurvor.danaid.cloud</a>.</p>
    ```
 
 4. Uppdatera adressen i `README.md`, `CLAUDE.md`, `docs/UTBYTE-CAD-APA.md`,
-   `docs/OVERLAMNING.md` och standardvärdet för `SIDA_URL` i `publicera.yml`.
+   `docs/OVERLAMNING.md` och kontrollens adress i publiceringen, och `url` i
+   katalogposten `apps/hojdkurvor/app.json` i agrellarkitektur/apps.
 
 ## Det som inte följer med
 

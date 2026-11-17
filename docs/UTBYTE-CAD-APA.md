@@ -22,8 +22,8 @@ Som reserv kan båda sidor spara och öppna filer.
 
 ## Adresser
 
-- höjdkurvor: `https://agrellarkitektur.se/terrang/` (flyttar till `https://apps.danaid.cloud/hojdkurvor/`, se `docs/FLYTT.md`)
-- cad-apa: `https://agrellarkitektur.se/cad-apa/`
+- höjdkurvor: `https://agrellarkitektur.se/terrang/` (flyttar till `https://hojdkurvor.danaid.cloud/`, se `docs/FLYTT.md`)
+- cad-apa: `https://agrellarkitektur.se/cad-apa/` (flyttar senare till `https://cad-apa.danaid.cloud/`)
 
 Höjdkurvor läser cad-apas adress ur `config.js` (`cadApaUrl`, standard `../cad-apa/`).
 cad-apa behöver motsvarande inställning för höjdkurvors adress. Båda sidor ska
