@@ -1,15 +1,14 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.4 och uppdelningen av
-Skapa (grenen `skapa-uppdelning`, som bygger på `v0.13.4`).
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.4 med uppdelningen av
+Skapa, sammanslagen med `main` och publicerad.
 
 ## Läget
 
-- **0.13.4** 19 november, på grenen `v0.13.4`, **inte sammanslagen med `main` och inte
-  publicerad**. Sessionen hade inte skrivrätt till GitHub; grenarna lämnades till ägaren som
-  en git-bundle. Finns de inte på GitHub: be om filen, eller gör om ändringarna efter
-  CHANGELOG. Rättelser efter ägarens test 19 november (BA och BC godkända, BB delvis; BD, BE
+- **0.13.4** 19 november, sammanslagen med `main` och publicerad samma dag tillsammans med
+  grenen `skapa-uppdelning` (grenarna kom som en git-bundle från en session utan skrivrätt;
+  enhetstesterna kördes igen före sammanslagningen). Rättelser efter ägarens test 19 november (BA och BC godkända, BB delvis; BD, BE
   och BF i `docs/SYNPUNKTER.md`):
   1. **Skyddad natur** (BD): frågan stämde inte med Naturvårdsverkets tjänster. De vill ha
      `outputFormat=GEOJSON` (inte `application/json`, som ger ett XML-fel med status 200) och
@@ -34,8 +33,8 @@ Skapa (grenen `skapa-uppdelning`, som bygger på `v0.13.4`).
   ur gränssnittstestet är jämförd fil för fil med 0.13.3: alla DXF-, CSV-, LAS-, XYZ- och
   bildfiler är identiska, också träden.
 
-- **Grenen `skapa-uppdelning`** (den här grenen, från `v0.13.4`, ingen ny version och
-  inget i CHANGELOG: inget syns för användaren): granskningens punkt 7. Skapa-flödet i
+- **Grenen `skapa-uppdelning`** (från `v0.13.4`, sammanslagen i 0.13.4, ingen egen version
+  och inget i CHANGELOG: inget syns för användaren): granskningens punkt 7. Skapa-flödet i
   `app.js` var en funktion på 860 rader och är nu 23 funktioner (den längsta 107 rader), se *Skapa-flödet i
   steg* nedan. Uppdelningen är gjord mekaniskt med ett skript som läste koden (variablerna
   som delas mellan stegen flyttades till körningens objekt), inte för hand. Körda: alla 19
@@ -46,7 +45,7 @@ Skapa (grenen `skapa-uppdelning`, som bygger på `v0.13.4`).
   prövade i webbläsaren: saknad inloggning, fel lösenord (felet visas, knappen och
   projektlåset släpps, vridningen nollställs) och egen vridning. **Inte prövat**: avbrottet
   när analysområdet blir över 6 km² (går bara att nå med långa sektioner eller en avlägsen
-  horisontpunkt); den vägen är läst. Slå ihop grenen före 0.14.0 (sol på fasaderna).
+  horisontpunkt); den vägen är läst.
 
 - **0.13.3** 19 november: granskningens rättelser (grenen `granskning-2026-11-19`) och
   `qr-ruta` (platshållaren för Swish-QR:n, copyrightraden `Agrell Arkitektur AB`) är
