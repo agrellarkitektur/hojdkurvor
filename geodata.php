@@ -21,7 +21,7 @@ $VITLISTA = [
     'https://pub.raa.se/visning/lamningar_v1/wms?',
     'https://gis-tjanster.mcf.se/arcgis/services/Oversvamningskarteringar/karteringar/MapServer/WmsServer?',
 ];
-$TYPER = ['application/json', 'application/geo+json', 'image/png', 'text/xml', 'application/xml', 'text/plain'];
+$TYPER = ['application/json', 'application/geo+json', 'application/vnd.geo+json', 'image/png', 'text/xml', 'application/xml', 'text/plain'];
 $MAX = 8 * 1024 * 1024;
 
 function fel($kod, $text) {
