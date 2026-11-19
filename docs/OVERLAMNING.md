@@ -5,7 +5,7 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 
 ## Läget
 
-- **0.14.0** 19 november (grenen `v0.14.0`): byggnadskroppar och planvyn, etapp 1–2 i
+- **0.14.0** 19 november (grenen `v0.14.0`, sammanslagen och publicerad): byggnadskroppar och planvyn, etapp 1–2 i
   `plan-skiss-situationsplan.md` (claude.ai-projektet), med ägarens ändringar samma dag:
   taksprång och tak ritas inte i plan (bara nytt/befintligt och FG), krysset betyder
   huvudbyggnad (inte takform), mått mellan kroppar i samma byggnad (ägarens skiss: tillbyggnaden
@@ -16,7 +16,7 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   Testdatan byggdes med rasterio och en liten ersättare för `osgeo` (utanför repot), som förut.
   **Inte provat**: iPhone, riktiga tomter med sneda och många gränssträckor, och stora utsnitt
   (planvyn ritar om hela SVG:n vid varje musrörelse). **Nästa**: ägarens test (BN–BR i
-  `docs/SYNPUNKTER.md`), sedan 0.15.0 = solanalysen (`overlamning-solanalys.md`) och 0.16.0 =
+  `docs/SYNPUNKTER.md`; BS i inkorgen: utsnittets format på mobilen), sedan 0.15.0 = solanalysen (`overlamning-solanalys.md`) och 0.16.0 =
   situationsplanen (etapp 3).
 
 - **0.13.6** 19 november (grenen `v0.13.6`, sammanslagen och publicerad):
