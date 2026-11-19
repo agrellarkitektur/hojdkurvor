@@ -2793,7 +2793,8 @@
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignoreras */ }
     let p;
     try { p = JSON.parse(b64url.avkoda(m[1])); } catch (e) { visaStatus('Projektlänken gick inte att läsa.', true); return false; }
-    if (!p || p.v !== 1 || !Array.isArray(p.r) || !T.ZONER.some(z => z.epsg === p.e)) return false;
+    const arTal = v => typeof v === 'number' && isFinite(v);
+    if (!p || p.v !== 1 || !Array.isArray(p.r) || p.r.length < 4 || !p.r.slice(0, 4).every(arTal) || !(p.r[2] > p.r[0] && p.r[3] > p.r[1]) || !T.ZONER.some(z => z.epsg === p.e)) return false;
     const satt = (namn, lista) => { if (lista) document.querySelectorAll(`input[name=${namn}]`).forEach(c => { if (!c.disabled) c.checked = lista.includes(c.value); }); };
     satt('tillval', p.t); satt('kapitel', p.k); satt('format', p.f);
     if (p.i) $('intervall').value = p.i;
@@ -2811,7 +2812,7 @@
         .map(x => ({ id: Utbyte.nyttId(), namn: String(x[0] == null ? '' : x[0]).slice(0, 40), a: [x[1], x[2]], b: [x[3], x[4]], vand: !!x[5] }));
       sparaSektioner(); ritaSektioner();
     }
-    if (p.h) state.horPunkt = p.h;
+    if (Array.isArray(p.h) && p.h.length === 2 && p.h.every(arTal)) state.horPunkt = p.h;
     state.epsg = p.e; state.zonManuell = true; zonVal.value = p.e;
     state.utsnitt = { xmin: p.r[0], ymin: p.r[1], xmax: p.r[2], ymax: p.r[3] };
     satGeoFranUtsnitt(); uppdateraKommun(); visaUtsnitt();
@@ -3367,7 +3368,7 @@
     $('mobil-storlek').textContent = `${fmt(r.xmax - r.xmin)} × ${fmt(r.ymax - r.ymin)} m`;
     $('mobil-kommun').textContent = state.kommun ? `${state.kommun.namn} kommun` : '';
     $('mobil-system').textContent = `HÖRN I ${T.zon(state.epsg).namn.toUpperCase()}`;
-    $('mobil-koord').innerHTML = [['Väst', r.xmin], ['Öst', r.xmax], ['Syd', r.ymin], ['Nord', r.ymax]].map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
+    $('mobil-koord').innerHTML = [['Väst', r.xmin], ['Öst', r.xmax], ['Syd', r.ymin], ['Nord', r.ymax]].map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('');
   }
   /** Ramens storlek i meter, visas ovanför ramen. */
   function mobilMatt() {
