@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 // Kör med: node test/koordinater.test.js
 // Prövar hur dialogen Klistra in koordinater föreslår koordinatsystem (Terrang.tolkaZon)
 // mot de riktiga kommungränserna i data/kommuner.json.

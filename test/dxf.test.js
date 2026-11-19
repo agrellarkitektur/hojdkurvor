@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 // Kör med: node test/dxf.test.js
 // Samlad DXF (0.12.0): Dxf.sammanfoga slår ihop filer från Dxf.skriv och höjdkurvornas egen skrivare.
 // Med DXF_UT=mapp sparas den samlade filen, så att den kan kontrolleras med ezdxf.

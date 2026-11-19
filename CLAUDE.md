@@ -13,6 +13,10 @@ härnäst och vad som väntar. Skriv om den när sessionen slutar.
 - Appen drivs av arkitektkontoret Agrell Arkitektur; *ägaren* nedan är den som
   driver den. Kontakt i appen:
   kontakt@agrellarkitektur.se.
+- Bolagsformen: skriv **Agrell Arkitektur AB** i formella texter
+  (copyrightrader, CLA, avtal, `THIRD-PARTY.md`, licensbeslutet) och
+  **Agrell Arkitektur** utan AB i det som syns (sidorna, sidfoten, Om-sidan).
+  Se Bolagsform i `docs/LICENS.md`.
 - Svara på svenska. Skriv svenska texter i appen klart och enkelt, utan
   utfyllnad. I det här projektet får du skriva färdiga texter direkt.
 - Ge kommandon ett och ett, i var sin kodruta.
@@ -40,7 +44,7 @@ härnäst och vad som väntar. Skriv om den när sessionen slutar.
 - Menyraden, ritningshuvudet och sidfoten finns i alla fyra HTML-sidor. BETA-knappen
   och formuläret Skicka synpunkter (`js/synpunkter.js`) laddas på alla fyra.
 - Nya egna filer börjar med licenshuvudet (`SPDX-License-Identifier:
-  AGPL-3.0-or-later` och `Copyright (C) 2026 Agrell Arkitektur`, se
+  AGPL-3.0-or-later` och `Copyright (C) 2026 Agrell Arkitektur AB`, se
   `CONTRIBUTING.md`); `test/kalla.test.js` kontrollerar det. Nya bibliotek,
   typsnitt och data skrivs in i `THIRD-PARTY.md` med licens.
 - Länken *Källkoden* (`js/kalla.js`, AGPL §13) ska finnas på alla fyra sidor.

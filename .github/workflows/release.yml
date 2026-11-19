@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 # Packar appen och lägger den på en release med tagg, till exempel v0.13.1.
 #
 # Sedan 0.13.1 sker det av sig självt: när en push till main ändrar

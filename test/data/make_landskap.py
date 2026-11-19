@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 """Syntetiskt testlandskap kring testtomten (SWEREF 99 TM, RH 2000).
 
 - Höjdmodell 1 m, 4 × 4 km, delad i Lantmäteriets 10 km-rutor 642_53 och 642_54 (COG med översikter)

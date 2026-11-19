@@ -68,7 +68,7 @@ Familjen Grotesk och IBM Plex Mono, båda SIL OFL. Ingen risk; de bäddas in i P
 - **Formella texter** skriver **Agrell Arkitektur AB**: copyrightraden i licenshuvudet (`Copyright (C) 2026 Agrell Arkitektur AB`), `CLA.md`, avtal, `THIRD-PARTY.md` och licensbeslutets juridiska delar.
 - **Synliga texter** skriver **Agrell Arkitektur**, utan AB: appens sidor, Om-sidan, sidfoten, menyer och marknadsföring.
 - I CLA:t är avtalsparten *Agrell Arkitektur AB, Sweden, represented by its authorised signatory (firmatecknare)*. Ägarens namn behövs inte.
-- Status: Höjdkurvor har AB i CLA.md, THIRD-PARTY.md och här sedan 19 november; copyrightraderna i källfilerna byts i nästa version. cad-apa (0.12.5.4) har kvar `Carl August Agrell / Agrell Arkitektur` och en CLA-part som enskild näringsidkare, och behöver samma ändring i en cad-apa-session.
+- Status: Höjdkurvor har AB i CLA.md, THIRD-PARTY.md och här sedan 19 november; copyrightraderna i källfilerna har AB från versionen efter 0.13.2. cad-apa (0.12.5.4) har kvar `Carl August Agrell / Agrell Arkitektur` och en CLA-part som enskild näringsidkare, och behöver samma ändring i en cad-apa-session.
 
 ## Varumärke
 
@@ -112,7 +112,7 @@ Ifylld för Höjdkurvor.
 ### Så gjordes det i Höjdkurvor (0.13.2, 19 november 2026)
 
 - **LICENSE:** gnu.org:s `agpl-3.0.txt`, 661 rader och 34 523 byte (samma fil som i cad-apa, sha256 `8486a10c…07ef`). Den gamla GPL-texten ligger i `LICENSES/GPL-3.0.txt`, eftersom versionerna till och med 0.13.1 är GPL.
-- **Licenshuvudet** i alla egna källfiler (`js/`, `config.js`, `app.css`, php, html, testerna och arbetsflödena), två rader: `SPDX-License-Identifier: AGPL-3.0-or-later` och `Copyright (C) 2026 Agrell Arkitektur` (blir `Agrell Arkitektur AB` i nästa version, se Bolagsform nedan). Ägarens namn står inte i repot (se CLAUDE.md). `vendor/` har kvar sina egna huvuden. `test/kalla.test.js` kontrollerar huvudet.
+- **Licenshuvudet** i alla egna källfiler (`js/`, `config.js`, `app.css`, php, html, testerna och arbetsflödena), två rader: `SPDX-License-Identifier: AGPL-3.0-or-later` och `Copyright (C) 2026 Agrell Arkitektur AB` (utan AB till och med 0.13.2, se Bolagsform nedan). Ägarens namn står inte i repot (se CLAUDE.md). `vendor/` har kvar sina egna huvuden. `test/kalla.test.js` kontrollerar huvudet.
 - **Källkodslänken** (`js/kalla.js`): appen har inget byggsteg, så publiceringen (`publicera-vps.yml`) och releasen (`release.yml`) skriver in commiten på raden `commit: ''` i det som laddas upp och packas. Länken *Källkoden* står i panelens fot på kartan, i sidfoten på de andra sidorna och på Om-sidan (källkoden, licensen och `THIRD-PARTY.md` vid samma commit). I repot går länkarna till repot.
 - **THIRD-PARTY.md** (förut `THIRD_PARTY.md`) med bibliotek, typsnitt, data i repot och data som hämtas. Alla beroenden var förenliga: Leaflet (BSD-2-Clause), proj4js, geotiff.js, JSZip, jsPDF, sql.js, copc.js och three.js (MIT), LERC och laz-perf (Apache-2.0), pako (MIT och Zlib), SQLite (allmän egendom), typsnitten OFL. Lantmäteriets och de andra källornas data är inte kod och har egna villkor. `data/kommuner.json` saknar licensfil hos källan ("Feel free to reuse").
 - **CONTRIBUTING.md** och **CLA.md** efter cad-apa, med Höjdkurvor och de skyddade namnen Höjdkurvor och höjdkurvor.se. CLA:t är märkt som utkast (som i cad-apa), och avtalsparten är Agrell Arkitektur AB genom sin firmatecknare.

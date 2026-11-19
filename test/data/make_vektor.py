@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 """Låtsasfiler för Byggnad och Fastighetsindelning Nedladdning, vektor (Kinda, 0513).
 
 Skikt och fält enligt Lantmäteriets produktbeskrivningar. Huset ligger där

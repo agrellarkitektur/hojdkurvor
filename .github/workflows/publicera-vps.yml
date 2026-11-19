@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 # Kontrollerar appen och lägger den på VPS:en (https://hojdkurvor.danaid.cloud/)
 # med rsync över SSH vid varje push till main (ändringar som bara rör
 # dokumentationen hoppas över). Kan också köras för hand under Actions →

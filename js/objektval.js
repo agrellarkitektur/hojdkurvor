@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Egna val för enskilda träd och befintliga hus (0.11.0): dölja dem som är uppenbart fel och rätta
  * trädens höjd, kronbredd och art. Valen sparas i webbläsaren och gäller nästa gång underlaget skapas

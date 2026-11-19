@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later
-   Copyright (C) 2026 Agrell Arkitektur */
+   Copyright (C) 2026 Agrell Arkitektur AB */
 /* Höjdkurvor – stilmall. Färger som variabler per tema: ritning = Blueprint (standard), lugn = Ljust, mork = Mörkt.
    Kartans orange (--annot) är densamma i alla teman och har tillräcklig kontrast mot både ljus och mörk karta. */
 @font-face { font-family: "Familjen Grotesk"; src: url("vendor/fonts/familjen-grotesk-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
@@ -473,6 +473,11 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .artikel dl.par { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: 12px 24px; }
 .artikel dl.par dt { font-weight: 600; }
 .artikel dl.par dd { margin: 0; }
+/* Stöd utvecklingen på om.html: Swish-QR:n (platshållare tills Swish Företag finns) */
+.stod-privat { display: flex; gap: 20px; align-items: flex-start; }
+.stod-privat p { margin: 0; }
+.swish-qr { flex: none; width: 120px; height: 120px; }
+.swish-qr.platshallare { display: flex; align-items: center; justify-content: center; text-align: center; border: 1px dashed var(--rule); color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; line-height: 1.6; }
 .artikel dl.par.bred { grid-template-columns: minmax(0, 280px) minmax(0, 1fr); font-size: 16px; }
 .artikel dl.fragor { display: flex; flex-direction: column; gap: 18px; }
 .artikel dl.fragor dd { margin: 4px 0 0; }

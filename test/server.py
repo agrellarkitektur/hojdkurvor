@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 """Testserver för Höjdkurvor. Efterliknar Lantmäteriet (Basic auth test:hemligt-åäö, Range, CORS, HEAD,
 STAC-sök för laserdata och ortofoto, Stompunkt Direkt) och Overpass, Naturvårdsverket, Riksantikvarieämbetet och MCF på port 8765.
 Användning: python3 test/server.py DATAKATALOG APPKATALOG"""
