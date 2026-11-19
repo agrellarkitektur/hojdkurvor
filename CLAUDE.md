@@ -114,6 +114,10 @@ node test/volym3d.test.js
 ```
 
 ```
+node test/kropp.test.js
+```
+
+```
 node test/dxf.test.js
 ```
 
@@ -171,6 +175,10 @@ python3 test/fastighetsnamn_test.py test/ut ritning
 
 ```
 python3 test/resultat_test.py test/ut ritning
+```
+
+```
+python3 test/planvy_test.py test/ut ritning
 ```
 
 Kör enhetstestet efter ändringar i beräkningarna och gränssnittstesterna efter

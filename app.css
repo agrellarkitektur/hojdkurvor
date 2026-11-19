@@ -605,6 +605,99 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 @media (pointer: coarse), (max-width: 700px) { #vy3d-modellera, #vy3d-modell { display: none; } }
 body.vy3d-oppen { overflow: hidden; }
 
+/* ---------- Planvyn (0.14.0): byggnadskroppar i plan ---------- */
+/* Ritytan är ett ljust papper i Blueprint och Ljust, mörkt i Mörkt. */
+.planvy { --pv-papper: #fbfaf7; --pv-ink: #17191b; --pv-gra: #7d8287; --pv-hus: #d8d5cd; --pv-ny: #ece7dc; --pv-vald: #1f6f9e; --pv-hjalp: #c25a12; --pv-rutnat: #e3e1db; }
+[data-tema="mork"] .planvy { --pv-papper: #1a1c1f; --pv-ink: #e8e9ea; --pv-gra: #8d9196; --pv-hus: #3a3d42; --pv-ny: #2c3035; --pv-vald: #6fa3e0; --pv-hjalp: #ff8a5c; --pv-rutnat: #26292d; }
+.planvy { position: fixed; inset: 0; z-index: 3000; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); font-family: var(--ui); }
+.planvy[hidden] { display: none; }
+.planvy-huvud { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; border-bottom: 1px solid var(--rule); }
+.planvy-huvud h2 { margin: 0 8px 0 0; font-family: var(--mono); font-size: 13px; letter-spacing: .14em; font-weight: 500; text-transform: uppercase; }
+.planvy-verktyg { display: flex; flex-wrap: wrap; gap: 6px; }
+.planvy-verktyg:last-child { margin-left: auto; }
+.planvy-huvud .knapp.liten { margin: 0; }
+.planvy-kropp { flex: 1; min-height: 0; display: flex; }
+.planvy-yta { position: relative; flex: 1; min-width: 0; background: var(--pv-papper); overflow: hidden; }
+.planvy-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; cursor: default; font-family: var(--mono); }
+.planvy-yta[data-verktyg=rekt] .planvy-svg, .planvy-yta[data-verktyg=poly] .planvy-svg { cursor: crosshair; }
+.planvy-yta[data-verktyg=riktn] .planvy-svg, .planvy-yta[data-verktyg=entre] .planvy-svg, .planvy-yta[data-verktyg=lm] .planvy-svg { cursor: pointer; }
+.planvy-panel { width: 320px; flex: none; overflow-y: auto; border-left: 1px solid var(--rule); background: var(--panel-bg); color: var(--panel-ink); }
+.planvy-panel section { padding: 12px 14px; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; }
+.planvy-panel h3 { margin: 0; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 500; color: var(--panel-muted); }
+.pv-falt { display: flex; flex-direction: column; gap: 3px; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--panel-muted); }
+.pv-falt input, .pv-falt select, .pv-horn input, .pv-vridin { width: 100%; height: 28px; padding: 0 6px; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); color: var(--ink); font: 13px var(--mono); }
+.pv-vridin { width: 130px; }
+.pv-kryss { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.pv-not { margin: 0; font-size: 12px; line-height: 1.45; color: var(--panel-muted); }
+.pv-harlett { font-family: var(--mono); font-size: 12px; line-height: 1.6; padding: 6px 8px; border: 1px solid var(--rule); }
+.pv-knappar { display: flex; flex-wrap: wrap; gap: 6px; }
+.pv-knappar .knapp.liten { margin: 0; }
+.pv-lista { display: flex; flex-direction: column; gap: 4px; }
+.pv-lista button { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border: 1px solid var(--rule); background: transparent; color: var(--panel-ink); font: 13px var(--ui); text-align: left; cursor: pointer; }
+.pv-lista button:hover { border-color: var(--brand); }
+.pv-tagg { font-family: var(--mono); font-size: 11px; color: var(--panel-muted); }
+.pv-horn { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+.pv-horn th { text-align: left; font-weight: 500; color: var(--panel-muted); font-size: 11px; padding: 2px; }
+.pv-horn td { padding: 2px; }
+.pv-nr { color: var(--panel-muted); width: 18px; }
+.pv-sida label { display: flex; align-items: center; gap: 6px; color: var(--panel-muted); white-space: nowrap; }
+.pv-sida input { max-width: 110px; }
+.pv-teckn { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.pv-t { display: inline-block; width: 18px; height: 10px; border: 1.5px solid var(--panel-ink); }
+.pv-t-ny { background: var(--pv-ny); border-width: 2px; }
+.pv-t-tillbyggnad { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--panel-ink) 3px 4px); border-width: 2px; }
+.pv-t-befintlig { border-width: 1px; }
+.pv-t-rivs { border-style: dashed; border-width: 1px; }
+.planvy-fot { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; }
+.planvy-prompt { flex: 0 1 40%; color: var(--brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.planvy-kommando { flex: 1; min-width: 120px; height: 30px; padding: 0 8px; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); color: var(--ink); font: 13px var(--mono); }
+.planvy-status { color: var(--muted); white-space: nowrap; }
+.planvy-mattin { position: absolute; z-index: 2; width: 80px; height: 28px; padding: 0 6px; border: 2px solid var(--pv-vald); background: var(--pv-papper); color: var(--pv-ink); font: 13px var(--mono); }
+.planvy-mattin[hidden] { display: none; }
+.planvy-besked { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); max-width: 80%; padding: 7px 12px; background: var(--pv-ink); color: var(--pv-papper); font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+.planvy-besked.syns { opacity: 1; }
+/* ritningen */
+.pv-utsnitt { fill: none; stroke: var(--ram); stroke-width: 1; stroke-dasharray: 6 4; }
+.pv-grans { fill: none; stroke: var(--fastighet); stroke-width: 1.6; stroke-dasharray: 14 4 2 4; }
+.pv-granspunkt { fill: var(--pv-papper); stroke: var(--fastighet); stroke-width: 1; }
+.pv-hus { fill: var(--pv-hus); stroke: var(--pv-gra); stroke-width: 1; }
+.pv-hus.pv-hov { fill: color-mix(in srgb, var(--pv-hjalp) 30%, var(--pv-hus)); stroke: var(--pv-hjalp); stroke-width: 2; }
+.pv-kropp { stroke: var(--pv-ink); }
+.pv-ny { fill: var(--pv-ny); stroke-width: 2.4; }
+.pv-tillbyggnad { fill: url(#pv-skraff); stroke-width: 2.4; }
+.pv-befintlig { fill: var(--pv-papper); stroke-width: 1.2; }
+.pv-rivs { fill: none; stroke-width: 1.2; stroke-dasharray: 6 4; }
+.pv-vald { stroke: var(--pv-vald); }
+.pv-skraff-bg { fill: var(--pv-papper); }
+.pv-skraff-linje { stroke: var(--pv-ink); stroke-width: 1; }
+.pv-huvudkryss { stroke: var(--pv-ink); stroke-width: 1; }
+.pv-etikett { fill: var(--pv-ink); letter-spacing: .04em; pointer-events: none; paint-order: stroke; stroke: var(--pv-papper); stroke-width: 3px; stroke-linejoin: round; }
+.pv-mattext, .pv-gmattext, .pv-koord { paint-order: stroke; stroke: var(--pv-papper); stroke-width: 3px; stroke-linejoin: round; }
+.pv-fet { font-weight: 600; }
+.pv-entre { fill: var(--pv-ink); }
+.pv-koord { fill: var(--pv-ink); pointer-events: none; }
+.pv-matt { stroke: var(--pv-ink); stroke-width: .8; fill: none; }
+.pv-tick { stroke-width: 1.6; }
+.pv-mattext { fill: var(--pv-ink); cursor: pointer; }
+.pv-gmatt { stroke: var(--fastighet); stroke-width: .9; fill: none; }
+.pv-gmattext { fill: var(--fastighet); font-weight: 600; cursor: pointer; }
+.pv-mattext:hover, .pv-gmattext:hover { fill: var(--pv-hjalp); }
+.pv-grepp { fill: var(--pv-papper); stroke: var(--pv-vald); stroke-width: 1.6; cursor: move; }
+.pv-gummi { stroke: var(--pv-hjalp); stroke-width: 1.5; stroke-dasharray: 6 4; fill: color-mix(in srgb, var(--pv-hjalp) 8%, transparent); }
+.pv-hjalptext { fill: var(--pv-hjalp); }
+.pv-snapp { stroke: var(--pv-hjalp); stroke-width: 2; fill: none; }
+.pv-hovkant { stroke: var(--pv-hjalp); stroke-width: 4; opacity: .6; }
+.pv-ucs path { stroke: var(--pv-vald); stroke-width: 1.6; fill: none; }
+.pv-ucs text { fill: var(--pv-vald); font-size: 10px; font-weight: 600; }
+.pv-norr path, .pv-norr text { fill: var(--pv-ink); }
+.pv-norr text { font-size: 11px; font-weight: 600; }
+@media (max-width: 760px) {
+  .planvy-kropp { flex-direction: column; }
+  .planvy-panel { width: auto; max-height: 40%; border-left: 0; border-top: 1px solid var(--rule); }
+  .planvy-prompt { display: none; }
+}
+body.planvy-oppen { overflow: hidden; }
+
 /* ---------- Mobilflödet: markera med ram ---------- */
 .mobil-ram { position: absolute; left: 12%; right: 12%; top: 24%; bottom: 34%; z-index: 500; pointer-events: none; border: 1px dashed var(--ram); background: color-mix(in srgb, var(--ram) 6%, transparent); }
 .mobil-ram .hörn { position: absolute; width: 24px; height: 24px; border-color: var(--ram); border-style: solid; border-width: 0; }

@@ -75,7 +75,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
     "forslag": [ { "id": "uuid", "namn": "Basfall", "aktivt": true } ],
     "volymer": [ { "id": "uuid", "forslag": "uuid", "namn": "Hus A", "fotavtryck": [[x, y], …],
                    "golv": 112.5, "takfot": 6, "takform": "sadel", "taklutning": 27,
-                   "nockriktning": null, "primitiv": { … } } ],
+                   "nockriktning": null, "primitiv": { … },
+                   "status": "ny", "huvudbyggnad": false, "kalla": null, "entre": { "sida": 0, "t": 0.5 } } ],
     "sektioner": [ { "id": "uuid", "namn": "A", "a": [x, y], "b": [x, y], "vand": false } ],
     "rattelser": { "tak": { "objektidentitet": { … } }, "trad": { "x,y": { … } }, "hus": { "objektidentitet": { … } } },
     "punkter": [], "overlagringar": [], "anteckningar": [], "vyer": []
@@ -112,7 +113,14 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
 
 - `volymer[]`: samma fält som skissen (se `js/volym3d.js` och
   `docs/UTBYTE-CAD-APA.md`), plus `forslag`. Volymer från cad-apa behåller sitt
-  `id`.
+  `id`. Från 0.14.0 är de byggnadskroppar (`js/kropp.js`) med fyra fält till,
+  som alla kan saknas (äldre filer läses som förut, så `version` är oförändrad):
+  `status` (`ny` | `tillbyggnad` | `befintlig` | `rivs`, saknas = `ny`),
+  `huvudbyggnad` (kryss i plan), `kalla` (Lantmäteriets objektidentitet när
+  kroppen är tagen ur ett befintligt hus; huset ersätts då av kroppen) och
+  `entre` (`{ sida, t }`: sidan i fotavtrycket och läget längs den, 0–1).
+  `golv` är färdigt golv (FG). Fälten följer inte med till cad-apa (utbytet är
+  oförändrat), men behålls för kroppar med samma `id` när skissen kommer tillbaka.
 - `sektioner[]`: `a` → `b` är linjen, `vand` vänder blickriktningen.
 - `rattelser`: egna takformer (`terrang-takval`), dolda och rättade träd
   (`terrang-tradval`) och dolda hus (`terrang-husval`) som rör projektet: hus som

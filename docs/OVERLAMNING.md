@@ -1,9 +1,23 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.6.
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.14.0.
 
 ## Läget
+
+- **0.14.0** 19 november (grenen `v0.14.0`): byggnadskroppar och planvyn, etapp 1–2 i
+  `plan-skiss-situationsplan.md` (claude.ai-projektet), med ägarens ändringar samma dag:
+  taksprång och tak ritas inte i plan (bara nytt/befintligt och FG), krysset betyder
+  huvudbyggnad (inte takform), mått mellan kroppar i samma byggnad (ägarens skiss: tillbyggnaden
+  0,3 m in från husets fasad), och måtten till tomtgräns mot bara två gränser: långsidan två mått,
+  kortsidan ett. Se avsnittet *Byggnadskroppar och planvyn* nedan. Körda: alla 21 enhetstester
+  (nytt: `kropp.test.js`), `ui_test.py` (ritning), `projekt_test.py`, `mobil_test.py`,
+  `fastighetsnamn_test.py`, `resultat_test.py` och nya `planvy_test.py` i alla tre teman.
+  Testdatan byggdes med rasterio och en liten ersättare för `osgeo` (utanför repot), som förut.
+  **Inte provat**: iPhone, riktiga tomter med sneda och många gränssträckor, och stora utsnitt
+  (planvyn ritar om hela SVG:n vid varje musrörelse). **Nästa**: ägarens test (BN–BR i
+  `docs/SYNPUNKTER.md`), sedan 0.15.0 = solanalysen (`overlamning-solanalys.md`) och 0.16.0 =
+  situationsplanen (etapp 3).
 
 - **0.13.6** 19 november (grenen `v0.13.6`, sammanslagen och publicerad):
   1. **BJ, resultatet sparat i webbläsaren** (`js/resultat.js`, blocket *Resultatet sparat i
@@ -206,6 +220,53 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## Byggnadskroppar och planvyn (0.14.0)
+
+- **Modellen** (`js/kropp.js`): en kropp är en volym (`js/volym3d.js`) med `status`
+  (`ny` | `tillbyggnad` | `befintlig` | `rivs`), `huvudbyggnad`, `kalla` (Lantmäteriets id) och
+  `entre` (`{ sida, t }`). Inget nytt namn i projektfilen: kropparna ligger kvar i
+  `inmatning.volymer` (planen sa `kroppar` med migrering; det hade krävt ändringar i utbytet med
+  cad-apa och i alla analyser för samma sak). `Projekt.VERSION` och utbytets `version` är
+  oförändrade. `golv` är FG. Taket som förut (`takform`, `taklutning`, `nockriktning` i grader);
+  taksprång finns inte. Nya rektanglar är prisma (med tak) eller rätblock (platt), så att 3D-vyns
+  fält för bredd och djup fortsätter fungera; `Kropp.satHorn` behåller typen om hörnen är en
+  rektangel i samma riktning, annars blir kroppen en polygon. `Kropp.satNock` vrider om prismat
+  (byter bredd och djup) när nocken läggs tvärs; entrén läggs då om på närmaste sida
+  (`andra(v, fn, true)`).
+- **Måtten**: `gransmatt` väljer två grannsidor (den längre får två mått, den kortare ett från det
+  gemensamma hörnet) och för varje sida den närmaste gränssträckan som är ungefär parallell (inom
+  35°) och ligger utanför; de två gränserna måste vara olika (inte parallella). Reserv: de tre
+  kortaste vinkelräta måtten. `relativaMatt`: motriktade sidor som ligger an (3 cm), måtten längs
+  fogen från den större kroppens hörn till den mindres (`ande`/`fast` för att flytta).
+  `yttermattSidor`: en lång och en kort sida för rektanglar (inte fogen, helst inte där
+  gränsmåtten är, annars norr och väster), alla utom fogarna för andra former. Bara ny och
+  tillbyggnad får gränsmått; alla utom rivs får yttermått.
+- **Planvyn** (`js/planvy.js`, `#planvy` i `index.html`, CSS *Planvyn* i `app.css` med egna
+  variabler `--pv-*` per tema): bygger sitt eget innehåll i `Planvy.oppna(rot, opt)`, ritar hela
+  SVG:n som en sträng vid varje ändring och arbetar på en kopia av kropparna; `opt.andrad(volymer)`
+  efter varje steg. Ångra/gör om med ögonblicksbilder (JSON). Dra flyttar från läget vid starten
+  (annars växer millimeteravrundningen i `Volym3D.flytta`). Länkade kroppar (kedjan i 3D) flyttas
+  och vrids tillsammans. Testkrok: `TERRANG_TEST.planvy` (`volymer()`, `_test.w2s`).
+- **app.js**, blocket *Planvyn*: `oppnaPlanvy` (gränser och hus ur `state.senaste` om systemet är
+  detsamma; husen utan dolda men med ersatta, så att ett borttaget ersättande hus kommer tillbaka),
+  `skissFranPlan` (som `skissFran3d`: skissen, `senaste.volymer`, `objektAndrat`, sparat resultat,
+  inget nytt Skapa), `markhojdVid` (golvet för nya kroppar ur `senaste.rutnat`). *Plan* i 3D-vyn
+  (`#vy3d-plan`) och *3D* i planvyn byter.
+- **Analyserna**: `Kropp.forAnalys` (utan rivs) i skuggornas DSM, skuggbladet, skyfallet,
+  horisonten och platsanalysbladet. Hus som ersatts av en kropp (`Kropp.ersatta`, id i `kalla`)
+  tas bort ur `senaste.byggnader` i `skapaByggnader` och `objektAndrat`
+  (`senaste.byggnaderErsatta`) och skärs bort ur ytmodellen som dolda hus; kroppen bränns in i
+  stället. Info-filen säger hur många. 3D-vyn får kropparna utan rivs och husen utan de ersatta;
+  `skissFran3d` lägger tillbaka kropparna som 3D-vyn inte fick (`utanfor3d`).
+- **Kartan**: skissens lager visar status (tjocklek, streckning, fyllning).
+- **cad-apa**: utbytet är oförändrat, så status, huvudbyggnad, källa och entré följer inte med. När
+  skissen kommer tillbaka behålls de för kroppar med samma id (`laddaSkiss`). Ska cad-apa förstå
+  dem: ändra `docs/UTBYTE-CAD-APA.md`, båda sidor och `test/cad-apa-mock.html` (ägarens klartecken
+  i cad-apa-projektet).
+- **Inte gjort** (etapp 3 och senare): situationsplanen som PDF/DXF med ritningshuvud,
+  teckenförklaring och skala; flytta och slå av enskilda mått; skattad höjd och tak för befintliga
+  hus ur takrättelserna; förslagen (kroppen får `forslag` som förut).
 
 ## Resultatet i webbläsaren (0.13.6, BJ)
 

@@ -18,6 +18,14 @@ Senast använda nummer: **BM**.
 
 Grupperat efter den version där testbehovet uppstod.
 
+### 0.14.0
+
+- **BN** *Rita i plan* på en riktig tomt (Windows, Chrome), skapad med Fastighetsgränser och Befintliga byggnader: blir ritriktningen rätt från början? Rita en rektangel med klick och med `12,6x9`, en polygon med klick och med inmatningsraden (`6`, `6<90`, `@3;4`). Fäster snäppet där du väntar dig, och är det lätt att se vad det fäster mot? Ortho (F8) och Snäpp (F3)? Flytta med ett hörn mot en gräns eller ett hus, dra i hörnen, vrid, kopiera, ångra.
+- **BO** Måtten jämfört med en egen situationsplan: tre mått mot två gränser (två från långsidan, ett från kortsidan), yttermåtten och måttet mellan tillbyggnad och hus (som i skissen med 0,3). Väljer appen rätt gränser och sidor, och hamnar texterna läsbart? Ändra ett gränsmått och ett yttermått genom att klicka på siffran. *FG lika bef*.
+- **BP** Ta in ett befintligt hus (Befintlig), gör det till huvudbyggnad, lägg till en tillbyggnad och ett förråd som ska rivas. Byt till 3D (knappen *3D*) och tillbaka (*Plan*): samma byggnader, utan det som rivs? Välj *Skapa* igen: är huset borta ur Byggnader och skuggorna, och är det rivna borta ur skuggorna?
+- **BQ** **På iPhone**: öppnas planvyn och går den att läsa (panelen under ritningen)? Ritandet är tänkt för datorn.
+- **BR** Saknas något för att kunna använda planen som grund för en situationsplan (etapp 3, 0.16.0): text, linjer, symboler, skala?
+
 ### 0.13.6
 
 - **BJ** Skapa underlag, gå till Instruktioner, Om eller Beställ och tillbaka till kartan: kommer lagren, sammanfattningen och *Ladda ner* tillbaka utan nytt Skapa, och säger statusraden när underlaget skapades? Fungerar *Förhandsvisa i 3D*, utskriften och *Fortsätt rita i cad-apa* med det inlästa? Ladda om sidan: likadant. Ändra området eller nollpunkten: försvinner underlaget, och kommer det inte tillbaka efter omladdning? Prova också med ett stort område (1–2 km sida, mycket laserdata): vad säger raden *Sparat* i sammanfattningen, och hur lång tid tar det att komma tillbaka till kartan? **På iPhone**: finns underlaget kvar efter byte av sida?

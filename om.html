@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Om – Höjdkurvor</title>
   <meta name="description" content="Höjdkurvor gör Lantmäteriets öppna geodata till underlag som går att rita på. En gratis betatjänst från Agrell Arkitektur.">
-  <script src="js/version.js?v=0.13.6"></script>
-  <script src="js/kalla.js?v=0.13.6" defer></script>
-  <script src="js/tema.js?v=0.13.6"></script>
-  <script src="js/synpunkter.js?v=0.13.6" defer></script>
-  <script src="js/stod.js?v=0.13.6" defer></script>
+  <script src="js/version.js?v=0.14.0"></script>
+  <script src="js/kalla.js?v=0.14.0" defer></script>
+  <script src="js/tema.js?v=0.14.0"></script>
+  <script src="js/synpunkter.js?v=0.14.0" defer></script>
+  <script src="js/stod.js?v=0.14.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.13.6">
+  <link rel="stylesheet" href="app.css?v=0.14.0">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -119,6 +119,7 @@
       <section id="andringar" style="padding-top: 40px; border-top: 1px solid var(--rule)">
         <h2>Ändringar</h2>
         <dl class="par bred">
+          <dt>0.14.0 · 19 nov 2026</dt><dd>Rita i plan: byggnader på tomten uppifrån, mot fastighetsgränserna, med mått som på en situationsplan. Rita rektanglar och fria former med klick eller mått, snäpp mot gränser och hus, och ta in befintliga hus från Lantmäteriet. Varje byggnad har status (ny, tillbyggnad, befintlig, rivs), färdigt golv, tak och entré, och samma byggnader går att ändra i 3D-vyn. Mått till två tomtgränser, yttermått och mått mellan tillbyggnad och hus. Hus som ska rivas räknas inte i skuggor och skyfall.</dd>
           <dt>0.13.6 · 19 nov 2026</dt><dd>Underlaget finns kvar när du går till en annan sida och tillbaka, eller laddar om: det senaste resultatet sparas i webbläsaren för projektet, med zip-filen. <a href="#stod">Stöd utvecklingen</a> har Swish.</dd>
           <dt>0.13.5 · 19 nov 2026</dt><dd>Strandskyddet följer reglerna från 1 juli 2025: små sjöar, bäckar och anlagt vatten räknas inte. Linjerna 100 och 300 m från vattnet visas på kartan och följer med som DXF. Med Marktäcke ikryssat används Lantmäteriets vatten, så att strandskyddet kommer med också när OpenStreetMap inte svarar. Zip-filen packas när du laddar ner, så Skapa blir klar fortare. Nytt: <em>STÖD</em> i menyraden.</dd>
           <dt>0.13.4 · 19 nov 2026</dt><dd>Skyddad natur kommer med i platsanalysen igen: frågan till Naturvårdsverket stämde inte med tjänsten. Är en tjänst överbelastad försöker appen två gånger till innan den ger upp, också för strandskyddet och vägarna. Ett nytt projektnamn, eller <em>Hämta från kartan</em>, kastar inte längre ett underlag som redan är skapat. Hus och träd försvinner inte i större utsnitt: laserdatan räknas in ruta för ruta, utan taket på 6 miljoner punkter.</dd>

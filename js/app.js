@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.13.6';
+  const FILVERSION = '0.14.0';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -1836,8 +1836,11 @@
         if (kor.laserYta && val.byggnadshojd) ytaFardig = kor.laserYta;
         Byggnad.hojder(byggAlla, ytaFardig || { W: kor.dtmZ.W, H: kor.dtmZ.H, s: kor.dtmZ.s, x0: kor.dtmZ.x0, y1: kor.dtmZ.y1, dtm: kor.dtmZ.z, ndsm: new Float32Array(kor.dtmZ.z.length) });
         // hus som användaren har dolt (0.11.0) kommer inte med någonstans
-        const { byggnader: bygg, dolda: byggDolda } = Objektval.tillampaHus(byggAlla, husval());
+        const { byggnader: byggSynliga, dolda: byggDolda } = Objektval.tillampaHus(byggAlla, husval());
+        // hus som har ritats om som byggnadskroppar (0.14.0) ersätts av kropparna
+        const ers = Kropp.ersatta(kor.volymer), bygg = byggSynliga.filter(b => !ers.has(String(b.id)));
         senaste.byggnaderAlla = byggAlla; senaste.byggnader = bygg; senaste.byggnaderDolda = byggDolda;
+        senaste.byggnaderErsatta = byggSynliga.filter(b => ers.has(String(b.id)));
         const medHojd = bygg.filter(b => b.hojd != null).length;
         filer[`byggnader/${namn}_byggnader_lokal.dxf`] = Byggnad.dxf(bygg, r, X0, Y0, Z0);
         filer[`byggnader/${namn}_byggnader_sweref.dxf`] = Byggnad.dxf(bygg, r, 0, 0, 0);
@@ -1860,6 +1863,7 @@
           '  Källa: Byggnad Nedladdning, vektor. © Lantmäteriet. Bearbetad: utvald och omprojicerad. Licens: CC BY 4.0.',
           `  ${bygg.length} byggnader som berör utsnittet. Hela fotavtrycket är med, även den del som ligger utanför.`,
           ...(byggDolda.length ? [`  ${byggDolda.length} ${byggDolda.length === 1 ? 'byggnad är dold' : 'byggnader är dolda'} i 3D-vyn och är inte med i filerna eller skuggorna.`] : []),
+          ...(byggSynliga.length > bygg.length ? [`  ${byggSynliga.length - bygg.length} ${byggSynliga.length - bygg.length === 1 ? 'byggnad är ritad' : 'byggnader är ritade'} som byggnadskropp i skissen och finns där i stället.`] : []),
           ...Object.keys(per).sort().map(t => `    ${t}: ${per[t]} st (lager ${Byggnad.lagerFor({ typ: t })})`),
           '  Fotavtrycken är oftast inmätta vid takkanten, inte vid fasaden, och kan avvika någon meter.',
           '  Kontrollera mot grundkartan eller en inmätning innan de används för projektering.',
@@ -1950,8 +1954,10 @@
           }
         }
         // dolda träd och hus (0.11.0) kastar ingen skugga
-        if (kor.laserYta) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: senaste.byggnaderDolda || [] });
-        if (senaste.volymer.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, senaste.volymer);
+        // dolda hus och hus som ersatts av en byggnadskropp skärs bort; kropparna (utom de som rivs) bränns in nedan
+        if (kor.laserYta) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: (senaste.byggnaderDolda || []).concat(senaste.byggnaderErsatta || []) });
+        const volA = Kropp.forAnalys(senaste.volymer);
+        if (volA.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, volA);
         if (val.skugga) {
           delFramsteg('analys', 0.3, 'Räknar skuggor');
           const tider = [];
@@ -1978,7 +1984,7 @@
             };
           });
           const skuggOpt = {
-            utsnitt: r, rader, kurvor: res.kurvor, fonter, byggnader: senaste.byggnader, volymer: senaste.volymer,
+            utsnitt: r, rader, kurvor: res.kurvor, fonter, byggnader: senaste.byggnader, volymer: Kropp.forAnalys(senaste.volymer),
             titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
             notis: [(kor.laserYta ? `Skuggor från terräng, träd och byggnader enligt laserdata ${kor.laserDatum}. Träd räknas som täta.` : 'Skuggor från terrängen (ingen laserdata).') +
               (senaste.volymer.length ? ' Skissade volymer ingår.' : '') + ` Skuggor från objekt mer än ${MARG_SKUGGA} m utanför utsnittet ingår inte.`,
@@ -2050,7 +2056,7 @@
           const sSky = Math.max(1, Math.ceil(Math.sqrt((omr.xmax - omr.xmin) * (omr.ymax - omr.ymin) / 1.5e6)));
           const gs = T.rutnat(mos, omr, sSky, epsg);
           const befSpar = senaste.byggnader ? Byggnad.somVolymer(senaste.byggnader, { utanHojd: 3 }) : [];
-          const hinder = senaste.volymer.concat(befSpar);
+          const hinder = Kropp.forAnalys(senaste.volymer).concat(befSpar);
           if (hinder.length) gs.z = Platsanalys.branInVolymer(gs, gs.z, hinder, { spar: true });
           await new Promise(ok => setTimeout(ok, 0));
           const sk = Platsanalys.skyfall(gs, r);
@@ -2390,9 +2396,9 @@
             const medTomt = $('hor-tomt').checked;
             const bara = { ...mos, s: 1 };
             let nara = kor.laserTM || bara;   // laserTM är byggd utan tomten om det är valt, se Laserdata ovan
-            if (senaste.volymer.length) {   // skissen räknas med i horisonten
+            if (Kropp.forAnalys(senaste.volymer).length) {   // skissen räknas med i horisonten
               const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
-              const volTM = senaste.volymer.map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
+              const volTM = Kropp.forAnalys(senaste.volymer).map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
               nara = Object.assign({}, nara, { data: Platsanalys.branInVolymer({ x0: nara.E0 + 0.5, y1: nara.N1 - 0.5, s: 1, W: nara.w, H: nara.h }, nara.data, volTM) });
             }
             // står punkten i ett hus eller under en krona räknas det objektet bort
@@ -2487,7 +2493,7 @@
           fonter, r, kurvor: res.kurvor, markhojd: { lo: res.lo, hi: res.hi },
           titel: { projekt: projekt || namn, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000`, datum: idag() },
           kapitel: { sol: kap.sol, terrang: kap.terrang, vatten: kap.vatten, skydd: kap.skydd },
-          lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: senaste.volymer, byggnader: senaste.byggnader, fastigheter: senaste.fastigheter,
+          lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: Kropp.forAnalys(senaste.volymer), byggnader: senaste.byggnader, fastigheter: senaste.fastigheter,
           sol: kap.sol ? senaste.solOpt : null, skuggor: kap.sol ? senaste.skuggOpt : null,
           solSammanfattning: senaste.horisont ? [['Horisont', state.horPunkt ? 'från vald punkt, se blad 2' : 'från utsnittets mitt, se blad 2']] : null,
           natur: senaste.natur, lamningar: senaste.lamningar, oversvamning: senaste.oversvamning, oversvamningBilder: senaste.oversvamningBilder, strand: senaste.strand,
@@ -2976,8 +2982,11 @@
     volymLager.clearLayers();
     const t = tillLatLng(state.epsg);
     state.volymer.forEach(v => {
-      L.polygon(v.fotavtryck.map(t), { color: farg('annot'), weight: 2, fillColor: farg('annot'), fillOpacity: 0.12 })
-        .bindTooltip(`${esc(v.namn)}: ${fmt(Platsanalys.area(v.fotavtryck))} m², ${TAKFORMER[v.takform] || ''} tak`, { sticky: true }).addTo(volymLager);
+      // status (0.14.0): befintliga tunnare, de som rivs streckade och utan fyllning
+      const st = Kropp.status(v);
+      L.polygon(v.fotavtryck.map(t), { color: farg('annot'), weight: st === 'ny' || st === 'tillbyggnad' ? 2 : 1.2, dashArray: st === 'rivs' ? '6 4' : null,
+        fillColor: farg('annot'), fillOpacity: st === 'rivs' ? 0 : st === 'befintlig' ? 0.05 : 0.12 })
+        .bindTooltip(`${esc(v.namn)}: ${fmt(Platsanalys.area(v.fotavtryck))} m², ${TAKFORMER[v.takform] || ''} tak${st !== 'ny' ? ', ' + Kropp.STATUS[st].toLowerCase() : ''}`, { sticky: true }).addTo(volymLager);
     });
     const ul = $('volymlista');
     ul.innerHTML = '';
@@ -3034,7 +3043,14 @@
       }
     }
     state.volymEpsg = state.epsg;
-    state.volymer = sk.volymer.map(v => Object.assign({}, v, { id: v.id || Utbyte.nyttId() }));
+    // status, huvudbyggnad, källa och entré (0.14.0) följer inte med cad-apa; de behålls för kroppar med samma id
+    const forra = new Map(state.volymer.map(v => [v.id, v]));
+    state.volymer = sk.volymer.map(v => {
+      const n = Object.assign({}, v, { id: v.id || Utbyte.nyttId() }), f = forra.get(n.id);
+      if (f) ['status', 'huvudbyggnad', 'kalla'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
+      if (f && f.entre && n.entre == null && f.fotavtryck.length === n.fotavtryck.length) n.entre = f.entre;
+      return n;
+    });
     sparaVolymer(); nollstallResultat(); ritaVolymer();
     if (state.proj) Projekt.logga(state.proj.d, `Skiss från ${kalla} (${sk.volymer.length} ${sk.volymer.length === 1 ? 'volym' : 'volymer'})`);
     visaSteg('skiss');
@@ -3170,6 +3186,58 @@
     } catch (e) { statusEl.textContent = 'cad-apa: ' + e.message; }
   }
   $('skiss-cadapa').addEventListener('click', () => tillCadApa($('skiss-status')));
+
+  // ------------------------------------------------------------------
+  // Planvyn (0.14.0): byggnadskroppar i plan mot fastighetsgränserna (js/planvy.js)
+  // ------------------------------------------------------------------
+  let planvy = null, planAndrad = false;
+  /** Markens höjd ur det senaste underlaget, eller NaN. */
+  function markhojdVid(x, y) {
+    const s = state.senaste, g = s && s.epsg === state.epsg ? s.rutnat : null;
+    return g ? Analys.nod(g, g.z, x, y) : NaN;
+  }
+  /** Kropparna från planvyn: skissen, kartan, projektet och (utan att räkna om) det sparade resultatet. */
+  function skissFranPlan(vol) {
+    state.volymer = vol;
+    planAndrad = true;
+    const s = state.senaste;
+    if (s) {
+      s.volymer = vol.filter(v => v.golv === v.golv && v.golv != null).map(v => Object.assign({}, v));
+      if (s.byggnaderAlla) objektAndrat(); else planeraResultatSpara();
+    }
+    sparaVolymer(); ritaVolymer();
+  }
+  function oppnaPlanvy() {
+    if (planvy) return;
+    if (!state.utsnitt) { visaStatus('Rita ett utsnitt under 01 Plats först.'); return; }
+    volymerIZon();
+    const s = state.senaste && state.senaste.epsg === state.epsg ? state.senaste : null;
+    const hus = s && s.byggnaderAlla ? Objektval.tillampaHus(s.byggnaderAlla, husval()).byggnader : (s && s.byggnader) || [];
+    const granser = s && s.fastigheter ? s.fastigheter.granser : [];
+    const saknas = [!granser.length && 'fastighetsgränser', !hus.length && 'byggnader'].filter(Boolean);
+    planAndrad = false;
+    document.body.classList.add('planvy-oppen');
+    planvy = Planvy.oppna($('planvy'), {
+      volymer: state.volymer, granser,
+      hus: hus.map(b => ({ id: b.id, fotavtryck: b.fotavtryck, mark: b.mark, hojd: b.hojd, huvudbyggnad: !!b.huvud, namn: Byggnad.beteckning(b) || 'Befintlig byggnad' })),
+      utsnitt: state.utsnitt, zonNamn: T.zon(state.epsg).namn,
+      markhojd: markhojdVid, nyttId: () => Utbyte.nyttId(), andrad: skissFranPlan,
+      till3d: s && s.rutnat ? () => $('visa-3d').click() : null,
+      saknas: saknas.length ? `Underlaget saknar ${saknas.join(' och ')}. Välj ${saknas.length > 1 ? 'dem' : 'det'} under 02 Underlag och välj Skapa för att rita mot ${saknas.length > 1 ? 'dem' : 'det'}.` : null,
+      stangd: () => {
+        document.body.classList.remove('planvy-oppen');
+        planvy = null;
+        if (planAndrad && state.senaste) {
+          $('skapa').classList.remove('gjord');
+          visaStatus('Skissen är ändrad i planvyn. Välj Skapa igen för att räkna om skuggor, horisont och filer med den.');
+        }
+        if (window.TERRANG_TEST) window.TERRANG_TEST.planvy = null;
+        const k = $('skiss-plan'); if (k && $('vy3d').hidden) k.focus();
+      },
+    });
+    if (window.TERRANG_TEST) window.TERRANG_TEST.planvy = planvy;
+  }
+  $('skiss-plan').addEventListener('click', oppnaPlanvy);
   $('till-cadapa').addEventListener('click', () => tillCadApa($('status-text')));
   $('spara-platsfil').addEventListener('click', async () => {
     if (!state.utsnitt) return;
@@ -3870,6 +3938,7 @@
   // 3D-förhandsvisning (three.js laddas först när den öppnas)
   // ------------------------------------------------------------------
   let vy3d = null;
+  let utanfor3d = [];   // kropparna som 3D-vyn inte fick (de som rivs); de står kvar när 3D-vyn ändrar skissen
   const HJALP3D = $('vy3d-hjalp').innerHTML;
   /** Sparade val i 3D-vyn: en färg (#rrggbb) ur localStorage, annars förvalet. */
   const sparadFarg = (nyckel, forval) => { const c = lager.las('localStorage', nyckel); return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : forval; };
@@ -3888,11 +3957,16 @@
       try { const m = utsnittsMitt(); sol = { lat: m.lat, lon: m.lon, konvergens: m.konvergens, tid: soltid3d() }; } catch (e) { console.error(e); }
       // alla träd och hus, de dolda markerade, så att de kan visas igen (0.11.0)
       trad3d = s.trad ? Objektval.tillampaTrad(s.tradAlla || s.trad, tradval(), { medDolda: true }).trad : [];
-      const husAlla = s.byggnaderAlla || s.byggnader;
+      // hus som är ritade som byggnadskroppar (0.14.0) visas som kroppar, och kroppar som rivs inte alls
+      const ers = Kropp.ersatta(state.volymer), utanErsatta = l => l && l.filter(b => !ers.has(String(b.id)));
+      const husAlla = utanErsatta(s.byggnaderAlla || s.byggnader);
       const takm = takmodeller3d(husAlla);
-      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad ? trad3d : null, volymer: s.volymer, befintliga: husAlla ? Byggnad.somVolymer(husAlla) : null,
+      const vol3d = Kropp.forAnalys(s.volymer);
+      const i3d = new Set(vol3d.map(v => v.id));
+      utanfor3d = state.volymer.filter(v => !i3d.has(v.id));
+      vy3d = await Vy3D.visa($('vy3d-yta'), { rutnat: s.rutnat, utsnitt: s.r, trad: s.trad ? trad3d : null, volymer: vol3d, befintliga: husAlla ? Byggnad.somVolymer(husAlla) : null,
         doldaHus: doldaHus3d(),
-        fotavtryck: s.byggnader ? s.byggnader.filter(b => b.hojd == null).map(b => b.fotavtryck) : null,
+        fotavtryck: s.byggnader ? utanErsatta(s.byggnader).filter(b => b.hojd == null).map(b => b.fotavtryck) : null,
         kurvor: s.kurvor, fastigheter: s.fastigheter ? s.fastigheter.granser.map(g => g.pts) : null, vagar: vagar3d(s.vagar, 'bil'), gangvagar: vagar3d(s.vagar, 'gang'),
         kurva: kurvfarg3d(), fastighet: farg('fastighet'), vag: farg('vag'), vagGang: farg('vag-gang'), byggnad: farg('byggnad'),
         befintlig: sparadFarg('terrang-3d-husfarg', '#b9b3aa'), skissfarg: sparadFarg('terrang-3d-skissfarg', farg('annot')),
@@ -3959,6 +4033,7 @@
     $('visa-3d').focus();
   };
   $('vy3d-stang').addEventListener('click', stang3d);
+  $('vy3d-plan').addEventListener('click', () => { stang3d(); oppnaPlanvy(); });
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || $('vy3d').hidden) return;
     // Esc avbryter först en placering eller ett val i modelleringen, och stänger takpanelen
@@ -4138,8 +4213,9 @@
     const tt = tillLatLng(s.epsg);
     if (s.tradAlla) { s.trad = Objektval.tillampaTrad(s.tradAlla, tradval()).trad; if (resultat.trad) visaTradKarta(s.trad, tt); }
     if (s.byggnaderAlla) {
-      const h = Objektval.tillampaHus(s.byggnaderAlla, husval());
-      s.byggnader = h.byggnader; s.byggnaderDolda = h.dolda;
+      const h = Objektval.tillampaHus(s.byggnaderAlla, husval()), ers = Kropp.ersatta(state.volymer);
+      s.byggnader = h.byggnader.filter(b => !ers.has(String(b.id))); s.byggnaderDolda = h.dolda;
+      s.byggnaderErsatta = h.byggnader.filter(b => ers.has(String(b.id)));
       if (resultat.byggnader) visaByggnaderKarta(s.byggnader, tt);
     }
     objektAndrade = true;
@@ -4320,8 +4396,9 @@
   let vantarPlacering = false;
   function skissFran3d(ut) {
     if (ut.typ === 'andrad') {
-      state.volymer = ut.volymer.map(v => Object.assign({}, v));
-      if (state.senaste) { state.senaste.volymer = ut.volymer.map(v => Object.assign({}, v)); planeraResultatSpara(); }
+      const fran3d = new Set(ut.volymer.map(v => v.id));
+      state.volymer = ut.volymer.map(v => Object.assign({}, v)).concat(utanfor3d.filter(v => !fran3d.has(v.id)));
+      if (state.senaste) { state.senaste.volymer = state.volymer.filter(v => v.golv === v.golv && v.golv != null).map(v => Object.assign({}, v)); planeraResultatSpara(); }
       sparaVolymer(); ritaVolymer();
     }
     $('vy3d-modellera').setAttribute('aria-pressed', String(ut.redigera));

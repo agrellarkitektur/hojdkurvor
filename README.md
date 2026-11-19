@@ -191,6 +191,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   ur laserdatan, ögonhöjd och bilder
 - `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter), också till cad-apa; laddas med sidan
 - `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer; laddas med sidan (takytorna används också i skissens DXF)
+- `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA (ren geometri, testas i Node)
+- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
@@ -250,7 +252,8 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
-- Planerat (se `docs/SYNPUNKTER.md`): sol på fasaderna (0.14.0), förslag och sparade vyer i
+- Planerat (se `docs/SYNPUNKTER.md` och planen för skiss och situationsplan): sol på fasaderna (0.15.0),
+  situationsplanen med ritningshuvud, PDF och DXF (0.16.0), förslag och sparade vyer i
   projektet, eget bildunderlag som överlagring (projektfilens bilagor), skissvolymer ur
   inskannat underlag, en html-visare i nedladdningsmappen och DXF med inlänkade filer (xref)
   och ortofoto.

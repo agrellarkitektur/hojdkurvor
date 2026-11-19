@@ -3,6 +3,32 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.14.0 – 2026-11-19
+
+Byggnadskroppar och planvyn, etapp 1–2 i planen för skiss och situationsplan.
+
+- **Rita i plan** under 04 Skiss: tomten uppifrån med fastighetsgränserna och de
+  befintliga husen. Rektangel med klick eller mått (`12,6x9`), polygon med klick
+  eller inmatningsraden (`6`, `6<90`, `@3;4`, `E;N`), ritriktning efter en gräns,
+  fasad eller ett hus, snäpp mot hörn, mittpunkter och linjer (också vinkelrätt),
+  Ortho, flytta med ett hörn som fäster, dra i hörnen, vrida, kopiera, ångra och
+  gör om. Hörnlistan visar och tar emot koordinater och sidlängder.
+- **Byggnadskroppen**: varje byggnad i skissen har status (ny, tillbyggnad,
+  befintlig, rivs), kan vara huvudbyggnad (kryss i plan), färdigt golv (FG) i
+  RH 2000, takfot, tak med lutning och nockens riktning, och en entrépil.
+  Samma byggnader går att ändra i 3D-vyn, och *Plan* i 3D-vyn byter tillbaka.
+  Taksprång ritas inte i plan, som på en situationsplan.
+- **Befintligt hus från Lantmäteriet** med ett klick. Höjd och golv är skattade.
+  Huset ersätts av byggnaden i 3D-vyn, skuggorna och filerna.
+- **Mått**: tre mått vinkelrätt mot två tomtgränser (två från långsidan, ett
+  från kortsidan, två till samma hörn), yttermått på en lång och en kort sida,
+  och mått mellan en tillbyggnad och huset den sitter mot. Klicka på ett mått
+  och skriv ett nytt för att flytta byggnaden eller ändra sidan. *FG lika bef*
+  när en tillbyggnad har samma golv som det befintliga. BYA per byggnad och
+  totalt.
+- Byggnader med status *Rivs* räknas inte i skuggor, horisont och skyfall och
+  visas inte i 3D-vyn. Kartan visar status med linjetjocklek och streckning.
+
 ## 0.13.6 – 2026-11-19
 
 - **Underlaget finns kvar när du byter sida.** Efter *Skapa* sparas resultatet

@@ -55,6 +55,10 @@ node test/volym3d.test.js
 ```
 
 ```
+node test/kropp.test.js
+```
+
+```
 node test/vagar.test.js
 ```
 
@@ -134,6 +138,21 @@ tror att Lantmäteriet gör; gränssnittstestet kontrollerar att horisonten änd
 Objektvalstestet (0.11.0) prövar att dölja och rätta träd och hus, att ett träd
 känns igen på nytt inom 0,6 m och att dolda träd och hus skärs bort ur
 ytmodellen.
+
+Kropptestet (0.14.0) prövar byggnadskropparna (`js/kropp.js`): inmatningsraden (mått, `@dx;dy`,
+längd och vinkel, ensam längd, `E;N`, decimalkomma), måtten till tomtgräns (tre mått mot två gränser,
+två från långsidan och ett från kortsidan till samma hörn, också vridet), måtten mellan en tillbyggnad
+och huset (ägarens exempel med 0,3 m), yttermåttens sidor, FG-texten (*FG lika bef*), status i
+analyserna och BYA, takform och nock (prisma och rätblock byter typ, nocken tvärs), att entrén följer
+med när kroppen ändras, kroppen ur ett befintligt hus och länkade kroppar.
+
+`planvy_test.py` (0.14.0, gränssnitt) skapar underlaget med byggnader och fastighetsgränser för
+testtomten och prövar planvyn: befintligt hus med kryss, en tillbyggnad med snäpp och `4x5,6`,
+status och *FG lika bef*, måtten (yttermått, mellan kropparna, tre till tomtgräns), ändra ett
+gränsmått, dra med snäpp mot husets hörn, dra i ett grepp, ångra, polygon ur inmatningsraden,
+entrépilen, Rivs, listan under 04 Skiss, 3D-vyn utan den som rivs, *Plan* i 3D-vyn, att allt finns
+kvar efter omladdning och att huset ersätts av kroppen när underlaget skapas igen. Skärmbilder
+`planvy_1_<tema>.png`, `planvy_2_<tema>.png`, `planvy_3d_<tema>.png`.
 
 Volymtestet (0.10.0) prövar volymerna att modellera: fotavtrycken för rätblock,
 cylinder och prisma, att takets höjd är densamma som `Platsanalys.takhojd`, de

@@ -1,0 +1,186 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur AB
+/*
+ * Enhetstest för byggnadskropparna (0.14.0, js/kropp.js): inmatningsraden, måtten till tomtgräns
+ * (två gränser, två mått från långsidan och ett från kortsidan), måtten mellan kroppar, yttermåtten,
+ * FG-texten, status i analyserna, nock och entré när kroppen ändras, och kroppen ur ett befintligt hus.
+ *   node test/kropp.test.js
+ */
+'use strict';
+const assert = require('assert');
+const K = require('../js/kropp.js');
+const V = require('../js/volym3d.js');
+let antal = 0;
+const prov = (namn, f) => { f(); antal++; console.log('ok', namn); };
+const nara = (a, b, e = 1e-6, t = '') => assert(Math.abs(a - b) <= e, `${t} ${a} ≠ ${b}`);
+const rekt = (id, x, y, b, d, extra = {}) => Object.assign(K.nyRektangel([x, y], [1, 0], [0, 1], b, d, { id, namn: id, golv: 32.8, takfot: 3, takform: 'sadel' }), extra);
+// tomten: 40 × 30 m med hörnet i (0, 0), som en polylinje runt om
+const TOMT = [{ pts: [[0, 0], [40, 0], [40, 30], [0, 30], [0, 0]] }];
+
+prov('inmatningsraden: mått, relativt, längd och vinkel, absolut', () => {
+  assert.deepStrictEqual(K.tolka('12,6x9'), { typ: 'matt', b: 12.6, d: 9 });
+  assert.deepStrictEqual(K.tolka('12,6 × 9'), { typ: 'matt', b: 12.6, d: 9 });
+  assert.deepStrictEqual(K.tolka('8*5,5'), { typ: 'matt', b: 8, d: 5.5 });
+  let r = K.tolka('@3;4', { bas: [10, 10], axel: 0 });
+  assert.deepStrictEqual(r.p, [13, 14]);
+  r = K.tolka('@3,4', { bas: [10, 10], axel: 0 });
+  assert.deepStrictEqual(r.p, [13, 14], 'med @ delar kommat talparet');
+  r = K.tolka('@3;0', { bas: [0, 0], axel: 90 });
+  nara(r.p[0], 0, 1e-9); nara(r.p[1], 3, 1e-9);
+  r = K.tolka('6<90', { bas: [1, 1], axel: 0 });
+  nara(r.p[0], 1, 1e-9); nara(r.p[1], 7, 1e-9);
+  r = K.tolka('5', { bas: [0, 0], mot: [0, -1] });
+  assert.deepStrictEqual(r.p, [0, -5], 'ensam längd mot markören');
+  r = K.tolka('12,6', { bas: [0, 0], mot: [1, 0] });
+  nara(r.p[0], 12.6, 1e-9, 'utan @ är kommat ett decimalkomma');
+  r = K.tolka('153410;6432110');
+  assert.deepStrictEqual(r, { typ: 'punkt', p: [153410, 6432110], absolut: true });
+  r = K.tolka('153410,5 6432110,25');
+  assert.deepStrictEqual(r.p, [153410.5, 6432110.25]);
+  assert.strictEqual(K.tolka('hej'), null);
+  assert.strictEqual(K.tolka('6<90'), null, 'vinkel kräver en förra punkt');
+  assert.strictEqual(K.tolka('0x5'), null);
+});
+
+prov('måtten till tomtgräns: två gränser, två från långsidan och ett från kortsidan', () => {
+  const v = rekt('h', 5, 6, 12.8, 9.4);
+  const m = K.gransmatt(v.fotavtryck, TOMT);
+  assert.strictEqual(m.length, 3);
+  // långsidan (12,8) mot södra gränsen från båda hörnen, kortsidan mot västra från det gemensamma hörnet
+  nara(m[0].d, 6, 1e-9); nara(m[1].d, 6, 1e-9); nara(m[2].d, 5, 1e-9);
+  assert.deepStrictEqual(m[0].fran, [5, 6]); assert.deepStrictEqual(m[0].till, [5, 0]);
+  assert.deepStrictEqual(m[1].fran, [17.8, 6]); assert.deepStrictEqual(m[1].till, [17.8, 0]);
+  assert.deepStrictEqual(m[2].fran, [5, 6], 'två mått till samma hörn'); assert.deepStrictEqual(m[2].till, [0, 6]);
+  // närmare norra och östra gränsen: måtten byter sida
+  const n = K.gransmatt(rekt('n', 25, 18, 12, 9).fotavtryck, TOMT);
+  nara(n[0].d, 3, 1e-9); nara(n[1].d, 3, 1e-9); nara(n[2].d, 3, 1e-9);
+  assert(n.slice(0, 2).every(x => Math.abs(x.till[1] - 30) < 1e-9), 'långsidan mot norra gränsen');
+  assert(Math.abs(n[2].till[0] - 40) < 1e-9, 'kortsidan mot östra gränsen');
+  // en kortare sida mot en närmare gräns: långsidan får ändå två mått
+  const s = K.gransmatt(rekt('s', 1, 10, 6, 14).fotavtryck, TOMT);
+  assert(Math.abs(s[0].till[0]) < 1e-9 && Math.abs(s[1].till[0]) < 1e-9, 'långsidan (14 m) mot västra gränsen');
+  // en vriden kropp mäts vinkelrätt mot gränsen
+  const vr = rekt('v', 10, 10, 10, 6); V.vrid(vr, 10, 15, 13);
+  const vm = K.gransmatt(vr.fotavtryck, TOMT);
+  assert.strictEqual(vm.length, 3);
+  vm.forEach(x => { const d = [x.till[0] - x.fran[0], x.till[1] - x.fran[1]]; assert(Math.abs(d[0]) < 1e-9 || Math.abs(d[1]) < 1e-9, 'vinkelrätt mot gränsen'); });
+  assert.deepStrictEqual(K.gransmatt(vr.fotavtryck, []), []);
+});
+
+prov('måtten mellan kroppar: tillbyggnaden mot huvudbyggnaden', () => {
+  const h = rekt('h', 5, 6, 12.8, 9.4, { status: 'befintlig' });
+  const t = rekt('t', 17.8, 6.3, 4, 5.6, { status: 'tillbyggnad' });
+  const r = K.relativaMatt([h, t]);
+  assert.strictEqual(r.length, 2);
+  assert(r.every(x => x.kropp === 't' && x.mot === 'h'), 'den mindre måttsätts mot den större');
+  nara(r[0].d, 0.3, 1e-9, 'indraget 0,3 m som i ägarens exempel');
+  nara(r[1].d, 3.5, 1e-9);
+  // flytta 0,2 m längs måttets riktning: måttet blir 0,5
+  const u = [r[0].ande[0] - r[0].fast[0], r[0].ande[1] - r[0].fast[1]], l = Math.hypot(...u);
+  K.flytta([h, t], 't', u[0] / l * 0.2, u[1] / l * 0.2);
+  nara(K.relativaMatt([h, t])[0].d, 0.5, 1e-9);
+  // kroppar som inte ligger an får inga mått
+  assert.deepStrictEqual(K.relativaMatt([h, rekt('x', 30, 20, 3, 3)]), []);
+  // samma linje i båda ändar: inga mått
+  assert.deepStrictEqual(K.relativaMatt([rekt('a', 0, 0, 10, 8), rekt('b', 10, 0, 4, 8)]), []);
+});
+
+prov('yttermåtten: en lång och en kort sida, inte fogen och helst inte där gränsmåtten är', () => {
+  const h = rekt('h', 5, 6, 12.8, 9.4, { status: 'befintlig' });
+  const t = rekt('t', 17.8, 6.3, 4, 5.6, { status: 'tillbyggnad' });
+  const s = i => K.sidor(t.fotavtryck).find(x => x.i === i);
+  const yt = K.yttermattSidor(t, [h, t], K.gransmatt(t.fotavtryck, TOMT));
+  assert.strictEqual(yt.length, 2);
+  assert(!K.fogsidor(t, [h, t]).has(yt[0]) && !K.fogsidor(t, [h, t]).has(yt[1]), 'inte fogen mot huset');
+  assert(yt.some(i => Math.abs(s(i).u[0]) > 0.99) && yt.some(i => Math.abs(s(i).u[1]) > 0.99), 'en sida i varje riktning');
+  assert.deepStrictEqual(K.yttermattSidor(h, [h, t], []).sort(), [2, 3], 'norra och västra sidan, som i exemplet');
+  const l = K.nyPolygon([[0, 0], [10, 0], [10, 4], [4, 4], [4, 9], [0, 9]], { id: 'l', namn: 'L', golv: 1 });
+  assert.strictEqual(K.yttermattSidor(l, [l], []).length, 6, 'en L-form får alla sidor');
+});
+
+prov('FG-texten och höjder med decimalkomma', () => {
+  const h = rekt('h', 5, 6, 12.8, 9.4, { status: 'befintlig' });
+  const t = rekt('t', 17.8, 6.3, 4, 5.6, { status: 'tillbyggnad' });
+  assert.strictEqual(K.fgText(h, [h, t]), 'FG +32,8');
+  assert.strictEqual(K.fgText(t, [h, t]), 'FG lika bef');
+  t.golv = 32.95;
+  assert.strictEqual(K.fgText(t, [h, t]), 'FG +32,95');
+  t.golv = NaN;
+  assert.strictEqual(K.fgText(t, [h, t]), 'FG ?');
+  assert.strictEqual(K.hojdText(100), '100'); assert.strictEqual(K.hojdText(-1.5), '−1,5'); assert.strictEqual(K.hojdText(12.345), '12,35');
+});
+
+prov('status: rivs räknas inte i analyserna, ersatta hus och BYA', () => {
+  const a = rekt('a', 0, 0, 10, 10), b = rekt('b', 20, 0, 5, 4, { status: 'rivs', kalla: 'LM-2' }), c = rekt('c', 0, 20, 10, 5, { status: 'befintlig', kalla: 'LM-1' });
+  assert.deepStrictEqual(K.forAnalys([a, b, c]).map(v => v.id), ['a', 'c']);
+  assert.deepStrictEqual([...K.ersatta([a, b, c])].sort(), ['LM-1', 'LM-2']);
+  const s = K.bya([a, b, c]);
+  nara(s.tillkommande, 100); nara(s.befintlig, 50); nara(s.rivs, 20); nara(s.totalt, 150);
+  const n = K.normalisera({ fotavtryck: [[0, 0], [0, 1], [1, 1], [1, 0]], entre: { sida: 9, t: 0.5 } });
+  assert.strictEqual(n.status, 'ny'); assert.strictEqual(n.huvudbyggnad, false); assert.strictEqual(n.entre, null);
+  assert(K.area(n.fotavtryck) > 0, 'moturs');
+});
+
+prov('takform och nock: prisma och rätblock byter typ, nocken kan läggas tvärs', () => {
+  const v = rekt('v', 0, 0, 12, 8);
+  assert.strictEqual(v.primitiv.typ, 'prisma'); nara(v.nockriktning, 0);
+  K.satTakform(v, 'platt');
+  assert.strictEqual(v.primitiv.typ, 'block'); assert.strictEqual(v.takform, 'platt');
+  K.satTakform(v, 'valm');
+  assert.strictEqual(v.primitiv.typ, 'prisma'); assert.strictEqual(v.takform, 'valm'); assert(v.taklutning > 0);
+  const fore = v.fotavtryck.map(p => p.join()).sort();
+  const val = K.nockVal(v);
+  assert.strictEqual(val.length, 2); assert(val[0].vald);
+  K.satNock(v, 90);
+  nara(v.nockriktning, 90);
+  assert.deepStrictEqual(v.fotavtryck.map(p => p.join()).sort(), fore, 'samma fotavtryck med nocken tvärs');
+  K.satTakform(v, 'sadel');
+  nara(v.nockriktning, 90);
+  nara(V.topp(v) - v.golv - v.takfot, 6 * Math.tan(v.taklutning * Math.PI / 180), 1e-6, 'sadeltak med nocken tvärs: gavlarna på långsidorna');
+  K.satTakform(v, 'pulpet');
+  assert.strictEqual(K.nockVal(v).length, 4, 'pulpet: högt vid vilken sida som helst');
+  // polygon
+  const l = K.nyPolygon([[0, 0], [10, 0], [10, 6], [0, 6]], { id: 'p', namn: 'p', golv: 0 });
+  K.satTakform(l, 'sadel'); nara(l.nockriktning, 0);
+  K.satNock(l, 90); nara(l.nockriktning, 90);
+});
+
+prov('entrén följer med när kroppen flyttas, vrids, får nya hörn eller nocken läggs om', () => {
+  const v = rekt('v', 0, 0, 12, 8);
+  v.entre = { sida: 0, t: 0.25 };
+  let e = K.entrePunkt(v);
+  assert.deepStrictEqual(e.p, [3, 0]); assert.deepStrictEqual(e.n, [0, -1]);
+  K.flytta([v], 'v', 5, 5);
+  assert.deepStrictEqual(K.entrePunkt(v).p, [8, 5]);
+  K.satNock(v, 90);   // prismat vrids om: hörnen får ny ordning
+  e = K.entrePunkt(v);
+  nara(e.p[0], 8, 1e-6); nara(e.p[1], 5, 1e-6); assert.deepStrictEqual(e.n.map(Math.round), [0, -1]);
+  K.satHorn(v, [[5, 5], [17, 5], [17, 15], [5, 15]]);   // djupare
+  e = K.entrePunkt(v);
+  nara(e.p[0], 8, 1e-6); nara(e.p[1], 5, 1e-6);
+  assert(['block', 'prisma'].includes(v.primitiv.typ), 'en rektangel i samma riktning förblir ett prisma');
+  K.satHorn(v, [[5, 5], [17, 5], [17, 15], [8, 15], [5, 12]]);
+  assert.strictEqual(v.primitiv.typ, 'polygon');
+  nara(K.entrePunkt(v).p[1], 5, 1e-6);
+});
+
+prov('kroppen ur ett befintligt hus och rensade hörn', () => {
+  const b = { id: 'abc', fotavtryck: [[0, 0], [0, 10], [5, 10], [10, 10], [10, 0], [0, 0]], mark: 101.234, hojd: 5.55, huvudbyggnad: true };
+  const v = K.franHus(b, { id: 'k1', namn: 'Hus', golv: NaN });
+  assert.strictEqual(v.status, 'befintlig'); assert.strictEqual(v.kalla, 'abc'); assert.strictEqual(v.huvudbyggnad, true);
+  assert.strictEqual(v.fotavtryck.length, 4, 'slutpunkten och hörnet mitt på sidan är borta');
+  assert(K.area(v.fotavtryck) > 0);
+  nara(v.golv, 101.23, 1e-9); nara(v.takfot, 5.6, 1e-9);
+  assert(K.arRektangel(v.fotavtryck));
+});
+
+prov('flytta och vrida följer länkade kroppar (kedjan i 3D-vyn)', () => {
+  const a = rekt('a', 0, 0, 10, 8), b = rekt('b', 10, 0, 4, 4), c = rekt('c', 30, 0, 4, 4);
+  V.vaxlaLank(a, b);
+  K.flytta([a, b, c], 'a', 1, 2);
+  assert.deepStrictEqual(b.fotavtryck[0], [11, 2]); assert.deepStrictEqual(c.fotavtryck[0], [30, 0]);
+  K.vrid([a, b, c], 'b', 90, [11, 2]);
+  nara(a.primitiv.vrid, 90, 1e-9);
+});
+
+console.log(`${antal} prov gick igenom`);

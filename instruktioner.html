@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.13.6"></script>
-  <script src="js/kalla.js?v=0.13.6" defer></script>
-  <script src="js/tema.js?v=0.13.6"></script>
-  <script src="js/synpunkter.js?v=0.13.6" defer></script>
-  <script src="js/stod.js?v=0.13.6" defer></script>
+  <script src="js/version.js?v=0.14.0"></script>
+  <script src="js/kalla.js?v=0.14.0" defer></script>
+  <script src="js/tema.js?v=0.14.0"></script>
+  <script src="js/synpunkter.js?v=0.14.0" defer></script>
+  <script src="js/stod.js?v=0.14.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.13.6">
+  <link rel="stylesheet" href="app.css?v=0.14.0">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -116,7 +116,7 @@
           <li><strong>01 Plats.</strong> Börja ett nytt projekt eller öppna ett sparat under Projekt, se nedan. Sök fram platsen, välj <em>Rita område på kartan</em> och dra upp en rektangel. Eller välj <em>Punkt och radie</em>, ange radien och klicka på kartan: området blir en kvadrat med punkten i mitten. Kanterna hamnar på jämna 10 m. Dra i handtagen mitt på sidorna för att ändra storleken, dra i ramen för att flytta området, eller klicka på krysset i hörnet för att börja om. Skriv projektets eller fastighetens namn, eller välj <em>Hämta från kartan</em> och klicka på fastigheten: beteckningen fylls i (kräver Fastighetsindelning beställd). Byter du namn efter att underlaget är skapat ligger underlaget kvar; zip-filen har det gamla namnet tills du väljer <em>Skapa</em> igen. Kontrollera koordinatsystemet; Höjdkurvor föreslår det som kommunen använder. Här anger du också nollpunkt, vridning och inloggning.</li>
           <li><strong>02 Underlag.</strong> Välj ritprogram, så ställs formaten in efter det. Under Terräng, Laserdata, Kartdata och Sektioner väljer du vad zip-filen ska innehålla.</li>
           <li><strong>03 Analys.</strong> Kryssa i <em>Skapa platsanalysblad</em> om du vill ha platsanalysen, se nedan.</li>
-          <li><strong>04 Skiss.</strong> Lägg till volymer om du vill pröva ett hus på platsen. Steget kan hoppas över.</li>
+          <li><strong>04 Skiss.</strong> Rita byggnader på tomten i plan, eller skissa i cad-apa, om du vill pröva ett hus på platsen. Steget kan hoppas över.</li>
           <li>Välj <em>Skapa</em>. Allt hämtas och räknas i din webbläsare. Stora områden och många tillval tar längre tid. Kontrollera resultatet på kartan och ladda ner zip-filen. Den packas när du väljer <em>Ladda ner</em>, vilket kan ta en stund första gången. Underlaget sparas i webbläsaren, så det finns kvar om du går till en annan sida eller laddar om.</li>
         </ol>
         <dl class="par">
@@ -147,13 +147,33 @@
 
       <section id="skiss">
         <h2><span class="nr">06</span>Skiss och cad-apa</h2>
-        <p>I steg 04 Skiss kan du pröva enkla volymer på platsen. De räknas med i skuggstudien, horisonten och skyfallet nästa gång du väljer Skapa, och syns i 3D-vyn.</p>
+        <p>I steg 04 Skiss ritar du byggnader på platsen. De räknas med i skuggstudien, horisonten och skyfallet nästa gång du väljer Skapa, och syns i 3D-vyn.</p>
         <ul>
+          <li><strong>Rita i plan.</strong> Byggnaderna i plan mot fastighetsgränserna, med mått som på en situationsplan. Se <a href="#plan">Rita i plan</a> nedan.</li>
           <li><strong>Rita i cad-apa.</strong> Öppnar ritprogrammet <a href="https://cad-apa.danaid.cloud/">cad-apa</a> i en ny flik med platsen, terrängen och kurvorna. När huset är skissat skickar du det tillbaka från cad-apa, och volymerna dyker upp i steg 04. Samma sak gör <em>Fortsätt rita i cad-apa</em> under resultatet.</li>
           <li><strong>Importera fil.</strong> En skiss sparad från cad-apa, eller en DXF där varje sluten polylinje blir en volym. Ange om DXF-filen är ritad i lokala koordinater eller i SWEREF 99.</li>
           <li><strong>Ändra i listan.</strong> Golvnivå i RH 2000 (tomt betyder marken vid husets mitt), höjd till takfot, takform och taklutning.</li>
           <li><strong>Modellera i 3D.</strong> Rita volymer direkt i 3D-vyn, se nedan.</li>
         </ul>
+        <h3 id="plan">Rita i plan</h3>
+        <p><em>Rita i plan</em> öppnar planvyn: tomten uppifrån med fastighetsgränserna och de befintliga husen, om du har valt <em>Fastighetsgränser</em> och <em>Befintliga byggnader</em> och skapat underlaget. Utan dem går det att rita ändå, men inte mot gränserna. Samma byggnader går att ändra i 3D-vyn; <em>3D</em> och <em>Plan</em> byter mellan vyerna. Höjdkurvor ritar bara byggnadernas utsida: form, höjd och tak.</p>
+        <ul>
+          <li><strong>Rektangel</strong> (R): klicka första hörnet och sedan det motstående, eller skriv måtten, till exempel <code>12,6x9</code>, och Enter. Rektangeln följer ritriktningen.</li>
+          <li><strong>Polygon</strong> (P): klicka hörnen, eller skriv dem i raden längst ner: en längd (<code>6</code>) går mot markören, <code>6&lt;90</code> är längd och vinkel från ritriktningen, <code>@3;4</code> är ett steg längs och tvärs ritriktningen, och <code>E;N</code> (två stora tal) är koordinater. Enter, dubbelklick eller ett klick på första hörnet stänger.</li>
+          <li><strong>Riktning</strong> (D): klicka på en gräns, en fasad eller ett hus. Rektanglar, Ortho och vinklar följer den. Planvyn börjar med riktningen efter den närmaste gränsen.</li>
+          <li><strong>Snäpp och Ortho</strong> (F3 och F8): klick och drag fäster mot hörn, mittpunkter och linjer, också vinkelrätt mot en linje. Ortho håller linjerna längs och tvärs ritriktningen.</li>
+          <li><strong>Befintlig</strong> (L): klicka på ett grått hus från Lantmäteriet så blir det en byggnad i skissen, med status Befintlig. Höjd och golv är skattade; skriv in rätt värden. Huset ersätts av byggnaden i 3D-vyn och analyserna.</li>
+          <li><strong>Entré</strong> (E): klicka på fasaden där entrépilen ska vara.</li>
+          <li><strong>Välj</strong> (V): klicka på en byggnad och dra för att flytta den. Tar du i ett hörn fäster hörnet mot det du drar till. På en vald byggnad flyttar de små rutorna i hörnen ett hörn; en rektangel förblir en rektangel (Alt släpper det).</li>
+        </ul>
+        <p>I panelen till höger ändrar du namn, status (Ny, Tillbyggnad, Befintlig eller Rivs), om byggnaden är huvudbyggnad, färdigt golv (FG) i RH 2000, höjd till takfot, tak, lutning och nockens riktning. Under <em>Hörn och sidor</em> skriver du in koordinater och sidlängder. BYA räknas per byggnad och för alla tillsammans.</p>
+        <p>I planen ritas nya byggnader med tjock linje och fyllning, tillbyggnader skrafferade, befintliga med tunn linje och de som ska rivas streckade. Huvudbyggnaden får ett kryss. Taket ritas inte, som på en situationsplan. Måtten:</p>
+        <ul>
+          <li><strong>Till tomtgräns</strong>: tre mått vinkelrätt mot två gränser, två från långsidan och ett från kortsidan, så att två av dem går till samma hörn. Klicka på ett mått och skriv ett nytt, så flyttas byggnaden.</li>
+          <li><strong>Yttermått</strong>: en lång och en kort sida. Klicka och skriv för att ändra längden.</li>
+          <li><strong>Mellan byggnader</strong>: ligger en tillbyggnad an mot huset måttsätts hur långt dess hörn ligger från husets, längs fogen. Har tillbyggnaden samma golv som det befintliga står det <em>FG lika bef</em>.</li>
+        </ul>
+        <p>Fastighetsgränserna är Lantmäteriets och inte juridiskt säkerställda, så måtten till gränsen är ungefärliga. Hörnkoordinaterna (under <em>Visa</em>) är det säkra måttet. Ctrl+Z ångrar och Ctrl+Y gör om. Allt sparas i projektet. Välj <em>Skapa</em> igen för att räkna om skuggor, horisont och filer med byggnaderna; de som ska rivas räknas inte med.</p>
         <p>Stoppar webbläsaren den nya fliken: tillåt popup-fönster för sidan, eller välj <em>Spara platsfil för cad-apa</em> och öppna filen i cad-apa.</p>
         <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen med det du har skapat: höjdkurvor, träd, byggnader, fastighetsgränser, vägar och volymerna. Byggnader utan höjd ur laserdatan visas som fotavtryck på marken. Har du valt ortofoto ligger det på terrängen. Knapparna överst slår av och på varje lager, och <em>Kurvfärg</em> byter färg på höjdkurvorna. Dra för att snurra. Välj <em>Flytta</em> om du hellre vill att dragningen flyttar vyn; högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Dubbelklicka eller välj <em>Återställ vy</em> för att komma tillbaka till början. Vägar och gångvägar är egna lager.</p>
         <p><em>Skuggor</em> tänder solen. Välj datum och dra i tiden, eller välj <em>Vårdagjämning</em>, <em>Midsommar</em> eller <em>Vintersolstånd</em>. <em>Spela dagen</em> går från soluppgång till solnedgång. Terrängen, husen, volymerna och träden kastar skugga; <em>Trädskuggor</em> stänger av trädens om vyn blir seg. Solen räknas som i soldiagrammet.</p>
