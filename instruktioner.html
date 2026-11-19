@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.13.5"></script>
-  <script src="js/kalla.js?v=0.13.5" defer></script>
-  <script src="js/tema.js?v=0.13.5"></script>
-  <script src="js/synpunkter.js?v=0.13.5" defer></script>
-  <script src="js/stod.js?v=0.13.5" defer></script>
+  <script src="js/version.js?v=0.13.6"></script>
+  <script src="js/kalla.js?v=0.13.6" defer></script>
+  <script src="js/tema.js?v=0.13.6"></script>
+  <script src="js/synpunkter.js?v=0.13.6" defer></script>
+  <script src="js/stod.js?v=0.13.6" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.13.5">
+  <link rel="stylesheet" href="app.css?v=0.13.6">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -117,11 +117,12 @@
           <li><strong>02 Underlag.</strong> Välj ritprogram, så ställs formaten in efter det. Under Terräng, Laserdata, Kartdata och Sektioner väljer du vad zip-filen ska innehålla.</li>
           <li><strong>03 Analys.</strong> Kryssa i <em>Skapa platsanalysblad</em> om du vill ha platsanalysen, se nedan.</li>
           <li><strong>04 Skiss.</strong> Lägg till volymer om du vill pröva ett hus på platsen. Steget kan hoppas över.</li>
-          <li>Välj <em>Skapa</em>. Allt hämtas och räknas i din webbläsare. Stora områden och många tillval tar längre tid. Kontrollera resultatet på kartan och ladda ner zip-filen. Den packas när du väljer <em>Ladda ner</em>, vilket kan ta en stund första gången.</li>
+          <li>Välj <em>Skapa</em>. Allt hämtas och räknas i din webbläsare. Stora områden och många tillval tar längre tid. Kontrollera resultatet på kartan och ladda ner zip-filen. Den packas när du väljer <em>Ladda ner</em>, vilket kan ta en stund första gången. Underlaget sparas i webbläsaren, så det finns kvar om du går till en annan sida eller laddar om.</li>
         </ol>
         <dl class="par">
           <dt id="projekt">Projekt</dt><dd>Det du matar in och väljer sparas som ett projekt i webbläsaren medan du arbetar: området, valen, skissens volymer, sektionerna, horisontens punkt och de tak, träd och hus du har rättat. Laddar du om sidan finns allt kvar. Under <em>Senaste projekt</em> i steg 01 öppnar du ett annat projekt, och <em>Nytt projekt</em> börjar om med ett tomt. Medan underlaget skapas går det inte att byta projekt. Hamnar volymer eller sektioner utanför området när du flyttar det ligger de kvar i projektet, och appen säger till.
             <br><em>Spara projektfil</em> sparar projektet som en fil (<em>.hojdkurvor</em>) att lägga i projektmappen, flytta till en annan dator eller ge till en kollega. Den innehåller inget underlag från Lantmäteriet och ingen inloggning, så underlaget hämtas igen när du väljer <em>Skapa</em>. En prick på knappen betyder att du har ändrat något sedan filen sparades. Öppna filen med <em>Öppna projektfil</em>, eller dra den till kartan. Projektfilen ligger också i zip-filen med underlaget. Är filen och webbläsaren oense om samma projekt får du välja vilken version som gäller, eller öppna filen som en kopia.
+            <br>Det senaste underlaget sparas också, för de tre senaste projekten. Öppnar du projektet igen visas det utan att något hämtas. Ändrar du området, nollpunkten, skissen eller något annat som underlaget bygger på tas det sparade bort, och du väljer <em>Skapa</em> igen. Är underlaget mycket stort sparas det utan zip-filen, eller inte alls; sammanfattningen säger vilket.
             <br>Projekten ligger kvar i webbläsaren tills du tar bort dem under <em>Sparat i webbläsaren</em> i steg 02, eller rensar webbplatsdata. Spara en projektfil av det du vill behålla.</dd>
           <dt>Kopiera område</dt><dd>Med <em>Kopiera</em> och <em>Klistra in koordinater</em> under Område flyttar du hörnens koordinater, till exempel mellan två projekt eller till en beställning. <em>Klistra in koordinater</em> öppnar en ruta där du klistrar in väst, öst, syd och nord och väljer kommun och koordinatsystem. Rutan visar vilken kommun området hamnar i med det valda systemet, så att du ser direkt om koordinaterna hör till ett annat.</dd>
           <dt>Projektlänk</dt><dd><em>Kopiera projektlänk</em> i steg 01 ger en länk med området och alla val, men utan inloggning och utan skissen och rättelserna. Skicka den till en kollega för att skapa samma underlag igen. Vill du ha med allt, skicka projektfilen.</dd>

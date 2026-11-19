@@ -198,6 +198,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/bestall.js` – beställningsformuläret
 - `js/synpunkter.js` – BETA-knappen och formuläret Skicka synpunkter, på alla sidor
 - `js/stod.js` – knappen STÖD och texten Stöd utvecklingen (dialogen och avsnittet på Om-sidan), på alla sidor
+- `js/resultat.js` (`Resultat`, 0.13.6) – det senaste resultatet sparat i IndexedDB per projekt: omvandlingen av `state.senaste` (typade arrayer, canvas som bild, husens tak) och lagringen med tak för storleken
+- `bilder/swish-qr.png` – Swish-QR:n i Stöd utvecklingen (0.13.6), ur Swish egen QR-fil utan ramen
 - `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, projektet, felrapport
 - `data/kommuner.json` – förenklade kommungränser med kommunkod och föreslagen
   SWEREF 99-zon (fältet `epsg`; Kiruna saknar värde eftersom kommunen använder
@@ -255,11 +257,14 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 
 ## Data som sparas i webbläsaren
 
-- IndexedDB (databasen `terrangunderlag`, version 2): marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt
+- IndexedDB (databasen `terrangunderlag`, version 3): marktäcke, byggnader och fastighetsindelning, en fil per kommun och produkt
   (objektlagringen `filer`). Appen frågar Lantmäteriet om
   filen ändrats innan den används igen. Projekten (objektlagringen `projekt`, 0.13.0): utsnitt, val och
-  inmatning, sparade en halv sekund efter varje ändring. Under 02 Underlag, "Sparat i
-  webbläsaren", kan man ta bort enstaka filer och projekt eller tömma filerna.
+  inmatning, sparade en halv sekund efter varje ändring. Det senaste resultatet per projekt
+  (objektlagringen `resultat`, 0.13.6, `js/resultat.js`): `state.senaste` och zip-filens filer,
+  för de tre senaste projekten och högst cirka 600 MB; läses in när projektet öppnas och tas bort
+  när något som resultatet bygger på ändras. Under 02 Underlag, "Sparat i
+  webbläsaren", kan man ta bort enstaka filer och projekt (med resultatet) eller tömma filerna.
 - localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`), dolda och rättade träd (`terrang-tradval`) och dolda hus (`terrang-husval`),
   formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
   om användaren väljer det, inloggningen.

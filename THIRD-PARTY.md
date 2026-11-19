@@ -10,7 +10,7 @@ Ett kommersiellt undantag från Agrell Arkitektur AB gäller bara Agrell
 Arkitektur AB:s egen kod, aldrig det som står här.
 
 Gås igenom när ett beroende eller en tillgång läggs till eller tas bort
-(senast 0.13.2, 19 november 2026).
+(senast 0.13.6, 19 november 2026).
 
 ## Bibliotek som följer med appen (`vendor/`)
 
@@ -54,6 +54,12 @@ OFL eller AGPL för det.
   inte av AGPL eller av ett kommersiellt undantag. Fältet `epsg` (föreslagen
   SWEREF 99-zon) är sammanställt ur Lantmäteriets uppgifter om vilka zoner
   kommunerna använder.
+- `bilder/swish-qr.png` (0.13.6): QR-koden för Swish till Danaid Open Source,
+  skapad i Swish egen tjänst för QR-koder och nedskalad, utan ramen runt.
+  Swish-loggan i mitten är Getswish AB:s varumärke och ingår i koden som
+  Swish skapade. Bilden omfattas inte av AGPL
+  eller av ett kommersiellt undantag; den ska bytas mot en egen kod om appen
+  körs av någon annan.
 - `test/data/`: syntetisk testdata skapad för testerna, utom
   `stac-bild-sok-vimmerby.json` (ett svar från Lantmäteriets bildkatalog,
   metadata) och `wkt5845.txt` (koordinatsystemets beskrivning ur

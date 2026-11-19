@@ -47,6 +47,10 @@ assert.ok(!/donation/i.test(om), 'om.html säger donation');
 // Texten om stöd finns sedan 0.13.5 i js/stod.js (Om-sidan och dialogen bakom STÖD i menyraden)
 const stod = las('js/stod.js');
 assert.ok(/class="swish-qr/.test(stod), 'js/stod.js saknar rutan för Swish-QR:n');
+// Swish-QR:n (0.13.6): bilden finns, platshållaren är borta och mejladressen står en gång
+assert.ok(/src="bilder\/swish-qr\.png"/.test(stod) && fs.existsSync(path.join(rot, 'bilder', 'swish-qr.png')), 'Swish-QR:n saknas');
+assert.ok(!/platshallare/.test(stod), 'js/stod.js har kvar platshållaren för Swish-QR:n');
+assert.strictEqual((stod.match(/mailto:/g) || []).length, 1, 'mejladressen ska stå en gång i Stöd utvecklingen');
 assert.ok(!/donation/i.test(stod), 'js/stod.js säger donation');
 assert.ok(/data-stod-innehall/.test(om), 'om.html fyller inte avsnittet ur js/stod.js');
 for (const sida of ['index.html', 'om.html', 'instruktioner.html', 'bestall.html']) {

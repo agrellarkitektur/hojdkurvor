@@ -123,7 +123,7 @@ Ifylld för Höjdkurvor.
 
 1. **Koppla CLA Assistant** för repot agrellarkitektur/hojdkurvor, med `CLA.md` i en gist, som i cad-apa.
 2. **Juristen:** CLA.md (samma text som i cad-apa) och avtalet om kommersiellt undantag.
-3. **Swish** när Swish Företag är tecknat: QR-koden in i avsnittet Stöd utvecklingen på `om.html`, och texten om att Swish är på väg ut.
+3. ~~**Swish**~~ klart i 0.13.6: QR-koden (`bilder/swish-qr.png`, mottagare Danaid Open Source, 123-718 06 15) i Stöd utvecklingen, och texten om att Swish är på väg är borta.
 
 ## Mall: licensavsnitt i README
 

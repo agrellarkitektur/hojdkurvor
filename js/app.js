@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.13.5';
+  const FILVERSION = '0.13.6';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -977,6 +977,7 @@
     const s = state.senaste, nytt = $('projekt').value.trim();
     if (!s) return false;
     if (s.projektSkapat === undefined) s.projektSkapat = s.projekt;
+    if (s.projekt !== nytt) planeraResultatSpara();
     s.projekt = nytt;
     return nytt !== s.projektSkapat;
   }
@@ -1199,11 +1200,18 @@
     k.textContent = ok ? 'Kopierat' : 'Markerat, kopiera själv';
     setTimeout(() => { k.textContent = 'Kopiera'; }, 1800);
   });
-  function nollstallResultat() {
+  /**
+   * Tar bort resultatet ur panelen och kartan. Det sparade resultatet (0.13.6) tas också bort,
+   * eftersom det inte längre stämmer med det man har matat in, utom med { behall: true }
+   * (när ett annat projekt öppnas).
+   */
+  function nollstallResultat(o) {
+    const behall = !!(o && o.behall === true);
+    if (state.senaste && !behall) glomResultat();
     $('resultat').hidden = true;
     $('visa-3d').hidden = true;
     $('skapa').classList.remove('gjord');
-    state.zipBlob = null; state.zipFiler = null;
+    state.zipBlob = null; state.zipFiler = null; state.zipSparad = null;
     state.senaste = null;
     Object.keys(resultat).forEach(n => visaResultatLager(n, null));
     $('lp-utskrift').hidden = true;
@@ -1545,6 +1553,58 @@
   }
 
   // ------------------------------------------------------------------
+  // Kartlagren ur resultatet. Används av Skapa och när ett sparat resultat läses in (0.13.6).
+  // ------------------------------------------------------------------
+  function visaKurvor(kurvor, tt) {
+    const stil = {
+      HOJDKURVA_10M: { weight: 2.4, opacity: 1 }, HOJDKURVA_5M: { weight: 1.7, opacity: 0.95 }, HOJDKURVA_1M: { weight: 1, opacity: 0.85 },
+      HOJDKURVA_0_5M: { weight: 0.6, opacity: 0.7 }, HOJDKURVA_0_25M: { weight: 0.4, opacity: 0.6 },
+    };
+    const kGrp = L.featureGroup(kurvor.map(k => {
+      const pts = k.pts.map(tt);
+      if (k.sluten) pts.push(pts[0]);
+      return L.polyline(pts, Object.assign({ color: farg('kurva'), renderer: kurvRitare, interactive: false }, stil[k.lager]));
+    }));
+    visaResultatLager('kurvor', kGrp, () => kGrp.setStyle({ color: farg('kurva') }));
+  }
+  /** Laserpunkterna på kartan: urvalet { x, y, k } (högst 25 000). */
+  function visaLaserKarta(lk, tt) {
+    const ritare = L.canvas({ padding: 0.3 }), pts = [];
+    for (let i = 0; i < lk.x.length; i++) {
+      const c = Laser.klassInfo(lk.k[i]).rgb;
+      pts.push(L.circleMarker(tt([lk.x[i], lk.y[i]]), { radius: 1.3, stroke: false, fillOpacity: 0.85, fillColor: `rgb(${c[0]},${c[1]},${c[2]})`, renderer: ritare, interactive: false }));
+    }
+    visaResultatLager('laser', L.layerGroup(pts));
+  }
+  /** En bild på kartan (höjd över mark, ortofotot). Bilden och läget sparas i senaste.kartbilder. */
+  function visaKartbild(senaste, id, kb, opt) {
+    (senaste.kartbilder || (senaste.kartbilder = {}))[id] = { url: kb.url, bounds: kb.bounds, opt };
+    visaResultatLager(id, L.imageOverlay(kb.url, kb.bounds, opt));
+  }
+  function visaFastigheter(fi, tt) {
+    const fstil = g => ({ color: farg('fastighet'), weight: 1.6, opacity: 0.95, dashArray: g.osakerhet > Fastighet.OSAKER ? '6 5' : null, interactive: true });
+    const fgrp = L.featureGroup([
+      ...fi.granser.map(g => L.polyline(g.pts.map(tt), fstil(g))
+        .bindTooltip(`${esc(g.typ)}${g.osakerhet != null ? `, osäkerhet ${fmt(g.osakerhet, 2)} m` : ''}${g.metod ? `<br><small>${esc(g.metod)}</small>` : ''}`, { sticky: true })),
+      ...fi.ytor.filter(y => y.ankare).map(y => L.marker(tt(y.ankare), { interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'fastighet-etikett', html: `<span>${esc(y.etikett)}</span>`, iconSize: null }) })),
+    ]);
+    visaResultatLager('fastigheter', fgrp, () => fgrp.eachLayer(l => { if (l.setStyle) l.setStyle({ color: farg('fastighet') }); }));
+  }
+  function visaMarktacke(m, tt) {
+    visaResultatLager('marktacke', L.layerGroup(m.ytor.map(y => {
+      const f = Marktacke.farg(y.klass);
+      return L.polygon(y.ringar.map(ring => ring.map(tt)), { color: f.css, weight: 0.8, fillColor: f.css, fillOpacity: 0.3 }).bindTooltip(esc(y.klass), { sticky: true });
+    })));
+  }
+  function visaStompunkter(sp, tt) {
+    const spStil = () => ({ color: farg('sp'), weight: 2, fillColor: farg('sp-fyll'), fillOpacity: 1 });
+    const spGrp = L.featureGroup(sp.map(p => L.circleMarker(tt([p.x, p.y]), Object.assign({ radius: 6 }, spStil()))
+      .bindPopup(`<strong>${esc(p.namn || p.id)}</strong><br>${esc(p.typ)}${p.kategori ? ', ' + esc(p.kategori) : ''}<br>${p.z != null ? 'Höjd ' + fmt(p.z, 3) + ' m (RH 2000)<br>' : ''}${p.markering ? 'Markering: ' + esc(p.markering) + '<br>' : ''}${p.beskrivning ? '<small>' + esc(p.beskrivning) + '</small>' : ''}`)));
+    visaResultatLager('stompunkter', spGrp, () => spGrp.setStyle(spStil()));
+  }
+
+  // ------------------------------------------------------------------
   // Skapa underlag
   // ------------------------------------------------------------------
   // Skapa-flödet är uppdelat i steg. Varje steg får körningens objekt `kor`: det som
@@ -1737,12 +1797,12 @@
               '  Filer: _laser_lokal.las och _laser_sweref.las (LAS 1.2, klass bevarad),',
               '         _laser_lokal.xyz (X Y Z R G B, färg per klass, för Archicad). Samma nollpunkt och Z0 som terrängen.');
             sammanExtra.push(['Laserpunkter', `${fmt(z.antal)} st, skannat ${kor.laserDatum}`]);
-            const ritare = L.canvas({ padding: 0.3 }), steg = Math.max(1, Math.ceil(z.antal / 25000)), pts = [];
-            for (let i = 0; i < z.antal; i += steg) {
-              const c = Laser.klassInfo(z.k[i]).rgb;
-              pts.push(L.circleMarker(tt([z.x[i], z.y[i]]), { radius: 1.3, stroke: false, fillOpacity: 0.85, fillColor: `rgb(${c[0]},${c[1]},${c[2]})`, renderer: ritare, interactive: false }));
-            }
-            visaResultatLager('laser', L.layerGroup(pts));
+            // på kartan högst 25 000 punkter; urvalet sparas med resultatet (0.13.6)
+            const steg = Math.max(1, Math.ceil(z.antal / 25000)), n = Math.ceil(z.antal / steg);
+            const lk = { x: new Float64Array(n), y: new Float64Array(n), k: new Uint8Array(n) };
+            for (let i = 0, j = 0; i < z.antal; i += steg, j++) { lk.x[j] = z.x[i]; lk.y[j] = z.y[i]; lk.k[j] = z.k[i]; }
+            kor.senaste.laserKarta = lk;
+            visaLaserKarta(lk, tt);
           }
         }
       } catch (e) {
@@ -1885,7 +1945,7 @@
             const klipp = document.createElement('canvas'); klipp.width = i1 - i0; klipp.height = j1 - j0;
             klipp.getContext('2d').drawImage(homC, -i0, -j0);
             const kb = bildTillKarta(klipp, y.x0 + i0 * y.s, y.y1 - j0 * y.s, y.s, epsg);
-            visaResultatLager('hom', L.imageOverlay(kb.url, kb.bounds, { opacity: 0.85, interactive: false }));
+            visaKartbild(senaste, 'hom', kb, { opacity: 0.85, interactive: false });
             sammanExtra.push(['Höjd över mark', 'bild med världsfil']);
           }
         }
@@ -2118,14 +2178,7 @@
           `  Fastigheter som utsnittet berör (${fi.fastigheter.length}), största delen först:`,
           ...fi.fastigheter.map(f => `    ${f.beteckning}${f.kommun ? ', ' + f.kommun : ''}: ${fmt(f.yta)} m² inom utsnittet` + (f.typ !== 'fastighetsområde' ? ` (${f.typ})` : '')));
         sammanExtra.push(['Fastigheter', `${fi.fastigheter.length} st`]);
-        const fstil = g => ({ color: farg('fastighet'), weight: 1.6, opacity: 0.95, dashArray: g.osakerhet > Fastighet.OSAKER ? '6 5' : null, interactive: true });
-        const fgrp = L.featureGroup([
-          ...fi.granser.map(g => L.polyline(g.pts.map(tt), fstil(g))
-            .bindTooltip(`${esc(g.typ)}${g.osakerhet != null ? `, osäkerhet ${fmt(g.osakerhet, 2)} m` : ''}${g.metod ? `<br><small>${esc(g.metod)}</small>` : ''}`, { sticky: true })),
-          ...fi.ytor.filter(y => y.ankare).map(y => L.marker(tt(y.ankare), { interactive: false, keyboard: false,
-            icon: L.divIcon({ className: 'fastighet-etikett', html: `<span>${esc(y.etikett)}</span>`, iconSize: null }) })),
-        ]);
-        visaResultatLager('fastigheter', fgrp, () => fgrp.eachLayer(l => { if (l.setStyle) l.setStyle({ color: farg('fastighet') }); }));
+        visaFastigheter(fi, tt);
         visaLagring();
       } catch (e) { console.error(e); varningar.push('Fastighetsindelning: ' + e.message); }
     }
@@ -2158,10 +2211,7 @@
           '  DXF-lager (slutna polylinjer, ett lager per typ):',
           ...(ln => typer.map(t => `    ${ln[t]}: ${t}, ${m.klasser[t]} st`))(Marktacke.lagerNamn(m.ytor.map(y => y.klass).concat(m.linjer.map(l => l.klass)))));
         sammanExtra.push(['Marktäcke', `${typer.length} typer, ${m.ytor.length} ytor`]);
-        visaResultatLager('marktacke', L.layerGroup(m.ytor.map(y => {
-          const f = Marktacke.farg(y.klass);
-          return L.polygon(y.ringar.map(ring => ring.map(tt)), { color: f.css, weight: 0.8, fillColor: f.css, fillOpacity: 0.3 }).bindTooltip(esc(y.klass), { sticky: true });
-        })));
+        visaMarktacke(m, tt);
         visaLagring();
       } catch (e) { console.error(e); varningar.push('Marktäcke: ' + e.message); }
     }
@@ -2250,7 +2300,7 @@
         const liten = document.createElement('canvas'); liten.width = Math.ceil(b.W / f); liten.height = Math.ceil(b.H / f);
         liten.getContext('2d').drawImage(c, 0, 0, b.W / f, b.H / f);
         const kb = bildTillKarta(liten, mal.x0 + s * f / 2, mal.y1 - s * f / 2, s * f, epsg);
-        visaResultatLager('ortofoto', L.imageOverlay(kb.url, kb.bounds, { pane: 'ortofotoPane', interactive: false }));
+        visaKartbild(senaste, 'ortofoto', kb, { pane: 'ortofotoPane', interactive: false });
       } catch (e) { console.error(e); varningar.push('Ortofoto: ' + e.message); }
     }
   }
@@ -2274,10 +2324,7 @@
           '  CSV (semikolon): koordinater, lokala koordinater, kvalitet, osäkerhet, markering, lägesbeskrivning och länk till skiss.',
           ...sp.map(p => `    ${p.namn || p.id}: ${p.typ}, ${p.x.toFixed(3)} ${p.y.toFixed(3)}${p.z != null ? ' +' + p.z.toFixed(3) : ''}`));
         sammanExtra.push(['Stompunkter', `${sp.length} st`]);
-        const spStil = () => ({ color: farg('sp'), weight: 2, fillColor: farg('sp-fyll'), fillOpacity: 1 });
-        const spGrp = L.featureGroup(sp.map(p => L.circleMarker(tt([p.x, p.y]), Object.assign({ radius: 6 }, spStil()))
-          .bindPopup(`<strong>${esc(p.namn || p.id)}</strong><br>${esc(p.typ)}${p.kategori ? ', ' + esc(p.kategori) : ''}<br>${p.z != null ? 'Höjd ' + fmt(p.z, 3) + ' m (RH 2000)<br>' : ''}${p.markering ? 'Markering: ' + esc(p.markering) + '<br>' : ''}${p.beskrivning ? '<small>' + esc(p.beskrivning) + '</small>' : ''}`)));
-        visaResultatLager('stompunkter', spGrp, () => spGrp.setStyle(spStil()));
+        visaStompunkter(sp, tt);
       } catch (e) { console.error(e); varningar.push('Stompunkter: ' + e.message); }
     }
   }
@@ -2490,12 +2537,21 @@
     const { extraInfo, filer, infoNamn, namn, res } = kor;
     if (extraInfo.length) filer[infoNamn] = res.filer[infoNamn] + extraInfo.join('\r\n') + '\r\n';
     const mapp = namn.replace(/[^\wåäöÅÄÖ.-]+/g, '_');
-    state.zipFiler = filer; state.zipBlob = null; state.zipNamn = `${mapp}.zip`;
+    state.zipFiler = filer; state.zipBlob = null; state.zipNamn = `${mapp}.zip`; state.zipSparad = null;
     $('ladda-ner').textContent = `Ladda ner ${mapp}.zip (${Object.keys(filer).length} filer)`;
+    $('ladda-ner').disabled = false;
   }
   /** Packar zip-filen en gång per Skapa; sparas sedan till nästa Skapa. */
   async function packaZipNu() {
     if (state.zipBlob) return state.zipBlob;
+    if (!state.zipFiler && state.zipSparad) {   // ett inläst resultat: filerna läses ur webbläsaren först nu
+      const id = state.zipSparad;
+      visaStatus('Läser zip-filens innehåll ur webbläsaren …');
+      const f = await Resultat.lasZip(id);
+      if (state.zipSparad !== id) return null;
+      if (!f) throw new Error('zip-filen finns inte längre i webbläsaren. Välj Skapa igen.');
+      state.zipFiler = f;
+    }
     const filer = state.zipFiler;
     const zip = new JSZip();
     Object.entries(filer).forEach(([fil, innehall]) => zip.file(fil, innehall));
@@ -2525,21 +2581,15 @@
     state.senaste = senaste;
     visaSkugga();
     $('resultat').hidden = false;
+    senaste.visning = { rader, tid: Date.now(), zipNamn: state.zipNamn, antalFiler: Object.keys(filer).length };
     $('visa-3d').hidden = !senaste.rutnat;
     $('skapa').classList.add('gjord');
     matare(null);
     visaStatus(varningar.length ? varningar.join('\n') : 'Klart. Resultatet visas på kartan som kontroll.', false);
 
-    const stil = {
-      HOJDKURVA_10M: { weight: 2.4, opacity: 1 }, HOJDKURVA_5M: { weight: 1.7, opacity: 0.95 }, HOJDKURVA_1M: { weight: 1, opacity: 0.85 },
-      HOJDKURVA_0_5M: { weight: 0.6, opacity: 0.7 }, HOJDKURVA_0_25M: { weight: 0.4, opacity: 0.6 },
-    };
-    const kGrp = L.featureGroup(res.kurvor.map(k => {
-      const pts = k.pts.map(tt);
-      if (k.sluten) pts.push(pts[0]);
-      return L.polyline(pts, Object.assign({ color: farg('kurva'), renderer: kurvRitare, interactive: false }, stil[k.lager]));
-    }));
-    visaResultatLager('kurvor', kGrp, () => kGrp.setStyle({ color: farg('kurva') }));
+    visaKurvor(res.kurvor, tt);
+    senaste.visning.kartlager = Object.keys(resultat);
+    sparaResultat(true);
     fyllUtskrift();
     visaPaKartan();
     $('resultat').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -2579,9 +2629,125 @@
   });
 
 
+  // ------------------------------------------------------------------
+  // Resultatet sparat i webbläsaren (0.13.6, BJ). Lagringen i js/resultat.js.
+  // ------------------------------------------------------------------
+  // Efter Skapa sparas state.senaste och zip-filens filer i IndexedDB för projektet. När projektet
+  // öppnas igen (också efter Instruktioner, Om eller Beställ och tillbaka) läses det in och
+  // lagren ritas om. Det sparade tas bort när man ändrar något som gör resultatet inaktuellt
+  // (nollstallResultat) och när projektet tas bort.
+  const aktivtProjekt = () => (state.proj && state.proj.d && state.proj.d.projekt ? state.proj.d.projekt.id : null);
+  let resultatKo = Promise.resolve();
+  const iKo = f => { resultatKo = resultatKo.then(f).catch(e => console.warn('Det sparade underlaget:', e)); return resultatKo; };
+  /** Det som sparas: state.senaste utan ytmodellen (stor, används inte efter Skapa) och utan ortofotots canvas (görs om ur bilden). */
+  function resultatAttSpara(s) {
+    const d = Object.assign({}, s);
+    delete d.yta;
+    if (s.ortofoto) d.ortofoto = Object.assign({}, s.ortofoto, { canvas: null });
+    return d;
+  }
+  /** Sparar det som visas. medZip: också zip-filens filer (efter Skapa). */
+  function sparaResultat(medZip) {
+    const id = aktivtProjekt(), s = state.senaste, zip = medZip ? state.zipFiler : null;
+    if (!id || !s || typeof Resultat === 'undefined') return;
+    clearTimeout(resultatTimer);
+    iKo(async () => {
+      if (state.senaste !== s) return;   // ett nytt Skapa eller ett annat projekt
+      const r = medZip ? await Resultat.spara(id, resultatAttSpara(s), zip, { app: VERSION }) : await Resultat.sparaData(id, resultatAttSpara(s), VERSION);
+      if (medZip && state.senaste === s) visaSparat(r);
+    });
+  }
+  let resultatTimer = 0;
+  /** Efter en ändring i 3D-vyn (träd, hus, skiss) eller av namnet: spara om utan zip-filen. */
+  function planeraResultatSpara() {
+    clearTimeout(resultatTimer);
+    resultatTimer = setTimeout(() => sparaResultat(false), 1500);
+  }
+  function glomResultat() {
+    const id = aktivtProjekt();
+    clearTimeout(resultatTimer);
+    if (id && typeof Resultat !== 'undefined') iKo(() => Resultat.taBort(id));
+  }
+  /** En rad i sammanfattningen om var underlaget finns. */
+  function visaSparat(r) {
+    const dl = $('sammanfattning');
+    let dd = dl.querySelector('dd[data-sparat]');
+    if (!dd) {
+      const dt = document.createElement('dt'); dt.textContent = 'Sparat';
+      dd = document.createElement('dd'); dd.dataset.sparat = '';
+      dl.append(dt, dd);
+    }
+    dd.textContent = !r || !r.sparat ? 'inte i webbläsaren (för stort); försvinner om du byter sida'
+      : r.zip ? 'i webbläsaren, finns kvar om du byter sida' : 'i webbläsaren utan zip-filen (för stor)';
+  }
+  const bildTillCanvas = url => new Promise((ok, fel) => {
+    const img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0); ok(c); };
+    img.onerror = () => fel(new Error('bilden kunde inte läsas'));
+    img.src = url;
+  });
+  /** Läser in det sparade resultatet för projektet, om området och systemet är desamma. */
+  async function lasInResultat(id) {
+    if (!id || typeof Resultat === 'undefined') return;
+    let r = null;
+    try { await resultatKo; r = await Resultat.las(id); } catch (e) { console.warn('Det sparade underlaget kunde inte läsas:', e); return; }
+    const inaktuellt = () => state.senaste || state.skapar || aktivtProjekt() !== id;
+    if (!r || inaktuellt()) return;
+    const s = r.data, u = state.utsnitt;
+    if (!u || !s.r || s.epsg !== state.epsg || ['xmin', 'xmax', 'ymin', 'ymax'].some(k => Math.abs(u[k] - s.r[k]) > 1e-6)) return;
+    try {
+      if (s.ortofoto && s.ortofoto.bild && !s.ortofoto.canvas) s.ortofoto.canvas = await bildTillCanvas(s.ortofoto.bild);
+    } catch (e) { console.warn(e); s.ortofoto = null; }
+    if (inaktuellt()) return;
+    visaInlastResultat(s, r.meta);
+  }
+  function visaInlastResultat(s, meta) {
+    const v = s.visning || {};
+    const dl = $('sammanfattning');
+    dl.innerHTML = '';
+    (v.rader || []).forEach(([a, b]) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = a; dd.textContent = b; dl.append(dt, dd); });
+    state.senaste = s;
+    state.zipFiler = null; state.zipBlob = null; state.zipNamn = v.zipNamn || 'underlag.zip';
+    state.zipSparad = meta.zip ? meta.id : null;
+    $('ladda-ner').textContent = meta.zip ? `Ladda ner ${state.zipNamn} (${v.antalFiler} filer)` : 'Zip-filen sparades inte. Välj Skapa igen för den.';
+    $('ladda-ner').disabled = !meta.zip;
+    visaSparat({ sparat: true, zip: meta.zip });
+    ritaSparadeLager(s, v.kartlager || []);
+    $('resultat').hidden = false;
+    $('visa-3d').hidden = !s.rutnat;
+    $('skapa').classList.add('gjord');
+    if (state.proj) for (const b of s.byggnaderAlla || []) if (b && b.id != null) state.proj.kandaHus.add(String(b.id));
+    fyllUtskrift();
+    const t = new Date(v.tid || meta.tid);
+    const nar = `${datumKort(t.getTime())} kl. ${String(t.getHours()).padStart(2, '0')}.${String(t.getMinutes()).padStart(2, '0')}`;
+    visaStatus(`Underlaget från ${nar} är inläst från webbläsaren. Välj Skapa för att hämta det på nytt.`);
+  }
+  /** Ritar lagren som syntes efter Skapa, i samma ordning som Skapa ritar dem. */
+  function ritaSparadeLager(s, ids) {
+    const tt = tillLatLng(s.epsg), har = id => ids.includes(id);
+    const rita = (id, f) => { try { f(); } catch (e) { console.warn(`Lagret ${id} kunde inte ritas:`, e); } };
+    const bild = id => { const b = s.kartbilder && s.kartbilder[id]; if (b && har(id)) rita(id, () => visaResultatLager(id, L.imageOverlay(b.url, b.bounds, b.opt))); };
+    if (har('laser') && s.laserKarta) rita('laser', () => visaLaserKarta(s.laserKarta, tt));
+    if (har('byggnader') && s.byggnader) rita('byggnader', () => visaByggnaderKarta(s.byggnader, tt));
+    if (har('trad') && s.trad) rita('trad', () => visaTradKarta(s.trad, tt));
+    bild('hom');
+    if (har('hojdpunkter') && s.hojdpunkter) rita('hojdpunkter', () => visaHojdpunkter(s.hojdpunkter, s.epsg));
+    if (har('lutning') && s.lutning && s.lutning.bild) rita('lutning', () => visaRasterLager('lutning', s.lutning.bild, s.epsg, 0.75));
+    if (har('skyfall') && s.skyfall) rita('skyfall', () => visaSkyfall(s.skyfall, s.epsg));
+    if (har('lamningar') || har('natur') || har('oversvamning')) rita('skydd', () => visaSkydd(s, s.epsg));
+    if (har('fastigheter') && s.fastigheter) rita('fastigheter', () => visaFastigheter(s.fastigheter, tt));
+    if (har('marktacke') && s.marktacke) rita('marktacke', () => visaMarktacke(s.marktacke, tt));
+    if (har('strandskydd') && s.strand) rita('strandskydd', () => visaStrandskydd(s.strand));
+    bild('ortofoto');
+    if (har('stompunkter') && s.stompunkter) rita('stompunkter', () => visaStompunkter(s.stompunkter, tt));
+    if ((har('vagar') || har('gangvagar')) && s.vagar) rita('vagar', () => visaVagar(s.vagar, tt));
+    if (har('skugga')) rita('skugga', visaSkugga);
+    if (har('kurvor') && s.kurvor) rita('kurvor', () => visaKurvor(s.kurvor, tt));
+  }
+
   // Filen väljs före packningen: dialogen kräver att den öppnas direkt på klicket (0.13.5)
   $('ladda-ner').addEventListener('click', async () => {
-    if (!state.zipFiler) return;
+    if (!state.zipFiler && !state.zipSparad) return;
     const knapp = $('ladda-ner'), namn = state.zipNamn;
     const mal = await valjFil(namn, 'application/zip', 'Zip-fil');
     if (mal === AVBRUTET) return;
@@ -3279,7 +3445,7 @@
     state.proj = nyttProjektlage(d, o);
     state.proj.laser = true;
     try {
-      nollstallResultat();
+      nollstallResultat({ behall: true });
       state.projektId = d.projekt.id;
       tillampaVal(d.val);
       namnAndrat = false;
@@ -3330,6 +3496,7 @@
   function oppnaPost(post) {
     const d = Projekt.las(post.data);
     oppnaProjekt(d, { iDb: true, franDb: true, filInnehall: post.filInnehall, sparadFil: post.sparadFil, bilagor: post.bilagor || {} });
+    lasInResultat(d.projekt.id);   // det senaste resultatet, om det finns sparat (0.13.6)
     // filInnehall i posten jämförs mot det som byggs nu; samma innehåll = inga osparade ändringar
   }
   async function oppnaFranDb(id) {
@@ -3473,11 +3640,15 @@
   /** Projekten under Sparat i webbläsaren, med storlek och Ta bort. */
   async function visaSparadeProjekt(alla) {
     if (!alla) { try { alla = await Projekt.dbAlla(); } catch (e) { alla = []; } }
+    let res = [];
+    try { res = await Resultat.alla(); } catch (e) { /* ignoreras */ }
     const ul = $('lagring-projekt');
     ul.innerHTML = '';
     alla.forEach(p => {
       const li = document.createElement('li');
-      li.innerHTML = `<span>Projekt ${esc(p.namn || 'utan namn')}, ${storlekText(p.storlek || 0)}<br><small>ändrat ${datumKort(p.andrad)}${p.sparadFil ? ', projektfil ' + datumKort(p.sparadFil) : ', ingen projektfil'}</small></span>`;
+      const rs = res.find(m => m.id === p.id);
+      const rsText = rs ? `<br><small>senaste underlaget ${storlekText((rs.storlek || 0) + (rs.zip ? rs.zipStorlek || 0 : 0))}${rs.zip ? '' : ', utan zip-filen'}</small>` : '';
+      li.innerHTML = `<span>Projekt ${esc(p.namn || 'utan namn')}, ${storlekText(p.storlek || 0)}<br><small>ändrat ${datumKort(p.andrad)}${p.sparadFil ? ', projektfil ' + datumKort(p.sparadFil) : ', ingen projektfil'}</small>${rsText}</span>`;
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'lank-ta-bort'; b.textContent = 'Ta bort';
       b.setAttribute('aria-label', `Ta bort projektet ${p.namn || 'utan namn'}`);
@@ -3486,6 +3657,7 @@
         if (oppet && bytetLast()) return;
         if (!window.confirm(`Ta bort projektet ${p.namn || 'utan namn'} ur webbläsaren?` + (oppet ? ' Det är öppet, så ett nytt, tomt projekt öppnas.' : '') + ' En sparad projektfil påverkas inte.')) return;
         await Projekt.dbTaBort(p.id);
+        try { await Resultat.taBort(p.id); } catch (e) { /* ignoreras */ }
         if (oppet) { state.proj.iDb = false; state.proj.senastInnehall = Projekt.innehall(state.proj.d); await nyttProjekt(); }
         ritaProjektlista(); visaSparadeProjekt();
       });
@@ -3972,6 +4144,7 @@
     }
     objektAndrade = true;
     uppdateraDoldaKnapp();
+    planeraResultatSpara();
   }
   /** Husen som är dolda i 3D-vyn (id som i Byggnad.somVolymer). */
   const doldaHus3d = () => { const v = husval(); return [...hus3d].filter(([, b]) => b.id != null && v[String(b.id)] && v[String(b.id)].dolt).map(([id]) => id); };
@@ -4148,7 +4321,7 @@
   function skissFran3d(ut) {
     if (ut.typ === 'andrad') {
       state.volymer = ut.volymer.map(v => Object.assign({}, v));
-      if (state.senaste) state.senaste.volymer = ut.volymer.map(v => Object.assign({}, v));
+      if (state.senaste) { state.senaste.volymer = ut.volymer.map(v => Object.assign({}, v)); planeraResultatSpara(); }
       sparaVolymer(); ritaVolymer();
     }
     $('vy3d-modellera').setAttribute('aria-pressed', String(ut.redigera));

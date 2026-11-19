@@ -3,6 +3,25 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.13.6 – 2026-11-19
+
+- **Underlaget finns kvar när du byter sida.** Efter *Skapa* sparas resultatet
+  och zip-filens innehåll i webbläsaren, för projektet. Går du till
+  Instruktioner, Om eller Beställ och tillbaka, eller laddar om sidan, läses det
+  in igen: lagren på kartan, sammanfattningen, 3D-vyn, utskriften och *Ladda
+  ner*. Statusraden säger när underlaget skapades, och sammanfattningen säger
+  om det är sparat. Det senaste resultatet sparas för de tre senaste
+  projekten, högst cirka 600 MB; blir zip-filen för stor sparas resultatet utan
+  den. Ändrar du något som gör underlaget inaktuellt (området, nollpunkten,
+  sektionerna, skissen, skuggtiderna …) tas det sparade bort. Under *Sparat i
+  webbläsaren* står hur stort det är, och *Ta bort* på projektet tar bort
+  det också.
+- **Stöd utvecklingen** har Swish: QR-koden (med Swish-loggan) och numret
+  123-718 06 15. På mobilen öppnar ett tryck på koden Swish. Rubrikerna
+  Privatpersoner och Företag står ovanför texten, så att rutan blir bredare
+  och lägre, och kontaktadressen står en gång, längst ner. Den långa
+  e-postadressen går inte längre utanför rutan.
+
 ## 0.13.5 – 2026-11-19
 
 Synpunkter från egen användning 19 november.

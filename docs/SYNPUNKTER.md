@@ -7,17 +7,21 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **BL**.
+Senast använda nummer: **BM**.
 
 ## Inkorg
 
-- **BJ** Platsdatan försvinner när man går till Instruktioner, Om eller Beställ och tillbaka; man måste skapa om. Den ska inte kännas ömtålig. *Planerat till 0.13.6: spara resultatet i webbläsaren (IndexedDB) och läsa in det när kartan öppnas.*
 - **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0.*
 - **BL** Stöd-knappen blir ett hjärta när gränssnittet går över till ikoner.
 
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.13.6
+
+- **BJ** Skapa underlag, gå till Instruktioner, Om eller Beställ och tillbaka till kartan: kommer lagren, sammanfattningen och *Ladda ner* tillbaka utan nytt Skapa, och säger statusraden när underlaget skapades? Fungerar *Förhandsvisa i 3D*, utskriften och *Fortsätt rita i cad-apa* med det inlästa? Ladda om sidan: likadant. Ändra området eller nollpunkten: försvinner underlaget, och kommer det inte tillbaka efter omladdning? Prova också med ett stort område (1–2 km sida, mycket laserdata): vad säger raden *Sparat* i sammanfattningen, och hur lång tid tar det att komma tillbaka till kartan? **På iPhone**: finns underlaget kvar efter byte av sida?
+- **BM** Stöd-rutan på dator och iPhone, i alla tre teman: får e-postadressen plats, och ser rutan bra ut med rubrikerna ovanför? Gå att skanna QR-koden från datorskärmen med Swish i telefonen (mottagaren ska vara Danaid Open Source)? **På iPhone**: öppnar ett tryck på koden Swish med rätt nummer och meddelandet *Stort tack för ditt stöd!*?
 
 ### 0.13.5
 
@@ -83,6 +87,11 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 19 november 2026 → 0.13.6
+
+- **BJ** Platsdatan försvinner när man går till Instruktioner, Om eller Beställ och tillbaka; man måste skapa om. Den ska inte kännas ömtålig. *Resultatet och zip-filen sparas i webbläsaren efter Skapa och läses in när projektet öppnas igen.*
+- **BM** Stöd-rutan: den långa e-postadressen går utanför rutan, och adressen står två gånger. Gemensamma kontaktuppgifter efter innehållet, Privatpersoner och Företag som rubriker ovanför text och bild (mer bredd, mindre luft). Swish-numret finns nu: QR-koden utan ramen, kvadratisk i rutan, med Swish-loggan i färg i mitten. *Gjort så. På mobilen är koden också en länk som öppnar Swish.*
 
 ### 19 november 2026 → 0.13.4
 

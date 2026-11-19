@@ -86,6 +86,15 @@ node test/geodata.test.js
 node test/laser.test.js
 ```
 
+```
+node test/resultat.test.js
+```
+
+`resultat.test.js` (0.13.6) prövar omvandlingen av det sparade resultatet (`js/resultat.js`) till
+något IndexedDB kan spara och tillbaka: typade arrayer, delade objekt, husens tak (inte
+uppräkningsbart), Map, Set och fel följer med, funktioner tas bort och canvas blir Blob och
+tillbaka (med en låtsad canvas). Själva lagringen prövas i `resultat_test.py`.
+
 `sol.test.js` (0.13.3) prövar solens läge mot referensvärden (NREL:s SPA) för fyra orter,
 dagjämningar och solstånd 2026, svensk tid kring sommartidens gränser, upp- och nedgång, och
 skuggornas längd från en mur där svaret går att räkna för hand, också med vridet rutnät.
@@ -256,6 +265,15 @@ python3 test/fastighetsnamn_test.py test/ut ritning
 fastighet: besked utan inloggning, hämtning ur låtsasfilen för Kinda, och läsning
 ur webbläsarens lagring utan inloggning. Kartan nås genom testkroken
 `TERRANG_TEST.karta`.
+
+```
+python3 test/resultat_test.py test/ut ritning
+```
+
+`resultat_test.py` (0.13.6) skapar underlag med alla tillval, går till Om-sidan (öppnar Stöd
+utvecklingen och tar skärmbilder av rutan och avsnittet) och tillbaka: lagren, sammanfattningen,
+ortofotots canvas, husens tak och 3D-vyn ska komma tillbaka utan nytt Skapa, och zip-filen ska
+ha samma filer. Efter omladdning likaså. Ett ändrat område tar bort det sparade.
 
 `ui_test.py` går igenom hela flödet på en dator: BETA-knappen och formuläret
 Skicka synpunkter (anropet till `synpunkter.php` fångas upp i testet), rita och

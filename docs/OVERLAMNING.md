@@ -1,9 +1,27 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.5.
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.6.
 
 ## Läget
+
+- **0.13.6** 19 november (grenen `v0.13.6`, sammanslagen och publicerad):
+  1. **BJ, resultatet sparat i webbläsaren** (`js/resultat.js`, blocket *Resultatet sparat i
+     webbläsaren* i `app.js`), se avsnittet nedan. Databasen `terrangunderlag` är version 3 i
+     både `projekt.js` och `kommunfil.js` (objektlagringen `resultat`).
+  2. **BM, Stöd-rutan**: rubrikerna Privatpersoner och Företag ovanför, kontakten en gång längst
+     ner, Swish-QR:n `bilder/swish-qr.png` (ur ägarens PDF från Swish: bara koden med loggan,
+     480 px, 256 färger, 9 kB; avkodad till
+     `https://app.swish.nu/1/p/sw/?sw=1237180615&msg=Stort%20tack%20f%C3%B6r%20ditt%20st%C3%B6d!&src=qr`,
+     som också är länken på bilden, `SWISH_URL` i `stod.js`). Vit ruta med marginal runt koden i
+     alla teman. Dialogen är 600 px (bredden låg tidigare under synpunktsformulärets 520 px).
+     Under 480 px flyter texten in under koden.
+  Kartlagren som ritades direkt i Skapa-stegen är utbrutna till `visaKurvor`, `visaLaserKarta`,
+  `visaKartbild`, `visaFastigheter`, `visaMarktacke` och `visaStompunkter`, så att de kan ritas
+  ur det sparade. Körda: alla 20 enhetstester (nytt: `resultat.test.js`), `ui_test.py` (ritning),
+  `projekt_test.py`, `mobil_test.py`, `fastighetsnamn_test.py` och nya `resultat_test.py`;
+  Stöd-rutan i alla tre teman på dator och mobilbredd. **Inte provat**: iPhone (Safari/WebKit
+  saknas i testmiljön) och riktigt stora områden, där det sparade kan bli hundratals MB.
 
 - **0.13.5** 19 november (grenen `v0.13.5`, sammanslagen och publicerad), efter ägarens
   synpunkter samma dag (BG–BL i `docs/SYNPUNKTER.md`):
@@ -188,6 +206,39 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## Resultatet i webbläsaren (0.13.6, BJ)
+
+- **Vad**: `state.senaste` (utan `yta`, ytmodellen, som inte används efter Skapa, och utan
+  `ortofoto.canvas`, som görs om ur `ortofoto.bild`) och zip-filens filer (`state.zipFiler`).
+  `senaste.visning` = `{ rader, tid, zipNamn, antalFiler, kartlager }`: sammanfattningens rader
+  och vilka kartlager som fanns (`Object.keys(resultat)`) när Skapa var klar.
+  `senaste.kartbilder` (bilderna på kartan: höjd över mark och ortofotot, data-URL och läge) och
+  `senaste.laserKarta` (de högst 25 000 laserpunkterna på kartan) är nya för att kunna rita om.
+- **Lagringen** (`Resultat`): nycklarna `meta:<id>`, `data:<id>`, `zip:<id>` i objektlagringen
+  `resultat`. `tillLagring` gör om allt till något IndexedDB kan spara: funktioner och
+  Leaflet-lager bort, canvas → Blob (PNG, JPEG över 2 Mpx), Map/Set/fel märkta, egenskaper som
+  inte är uppräkningsbara (husens `tak`) märkta i `__hkdolda`. `franLagring` gör tillbaka, och
+  delade objekt (husen i `byggnader` och `byggnaderAlla`, träden) blir delade igen. Högst
+  `MAX_PROJEKT` = 3 projekt och `TAK` = 600 MB (ungefärlig storlek: byte i arrayer och Blob,
+  tecken i strängar); äldre projekt tas bort först, sedan sparas utan zip-filen, och är själva
+  resultatet över taket sparas ingenting. Blir lagringen full (QuotaExceeded) görs ett försök utan
+  zip-filen. Testlandskapet med alla tillval: 2 MB resultat och 12 MB zip.
+- **app.js**: `sparaResultat(true)` sist i `visaKlart`. `planeraResultatSpara()` (1,5 s, utan
+  zip-filen, `Resultat.sparaData`) efter `objektAndrat`, ändrad skiss i 3D-vyn och namnbyte.
+  `nollstallResultat()` tar bort det sparade (`glomResultat`) om ett resultat visades, utom med
+  `{ behall: true }` (i `oppnaProjekt`). Allt mot lagringen går i en kö (`resultatKo`), så att
+  borttagningen vid Skapa hinner före sparandet efteråt. `oppnaPost` (vid start och från
+  Senaste projekt) anropar `lasInResultat(id)`: läser, kontrollerar att projektet, utsnittet och
+  systemet är desamma och att inget Skapa har börjat, gör om ortofotots canvas, och
+  `visaInlastResultat` fyller sammanfattningen, ritar lagren (`ritaSparadeLager`, i samma ordning
+  som Skapa), visar 3D-knappen och utskriften och säger *Underlaget från … är inläst från
+  webbläsaren*. Zip-filen läses först när man väljer *Ladda ner* (`state.zipSparad`,
+  `packaZipNu`). Raden *Sparat* i sammanfattningen (`visaSparat`) säger om det gick.
+- **Sparat i webbläsaren**: varje projekt visar storleken på sitt senaste underlag; *Ta bort*
+  tar bort det också. *Ta bort alla sparade filer* rör bara kommunfilerna.
+- **Inte gjort**: inget besked om lagringen blir full utom raden *Sparat*; underlaget följer inte
+  med i projektfilen (avsiktligt: projektfilen ska vara liten och utan Lantmäteriets data).
 
 ## Skapa-flödet i steg (sedan 0.13.4)
 
@@ -674,7 +725,6 @@ Versionsplanen (19 november, kan ändras av ägaren):
 
 | Version | Innehåll |
 |---|---|
-| 0.13.6 | Spara resultatet i webbläsaren och läs in det när kartan öppnas (BJ, ägaren har sagt ja) |
 | 0.13.x | Rättelser efter testet (BB, BD–BI, AW, AY, AZ, AÅ, AR–AV, AÄ, AÖ) |
 | före/efter 0.14.0 | Räkna om skissen med hämtad data (BK, ägaren har sagt ja; ordningen öppen) |
 | 0.14.0 | Sol på fasaderna (`overlamning-solanalys.md` i claude.ai-projektet) |
@@ -683,12 +733,7 @@ Versionsplanen (19 november, kan ändras av ägaren):
 | 0.17.0 | Bergytemodell och geologiblock i platspaketet (geologi etapp 3–4) |
 | 0.18.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
 
-0. **0.13.6, spara resultatet (BJ)**: `state.senaste` (rutnät som typade arrayer, ortofotot
-   och andra canvas som blob, lager som data, inte Leaflet-objekt) och `state.zipFiler` i
-   IndexedDB, bara det senaste per projekt och med ett tak för storleken. Läs in när kartan
-   öppnas och projektet är detsamma, rita om lagren och visa ett kort besked. Föreslå att
-   börja med att lista vad `senaste` innehåller och vad som går att återskapa billigt.
-1. För in testresultaten. Rättelser blir 0.13.x.
+1. För in testresultaten (BI, BJ, BM och de äldre under *Att testa*). Rättelser blir 0.13.x.
 2. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i
    panelen.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid

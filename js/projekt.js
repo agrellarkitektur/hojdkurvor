@@ -286,13 +286,14 @@
   }
 
   // ------------------------------------------------------------------
-  // Lagringen i webbläsaren (IndexedDB). Samma databas som kommunfilerna (kommunfil.js), version 2.
+  // Lagringen i webbläsaren (IndexedDB). Samma databas som kommunfilerna (kommunfil.js), version 3
+  // (0.13.6: objektlagringen resultat, se resultat.js).
   // ------------------------------------------------------------------
-  const DB = 'terrangunderlag', DB_VERSION = 2, LAGRING = 'projekt';
+  const DB = 'terrangunderlag', DB_VERSION = 3, LAGRING = 'projekt';
   let dbLofte = null;
   /** Skapar objektlagringarna som saknas. Samma i kommunfil.js. */
   function uppgradera(db) {
-    for (const n of ['filer', 'projekt']) if (!db.objectStoreNames.contains(n)) db.createObjectStore(n);
+    for (const n of ['filer', 'projekt', 'resultat']) if (!db.objectStoreNames.contains(n)) db.createObjectStore(n);
   }
   function oppnaDb() {
     if (!dbLofte) dbLofte = new Promise((ok, fel) => {
