@@ -1,10 +1,37 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.4 med uppdelningen av
-Skapa, sammanslagen med `main` och publicerad.
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.5.
 
 ## Läget
+
+- **0.13.5** 19 november (grenen `v0.13.5`, sammanslagen och publicerad), efter ägarens
+  synpunkter samma dag (BG–BL i `docs/SYNPUNKTER.md`):
+  1. **Strandskyddet** (`Platsanalys.strandKlass`, `strandskydd`, `strandZoner`,
+     `dxfStrandskydd`; steget `skapaStrandskydd` efter `skapaMarktacke`). Reglerna från 1 juli
+     2025: insjöar under 1 ha (bara när ringen är sluten), bäckar (OSM `waterway=stream`, antas
+     ≤ 2 m) och anlagt vatten (OSM `water=basin|wastewater`, marktäckets *Anlagt vatten*) räknas
+     inte; närmaste sådant vatten inom 100 m står i texten (`ovrigt`). Linjerna 100 och 300 m
+     ur ett avståndsfält (exakt EDT, Felzenszwalb) över utsnittet + 300 m, rutan 2 m eller
+     grövre så att det blir högst cirka 1 miljon noder, sedan `kurvorForNiva`. Kartlagret
+     `strandskydd` (färgen `--strand` i alla tre teman), DXF i `strandskydd/` och i den
+     samlade. Platsanalysbladets karta ritar inte linjerna (idé).
+     Marktäcket läses med `vattenMarginal: 300` när Skydd är valt och ger `m.vatten` (hela
+     ytor, yttre ringen). Bara kommunerna i utsnittet läses. OSM-frågan startar i `skapaSkydd`
+     (`kor.vattenOsm`) och väntas in i `skapaStrandskydd`. Marktäckets ytor saknar namn; namnet
+     lånas från OSM om samma slags vatten ligger inom 15 m lika långt bort.
+  2. **Tidsgränsen**: `Geodata.hamta` gör ett avbrott efter `tid` till ett fel med
+     `tidsgrans: true` (*svarade inte inom N s*), och `medOmforsok` försöker igen som vid 502.
+     Overpass får 40 s (`[timeout:35]`). Ingen andra Overpass-server (kräver ägarens besked).
+  3. **Zip-filen** packas vid *Ladda ner* (`forberedZip` i Skapa, `packaZipNu` vid klicket,
+     sparas i `state.zipBlob` till nästa Skapa). Spardialogen öppnas före packningen eftersom
+     den kräver klicket. **Inte provat på iPhone**: nedladdningen startar efter packningen (BH).
+  4. **STÖD** (`js/stod.js`): knapp i menyraden på alla fyra sidor, dialog med samma klasser
+     som synpunktsformuläret. Texten finns bara i `js/stod.js` och fylls i Om-sidans
+     `[data-stod-innehall]`. `kalla.test.js` kontrollerar Swish-rutan där.
+  Körda: alla 19 enhetstester, `ui_test.py` i alla tre teman, `mobil_test.py`,
+  `projekt_test.py`, `fastighetsnamn_test.py`; Stöd-dialogen i alla tre teman på dator och
+  mobilbredd. **Nästa**: 0.13.6 = spara resultatet i webbläsaren (BJ).
 
 - **0.13.4** 19 november, sammanslagen med `main` och publicerad samma dag tillsammans med
   grenen `skapa-uppdelning` (grenarna kom som en git-bundle från en session utan skrivrätt;
@@ -162,7 +189,7 @@ Skapa, sammanslagen med `main` och publicerad.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
 
-## Skapa-flödet i steg (grenen `skapa-uppdelning`)
+## Skapa-flödet i steg (sedan 0.13.4)
 
 Blocket *Skapa underlag* i `app.js`. Lyssnaren på `#skapa` gör bara detta:
 
@@ -175,9 +202,9 @@ Blocket *Skapa underlag* i `app.js`. Lyssnaren på `#skapa` gör bara detta:
 4. `T.lokal.vrid = kor.vrid`, och sedan stegen i `SKAPA_STEG` i tur och ordning:
    `skapaTerrang`, `skapaLaser`, `skapaByggnader`, `stallVolymerPaMarken`, `skapaAnalyser`
    (träd, höjd över mark, skuggor), `skapaMarklager` (höjdpunkter, lutning, skyfall),
-   `skapaSkissfiler`, `skapaSkydd`, `skapaSektioner`, `skapaFastigheter`, `skapaMarktacke`,
+   `skapaSkissfiler`, `skapaSkydd`, `skapaSektioner`, `skapaFastigheter`, `skapaMarktacke`, `skapaStrandskydd` (0.13.5),
    `skapaOrtofoto`, `skapaStompunkter`, `skapaVagar`, `skapaSol`, `skapaLagerPdf`, `skapaBlad`,
-   `skapaProjektfilen`, `skapaSamladDxf`, `packaZip`, `visaKlart`.
+   `skapaProjektfilen`, `skapaSamladDxf`, `forberedZip` (0.13.5, förut `packaZip`), `visaKlart`.
 5. `catch` (inloggningsfel och andra fel på statusraden) och `finally` (knappen, vridningen,
    projektlåset) som förut.
 
@@ -647,16 +674,20 @@ Versionsplanen (19 november, kan ändras av ägaren):
 
 | Version | Innehåll |
 |---|---|
-| 0.13.4 | Grenen `v0.13.4`: slå ihop med `main` när ägaren sagt till. Sedan `skapa-uppdelning` |
-| 0.13.x | Rättelser efter testet (BB, BD–BF, AW, AY, AZ, AÅ, AR–AV, AÄ, AÖ) |
+| 0.13.6 | Spara resultatet i webbläsaren och läs in det när kartan öppnas (BJ, ägaren har sagt ja) |
+| 0.13.x | Rättelser efter testet (BB, BD–BI, AW, AY, AZ, AÅ, AR–AV, AÄ, AÖ) |
+| före/efter 0.14.0 | Räkna om skissen med hämtad data (BK, ägaren har sagt ja; ordningen öppen) |
 | 0.14.0 | Sol på fasaderna (`overlamning-solanalys.md` i claude.ai-projektet) |
 | 0.15.0 | Förslag och sparade vyer (projektfilen, etapp 3). Planen säger helst före solanalysen; fråga ägaren om ordningen |
 | 0.16.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
 | 0.17.0 | Bergytemodell och geologiblock i platspaketet (geologi etapp 3–4) |
 | 0.18.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
 
-0. `v0.13.4` och `skapa-uppdelning`: fråga ägaren om de ska slås ihop med `main` (det
-   publicerar appen). Kör då `ui_test.py` också i lugn och mork.
+0. **0.13.6, spara resultatet (BJ)**: `state.senaste` (rutnät som typade arrayer, ortofotot
+   och andra canvas som blob, lager som data, inte Leaflet-objekt) och `state.zipFiler` i
+   IndexedDB, bara det senaste per projekt och med ett tak för storleken. Läs in när kartan
+   öppnas och projektet är detsamma, rita om lagren och visa ett kort besked. Föreslå att
+   börja med att lista vad `senaste` innehåller och vad som går att återskapa billigt.
 1. För in testresultaten. Rättelser blir 0.13.x.
 2. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i
    panelen.

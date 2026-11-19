@@ -54,7 +54,7 @@
   async function medOmforsok(fn, vanta = pauser()) {
     for (let i = 0; ; i++) {
       try { return await fn(); } catch (e) {
-        if (!e || !TILLFALLIGT.includes(e.status)) throw e;
+        if (!e || !(TILLFALLIGT.includes(e.status) || e.tidsgrans)) throw e;
         if (i >= vanta.length) { if (i) e.message += ` (${i + 1} försök)`; throw e; }
         await new Promise(r => setTimeout(r, vanta[i]));
       }
@@ -64,12 +64,20 @@
   /**
    * Hämtar en adress direkt, och via proxyn om webbläsaren spärrar. typ: 'json' | 'text' | 'blob'.
    * Svarar tjänsten 429, 502, 503 eller 504 görs två nya försök med några sekunders paus (0.13.4).
+   * Svarar den inte inom `tid` ms räknas det likadant (0.13.5; förut kom felet "signal is aborted without reason").
+   * Ett sådant fel prövas inte via proxyn (meddelandet börjar med "svarade").
    */
   async function hamta(url, typ = 'json', { tid = 25000, metod = 'GET', kropp = null } = {}) {
     const forsok = u => medOmforsok(async () => {
       const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), tid);
       try {
-        const svar = await fetch(u, { signal: ctrl.signal, method: metod, body: kropp, headers: kropp ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined });
+        let svar;
+        try {
+          svar = await fetch(u, { signal: ctrl.signal, method: metod, body: kropp, headers: kropp ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined });
+        } catch (e) {
+          if (ctrl.signal.aborted) throw Object.assign(new Error(`svarade inte inom ${Math.round(tid / 1000)} s`), { tidsgrans: true });
+          throw e;
+        }
         if (!svar.ok) throw Object.assign(new Error(`svarade ${svar.status}`), { status: svar.status });
         if (typ !== 'json') return typ === 'blob' ? await svar.blob() : await svar.text();
         const text = await svar.text();
@@ -231,19 +239,27 @@
     return ut;
   }
 
-  /** Sjöar, vattendrag och hav från OpenStreetMap inom marg meter från rutan (WGS 84-ruta). */
+  /** Anlagt vatten i OSM (water=…): strandskydd bara om det fanns före juli 1975. */
+  const ANLAGT = /^(basin|wastewater|reservoir_covered)$/;
+  /**
+   * Sjöar, vattendrag och hav från OpenStreetMap inom rutan (WGS 84-ruta).
+   * Ger [{ typ, namn, yta, sluten, pts (zon) }]; typ är sjö, vattendrag, bäck, kanal, kust eller anlagt.
+   * Overpass får 40 s (0.13.5) och försöks igen vid överbelastning och tidsgräns.
+   */
   async function vatten(llRuta, tillZon) {
     const bb = `${llRuta.syd},${llRuta.vast},${llRuta.nord},${llRuta.ost}`;
-    const q = `[out:json][timeout:25];(way["natural"="water"](${bb});relation["natural"="water"](${bb});way["waterway"~"^(river|stream|canal)$"](${bb});way["natural"="coastline"](${bb}););out geom;`;
-    const svar = await hamta(adress('overpass'), 'json', { metod: 'POST', kropp: 'data=' + encodeURIComponent(q) });
+    const q = `[out:json][timeout:35];(way["natural"="water"](${bb});relation["natural"="water"](${bb});way["waterway"~"^(river|stream|canal)$"](${bb});way["natural"="coastline"](${bb}););out geom;`;
+    const svar = await hamta(adress('overpass'), 'json', { metod: 'POST', kropp: 'data=' + encodeURIComponent(q), tid: 40000 });
     const ut = [];
     for (const e of (svar.elements || [])) {
       const t = e.tags || {};
-      const typ = t.natural === 'coastline' ? 'kust' : t.waterway ? (t.waterway === 'stream' ? 'bäck' : t.waterway === 'canal' ? 'kanal' : 'vattendrag') : (t.water === 'river' ? 'vattendrag' : 'sjö');
+      const typ = t.natural === 'coastline' ? 'kust' : t.waterway ? (t.waterway === 'stream' ? 'bäck' : t.waterway === 'canal' ? 'kanal' : 'vattendrag')
+        : t.water === 'river' ? 'vattendrag' : ANLAGT.test(t.water || '') ? 'anlagt' : 'sjö';
       const linjer = e.type === 'way' ? [e.geometry] : (e.members || []).filter(m => m.geometry).map(m => m.geometry);
       for (const g of linjer) {
         if (!g || g.length < 2) continue;
-        ut.push({ typ, namn: t.name || '', yta: e.type !== 'way' || (t.natural === 'water' && g[0].lat === g[g.length - 1].lat && g[0].lon === g[g.length - 1].lon), pts: g.map(p => tillZon([p.lon, p.lat])) });
+        const sluten = g[0].lat === g[g.length - 1].lat && g[0].lon === g[g.length - 1].lon;
+        ut.push({ typ, namn: t.name || '', yta: e.type !== 'way' || (t.natural === 'water' && sluten), sluten, pts: g.map(p => tillZon([p.lon, p.lat])) });
       }
     }
     return ut;

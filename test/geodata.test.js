@@ -93,6 +93,17 @@ const somDen = p => p;
     assert.strictEqual(nr, 2, `${status} försöks igen`);
   }
 
+  // svarar tjänsten inte inom tidsgränsen försöks det igen, och felet säger det (0.13.5)
+  const tyst = (u, o) => new Promise((_, nej) => o.signal.addEventListener('abort', () => nej(new DOMException('signal is aborted without reason', 'AbortError'))));
+  nr = 0;
+  globalThis.fetch = async (u, o) => (++nr === 1 ? tyst(u, o) : svar(200, '{"ok":1}'));
+  assert.deepStrictEqual(await G.hamta('https://x/api', 'json', { metod: 'POST', kropp: 'data=1', tid: 30 }), { ok: 1 });
+  assert.strictEqual(nr, 2, 'nytt försök efter tidsgränsen');
+  nr = 0;
+  globalThis.fetch = async (u, o) => { nr++; return tyst(u, o); };
+  await assert.rejects(G.hamta('https://x/api', 'json', { metod: 'POST', kropp: 'data=1', tid: 30 }), e => e.message === 'svarade inte inom 0 s (3 försök)' && e.tidsgrans);
+  assert.strictEqual(nr, 3);
+
   // strandskyddets vatten kommer efter ett 502
   nr = 0;
   globalThis.fetch = async () => (++nr === 1 ? svar(502, '') : svar(200, JSON.stringify({ elements: [
@@ -100,6 +111,7 @@ const somDen = p => p;
   const v = await G.vatten({ syd: 57.9, vast: 14.9, nord: 58.1, ost: 15.1 }, somDen);
   assert.strictEqual(v.length, 1);
   assert.strictEqual(v[0].namn, 'Lillsjön');
+  assert.strictEqual(v[0].sluten, true); assert.strictEqual(v[0].typ, 'sjö');
 
   console.log('geodata.test.js: allt godkänt');
 })().catch(e => { console.error(e); process.exit(1); });

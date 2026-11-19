@@ -221,8 +221,17 @@ with sync_playwright() as p:
     status = pg.locator('#status-text').inner_text()
     assert 'Skyddad natur' not in status and 'Strandskydd' not in status and 'Vägar:' not in status, f'inga varningar från tjänsterna: {status}'
     assert 'Skyddad natur: Naturreservat Starens naturreservat' in info, 'naturreservatet kommer med'
-    strand = next(r for r in info.splitlines() if 'Strandskydd (indikation)' in r)
+    # 0.13.5: strandskyddet har ett eget avsnitt. Lillsjön (1,1 ha, OSM) har strandskydd; marktäckets
+    # Sjö (0,16 ha) har det inte enligt reglerna från 1 juli 2025 och nämns som närmare vatten utan skydd
+    rader = info.splitlines(); i = rader.index('STRANDSKYDD (INDIKATION)')
+    strand = rader[i + 1]
+    print('  marktäckets vatten:', pg.evaluate('(TERRANG_TEST.senaste().marktacke || {}).vatten'))
     assert 'kunde inte' not in strand and 'Lillsjön' in strand, strand
+    assert 'sjö under 1 ha' in strand, strand
+    assert any('Vatten: Lantmäteriets marktäcke och OpenStreetMap' in r for r in rader[i:i + 8]), rader[i:i + 8]
+    assert any(n.startswith('strandskydd/') and n.endswith('_lokal.dxf') for n in namn_i_zip), 'strandskyddets DXF'
+    assert 'STRANDSKYDD_100' in z.read(next(n for n in namn_i_zip if n.endswith('_samlad_lokal.dxf'))).decode('latin-1'), 'i den samlade DXF:en'
+    assert 'Strandskydd (indikation)' in pg.locator('#lp-lager').inner_text(), 'kartlagret'
     # laserdatan räknas ruta för ruta: antalet per ruta står i info-filen, och träden finns
     assert re.search(r'Rutor: \S+ \([\d\s\u00a0]+ punkter\)', info), 'antal punkter per laserruta'
     assert pg.evaluate('TERRANG_TEST.senaste().trad.length') > 0

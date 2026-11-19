@@ -44,7 +44,16 @@ for (const sida of ['index.html', 'om.html', 'instruktioner.html', 'bestall.html
 const om = las('om.html');
 assert.ok(om.includes('<h2>Stöd utvecklingen</h2>'), 'om.html saknar Stöd utvecklingen');
 assert.ok(!/donation/i.test(om), 'om.html säger donation');
-assert.ok(/class="swish-qr/.test(om), 'om.html saknar rutan för Swish-QR:n');
+// Texten om stöd finns sedan 0.13.5 i js/stod.js (Om-sidan och dialogen bakom STÖD i menyraden)
+const stod = las('js/stod.js');
+assert.ok(/class="swish-qr/.test(stod), 'js/stod.js saknar rutan för Swish-QR:n');
+assert.ok(!/donation/i.test(stod), 'js/stod.js säger donation');
+assert.ok(/data-stod-innehall/.test(om), 'om.html fyller inte avsnittet ur js/stod.js');
+for (const sida of ['index.html', 'om.html', 'instruktioner.html', 'bestall.html']) {
+  const t = las(sida);
+  assert.ok(/<script src="js\/stod\.js\?v=[^"]+" defer><\/script>/.test(t), `${sida} laddar inte js/stod.js`);
+  assert.ok(/<button[^>]* data-stod[ >]/.test(t), `${sida} saknar knappen STÖD`);
+}
 
 assert.ok(/^\s*GNU AFFERO GENERAL PUBLIC LICENSE\s+Version 3, 19 November 2007/.test(las('LICENSE')), 'LICENSE är inte AGPL-3.0');
 assert.ok(las('LICENSES/GPL-3.0.txt').startsWith('GNU GENERAL PUBLIC LICENSE'), 'LICENSES/GPL-3.0.txt saknas');

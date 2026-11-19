@@ -304,13 +304,22 @@
     y = Math.max(y, PH - M - 66);
     stycke('Underlag för tidiga skeden. Uppgifterna ersätter inte myndigheternas egna besked, en geoteknisk undersökning, en dagvattenutredning eller en bullerutredning. Kontrollera alltid mot kommunen och länsstyrelsen. Källor och datum på sista bladet.', x, y, w, 7, { farg: F.gra });
   }
+  /**
+   * Strandskyddets text, kort (tabellen) och lång (avsnittet). Sedan 0.13.5 räknas bara vatten med
+   * generellt strandskydd enligt reglerna från 1 juli 2025; närmare vatten utan skydd nämns (s.ovrigt).
+   */
   function strandText(s) {
-    if (s.avstand == null || !isFinite(s.avstand)) return { kort: 'Inget vatten inom 300 m', lang: 'Inget vatten i OpenStreetMap inom 300 m från utsnittet.' };
-    const d = Math.round(s.avstand), namn = s.objekt ? `${s.objekt.typ}${s.objekt.namn ? ' ' + s.objekt.namn : ''}` : 'vatten';
-    if (d <= 100) return { kort: `Kan gälla (${namn}, ${d} m)`, lang: `Utsnittet ligger ${d} m från ${namn}. Generellt strandskydd gäller 100 m från strandlinjen, om det inte är upphävt i en detaljplan.` };
-    if (d <= 300) return { kort: `Utvidgat kan gälla (${d} m)`, lang: `Utsnittet ligger ${d} m från ${namn}. Länsstyrelsen kan ha utvidgat strandskyddet till 300 m.` };
-    return { kort: 'Inget vatten inom 300 m', lang: 'Inget vatten i OpenStreetMap inom 300 m från utsnittet.' };
+    const namnFor = o => o ? `${o.typ}${o.namn ? ' ' + o.namn : ''}` : 'vatten';
+    const dOvr = s.ovrigt && (s.ovrigt.avstand < 1 ? 'inom utsnittet' : `${Math.round(s.ovrigt.avstand)} m bort`);
+    const ovr = s.ovrigt ? ` Närmare ligger ${namnFor(s.ovrigt.objekt)}, ${dOvr}: ${s.ovrigt.objekt.skal}, och därför enligt reglerna från 1 juli 2025 utan generellt strandskydd.` : '';
+    const ingen = { kort: s.ovrigt ? `Troligen inte (${s.ovrigt.objekt.skal.split(',')[0]})` : 'Inget vatten inom 300 m', lang: 'Inget vatten med strandskydd inom 300 m från utsnittet.' + ovr };
+    if (s.avstand == null || !isFinite(s.avstand)) return ingen;
+    const d = Math.round(s.avstand), namn = namnFor(s.objekt);
+    if (d <= 100) return { kort: `Kan gälla (${namn}, ${d} m)`, lang: `Utsnittet ligger ${d} m från ${namn}. Generellt strandskydd gäller 100 m från strandlinjen, om det inte är upphävt i en detaljplan.${ovr}` };
+    if (d <= 300) return { kort: `Utvidgat kan gälla (${d} m)`, lang: `Utsnittet ligger ${d} m från ${namn}. Länsstyrelsen kan ha utvidgat strandskyddet till 300 m.${ovr}` };
+    return ingen;
   }
+
   function oversvamningKort(o) {
     const h = o.find(x => x.lager === '13'), k = o.find(x => x.lager === '12'), b = o.find(x => x.lager === '9');
     if (h && h.andel > 0.001) return `Ja, ${komma(h.andel * 100)} % av utsnittet`;
@@ -403,6 +412,7 @@
     avsnitt('STRANDSKYDD (INDIKATION)', () => {
       const s = opt.strand;
       y = stycke(s && !s.fel ? strandText(s).lang + ' Kontrollera med kommunen och länsstyrelsen.' : `Kunde inte kontrolleras: ${(s && s.fel) || 'okänt fel'}.`, x, y, kol, 7.5);
+      if (s && !s.fel) y = stycke('Sedan 1 juli 2025 har insjöar under 1 ha, vattendrag högst 2 m breda och vatten anlagda efter juni 1975 inget generellt strandskydd. Bäckar räknas här som högst 2 m breda. Upphävanden och dispenser finns inte i underlaget.' + (s.kalla ? ` Vatten: ${s.kalla}.` : ''), x, y + 1, kol, 7, { farg: F.gra });
     });
     avsnitt('ÖVERSVÄMNING (MYNDIGHETEN FÖR CIVILT FÖRSVAR)', () => {
       const o = opt.oversvamning;

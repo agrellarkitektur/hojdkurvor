@@ -541,11 +541,113 @@
     return bast;
   }
 
+  // ------------------------------------------------------------------
+  // Strandskydd enligt reglerna från 1 juli 2025 (0.13.5)
+  // ------------------------------------------------------------------
+  /** Insjöar mindre än så (m²) har inget generellt strandskydd sedan 1 juli 2025. */
+  const SMA_SJO = 10000;
+  /**
+   * Om vattnet har generellt strandskydd. Ger { skydd, skal }. Bäckar (OSM waterway=stream) antas vara
+   * högst 2 m breda, anlagt vatten antas anlagt efter juni 1975; båda med en förklaring.
+   * Sjöns yta räknas bara när ringen är hel (en bit av en stor sjö i OSM är inte sluten).
+   */
+  function strandKlass(v) {
+    if (v.typ === 'bäck') return { skydd: false, skal: 'bäck, troligen högst 2 m bred' };
+    if (v.typ === 'anlagt') return { skydd: false, skal: 'anlagt vatten, strandskydd bara om det fanns före juli 1975' };
+    if (v.typ === 'sjö' && v.yta && v.sluten !== false && v.pts.length > 2) {
+      const a = area(v.pts);
+      if (a < SMA_SJO) return { skydd: false, skal: `sjö under 1 ha (${Math.round(a)} m²)` };
+    }
+    return { skydd: true, skal: '' };
+  }
+  /**
+   * vatten: [{ typ, namn, pts, yta, sluten }] i zonen. Ger närmaste skyddade vatten
+   * { avstand, objekt }, närmaste vatten utan skydd inom 100 m (ovrigt) och, med zoner: true,
+   * linjerna 100 och 300 m från det skyddade vattnet ({ m100, m300 }, polylinjer i zonen).
+   */
+  function strandskydd(r, vatten, { zoner = false } = {}) {
+    const klassade = vatten.map(v => Object.assign({}, v, strandKlass(v)));
+    const skyddade = klassade.filter(v => v.skydd);
+    const n = narmasteVatten(r, skyddade), o = narmasteVatten(r, klassade.filter(v => !v.skydd));
+    const ut = { avstand: n.avstand, objekt: n.objekt, ovrigt: o.objekt && o.avstand <= 100 ? { avstand: o.avstand, objekt: o.objekt } : null };
+    if (zoner && skyddade.length && n.avstand <= 300) ut.zoner = strandZoner(r, skyddade);
+    return ut;
+  }
+  /** Exakt euklidiskt avstånd i en dimension (Felzenszwalb & Huttenlocher), f = kvadrerat avstånd. */
+  function edt1(f, n, d, v, z) {
+    let k = 0; v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+    for (let q = 1; q < n; q++) {
+      let s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+      while (s <= z[k]) { k--; s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); }
+      k++; v[k] = q; z[k] = s; z[k + 1] = Infinity;
+    }
+    k = 0;
+    for (let q = 0; q < n; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; }
+  }
+  /** Linjerna 100 och 300 m från vattnet, ur ett avståndsfält över utsnittet + 300 m. */
+  function strandZoner(r, vatten) {
+    const M = 300, ex = { xmin: r.xmin - M, ymin: r.ymin - M, xmax: r.xmax + M, ymax: r.ymax + M };
+    const bx = ex.xmax - ex.xmin, by = ex.ymax - ex.ymin;
+    const s = Math.max(2, Math.ceil(Math.sqrt(bx * by / 1e6)));
+    const W = Math.ceil(bx / s) + 1, H = Math.ceil(by / s) + 1, x0 = ex.xmin, y1 = ex.ymax;
+    const f = new Float64Array(W * H).fill(1e20);   // 1e20 = inget vatten (Infinity ger NaN i edt1)
+    const satt = (x, y) => { const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s); if (i >= 0 && i < W && j >= 0 && j < H) f[j * W + i] = 0; };
+    for (const v of vatten) {
+      const p = v.pts;
+      const kanter = v.yta && p.length > 2 ? p.length : p.length - 1;
+      for (let a = 0; a < kanter; a++) {
+        const A = p[a], B = p[(a + 1) % p.length], l = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(l / (s / 2)));
+        for (let t = 0; t <= n; t++) satt(A[0] + (B[0] - A[0]) * t / n, A[1] + (B[1] - A[1]) * t / n);
+      }
+      if (v.yta && v.sluten !== false && p.length > 2) {
+        // fyll ytan rad för rad
+        for (let j = 0; j < H; j++) {
+          const y = y1 - j * s, xs = [];
+          for (let a = 0; a < p.length; a++) {
+            const A = p[a], B = p[(a + 1) % p.length];
+            if ((A[1] > y) !== (B[1] > y)) xs.push(A[0] + (y - A[1]) * (B[0] - A[0]) / (B[1] - A[1]));
+          }
+          xs.sort((a, b) => a - b);
+          for (let k = 0; k + 1 < xs.length; k += 2) {
+            const i0 = Math.max(0, Math.ceil((xs[k] - x0) / s)), i1 = Math.min(W - 1, Math.floor((xs[k + 1] - x0) / s));
+            for (let i = i0; i <= i1; i++) f[j * W + i] = 0;
+          }
+        }
+      }
+    }
+    // avståndsfältet: först kolumnerna, sedan raderna
+    const n = Math.max(W, H), fi = new Float64Array(n), d = new Float64Array(n), vv = new Int32Array(n), zz = new Float64Array(n + 1);
+    for (let i = 0; i < W; i++) {
+      for (let j = 0; j < H; j++) fi[j] = f[j * W + i];
+      edt1(fi, H, d, vv, zz);
+      for (let j = 0; j < H; j++) f[j * W + i] = d[j];
+    }
+    const z = new Float32Array(W * H);
+    for (let j = 0; j < H; j++) {
+      for (let i = 0; i < W; i++) fi[i] = f[j * W + i];
+      edt1(fi, W, d, vv, zz);
+      for (let i = 0; i < W; i++) z[j * W + i] = Math.sqrt(d[i]) * s;
+    }
+    const g = { W, H, s, x0, y1, z };
+    const linjer = niva => T().kurvorForNiva(g, niva).map(l => T().forenkla(l.pts, s / 2)).filter(p => p.length >= 2);
+    return { m100: linjer(100), m300: linjer(300) };
+  }
+  /** DXF med strandskyddets linjer och vattnet som räknas. */
+  function dxfStrandskydd(s, vatten, r, dx, dy) {
+    const o = [ram(r)];
+    for (const v of vatten.filter(v => strandKlass(v).skydd)) o.push({ typ: 'pl', lager: 'STRANDSKYDD_VATTEN', pts: v.pts, sluten: !!(v.yta && v.sluten !== false) });
+    if (s.zoner) {
+      s.zoner.m100.forEach(p => o.push({ typ: 'pl', lager: 'STRANDSKYDD_100', pts: p }));
+      s.zoner.m300.forEach(p => o.push({ typ: 'pl', lager: 'STRANDSKYDD_300', pts: p }));
+    }
+    return D().skriv({ STRANDSKYDD_VATTEN: 5, STRANDSKYDD_100: 4, STRANDSKYDD_300: 4, UTSNITT: 3 }, o, { dx, dy, ext: r });
+  }
+
   return {
     hojdpunkter, dxfHojdpunkter, hojdText,
     LUTNING, lutning, lutningCanvas, lutningKonturer, dxfLutning,
     fyll, skyfall, dxfSkyfall, inuti, bildRutnat, lutningBild, skyfallBild,
     takhojd, nockhojd, branInVolymer, dxfVolymer, tyngdpunkt, area, langsida, lasDxfFotavtryck,
-    narmasteVatten,
+    narmasteVatten, strandKlass, strandskydd, dxfStrandskydd, SMA_SJO,
   };
 }));

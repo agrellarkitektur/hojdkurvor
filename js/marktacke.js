@@ -42,16 +42,29 @@
   // ------------------------------------------------------------------
   // Hela kedjan
   // ------------------------------------------------------------------
+  /** Vattnets slag för strandskyddet ur marktäckets klass (0.13.5), eller null om det inte är vatten. */
+  function vattenTyp(klass) {
+    const k = String(klass).toLowerCase();
+    if (/anlagt\s*vatten/.test(k)) return 'anlagt';
+    if (/^hav/.test(k)) return 'kust';
+    if (/vattendrag/.test(k)) return 'vattendrag';
+    if (/^sjö/.test(k)) return 'sjö';
+    return null;
+  }
   /**
-   * opt: { kommuner: ['0513', …], utsnitt, epsg, auth, logg, framsteg, bekrafta }
-   * Returnerar { ytor: [{klass, ringar (i zonen)}], linjer: [...], klasser: {namn: antal} }
+   * opt: { kommuner: ['0513', …], utsnitt, epsg, auth, logg, framsteg, bekrafta, vattenMarginal }
+   * Returnerar { ytor: [{klass, ringar (i zonen)}], linjer: [...], klasser: {namn: antal}, vatten }.
+   * Med vattenMarginal (m) läses också vattenytorna så långt utanför utsnittet, hela och oklippta,
+   * för strandskyddet: vatten = [{ typ, namn, yta, sluten, pts }] (yttre ringen).
    */
   async function hamtaUtsnitt(opt) {
     const r = opt.utsnitt;
-    const { objekt } = await K().lasUtsnitt(Object.assign({ produkt: 'marktacke' }, opt));
-    const ytor = [], linjer = [], klasser = {};
+    const { objekt } = await K().lasUtsnitt(Object.assign({ produkt: 'marktacke' }, opt, opt.vattenMarginal ? { marginal: opt.vattenMarginal } : {}));
+    const ytor = [], linjer = [], klasser = {}, vatten = [];
     for (const o of objekt) {
       const klass = klassFor(o);
+      const vt = o.typ === 'yta' && opt.vattenMarginal ? vattenTyp(klass) : null;
+      if (vt && o.ringar[0] && o.ringar[0].length > 2) vatten.push({ typ: vt, namn: '', yta: true, sluten: true, pts: o.ringar[0], kalla: 'marktäcke' });
       if (o.typ === 'yta') {
         const klippta = o.ringar.flatMap(ring => K().klippRing(ring, r, true));
         if (!klippta.length) continue;
@@ -63,7 +76,7 @@
         if (delar.length) klasser[klass] = (klasser[klass] || 0) + delar.length;
       }
     }
-    return { ytor, linjer, klasser };
+    return { ytor, linjer, klasser, vatten };
   }
 
   /** DXF-lagernamn per marktäckesklass, högst 31 tecken (DXF R12). */
@@ -85,5 +98,5 @@
     return Dxf.skriv(lager, objekt, { dx, dy, ext: r });
   }
 
-  return { hamtaUtsnitt, dxf, lagerNamn, farg, klassFor, URL_MALL };
+  return { hamtaUtsnitt, dxf, lagerNamn, farg, klassFor, vattenTyp, URL_MALL };
 }));

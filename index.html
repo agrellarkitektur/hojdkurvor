@@ -7,13 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Höjdkurvor – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.13.4"></script>
-  <script src="js/kalla.js?v=0.13.4" defer></script>
-  <script src="js/tema.js?v=0.13.4"></script>
-  <script src="js/synpunkter.js?v=0.13.4" defer></script>
+  <script src="js/version.js?v=0.13.5"></script>
+  <script src="js/kalla.js?v=0.13.5" defer></script>
+  <script src="js/tema.js?v=0.13.5"></script>
+  <script src="js/synpunkter.js?v=0.13.5" defer></script>
+  <script src="js/stod.js?v=0.13.5" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.13.4">
-  <link rel="stylesheet" href="app.css?v=0.13.4">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.13.5">
+  <link rel="stylesheet" href="app.css?v=0.13.5">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -26,6 +27,7 @@
       <a href="instruktioner.html"><span class="blad">BLAD 02</span><span class="namn">INSTRUKTIONER</span></a>
       <a href="om.html"><span class="blad">BLAD 03</span><span class="namn">OM</span></a>
       <a href="bestall.html"><span class="blad">BLAD 04</span><span class="namn">BESTÄLL</span></a>
+      <button type="button" class="stod-knapp" data-stod aria-haspopup="dialog" title="Stöd utvecklingen av Höjdkurvor"><span class="blad">BIDRA</span><span class="namn">STÖD</span></button>
       <div class="tema-val">
         <button type="button" class="tema-knapp" aria-haspopup="menu" aria-expanded="false" aria-controls="tema-meny"><span class="blad">TEMA</span><span class="namn tema-namn">BLUEPRINT</span></button>
         <div class="tema-meny" id="tema-meny" role="menu" aria-label="Tema">
@@ -532,34 +534,34 @@
     </aside>
   </div>
 
-  <script src="config.js?v=0.13.4"></script>
-  <script src="vendor/leaflet/leaflet.js?v=0.13.4"></script>
-  <script src="vendor/proj4.js?v=0.13.4"></script>
-  <script src="vendor/geotiff.js?v=0.13.4"></script>
-  <script src="vendor/jszip.min.js?v=0.13.4"></script>
-  <script src="js/karna.js?v=0.13.4"></script>
-  <script src="js/dxf.js?v=0.13.4"></script>
-  <script src="js/sol.js?v=0.13.4"></script>
-  <script src="js/laser.js?v=0.13.4"></script>
-  <script src="js/ortofoto.js?v=0.13.4"></script>
-  <script src="js/kommunfil.js?v=0.13.4"></script>
-  <script src="js/marktacke.js?v=0.13.4"></script>
-  <script src="js/byggnad.js?v=0.13.4"></script>
-  <script src="js/ifc.js?v=0.13.4"></script>
-  <script src="js/fastighet.js?v=0.13.4"></script>
-  <script src="js/stompunkt.js?v=0.13.4"></script>
-  <script src="js/analys.js?v=0.13.4"></script>
-  <script src="js/vagar.js?v=0.13.4"></script>
-  <script src="js/platsanalys.js?v=0.13.4"></script>
-  <script src="js/geodata.js?v=0.13.4"></script>
-  <script src="js/trad3d.js?v=0.13.4"></script>
-  <script src="js/objektval.js?v=0.13.4"></script>
-  <script src="js/volym3d.js?v=0.13.4"></script>
-  <script src="js/projekt.js?v=0.13.4"></script>
-  <script src="js/utbyte.js?v=0.13.4"></script>
-  <script src="js/topowebb.js?v=0.13.4"></script>
-  <script src="js/utskrift.js?v=0.13.4"></script>
-  <script src="js/platsanalysblad.js?v=0.13.4"></script>
-  <script src="js/app.js?v=0.13.4"></script>
+  <script src="config.js?v=0.13.5"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.13.5"></script>
+  <script src="vendor/proj4.js?v=0.13.5"></script>
+  <script src="vendor/geotiff.js?v=0.13.5"></script>
+  <script src="vendor/jszip.min.js?v=0.13.5"></script>
+  <script src="js/karna.js?v=0.13.5"></script>
+  <script src="js/dxf.js?v=0.13.5"></script>
+  <script src="js/sol.js?v=0.13.5"></script>
+  <script src="js/laser.js?v=0.13.5"></script>
+  <script src="js/ortofoto.js?v=0.13.5"></script>
+  <script src="js/kommunfil.js?v=0.13.5"></script>
+  <script src="js/marktacke.js?v=0.13.5"></script>
+  <script src="js/byggnad.js?v=0.13.5"></script>
+  <script src="js/ifc.js?v=0.13.5"></script>
+  <script src="js/fastighet.js?v=0.13.5"></script>
+  <script src="js/stompunkt.js?v=0.13.5"></script>
+  <script src="js/analys.js?v=0.13.5"></script>
+  <script src="js/vagar.js?v=0.13.5"></script>
+  <script src="js/platsanalys.js?v=0.13.5"></script>
+  <script src="js/geodata.js?v=0.13.5"></script>
+  <script src="js/trad3d.js?v=0.13.5"></script>
+  <script src="js/objektval.js?v=0.13.5"></script>
+  <script src="js/volym3d.js?v=0.13.5"></script>
+  <script src="js/projekt.js?v=0.13.5"></script>
+  <script src="js/utbyte.js?v=0.13.5"></script>
+  <script src="js/topowebb.js?v=0.13.5"></script>
+  <script src="js/utskrift.js?v=0.13.5"></script>
+  <script src="js/platsanalysblad.js?v=0.13.5"></script>
+  <script src="js/app.js?v=0.13.5"></script>
 </body>
 </html>

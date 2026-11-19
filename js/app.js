@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.13.4';
+  const FILVERSION = '0.13.5';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -165,7 +165,7 @@
     ['hom', 'Höjd över mark', 'yta', 'sw-hom', 'u'], ['trad', 'Träd', 'ring', 'sw-trad', 'u'], ['stompunkter', 'Stompunkter', 'ring', 'sw-sp', 'u'],
     ['vagar', 'Vägar (OSM)', 'linje', 'sw-vag', 'u'], ['gangvagar', 'Gång- och cykelvägar (OSM)', 'linje', 'sw-vag-gang', 'u'], ['laser', 'Laserpunkter', 'yta', 'sw-skugga', 'u'],
     ['lutning', 'Lutning', 'yta', 'sw-lutning', 'a'], ['skyfall', 'Skyfall', 'yta', 'sw-skyfall', 'a'], ['skugga', 'Skugga', 'yta', 'sw-skugga', 'a'],
-    ['lamningar', 'Lämningar (RAÄ)', 'ring', 'sw-lamning', 'a'], ['natur', 'Skyddad natur', 'linje', 'sw-natur', 'a'], ['oversvamning', 'Översvämning', 'yta', 'sw-skyfall', 'a'],
+    ['lamningar', 'Lämningar (RAÄ)', 'ring', 'sw-lamning', 'a'], ['natur', 'Skyddad natur', 'linje', 'sw-natur', 'a'], ['strandskydd', 'Strandskydd (indikation)', 'linje', 'sw-strand', 'a'], ['oversvamning', 'Översvämning', 'yta', 'sw-skyfall', 'a'],
   ];
   const GRUPPER = { u: 'UNDERLAG', a: 'ANALYS', s: 'SKISS' };
   const TRAD_VID_HUS = 1;   // meter: träd så nära en byggnad räknas som byggnaden
@@ -1203,7 +1203,7 @@
     $('resultat').hidden = true;
     $('visa-3d').hidden = true;
     $('skapa').classList.remove('gjord');
-    state.zipBlob = null;
+    state.zipBlob = null; state.zipFiler = null;
     state.senaste = null;
     Object.keys(resultat).forEach(n => visaResultatLager(n, null));
     $('lp-utskrift').hidden = true;
@@ -2031,8 +2031,10 @@
       const ll = (() => { const t = tillLatLng(epsg), k = T.kantlinje({ xmin: r.xmin - 300, ymin: r.ymin - 300, xmax: r.xmax + 300, ymax: r.ymax + 300 }).map(t);
         return { syd: Math.min(...k.map(q => q[0])), nord: Math.max(...k.map(q => q[0])), vast: Math.min(...k.map(q => q[1])), ost: Math.max(...k.map(q => q[1])) }; })();
       const fel = e => ({ fel: (e && e.message) || 'okänt fel' });
-      const [lam, nat, ovs, vat] = await Promise.allSettled([
-        Geodata.lamningar(b100, tillZon), Geodata.skyddadNatur(bUts, tillZon), Geodata.oversvamning(bUts), Geodata.vatten(ll, llTillZon),
+      // Vattnet till strandskyddet tas om hand i skapaStrandskydd, efter marktäcket (0.13.5); frågan går under tiden
+      kor.vattenOsm = Geodata.vatten(ll, llTillZon).then(v => ({ v }), e => ({ fel: (e && e.message) || 'okänt fel' }));
+      const [lam, nat, ovs] = await Promise.allSettled([
+        Geodata.lamningar(b100, tillZon), Geodata.skyddadNatur(bUts, tillZon), Geodata.oversvamning(bUts),
       ]);
       senaste.lamningar = lam.status === 'fulfilled' ? lam.value : fel(lam.reason);
       senaste.natur = nat.status === 'fulfilled' ? nat.value : fel(nat.reason);
@@ -2042,8 +2044,6 @@
         else senaste.natur = { fel: nat.value.saknas };
       }
       senaste.oversvamning = ovs.status === 'fulfilled' ? ovs.value : fel(ovs.reason);
-      senaste.strand = vat.status === 'fulfilled' ? Platsanalys.narmasteVatten(r, vat.value) : fel(vat.reason);
-      if (vat.status === 'fulfilled') senaste.vatten = vat.value;
       if (ovs.status === 'fulfilled') {
         const tillTM = epsg === 3006 ? ((x, y) => [x, y]) : (f => (x, y) => f([x, y]))(T.omvandlare(epsg, 3006).forward);
         senaste.oversvamningBilder = ovs.value.filter(o => o.andel > 0).slice(0, 1).map(o => {
@@ -2052,14 +2052,13 @@
           return { url: c.toDataURL('image/png'), x0: r.xmin + s0 / 2, y1: r.ymax - s0 / 2, s: s0, W: Wz, H: Hz };
         });
       }
-      [['Lämningar', senaste.lamningar], ['Skyddad natur', senaste.natur], ['Översvämning', senaste.oversvamning], ['Strandskydd', senaste.strand]]
+      [['Lämningar', senaste.lamningar], ['Skyddad natur', senaste.natur], ['Översvämning', senaste.oversvamning]]
         .forEach(([n, v]) => { if (v && v.fel) varningar.push(`${n}: kunde inte hämtas (${v.fel}).`); });
       extraInfo.push('', 'SKYDD OCH RISKER',
         '  Lämningar inom 100 m: ' + (Array.isArray(senaste.lamningar) ? (senaste.lamningar.length ? senaste.lamningar.map(l => `${l.klass}${l.id ? ' ' + l.id : ''}`).join('; ') : 'inga registrerade') : 'kunde inte kontrolleras'),
         '  Skyddad natur: ' + (Array.isArray(senaste.natur) ? (senaste.natur.length ? senaste.natur.map(o => `${o.typ}${o.namn ? ' ' + o.namn : ''}`).join('; ') : 'inget skyddat område') : 'kunde inte kontrolleras'),
-        '  Strandskydd (indikation): ' + (senaste.strand && !senaste.strand.fel ? Platsanalysblad.strandText(senaste.strand).lang : 'kunde inte kontrolleras'),
         '  Översvämning: ' + (Array.isArray(senaste.oversvamning) ? senaste.oversvamning.map(o => `${o.namn} ${o.andel > 0.001 ? fmt(o.andel * 100) + ' %' : 'nej'}`).join(', ') : 'kunde inte kontrolleras'),
-        '  ' + Object.values(Geodata.KALLOR).join(' '));
+        '  ' + [Geodata.KALLOR.natur, Geodata.KALLOR.lamningar, Geodata.KALLOR.oversvamning].join(' '));
       sammanExtra.push(['Skydd och risker', [Array.isArray(senaste.lamningar) ? `${senaste.lamningar.length} lämningar` : null, Array.isArray(senaste.natur) ? `${senaste.natur.length} skyddade områden` : null].filter(Boolean).join(', ') || 'se varningar']);
       visaSkydd(senaste, epsg, bUts);
     }
@@ -2143,7 +2142,7 @@
         const kommuner = kommunerIUtsnitt();
         if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
         const m = await Marktacke.hamtaUtsnitt({
-          kommuner, utsnitt: r, epsg, auth,
+          kommuner, utsnitt: r, epsg, auth, vattenMarginal: val.skydd ? 300 : 0,
           logg: t => visaStatus(t),
           framsteg: f => delFramsteg('marktacke', f * 0.9),
           bekrafta: async storlek => window.confirm(`Marktäcket för kommunen är ${fmt(storlek / 1e6)} MB. Det hämtas en gång och sparas sedan i webbläsaren. Vill du hämta det?`),
@@ -2167,6 +2166,48 @@
       } catch (e) { console.error(e); varningar.push('Marktäcke: ' + e.message); }
     }
   }
+
+  /**
+   * Strandskydd (indikation, 0.13.5): vatten ur marktäcket (om det är valt) och OpenStreetMap, reglerna
+   * från 1 juli 2025 (Platsanalys.strandKlass) och linjerna 100 och 300 m från vattnet.
+   * Svarar inte OpenStreetMap räcker marktäcket, men då saknas bäckar och namn.
+   */
+  async function skapaStrandskydd(kor) {
+    const { X0, Y0, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, val, varningar } = kor;
+    if (!val.skydd || !kor.vattenOsm) return;
+    delFramstegFor(kor, 'Strandskydd');
+    const osm = await kor.vattenOsm;
+    const mt = (senaste.marktacke && senaste.marktacke.vatten) || [];
+    if (osm.fel && !mt.length) {
+      senaste.strand = { fel: osm.fel };
+      varningar.push(`Strandskydd: kunde inte hämtas (${osm.fel}).`);
+      extraInfo.push('', 'STRANDSKYDD (INDIKATION)', '  Kunde inte kontrolleras.');
+      return;
+    }
+    const vatten = mt.concat(osm.v || []);
+    const st = Platsanalys.strandskydd(r, vatten, { zoner: true });
+    // marktäckets ytor har inga namn: låna namnet från OpenStreetMap om samma slags vatten ligger lika nära
+    if (st.objekt && !st.objekt.namn && osm.v) {
+      const n = Platsanalys.narmasteVatten(r, osm.v.filter(v => v.typ === st.objekt.typ && v.namn));
+      if (n.objekt && Math.abs(n.avstand - st.avstand) < 15) st.objekt = Object.assign({}, st.objekt, { namn: n.objekt.namn });
+    }
+    st.kalla = mt.length && osm.v ? 'Lantmäteriets marktäcke och OpenStreetMap' : mt.length ? 'Lantmäteriets marktäcke' : 'OpenStreetMap';
+    senaste.strand = st; senaste.vatten = vatten;
+    if (osm.fel) varningar.push(`Strandskydd: OpenStreetMap svarade inte (${osm.fel}). Bara marktäckets vatten är med; bäckar saknas.`);
+    if (st.zoner || vatten.length) {
+      filer[`strandskydd/${namn}_strandskydd_lokal.dxf`] = Platsanalys.dxfStrandskydd(st, vatten, r, X0, Y0);
+      filer[`strandskydd/${namn}_strandskydd_sweref.dxf`] = Platsanalys.dxfStrandskydd(st, vatten, r, 0, 0);
+    }
+    extraInfo.push('', 'STRANDSKYDD (INDIKATION)',
+      '  ' + Platsanalysblad.strandText(st).lang,
+      '  Reglerna från 1 juli 2025: inget generellt strandskydd vid insjöar under 1 ha, vattendrag högst 2 m breda och vatten anlagda efter juni 1975.',
+      '  Bäckar ur OpenStreetMap räknas som högst 2 m breda. Upphävanden i detaljplaner, dispenser och utvidgat strandskydd finns inte i underlaget.',
+      ...(st.zoner ? ['  strandskydd/: STRANDSKYDD_100 och STRANDSKYDD_300 = 100 och 300 m från vattnet (STRANDSKYDD_VATTEN), räknat i ett rutnät (± några meter).'] : []),
+      '  Vatten: ' + st.kalla + '.' + (osm.v ? ' ' + Geodata.KALLOR.vatten.replace(/^Vatten: /, '') : ''));
+    sammanExtra.push(['Strandskydd', Platsanalysblad.strandText(st).kort]);
+    visaStrandskydd(st);
+  }
+  function delFramstegFor(kor, text) { if (kor.delFramsteg) kor.delFramsteg('skydd', 0.95, text); }
 
   /** Ortofoto. */
   async function skapaOrtofoto(kor) {
@@ -2441,20 +2482,28 @@
     }
   }
 
-  /** Info-filen och zip-filen. */
-  async function packaZip(kor) {
+  /**
+   * Info-filen och filerna till zip-filen. Sedan 0.13.5 packas zip-filen först när man laddar ner
+   * (packaZipNu), så att Skapa blir klar fortare och inte packar om i onödan.
+   */
+  function forberedZip(kor) {
     const { extraInfo, filer, infoNamn, namn, res } = kor;
     if (extraInfo.length) filer[infoNamn] = res.filer[infoNamn] + extraInfo.join('\r\n') + '\r\n';
-
-    // --- Paketera
-    visaStatus('Packar zip-filen …');
-    matare(99);
-    const zip = new JSZip();
     const mapp = namn.replace(/[^\wåäöÅÄÖ.-]+/g, '_');
+    state.zipFiler = filer; state.zipBlob = null; state.zipNamn = `${mapp}.zip`;
+    $('ladda-ner').textContent = `Ladda ner ${mapp}.zip (${Object.keys(filer).length} filer)`;
+  }
+  /** Packar zip-filen en gång per Skapa; sparas sedan till nästa Skapa. */
+  async function packaZipNu() {
+    if (state.zipBlob) return state.zipBlob;
+    const filer = state.zipFiler;
+    const zip = new JSZip();
     Object.entries(filer).forEach(([fil, innehall]) => zip.file(fil, innehall));
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-    state.zipBlob = blob; state.zipNamn = `${mapp}.zip`;
-    $('ladda-ner').textContent = `Ladda ner ${mapp}.zip (${fmt(blob.size / 1e6, 1)} MB)`;
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }, m => visaStatus(`Packar zip-filen … ${Math.round(m.percent)} %`));
+    if (state.zipFiler !== filer) return null;   // ett nytt Skapa har börjat under tiden
+    state.zipBlob = blob;
+    $('ladda-ner').textContent = `Ladda ner ${state.zipNamn} (${fmt(blob.size / 1e6, 1)} MB)`;
+    return blob;
   }
 
   /** Sammanfattningen, resultatet på kartan och statusraden. */
@@ -2502,7 +2551,7 @@
    * räknas in i markmodellen från skapaTerrang, byggnaderna behövs för träden och skuggorna,
    * ortofotot för vägarnas bredd, och bladet, den samlade DXF:en och zip-filen kommer sist.
    */
-  const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaLagerPdf, skapaBlad, skapaProjektfilen, skapaSamladDxf, packaZip, visaKlart];
+  const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaStrandskydd, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaLagerPdf, skapaBlad, skapaProjektfilen, skapaSamladDxf, forberedZip, visaKlart];
 
   $('skapa').addEventListener('click', async () => {
     const kor = {};
@@ -2530,11 +2579,22 @@
   });
 
 
+  // Filen väljs före packningen: dialogen kräver att den öppnas direkt på klicket (0.13.5)
   $('ladda-ner').addEventListener('click', async () => {
-    if (!state.zipBlob) return;
-    const mal = await valjFil(state.zipNamn, 'application/zip', 'Zip-fil');
+    if (!state.zipFiler) return;
+    const knapp = $('ladda-ner'), namn = state.zipNamn;
+    const mal = await valjFil(namn, 'application/zip', 'Zip-fil');
     if (mal === AVBRUTET) return;
-    try { await skrivFil(mal, state.zipBlob, state.zipNamn); } catch (e) { console.error(e); visaStatus('Filen kunde inte sparas: ' + e.message, true); }
+    knapp.disabled = true;
+    const fore = $('status-text').textContent;   // varningarna från Skapa står kvar efter packningen
+    try {
+      const packas = !state.zipBlob;
+      const blob = await packaZipNu();
+      if (packas) visaStatus(fore, false);
+      if (!blob) return;
+      await skrivFil(mal, blob, namn);
+    } catch (e) { console.error(e); visaStatus('Filen kunde inte sparas: ' + e.message, true); }
+    finally { knapp.disabled = false; }
   });
 
   // ------------------------------------------------------------------
@@ -2712,6 +2772,17 @@
       visaResultatLager('natur', grp, () => pol.forEach(p => p.setStyle(stil())));
     }
     visaResultatLager('oversvamning', L.tileLayer.wms(Geodata.TJANSTER.oversvamningWms, { layers: '13', format: 'image/png', transparent: true, opacity: 0.6, maxZoom: 19, attribution: 'Översvämning: Myndigheten för civilt försvar' }));
+  }
+
+  /** Linjerna 100 m (heldragen) och 300 m (streckad) från vattnet med strandskydd (0.13.5). */
+  function visaStrandskydd(st) {
+    if (!st || !st.zoner) { visaResultatLager('strandskydd', null); return; }
+    const t = tillLatLng(state.epsg);
+    const stil = m => ({ color: farg('strand'), weight: m === 100 ? 2 : 1.5, dashArray: m === 100 ? null : '8 6', fill: false });
+    const linjer = [];
+    [[100, st.zoner.m100], [300, st.zoner.m300]].forEach(([m, lista]) => lista.forEach(p =>
+      linjer.push(Object.assign(L.polyline(p.map(t), stil(m)).bindTooltip(`${m} m från vatten med strandskydd (indikation)`, { sticky: true }), { meter: m }))));
+    visaResultatLager('strandskydd', L.featureGroup(linjer), () => linjer.forEach(l => l.setStyle(stil(l.meter))));
   }
 
   // ------------------------------------------------------------------

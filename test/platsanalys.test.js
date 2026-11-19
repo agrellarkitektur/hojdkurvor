@@ -75,4 +75,27 @@ assert.strictEqual(fb.length, 1); assert.deepStrictEqual(fb[0].pts[2], [10, 5]);
 // strandskydd
 const vatten = [{ typ: 'sjö', namn: 'Sjön', yta: true, pts: [[1300, 2000], [1400, 2000], [1400, 2100], [1300, 2100]] }];
 assert.strictEqual(Math.round(P.narmasteVatten(r, vatten).avstand), 100);
+// reglerna från 1 juli 2025 (0.13.5): små sjöar, bäckar och anlagt vatten räknas inte
+assert.strictEqual(P.strandKlass({ typ: 'sjö', yta: true, pts: [[0, 0], [99, 0], [99, 99], [0, 99]] }).skydd, false);
+assert.strictEqual(P.strandKlass({ typ: 'sjö', yta: true, pts: [[0, 0], [101, 0], [101, 101], [0, 101]] }).skydd, true);
+assert.strictEqual(P.strandKlass({ typ: 'sjö', yta: true, sluten: false, pts: [[0, 0], [5, 0], [5, 5]] }).skydd, true, 'en bit av en stor sjö');
+assert.strictEqual(P.strandKlass({ typ: 'bäck', pts: [[0, 0], [5, 0]] }).skydd, false);
+assert.strictEqual(P.strandKlass({ typ: 'anlagt', yta: true, pts: [[0, 0], [500, 0], [500, 500]] }).skydd, false);
+{
+  const damm = { typ: 'sjö', namn: 'Dammen', yta: true, pts: [[1100, 2160], [1150, 2160], [1150, 2200], [1100, 2200]] };   // 0,2 ha, 10 m norr om utsnittet
+  const st = P.strandskydd(r, [damm].concat(vatten), { zoner: true });
+  assert.strictEqual(Math.round(st.avstand), 100, 'dammen räknas inte, Sjön gör det');
+  assert.strictEqual(st.objekt.namn, 'Sjön');
+  assert.strictEqual(st.ovrigt.objekt.namn, 'Dammen'); assert.strictEqual(Math.round(st.ovrigt.avstand), 10);
+  // 100-metersgränsen kring Sjön (1300–1400, 2000–2100) går genom x = 1200 vid y = 2050
+  const tillSjon = p => Math.hypot(Math.max(1300 - p[0], 0, p[0] - 1400), Math.max(2000 - p[1], 0, p[1] - 2100));
+  const pts = st.zoner.m100.flat().filter(p => p[0] > 800 && p[0] < 1900 && p[1] > 1700 && p[1] < 2450);
+  assert(pts.length > 4);
+  pts.forEach(p => assert(Math.abs(tillSjon(p) - 100) < 4, 'punkt på 100-metersgränsen: ' + p + ' ' + tillSjon(p)));
+  assert(st.zoner.m300.length > 0);
+  const dxf = P.dxfStrandskydd(st, [damm].concat(vatten), r, 0, 0);
+  assert(/STRANDSKYDD_100/.test(dxf) && /STRANDSKYDD_VATTEN/.test(dxf));
+  const t0 = Date.now(); P.strandskydd({ xmin: 0, ymin: 0, xmax: 2000, ymax: 2000 }, [{ typ: 'kust', pts: [[-200, -100], [2200, 2300]] }], { zoner: true });
+  assert(Date.now() - t0 < 3000, 'zonerna för 2 × 2 km tar under 3 s');
+}
 console.log('platsanalys: alla test godkända');

@@ -7,16 +7,26 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **BF**.
+Senast använda nummer: **BL**.
 
 ## Inkorg
 
-(tom)
+- **BJ** Platsdatan försvinner när man går till Instruktioner, Om eller Beställ och tillbaka; man måste skapa om. Den ska inte kännas ömtålig. *Planerat till 0.13.6: spara resultatet i webbläsaren (IndexedDB) och läsa in det när kartan öppnas.*
+- **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0.*
+- **BL** Stöd-knappen blir ett hjärta när gränssnittet går över till ikoner.
 
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
 
+### 0.13.5
+
+Synpunkter från egen användning 19 november (BG–BL): strandskyddet, zip-filen, STÖD och att
+underlaget försvinner vid byte av sida. BJ och BK väntar till 0.13.6 respektive senare.
+
+- **BG** Strandskydd på en riktig plats nära en sjö: kommer strandskyddet med, utan *signal is aborted without reason*? Syns lagret *Strandskydd (indikation)* med en heldragen linje 100 m och en streckad 300 m från vattnet, och stämmer de ungefär med kartan? Prova med och utan Marktäcke ikryssat. Står det rätt sjö i texten? Prova också nära en liten damm eller bäck: säger texten att den saknar strandskydd enligt reglerna från 2025?
+- **BH** Zip-filen: blir Skapa klar fortare? Välj *Ladda ner*: packas filen (statusraden visar procent) och sparas den? Andra gången ska den sparas direkt. **På iPhone**: kommer nedladdningen fram, eller stoppar Chrome den eftersom den startar först efter packningen?
+- **BI** STÖD i menyraden på alla fyra sidor: öppnas rutan, går den att stänga med krysset, Stäng, Esc och klick utanför, och ser den bra ut på iPhone?
 ### 0.13.4
 
 Rättelser efter testet 19 november (BD, BE och BF nedan). Tjänsterna är kontrollerade mot

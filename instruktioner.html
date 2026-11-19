@@ -7,12 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.13.4"></script>
-  <script src="js/kalla.js?v=0.13.4" defer></script>
-  <script src="js/tema.js?v=0.13.4"></script>
-  <script src="js/synpunkter.js?v=0.13.4" defer></script>
+  <script src="js/version.js?v=0.13.5"></script>
+  <script src="js/kalla.js?v=0.13.5" defer></script>
+  <script src="js/tema.js?v=0.13.5"></script>
+  <script src="js/synpunkter.js?v=0.13.5" defer></script>
+  <script src="js/stod.js?v=0.13.5" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.13.4">
+  <link rel="stylesheet" href="app.css?v=0.13.5">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -25,6 +26,7 @@
       <a href="instruktioner.html" aria-current="page"><span class="blad">BLAD 02</span><span class="namn">INSTRUKTIONER</span></a>
       <a href="om.html"><span class="blad">BLAD 03</span><span class="namn">OM</span></a>
       <a href="bestall.html"><span class="blad">BLAD 04</span><span class="namn">BESTÄLL</span></a>
+      <button type="button" class="stod-knapp" data-stod aria-haspopup="dialog" title="Stöd utvecklingen av Höjdkurvor"><span class="blad">BIDRA</span><span class="namn">STÖD</span></button>
       <div class="tema-val">
         <button type="button" class="tema-knapp" aria-haspopup="menu" aria-expanded="false" aria-controls="tema-meny"><span class="blad">TEMA</span><span class="namn tema-namn">BLUEPRINT</span></button>
         <div class="tema-meny" id="tema-meny" role="menu" aria-label="Tema">
@@ -115,7 +117,7 @@
           <li><strong>02 Underlag.</strong> Välj ritprogram, så ställs formaten in efter det. Under Terräng, Laserdata, Kartdata och Sektioner väljer du vad zip-filen ska innehålla.</li>
           <li><strong>03 Analys.</strong> Kryssa i <em>Skapa platsanalysblad</em> om du vill ha platsanalysen, se nedan.</li>
           <li><strong>04 Skiss.</strong> Lägg till volymer om du vill pröva ett hus på platsen. Steget kan hoppas över.</li>
-          <li>Välj <em>Skapa</em>. Allt hämtas och räknas i din webbläsare. Stora områden och många tillval tar längre tid. Kontrollera resultatet på kartan och ladda ner zip-filen.</li>
+          <li>Välj <em>Skapa</em>. Allt hämtas och räknas i din webbläsare. Stora områden och många tillval tar längre tid. Kontrollera resultatet på kartan och ladda ner zip-filen. Den packas när du väljer <em>Ladda ner</em>, vilket kan ta en stund första gången.</li>
         </ol>
         <dl class="par">
           <dt id="projekt">Projekt</dt><dd>Det du matar in och väljer sparas som ett projekt i webbläsaren medan du arbetar: området, valen, skissens volymer, sektionerna, horisontens punkt och de tak, träd och hus du har rättat. Laddar du om sidan finns allt kvar. Under <em>Senaste projekt</em> i steg 01 öppnar du ett annat projekt, och <em>Nytt projekt</em> börjar om med ett tomt. Medan underlaget skapas går det inte att byta projekt. Hamnar volymer eller sektioner utanför området när du flyttar det ligger de kvar i projektet, och appen säger till.
@@ -136,7 +138,7 @@
           <dt>Sol</dt><dd>Soldiagram med horisont från terräng, träd och byggnader, och en skuggstudie vid dagjämning och solstånd. Under Anpassa sol väljer du betraktelsepunkt, ögonhöjd och tider. Horisonten räknas från utsnittets mitt, eller från en punkt du väljer på kartan. Står punkten i ett hus eller under ett träd räknas det objektet bort. Träd och byggnader kräver Laserdata skog.</dd>
           <dt>Terräng</dt><dd>Markens lutning i fyra klasser: flackare än 1:50, 1:50–1:20, 1:20–1:12 och brantare än 1:12. Gränserna följer tillgänglighetskraven för gångvägar och ramper.</dd>
           <dt>Vatten</dt><dd>Var vatten blir stående och vilka vägar det tar vid ett skyfall. Räknas ur markmodellen utan hänsyn till ledningar, kulvertar eller hur mycket marken suger upp. Skissade volymer räknas med.</dd>
-          <dt>Skydd</dt><dd>Fornlämningar och andra kulturhistoriska lämningar från Riksantikvarieämbetet, naturreservat, Natura 2000 och andra skyddade områden från Naturvårdsverket, avstånd till sjöar och vattendrag som indikation på strandskydd, och översvämningskarteringar från Myndigheten för civilt försvar. Kräver ingen inloggning.</dd>
+          <dt>Skydd</dt><dd>Fornlämningar och andra kulturhistoriska lämningar från Riksantikvarieämbetet, naturreservat, Natura 2000 och andra skyddade områden från Naturvårdsverket, avstånd till sjöar och vattendrag som indikation på strandskydd (efter reglerna från 1 juli 2025: inte vid insjöar under 1 ha, vattendrag högst 2 m breda eller anlagt vatten; linjerna 100 och 300 m från vattnet visas på kartan och följer med som DXF, och med Marktäcke ikryssat används också Lantmäteriets vatten), och översvämningskarteringar från Myndigheten för civilt försvar. Kräver ingen inloggning.</dd>
           <dt>Klimat och buller</dt><dd>Snölast, vind, växtzon och buller från vägar kommer i en senare version.</dd>
         </dl>
         <p class="liten">Platsanalysen är ett underlag för tidiga skeden och ersätter inte myndigheternas egna besked, en geoteknisk undersökning, en dagvattenutredning eller en bullerutredning. Strandskyddet är bara en indikation; kontrollera alltid med kommunen och länsstyrelsen.</p>

@@ -3,6 +3,31 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.13.5 – 2026-11-19
+
+Synpunkter från egen användning 19 november.
+
+- **Strandskyddet efter reglerna från 1 juli 2025**: insjöar under 1 ha,
+  bäckar (räknas som högst 2 m breda) och anlagt vatten räknas inte. Ligger
+  ett sådant vatten närmare än det som har strandskydd nämns det i texten.
+  Linjerna 100 m (heldragen) och 300 m (streckad) från vattnet visas som
+  lagret *Strandskydd (indikation)* på kartan och följer med som DXF i
+  mappen `strandskydd/` (lagren `STRANDSKYDD_100`, `STRANDSKYDD_300` och
+  `STRANDSKYDD_VATTEN`, också i den samlade DXF:en).
+- **Strandskyddet med marktäckets vatten**: är Marktäcke ikryssat läses
+  sjöar, hav och vattendragsytor ur Lantmäteriets marktäcke 300 m runt
+  utsnittet. Svarar inte OpenStreetMap räcker det, men då saknas bäckar och
+  namn. Vatten i grannkommunen kommer bara med från OpenStreetMap.
+- **Strandskydd: kunde inte hämtas (signal is aborted without reason)**:
+  appen avbröt själv frågan till OpenStreetMap efter 25 sekunder, och ett
+  sådant avbrott gav inga nya försök. Nu får OpenStreetMap 40 sekunder, ett
+  avbrott försöks igen som ett 502, och felet säger *svarade inte inom 40 s*.
+  Frågan går medan resten av underlaget skapas.
+- **Zip-filen packas när du laddar ner**, inte i varje Skapa. Skapa blir
+  klar fortare, och den packade filen sparas tills du skapar igen.
+- **STÖD i menyraden** på alla sidor öppnar avsnittet Stöd utvecklingen i en
+  ruta. Texten finns på ett ställe (`js/stod.js`) och visas också på Om-sidan.
+
 ## 0.13.4 – 2026-11-19
 
 Rättelser efter testet av 0.13.3 (BD, BE och BF i `docs/SYNPUNKTER.md`).

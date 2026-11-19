@@ -177,7 +177,9 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/platsanalys.js` (`Platsanalys`) – höjdpunkter, lutning, skyfall
   (sänkfyllning och flödesackumulering), lagren som bild, skissade volymer och tak
 - `js/geodata.js` (`Geodata`) – skyddad natur, lämningar, översvämning och
-  vatten från andra myndigheter och OpenStreetMap
+  vatten från andra myndigheter och OpenStreetMap. Strandskyddet (reglerna från
+  1 juli 2025, linjerna 100 och 300 m) räknas i `Platsanalys.strandskydd`, med
+  marktäckets vatten när Marktäcke är valt
 - `js/platsanalysblad.js` – platsanalysens A3-häfte (PDF)
 - `js/utbyte.js` (`Utbyte`) – utbytet med cad-apa, se `docs/UTBYTE-CAD-APA.md`
 - `js/projekt.js` (`Projekt`) – projektet: formatet för projektfilen (`.hojdkurvor`, zip med
@@ -195,6 +197,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/dxf.js` – DXF-skrivare och sammanslagning till en samlad DXF
 - `js/bestall.js` – beställningsformuläret
 - `js/synpunkter.js` – BETA-knappen och formuläret Skicka synpunkter, på alla sidor
+- `js/stod.js` – knappen STÖD och texten Stöd utvecklingen (dialogen och avsnittet på Om-sidan), på alla sidor
 - `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, projektet, felrapport
 - `data/kommuner.json` – förenklade kommungränser med kommunkod och föreslagen
   SWEREF 99-zon (fältet `epsg`; Kiruna saknar värde eftersom kommunen använder
