@@ -1,0 +1,55 @@
+# Skapar taggar och releaser i efterhand för versioner som saknar dem.
+#
+# Körs för hand: Actions → "Releaser i efterhand" → "Run workflow". Skriv
+# versionerna som version=commit, med mellanslag emellan, till exempel
+#   0.12.0=78b0480 0.12.1=227318c
+# För varje version skapas taggen vX.Y.Z på commiten och en release med
+# versionens avsnitt ur CHANGELOG.md (som den såg ut i commiten) och
+# hojdkurvor-vX.Y.Z.zip med samma urval som release.yml. Releasen markeras inte
+# som den senaste. Finns releasen redan hoppas versionen över.
+#
+# Nya versioner får tagg och release av sig själva (release.yml).
+
+name: Releaser i efterhand
+
+on:
+  workflow_dispatch:
+    inputs:
+      versioner:
+        description: 'version=commit med mellanslag emellan, t.ex. 0.12.0=78b0480 0.12.1=227318c'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  efterhand:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Skapa taggar och releaser
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSIONER: ${{ inputs.versioner }}
+        run: |
+          set -euo pipefail
+          for par in $VERSIONER; do
+            V="${par%%=*}"; C="${par#*=}"
+            [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Fel version: $par"; exit 1; }
+            SHA=$(git rev-parse --verify "$C^{commit}") || { echo "::error::Hittar inte commit $C"; exit 1; }
+            if gh release view "v$V" >/dev/null 2>&1; then echo "v$V har redan en release, hoppar över."; continue; fi
+            # versionen i commiten ska stämma
+            git show "$SHA:js/version.js" | grep -q "version: '$V'" || { echo "::error::js/version.js i $C är inte $V"; exit 1; }
+            git show "$SHA:CHANGELOG.md" | awk -v v="$V" '$0 ~ "^## "v"( |$)" {p=1; next} /^## / && p {exit} p' > noter.md
+            [ -s noter.md ] || echo "Se CHANGELOG.md." > noter.md
+            printf '\n*Release skapad i efterhand.*\n' >> noter.md
+            rm -rf package && mkdir -p package/hojdkurvor
+            git archive "$SHA" -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C package/hojdkurvor
+            printf 'Höjdkurvor v%s\n\nLadda upp innehållet i mappen hojdkurvor till appens mapp på webbservern.\n\nÄndringar: https://github.com/%s/blob/v%s/CHANGELOG.md\n' "$V" "$GITHUB_REPOSITORY" "$V" > package/hojdkurvor/LASMIG.txt
+            (cd package && zip -q -r -9 "../hojdkurvor-v$V.zip" hojdkurvor)
+            gh release create "v$V" "hojdkurvor-v$V.zip" --target "$SHA" --title "Höjdkurvor $V" --notes-file noter.md --latest=false
+            echo "v$V skapad på $SHA"
+          done

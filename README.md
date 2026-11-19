@@ -38,6 +38,8 @@ till `main` ändrar `js/version.js` och taggen för versionen inte finns, skapas
 taggen (`v0.13.1`) och en release med versionens avsnitt ur `CHANGELOG.md` och
 filen `hojdkurvor-vX.Y.Z.zip`, med en mapp `hojdkurvor` som innehåller samma
 filer som publiceras. En release som skapas för hand får också zip-filen.
+Saknas en release för en äldre version skapar `releaser-i-efterhand.yml`
+(körs för hand, med till exempel `0.12.0=78b0480`) tagg, release och zip-fil.
 
 FTP-publiceringen till webbhotellet togs bort i 0.13.1. Arbetsflödet
 `stang-webbhotellet.yml` (körs för hand) tar bort appen från
