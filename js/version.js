@@ -1,4 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Agrell Arkitektur
 /* Version av Höjdkurvor. Höj vid varje uppdatering och skriv vad som är nytt i CHANGELOG.md och på Om-sidan. */
-window.HOJDKURVOR = { version: '0.13.1', datum: '2026-11-19' };
+window.HOJDKURVOR = { version: '0.13.2', datum: '2026-11-19' };
