@@ -1,9 +1,22 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.2 (AGPL och Stöd utvecklingen).
+överlämning; historiken finns i git. Senast: 19 november 2026, granskningen efter 0.13.2.
 
 ## Läget
+
+- **Granskningen 19 november** (grenen `granskning-2026-11-19`, inte publicerad, ingen ny
+  version): hela koden, dokumenten och driften är genomgångna. Rapporten ligger i
+  claude.ai-projektet (`granskning-0.13.2.md`) med alla fynd, också de som inte är åtgärdade.
+  På grenen är småfelen rättade: sektionens namn skrevs som HTML i kartans tips (en
+  projektlänk eller projektfil kunde köra skript på sidan), sektioner ur en projektlänk
+  ritades inte förrän sidan laddades om, `Projekt.las` tål fält av fel sort, trädvalen ur
+  projektet ger inte längre tvillingar en decimeter bredvid (`Projekt.slaIhopTradval`),
+  `geodata.php` och `stac.php` sparar bara lyckade svar i webbläsaren, och arbetsflödena har
+  bara de rättigheter de behöver. Nytt test: `test/sol.test.js`. **Nästa version (0.13.3)**
+  slår ihop den här grenen och `qr-ruta` och skriver båda i CHANGELOG och på Om-sidan.
+  Testdatan gick att bygga utan GDAL (rasterio, se `test/README.md`); gränssnittstesterna
+  är körda mot grenen.
 
 - **0.13.2** 19 november: licensbytet till AGPL-3.0-or-later och avsnittet
   Stöd utvecklingen på Om-sidan, efter `docs/LICENS.md` (samma beslut som i
