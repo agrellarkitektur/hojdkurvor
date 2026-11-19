@@ -1,5 +1,8 @@
 # Contributor License Agreement (CLA)
 
+*Utkast 1, 19 november 2026. Ska granskas av en jurist innan det används
+skarpt. Draft 1, to be reviewed by a lawyer before it is put into use.*
+
 **På svenska, i korthet:** du behåller upphovsrätten till ditt bidrag, men
 ger Agrell Arkitektur rätt att använda det och licensiera det vidare, också
 under andra villkor än AGPL. Det behövs för att projektet ska kunna sälja
@@ -9,8 +12,9 @@ AGPL-3.0 för alla andra. Avtalet nedan på engelska är det som gäller.
 ---
 
 This Contributor License Agreement ("Agreement") is between you
-("You") and the owner of the Swedish sole proprietorship Agrell
-Arkitektur, contact kontakt@agrellarkitektur.se ("Agrell Arkitektur"),
+("You") and Agrell Arkitektur AB, Sweden, represented by its authorised
+signatory (firmatecknare), contact kontakt@agrellarkitektur.se
+("Agrell Arkitektur"),
 concerning the software project Höjdkurvor at
 https://github.com/agrellarkitektur/hojdkurvor ("the Project").
 
