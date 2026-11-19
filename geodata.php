@@ -5,6 +5,8 @@
  * Vidarebefordrar GET-frågor till ett fåtal öppna geodatatjänster, för webbläsare
  * som inte får fråga dem direkt (CORS). Bara adresser som börjar som i $VITLISTA
  * släpps igenom. Inga cookies eller inloggningsuppgifter skickas vidare.
+ * Omdirigeringar följs bara till https på en av vitlistans servrar (0.13.3),
+ * högst två gånger.
  *
  * Anrop: geodata.php?u=<urlkodad adress>
  */
@@ -37,16 +39,46 @@ foreach ($VITLISTA as $prefix) {
 }
 if (!$ok || strlen($u) > 2000 || preg_match('/[\s\x00-\x1f]/', $u)) fel(400, 'Otillåten adress');
 
+$VARDAR = array_unique(array_map(fn($p) => strtolower((string) parse_url($p, PHP_URL_HOST)), $VITLISTA));
+
+/** Vart en omdirigering pekar, som hel adress. null om den inte får följas. */
+function omdirigering($fran, $till, $vardar) {
+    $till = trim($till);
+    if ($till === '' || strlen($till) > 2000 || preg_match('/[\s\x00-\x1f]/', $till)) return null;
+    $f = parse_url($fran);
+    if (strncmp($till, '//', 2) === 0) $till = 'https:' . $till;
+    elseif ($till[0] === '/') $till = 'https://' . $f['host'] . $till;
+    elseif (!preg_match('#^https?://#i', $till)) return null;
+    $d = parse_url($till);
+    if (!is_array($d) || strtolower($d['scheme'] ?? '') !== 'https' || empty($d['host'])) return null;
+    if (isset($d['user']) || isset($d['pass']) || (isset($d['port']) && (int) $d['port'] !== 443)) return null;
+    return in_array(strtolower($d['host']), $vardar, true) ? $till : null;
+}
+
+// PHP får inte följa omdirigeringar själv: då prövas inte målet. Varje steg hämtas för sig.
 $ctx = stream_context_create(['http' => [
     'method' => 'GET',
     'timeout' => 25,
     'ignore_errors' => true,
-    'follow_location' => 1,
-    'max_redirects' => 2,
+    'follow_location' => 0,
+    'max_redirects' => 0,
     'header' => "User-Agent: Hojdkurvor\r\nAccept: application/json, image/png, */*\r\n",
 ]]);
-$svar = @file_get_contents($u, false, $ctx, 0, $MAX + 1);
-if ($svar === false) fel(502, 'Kunde inte nå tjänsten');
+$adress = $u;
+for ($steg = 0; ; $steg++) {
+    $http_response_header = null;
+    $svar = @file_get_contents($adress, false, $ctx, 0, $MAX + 1);
+    if ($svar === false) fel(502, 'Kunde inte nå tjänsten');
+    $kod = 0; $vidare = null;
+    foreach ((array) $http_response_header as $rad) {
+        if (preg_match('#^HTTP/\S+\s+(\d{3})#', $rad, $m)) $kod = (int) $m[1];
+        if (preg_match('#^Location:\s*(.+)$#i', $rad, $m)) $vidare = $m[1];
+    }
+    if (!in_array($kod, [301, 302, 303, 307, 308], true) || $vidare === null) break;
+    if ($steg >= 2) fel(502, 'Tjänsten omdirigerar för många gånger');
+    $adress = omdirigering($adress, $vidare, $VARDAR);
+    if ($adress === null) fel(502, 'Tjänsten hänvisar till en adress som inte är tillåten');
+}
 if (strlen($svar) > $MAX) fel(502, 'Svaret är för stort');
 
 $status = 200;

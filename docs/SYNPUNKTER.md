@@ -17,6 +17,12 @@ Senast använda nummer: **AÖ**.
 
 Grupperat efter den version där testbehovet uppstod.
 
+### 0.13.3
+
+- **BA** Synpunktsformuläret efter de nya spärrarna: skicka en synpunkt från <https://hojdkurvor.danaid.cloud/> (BETA-knappen), på datorn och på telefonen. Kommer den fram till Gmail? Svarar formuläret *Formuläret kan bara skickas från appens egen sida* är det kontrollen av avsändande sida som slår fel på servern; säg till.
+- **BB** Skydd i platsanalysen: gör en platsanalys med Skydd ikryssat. Kommer skyddad natur, fornlämningar och översvämning med som förut, utan nya varningar? (`geodata.php` följer inte längre omdirigeringar vart som helst; det gick inte att pröva mot de riktiga tjänsterna.)
+- **BC** Låset under Skapa: välj Skapa och försök under tiden med *Nytt projekt*, *Senaste projekt* och att dra en projektfil till kartan. Knapparna ska vara gråa och filen avvisas med ett besked, och allt ska gå igen när underlaget är klart.
+
 ### 0.13.1
 
 - **AÄ** cad-apa på nya adressen: på <https://hojdkurvor.danaid.cloud/>, välj *Rita i cad-apa*. Öppnas <https://cad-apa.danaid.cloud/> med platsen? Skicka tillbaka en skiss från cad-apa: dyker volymerna upp i 04 Skiss? Prova också *Fortsätt rita i cad-apa* under resultatet.

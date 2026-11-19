@@ -9,7 +9,8 @@ Prövar: autospar i webbläsaren (utsnitt, namn, sektion, volymer, nollpunkt, vr
 att allt finns kvar efter omladdning, Spara projektfil (zip med projekt.json), Nytt projekt,
 Senaste projekt, Öppna projektfil och dra-och-släpp, frågan när filen och webbläsaren är oense
 (öppna som kopia), inmatning utanför utsnittet, Ta bort under Sparat i webbläsaren, en annan flik
-som ändrar samma projekt och flytten av det som sparades i sessionStorage före 0.13.0.
+som ändrar samma projekt, flytten av det som sparades i sessionStorage före 0.13.0 och att
+projektet inte går att byta medan underlaget skapas (0.13.3).
 """
 import zipfile, io, re, sys, json, os, base64
 from playwright.sync_api import sync_playwright
@@ -251,6 +252,47 @@ with sync_playwright() as p:
     pg3.reload(); pg3.wait_for_timeout(1200)
     assert len(pg3.evaluate("Projekt.dbAlla()")) == 1 and pg3.locator('#volymlista li').count() == 1, 'flyttas bara en gång'
     ctx2.close()
+
+    # --- inget projektbyte medan underlaget skapas (0.13.3)
+    ctx3 = b.new_context(viewport={'width': 1400, 'height': 900})
+    ctx3.add_init_script(INIT)
+    ctx3.route(re.compile(r'https://.*(openstreetmap|opentopomap|arcgis|nominatim).*'), lambda r: r.abort())
+    pg4 = ctx3.new_page(); pg4.on('pageerror', lambda e: logg.append(f'PAGEERROR 4: {e}'))
+    pg4.goto(APP); pg4.wait_for_timeout(700)
+    satt_utsnitt(pg4, r0)
+    pg4.fill('#projekt', 'Första'); pg4.dispatch_event('#projekt', 'change'); vanta_sparat(pg4)
+    pg4.click('#projekt-nytt'); pg4.wait_for_timeout(400)
+    satt_utsnitt(pg4, r0)
+    pg4.fill('#projekt', 'Andra'); pg4.dispatch_event('#projekt', 'change'); vanta_sparat(pg4)
+    for ruta in pg4.locator('input[name=val]:checked, input[name=analys]:checked').all():
+        if ruta.is_visible() and ruta.is_enabled(): ruta.uncheck()
+    aktivt = pg4.evaluate("sessionStorage.getItem('terrang-projekt-aktivt')")
+    pg4.fill('#anv', 'test'); pg4.fill('#losen', 'hemligt-åäö'); pg4.dispatch_event('#losen', 'change')
+    # höjddatan dröjer, så att testet hinner pröva låset
+    ctx3.route(re.compile(r'.*\.tif.*'), lambda r: (pg4.wait_for_timeout(1500), r.continue_()))
+    pg4.click('#skapa'); pg4.wait_for_timeout(300)
+    assert pg4.is_disabled('#skapa'), 'Skapa pågår'
+    last = {k: pg4.is_disabled('#' + k) for k in ('projekt-nytt', 'projekt-oppna', 'skiss-importera')}
+    lista = pg4.locator('#projekt-lista .projekt-post:not(.aktivt)')
+    print('låst under Skapa:', last, '| andra projekt i listan låsta:', [x.is_disabled() for x in lista.all()])
+    assert all(last.values()) and lista.count() == 1 and lista.first.is_disabled()
+    pg4.evaluate("document.getElementById('projekt-senaste').open = true"); pg4.screenshot(path=f'{UT}/projekt_last_{TEMA}.png')
+    pg4.evaluate("""() => {
+      const dt = new DataTransfer(); dt.items.add(new File(['{}'], 'Annat.hojdkurvor'));
+      document.getElementById('karta').dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    }""")
+    pg4.wait_for_timeout(200)
+    print('  fil släppt under Skapa:', pg4.locator('#projekt-status').inner_text())
+    assert 'Vänta tills underlaget är skapat' in pg4.locator('#projekt-status').inner_text()
+    assert pg4.evaluate("sessionStorage.getItem('terrang-projekt-aktivt')") == aktivt and pg4.input_value('#projekt') == 'Andra'
+    pg4.wait_for_function("!document.getElementById('skapa').disabled", timeout=120000)
+    upplast = {k: pg4.is_disabled('#' + k) for k in ('projekt-nytt', 'projekt-oppna', 'skiss-importera')}
+    print('  efter Skapa:', pg4.locator('#status-text').inner_text()[:80], '| låst:', upplast, '| listan:', [x.is_disabled() for x in lista.all()])
+    assert not any(upplast.values()) and not lista.first.is_disabled(), 'låset släpper när Skapa är klar'
+    pg4.evaluate("document.getElementById('projekt-senaste').open = true")
+    lista.first.click(); pg4.wait_for_timeout(600)
+    assert pg4.input_value('#projekt') == 'Första', 'projektbyte går igen efter Skapa'
+    ctx3.close()
 
     fel = [x for x in logg if 'PAGEERROR' in x or ('error' in x and '404' not in x and 'Failed to load' not in x and 'ERR_FAILED' not in x)]
     print('fel:', fel)

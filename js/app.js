@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.13.2';
+  const FILVERSION = '0.13.3';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -1571,6 +1571,7 @@
 
     const knapp = $('skapa');
     knapp.disabled = true;
+    lasProjektbyte(true);
     nollstallResultat();
     matare(0);
     const varningar = [];
@@ -1610,7 +1611,7 @@
     const yta = (tmBox.xmax - tmBox.xmin) * (tmBox.ymax - tmBox.ymin);
     if (yta > 6e6) {
       visaStatus(`Området för analyserna blir ${fmt(yta / 1e6, 1)} km², högst 6 km² går. Välj ett mindre utsnitt, kortare sektioner eller färre analyser.`, true);
-      knapp.disabled = false; matare(null); return;
+      knapp.disabled = false; lasProjektbyte(false); matare(null); return;
     }
 
     const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.fastigheter && 'fastigheter', val.marktacke && 'marktacke', val.ortofoto && 'ortofoto', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
@@ -2355,6 +2356,7 @@
     } finally {
       knapp.disabled = false;
       T.lokal.vrid = 0;
+      lasProjektbyte(false);
     }
   });
 
@@ -2600,6 +2602,7 @@
    * till ett annat projekt (0.13.0) öppnas det projektet först, eller ett nytt med samma id.
    */
   async function laddaSkiss(sk, kalla) {
+    if (bytetLast()) return;
     const p = sk.plats;
     if (p && p.utsnitt && p.koordinatsystem && p.koordinatsystem.plan) {
       const e = Number(p.koordinatsystem.plan.epsg), u = p.utsnitt;
@@ -3002,6 +3005,29 @@
     return svg + '</svg>';
   }
 
+  /**
+   * Medan underlaget skapas (0.13.3) går det inte att byta projekt. Annars skrivs källorna och husen
+   * in i det nya projektet, och projektfilen i zip:en blir det nya projektets.
+   */
+  function lasProjektbyte(pa) {
+    state.skapar = pa;
+    ['projekt-nytt', 'projekt-oppna', 'projekt-las-igen', 'skiss-importera'].forEach(id => { $(id).disabled = pa; });
+    document.querySelectorAll('#projekt-lista .projekt-post:not(.aktivt)').forEach(b => { b.disabled = pa; });
+  }
+  /** Sant, med ett besked, om ett projektbyte försöks medan underlaget skapas (fil som släpps på kartan, skiss från cad-apa). */
+  function bytetLast() {
+    if (!state.skapar) return false;
+    visaProjektbesked('Vänta tills underlaget är skapat. Det går inte att byta projekt eller läsa in en skiss under tiden.');
+    return true;
+  }
+  /** Ett besked på projektets statusrad som står kvar några sekunder, också om projektet sparas under tiden. */
+  function visaProjektbesked(besked) {
+    visaProjektbesked.text = besked;
+    $('projekt-status').textContent = besked;
+    clearTimeout(visaProjektbesked.timer);
+    visaProjektbesked.timer = setTimeout(() => { visaProjektbesked.text = ''; visaProjektStatus(); }, 6000);
+  }
+
   /** Öppnar projektet d: panelen, utsnittet och inmatningen byts mot projektets. */
   function oppnaProjekt(d, o = {}) {
     if (state.proj) clearTimeout(state.proj.timer);
@@ -3066,6 +3092,7 @@
     // filInnehall i posten jämförs mot det som byggs nu; samma innehåll = inga osparade ändringar
   }
   async function oppnaFranDb(id) {
+    if (bytetLast()) return;
     await sparaProjektNu();
     const post = await Projekt.dbLas(id);
     if (!post) { visaStatus('Projektet finns inte längre i webbläsaren.', true); ritaProjektlista(); return; }
@@ -3074,6 +3101,7 @@
     visaStatus(`Projektet ${post.namn || 'utan namn'} är öppnat.`);
   }
   async function nyttProjekt() {
+    if (bytetLast()) return;
     await sparaProjektNu();
     const d = Projekt.nytt({ app: VERSION });
     d.val = lasVal();
@@ -3107,6 +3135,7 @@
   }
   /** Öppnar en projektfil (.hojdkurvor eller .json). Finns projektet redan i webbläsaren med annat innehåll: fråga. */
   async function oppnaProjektfil(fil) {
+    if (bytetLast()) return;
     try {
       const { data, bilagor } = await Projekt.lasFil(await fil.arrayBuffer(), JSZip);
       await sparaProjektNu();
@@ -3159,7 +3188,7 @@
     else if (osparad) text = `${namn}. Ändrat sedan projektfilen sparades${pr.sparadFil ? ' ' + datumKort(pr.sparadFil) : ''}. Allt finns kvar i webbläsaren.`;
     else text = `${namn}. Samma som projektfilen${pr.sparadFil ? ' från ' + datumKort(pr.sparadFil) : ''}.`;
     if (pr.annanFlik) text = 'Projektet har ändrats i en annan flik. Ändringar här sparas inte förrän du väljer.';
-    $('projekt-status').textContent = text;
+    $('projekt-status').textContent = visaProjektbesked.text || text;
     $('projekt-annan-flik').hidden = !pr.annanFlik;
   }
   /** Säger till om volymer eller sektioner hamnat utanför utsnittet. De ligger kvar i projektet. */
@@ -3192,6 +3221,7 @@
           `<small>${esc(Projekt.sammanfattningText(p.antal || {}))}${p.id === aktivt ? ' · öppet' : ''}</small></span>`;
         if (p.id === aktivt) b.setAttribute('aria-current', 'true');
         b.addEventListener('click', () => { if (p.id !== aktivt) oppnaFranDb(p.id); });
+        if (state.skapar && p.id !== aktivt) b.disabled = true;
         li.append(b); ul.append(li);
       });
       $('projekt-senaste').hidden = !alla.length;
@@ -3212,6 +3242,7 @@
       b.setAttribute('aria-label', `Ta bort projektet ${p.namn || 'utan namn'}`);
       b.addEventListener('click', async () => {
         const oppet = state.proj && p.id === state.proj.d.projekt.id;
+        if (oppet && bytetLast()) return;
         if (!window.confirm(`Ta bort projektet ${p.namn || 'utan namn'} ur webbläsaren?` + (oppet ? ' Det är öppet, så ett nytt, tomt projekt öppnas.' : '') + ' En sparad projektfil påverkas inte.')) return;
         await Projekt.dbTaBort(p.id);
         if (oppet) { state.proj.iDb = false; state.proj.senastInnehall = Projekt.innehall(state.proj.d); await nyttProjekt(); }

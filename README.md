@@ -122,6 +122,14 @@ till Gmail (se `docs/FLYTT.md`, steg 5).
 konfigurationen hittas. Formuläret visar serverns felmeddelande om det inte går
 att skicka, och erbjuder då ett vanligt mejl.
 
+Skydd mot skräp: ett dolt fält för robotar, minst tre sekunder från att
+formuläret öppnas, högst fem synpunkter i timmen per avsändare och högst 30 i
+timmen från alla tillsammans (`MAX_PER_AVSANDARE` och `MAX_ALLA` i filen).
+Formuläret tas bara emot som JSON från en sida på samma värdnamn som skriptet
+(`Origin`, annars `Referer`, och `Sec-Fetch-Site`), så att en annan webbplats
+inte kan få sina besökare att skicka det. Ligger appen bakom en proxy som
+byter värdnamn måste proxyn skicka med det ursprungliga `Host`.
+
 ## stac.php och geodata.php
 
 Laserdatans rutor heter efter skanningsområde, så appen frågar Lantmäteriets
@@ -133,7 +141,8 @@ och `/stac-bild`.
 `geodata.php` gör samma sak för platsanalysens kapitel Skydd: bara adresser som
 börjar som i filens `$VITLISTA` släpps igenom (Naturvårdsverkets WFS och WMS,
 Riksantikvarieämbetets WMS för lämningar och MCF:s WMS för
-översvämningskarteringar). Appen frågar alltid direkt först.
+översvämningskarteringar). Appen frågar alltid direkt först. Omdirigeringar
+följs bara till https på en av vitlistans servrar, högst två gånger.
 
 Inga inloggningsuppgifter passerar någon av filerna.
 

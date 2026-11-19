@@ -3,6 +3,47 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.13.3 – 2026-11-19
+
+Rättelser efter granskningen av 0.13.2. Ett säkerhetsfel är rättat: har du
+sparat inloggningen till Lantmäteriet i webbläsaren och öppnat en projektlänk
+eller projektfil från någon du inte litar på, byt lösenordet.
+
+- **Skript ur en projektlänk eller projektfil**: sektionens namn skrevs som
+  HTML i kartans tips, så att en preparerad länk eller fil kunde köra skript
+  på sidan och läsa en sparad inloggning. Namnet skrivs nu som text. Samma
+  sak för namn ur stompunkter, marktäcke, skyddad natur och listan över
+  sparade filer.
+- **Projektlänkar**: sektionerna ritas direkt, inte först efter omladdning.
+  En länk med text i stället för tal i utsnittet eller horisontpunkten
+  avvisas i stället för att ge sidfel.
+- **Träd som visades igen kunde förbli dolda** efter att ett projekt öppnats
+  i en annan zon än SWEREF 99 TM: trädvalen fick tvillingar en decimeter
+  bredvid. De slås nu ihop (`Projekt.slaIhopTradval`).
+- **Trasiga projektfiler** stoppar inte appen. Fält av fel sort ersätts med
+  standardvärden, och volymer utan fotavtryck och sektioner utan punkter tas
+  bort.
+- **Inget projektbyte medan underlaget skapas**: Nytt projekt, Öppna
+  projektfil, Senaste projekt och Importera skiss är låsta tills Skapa är
+  klar. En projektfil som släpps på kartan eller en skiss från cad-apa under
+  tiden tas inte emot, med ett besked. Förut kunde källorna och husen hamna
+  i fel projekt.
+- **Synpunktsformuläret** (`synpunkter.php`): högst 30 synpunkter i timmen
+  från alla tillsammans (utöver fem per avsändare), och formuläret tas bara
+  emot som JSON från appens egna sidor.
+- **`geodata.php`** följer bara omdirigeringar till https på en av
+  vitlistans servrar, högst två gånger. `geodata.php` och `stac.php` låter
+  webbläsaren spara bara lyckade svar, så att ett tillfälligt fel hos en
+  myndighet inte ligger kvar i en timme.
+- 3D-vyn lämnar inte kvar en lyssnare varje gång den stängs.
+- **Stöd utvecklingen**: en platshållare för Swish-QR:n på Om-sidan.
+  Copyrightraden i alla källfiler är `Agrell Arkitektur AB`.
+- Arbetsflödena `publicera-vps.yml` och `stang-webbhotellet.yml` har bara de
+  rättigheter de behöver.
+- Nytt test `test/sol.test.js` (solens läge mot NREL:s SPA, svensk tid,
+  skuggans längd). `projekt.test.js` prövar trasiga filer och trädvalen,
+  `projekt_test.py` låset under Skapa.
+
 ## 0.13.2 – 2026-11-19
 
 Ny licens: **AGPL-3.0 eller senare gäller från och med den här versionen.**

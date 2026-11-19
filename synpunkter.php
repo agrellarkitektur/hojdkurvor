@@ -24,9 +24,16 @@
  *
  * Skydd mot spam: ett dolt fält som bara robotar fyller i, en spärr mot
  * formulär som skickas på under tre sekunder, högst fem meddelanden i timmen
- * per avsändare och en gräns för längden. Inga personuppgifter sparas;
- * spärren använder en hash av adressen och glöms efter en timme.
+ * per avsändare, högst 30 i timmen från alla tillsammans och en gräns för
+ * längden. Formuläret tas bara emot från appens egna sidor (0.13.3): anropet
+ * ska vara JSON och komma från samma värdnamn som skriptet ligger på, så att
+ * en annan webbplats inte kan få sina besökare att skicka det. Inga
+ * personuppgifter sparas; spärren använder en hash av adressen och glöms
+ * efter en timme.
  */
+
+const MAX_PER_AVSANDARE = 5;
+const MAX_ALLA = 30;
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -66,6 +73,34 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
 }
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') svara(405, ['ok' => false, 'error' => 'Fel metod.']);
 
+/** Värdnamnet (med port) i en adress, med små bokstäver. Tom text om adressen inte går att läsa. */
+function vardnamn(string $adress): string {
+  $d = parse_url($adress);
+  if (!is_array($d) || empty($d['host'])) return '';
+  return strtolower($d['host']) . (isset($d['port']) ? ':' . $d['port'] : '');
+}
+
+/**
+ * Kommer anropet från appens egen sida? Webbläsaren skickar Origin med varje
+ * POST från fetch, och Sec-Fetch-Site säger om sidan ligger på samma adress.
+ * Saknas Origin prövas Referer. Saknas båda avvisas anropet.
+ */
+function franEgenSida(): bool {
+  $plats = $_SERVER['HTTP_SEC_FETCH_SITE'] ?? '';
+  if ($plats !== '' && $plats !== 'same-origin') return false;
+  $har = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+  $kalla = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+  if ($kalla === '' || $kalla === 'null') $kalla = (string)($_SERVER['HTTP_REFERER'] ?? '');
+  $fran = vardnamn($kalla);
+  if ($har === '' || $fran === '') return false;
+  $utanPort = fn($v) => preg_replace('/:(80|443)$/', '', $v);
+  return $utanPort($fran) === $utanPort($har);
+}
+
+if (!franEgenSida()) svara(403, ['ok' => false, 'error' => 'Formuläret kan bara skickas från appens egen sida.']);
+// JSON går inte att skicka från ett vanligt formulär på en annan webbplats.
+if (stripos((string)($_SERVER['CONTENT_TYPE'] ?? ''), 'application/json') !== 0) svara(415, ['ok' => false, 'error' => 'Formuläret kunde inte läsas.']);
+
 $k = lasKonfig();
 if (isset($k['fel'])) svara(503, ['ok' => false, 'error' => $k['fel']]);
 $till = $k['konfig']['to'];
@@ -89,14 +124,31 @@ if ($text === '') svara(400, ['ok' => false, 'error' => 'Skriv något först.'])
 if (mb_strlen($text) > 5000) svara(400, ['ok' => false, 'error' => 'Texten är för lång (högst 5000 tecken).']);
 if ($epost !== '' && !filter_var($epost, FILTER_VALIDATE_EMAIL)) svara(400, ['ok' => false, 'error' => 'E-postadressen ser inte rätt ut.']);
 
-// Högst fem i timmen per avsändare.
-$nyckel = hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . '|hojdkurvor');
-$lager = sys_get_temp_dir() . '/hojdkurvor-synpunkt-' . substr($nyckel, 0, 32);
+// Högst fem i timmen per avsändare och 30 i timmen från alla tillsammans.
+// Räknarna läses och skrivs under samma lås, så att två samtidiga anrop inte
+// räknas som ett.
 $nu = time();
-$tider = is_file($lager) ? array_filter(array_map('intval', explode(',', (string)file_get_contents($lager))), fn($t) => $t > $nu - 3600) : [];
-if (count($tider) >= 5) svara(429, ['ok' => false, 'error' => 'Många synpunkter på kort tid. Försök igen om en stund.']);
-$tider[] = $nu;
-@file_put_contents($lager, implode(',', $tider), LOCK_EX);
+$nyckel = hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . '|hojdkurvor');
+$mapp = sys_get_temp_dir();
+$las = @fopen($mapp . '/hojdkurvor-synpunkt.las', 'c');
+if ($las) flock($las, LOCK_EX);
+$lasTider = function (string $fil) use ($nu): array {
+  $ra = is_file($fil) ? (string)@file_get_contents($fil) : '';
+  return array_values(array_filter(array_map('intval', explode(',', $ra)), fn($t) => $t > $nu - 3600 && $t <= $nu + 60));
+};
+$egen = $mapp . '/hojdkurvor-synpunkt-' . substr($nyckel, 0, 32);
+$alla = $mapp . '/hojdkurvor-synpunkt-alla';
+$tider = $lasTider($egen);
+$allaTider = $lasTider($alla);
+$full = count($tider) >= MAX_PER_AVSANDARE ? 'Många synpunkter på kort tid. Försök igen om en stund.'
+  : (count($allaTider) >= MAX_ALLA ? 'Formuläret har tagit emot många synpunkter den senaste timmen. Försök igen om en stund, eller skicka med e-post.' : null);
+if ($full === null) {
+  $tider[] = $nu; $allaTider[] = $nu;
+  @file_put_contents($egen, implode(',', $tider));
+  @file_put_contents($alla, implode(',', $allaTider));
+}
+if ($las) { flock($las, LOCK_UN); fclose($las); }
+if ($full !== null) svara(429, ['ok' => false, 'error' => $full]);
 
 $amne = '=?UTF-8?B?' . base64_encode("Synpunkt på $version") . '?=';
 $brod = $text . "\n\n—\nVersion: $version\nSida: $sida\nSkärm: $skarm\n" . ($epost !== '' ? "Svara till: $epost\n" : "Ingen e-post angiven (anonym).\n");

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 // Kör med: node test/sol.test.js
 // Solens läge (js/sol.js) mot referensvärden räknade med NREL:s SPA (pvlib 0.13, geometrisk höjd),
 // dagjämningar och solstånd 2026, svensk tid kring sommartidens gränser, och upp- och nedgång.

@@ -1,22 +1,42 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, granskningen efter 0.13.2.
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.3.
 
 ## Läget
 
-- **Granskningen 19 november** (grenen `granskning-2026-11-19`, inte publicerad, ingen ny
-  version): hela koden, dokumenten och driften är genomgångna. Rapporten ligger i
-  claude.ai-projektet (`granskning-0.13.2.md`) med alla fynd, också de som inte är åtgärdade.
-  På grenen är småfelen rättade: sektionens namn skrevs som HTML i kartans tips (en
-  projektlänk eller projektfil kunde köra skript på sidan), sektioner ur en projektlänk
-  ritades inte förrän sidan laddades om, `Projekt.las` tål fält av fel sort, trädvalen ur
-  projektet ger inte längre tvillingar en decimeter bredvid (`Projekt.slaIhopTradval`),
-  `geodata.php` och `stac.php` sparar bara lyckade svar i webbläsaren, och arbetsflödena har
-  bara de rättigheter de behöver. Nytt test: `test/sol.test.js`. **Nästa version (0.13.3)**
-  slår ihop den här grenen och `qr-ruta` och skriver båda i CHANGELOG och på Om-sidan.
-  Testdatan gick att bygga utan GDAL (rasterio, se `test/README.md`); gränssnittstesterna
-  är körda mot grenen.
+- **0.13.3** 19 november: granskningens rättelser (grenen `granskning-2026-11-19`) och
+  `qr-ruta` (platshållaren för Swish-QR:n, copyrightraden `Agrell Arkitektur AB`) är
+  sammanslagna och släppta. Rättat på granskningsgrenen: sektionens namn skrevs som HTML i
+  kartans tips (en projektlänk eller projektfil kunde köra skript på sidan), sektioner ur en
+  projektlänk ritades inte förrän sidan laddades om, `Projekt.las` tål fält av fel sort,
+  trädvalen ger inte längre tvillingar (`Projekt.slaIhopTradval`), `geodata.php` och
+  `stac.php` sparar bara lyckade svar, arbetsflödena har bara de rättigheter de behöver.
+  Dessutom punkt 1–3 under *Väntar på besked* i rapporten (`granskning-0.13.2.md` i
+  claude.ai-projektet), efter ägarens besked:
+  1. `synpunkter.php`: tak på 30 i timmen för alla tillsammans (`MAX_ALLA`, räknarna under
+     ett gemensamt lås i temp-mappen) och `franEgenSida()`: `Sec-Fetch-Site` ska vara
+     `same-origin` om det finns, och `Origin` (annars `Referer`) ska ha samma värdnamn som
+     `Host`. Anropet ska vara `application/json`. Provat mot en lokal PHP-server med
+     låtsasbrevlåda, **inte på VPS:en**: Caddy måste lämna `Host` orört (det gör
+     `php_fastcgi` som standard). Se BA i `docs/SYNPUNKTER.md`.
+  2. `geodata.php`: PHP följer inte omdirigeringar själv; varje steg hämtas för sig och
+     målet ska vara https på en av vitlistans servrar (`omdirigering()`), högst två steg.
+     Värdnamnet prövas, inte hela vitlistans början på adressen, så att en tjänst som
+     hänvisar till en annan sökväg på samma server inte slutar fungera. Provat med en kopia
+     mot låtsastjänster på localhost, inte mot de riktiga tjänsterna. Se BB.
+  3. `lasProjektbyte(på)` i `app.js` sätter `state.skapar` och låser Nytt projekt, Öppna
+     projektfil, Läs in igen, Importera skiss och de andra projekten i listan från att
+     Skapa startar till `finally`. `bytetLast()` stoppar `nyttProjekt`, `oppnaProjektfil`,
+     `oppnaFranDb`, `laddaSkiss` (också från cad-apa) och Ta bort av det öppna projektet,
+     med ett besked på projektets statusrad (`visaProjektbesked`, står kvar sex sekunder).
+     Prov i `projekt_test.py`. Se BC.
+  Testdatan byggdes utan GDAL med en liten ersättare för `osgeo` ovanpå rasterio (utanför
+  repot); enhetstesterna, gränssnittstestet i alla tre teman, projekttestet,
+  fastighetsnamnstestet och mobiltestet är körda. **Kvar ur rapporten**: punkt 4–11 under
+  *Väntar på besked* (ägaren har inte sagt något om dem), och listorna till apps- och
+  cad-apa-projekten, som ska tas i de sessionerna. **Nästa version** är 0.14.0, sol på
+  fasaderna; dela gärna upp Skapa-flödet först (punkt 7).
 
 - **0.13.2** 19 november: licensbytet till AGPL-3.0-or-later och avsnittet
   Stöd utvecklingen på Om-sidan, efter `docs/LICENS.md` (samma beslut som i
