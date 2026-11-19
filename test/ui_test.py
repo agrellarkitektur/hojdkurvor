@@ -24,6 +24,7 @@ INIT = f"""
 window.TERRANG_DL_ROT='{ROT}'; window.TERRANG_STAC_BAS='{ROT}'; window.TERRANG_API_BAS='{ROT}';
 window.TERRANG_OVERPASS='{ROT}/api/interpreter';
 window.TERRANG_GEODATA = {{ naturWfs: '{ROT}/nv/wfs', natura2000Wfs: '{ROT}/n2k/wfs', lamningarWms: '{ROT}/raa/wms', oversvamningWms: '{ROT}/mcf/wms', overpass: '{ROT}/api/interpreter' }};
+window.TERRANG_PAUSER = [80, 80];   // nya försök mot tjänsterna utan att testet får vänta
 window.TERRANG_CADAPA = '/test/cad-apa-mock.html';
 window.TERRANG_TEST = {{}};
 delete window.showSaveFilePicker;
@@ -215,6 +216,28 @@ with sync_playwright() as p:
     assert any(n.startswith('soldiagram/') for n in namn_i_zip), 'soldiagrammen ligger kvar i soldiagram/'
     info = next((z.read(n).decode('utf-8', 'replace') for n in namn_i_zip if n.endswith('info.txt')), '')
     assert 'HORISONT' in info and 'gick inte att läsa' in info, 'soldiagrammet har horisont trots rutor utan CORS (0.12.1)'
+    # 0.13.4: frågan till Naturvårdsverket (testservern svarar som den riktiga tjänsten: bara GEOJSON och
+    # nordvärdet först i rutan), och nya försök när Overpass svarar 502 första gången
+    status = pg.locator('#status-text').inner_text()
+    assert 'Skyddad natur' not in status and 'Strandskydd' not in status and 'Vägar:' not in status, f'inga varningar från tjänsterna: {status}'
+    assert 'Skyddad natur: Naturreservat Starens naturreservat' in info, 'naturreservatet kommer med'
+    strand = next(r for r in info.splitlines() if 'Strandskydd (indikation)' in r)
+    assert 'kunde inte' not in strand and 'Lillsjön' in strand, strand
+    # laserdatan räknas ruta för ruta: antalet per ruta står i info-filen, och träden finns
+    assert re.search(r'Rutor: \S+ \([\d\s\u00a0]+ punkter\)', info), 'antal punkter per laserruta'
+    assert pg.evaluate('TERRANG_TEST.senaste().trad.length') > 0
+    print('  info:', strand.strip(), '|', next(r for r in info.splitlines() if 'Lästa punkter' in r).strip())
+    # 0.13.4 (BE): ett nytt namn kastar inte underlaget
+    pg.click('#flik-plats'); pg.wait_for_timeout(150)
+    gammalt = pg.input_value('#projekt')
+    pg.fill('#projekt', gammalt + ' B'); pg.wait_for_timeout(200)
+    assert pg.evaluate('!!TERRANG_TEST.senaste()') and pg.evaluate("!document.getElementById('resultat').hidden"), 'underlaget ligger kvar när namnet ändras'
+    assert 'Underlaget ligger kvar' in pg.inner_text('#projekt-hjalp')
+    assert pg.evaluate('TERRANG_TEST.senaste().projekt') == gammalt + ' B', 'utskrifterna får det nya namnet'
+    pg.fill('#projekt', gammalt); pg.wait_for_timeout(200)
+    assert 'Underlaget ligger kvar' not in pg.inner_text('#projekt-hjalp') and pg.evaluate('!!TERRANG_TEST.senaste()')
+    pg.click('#flik-skiss'); pg.wait_for_timeout(150)
+    assert pg.locator('#resultat').is_visible()
     for rad in info.splitlines():
         if 'IFC' in rad or 'från en byggnad är borttagna' in rad or 'precis vid en byggnad' in rad or 'vägar:' in rad or 'VÄGYTOR' in rad: print('  info:', rad.strip()[:160])
 

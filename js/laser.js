@@ -122,15 +122,19 @@
     };
   }
 
+  const KOLUMNER = { x: Float64Array, y: Float64Array, z: Float64Array, k: Uint8Array, i: Uint16Array, ret: Uint8Array, nret: Uint8Array, t: Float64Array };
+
   /**
-   * Läser punkter inom tmBox (SWEREF 99 TM, med marginal). Returnerar typade arrayer
-   * i TM-koordinater. klassFilter(k) → true för klasser som ska med.
+   * Läser rutornas punkter inom tmBox (SWEREF 99 TM, med marginal) och lämnar dem del för del
+   * till mottag(del, ruta), en del per nod i filen. Inget sparas här, så antalet punkter har
+   * inget tak: den som tar emot räknar in delen i sina rutnät och släpper den (0.13.4).
+   * del = { antal, x, y, z, k, i, ret, nret, t } som typade arrayer i TM.
+   * klassFilter(k) → true för klasser som ska med. Returnerar { antal, rutor: [{ id, antal }] }.
    */
-  async function lasPunkter(rutor, tmBox, auth, { logg = () => {}, framsteg = () => {}, klassFilter = () => true, maxPunkter = 6e6 } = {}) {
+  async function lasRutvis(rutor, tmBox, auth, { logg = () => {}, framsteg = () => {}, klassFilter = () => true, mottag = () => {} } = {}) {
     const Lib = C();
     const lp = await lazPerf();
-    const kol = { x: [], y: [], z: [], k: [], i: [], ret: [], nret: [], t: [] };
-    let antal = 0;
+    const ut = { antal: 0, rutor: [] };
     for (let ri = 0; ri < rutor.length; ri++) {
       const r = rutor[ri];
       const url = T().dlUrl(r.href);
@@ -154,29 +158,87 @@
         Object.entries(h.pages).forEach(([k, p]) => { if (korsar(k)) koer.push(p); });
       }
       const lista = Object.entries(noder);
+      let iRutan = 0;
       for (let ni = 0; ni < lista.length; ni++) {
         const [, node] = lista[ni];
         const vy = await Lib.Copc.loadPointDataView(get, copc, node, { lazPerf: lp });
         const g = n => { try { return vy.getter(n); } catch (e) { return () => 0; } };
         const X = g('X'), Y = g('Y'), Z = g('Z'), K = g('Classification'), I = g('Intensity'),
           RN = g('ReturnNumber'), NR = g('NumberOfReturns'), GT = g('GpsTime');
+        const d = {};
+        Object.entries(KOLUMNER).forEach(([namn, Typ]) => { d[namn] = new Typ(vy.pointCount); });
+        let n = 0;
         for (let p = 0; p < vy.pointCount; p++) {
           const x = X(p), y = Y(p);
           if (x < tmBox.xmin || x > tmBox.xmax || y < tmBox.ymin || y > tmBox.ymax) continue;
           const k = K(p);
           if (!klassFilter(k)) continue;
-          kol.x.push(x); kol.y.push(y); kol.z.push(Z(p)); kol.k.push(k); kol.i.push(I(p));
-          kol.ret.push(RN(p)); kol.nret.push(NR(p)); kol.t.push(GT(p));
-          if (++antal > maxPunkter) throw new Error(`Utsnittet innehåller fler än ${(maxPunkter / 1e6).toFixed(0)} miljoner laserpunkter. Välj ett mindre område.`);
+          d.x[n] = x; d.y[n] = y; d.z[n] = Z(p); d.k[n] = k; d.i[n] = I(p);
+          d.ret[n] = RN(p); d.nret[n] = NR(p); d.t[n] = GT(p);
+          n++;
+        }
+        if (n) {
+          const del = { antal: n };
+          Object.keys(KOLUMNER).forEach(namn => { del[namn] = d[namn].subarray(0, n); });
+          await mottag(del, r);
+          iRutan += n;
         }
         framsteg((ri + (ni + 1) / lista.length) / rutor.length);
       }
+      ut.rutor.push({ id: r.id, antal: iRutan });
+      ut.antal += iRutan;
     }
+    return ut;
+  }
+
+  /**
+   * Samlar delar till en punktmängd, högst max punkter. Blir det fler släpps allt som samlats
+   * och `full` blir sann: då går mängden inte att få ut, men den som räknar ruta för ruta
+   * berörs inte.
+   */
+  function samlare(max = Infinity) {
+    let delar = [], antal = 0, full = false;
     return {
-      antal, x: Float64Array.from(kol.x), y: Float64Array.from(kol.y), z: Float64Array.from(kol.z),
-      k: Uint8Array.from(kol.k), i: Uint16Array.from(kol.i), ret: Uint8Array.from(kol.ret),
-      nret: Uint8Array.from(kol.nret), t: Float64Array.from(kol.t),
+      get antal() { return antal; },
+      get full() { return full; },
+      lagg(d) {
+        if (full || !d || !d.antal) return;
+        if (antal + d.antal > max) { full = true; delar = []; antal = 0; return; }
+        delar.push(d); antal += d.antal;
+      },
+      klar() {
+        const ut = { antal };
+        Object.entries(KOLUMNER).forEach(([namn, Typ]) => {
+          const a = new Typ(antal);
+          let o = 0;
+          for (const d of delar) { a.set(d[namn].subarray(0, d.antal), o); o += d.antal; }
+          ut[namn] = a;
+        });
+        return ut;
+      },
     };
+  }
+
+  /** Punkterna där behall(x, y, i) är sann, som en ny punktmängd. */
+  function urval(p, behall) {
+    const idx = [];
+    for (let i = 0; i < p.antal; i++) if (behall(p.x[i], p.y[i], i)) idx.push(i);
+    const ut = { antal: idx.length };
+    Object.entries(KOLUMNER).forEach(([namn, Typ]) => { const a = new Typ(idx.length); for (let j = 0; j < idx.length; j++) a[j] = p[namn][idx[j]]; ut[namn] = a; });
+    return ut;
+  }
+
+  /**
+   * Läser alla punkter inom tmBox till en enda punktmängd i TM. Bara för små områden:
+   * över maxPunkter kastas ett fel. Skapa-flödet använder lasRutvis, som inte har något tak.
+   */
+  async function lasPunkter(rutor, tmBox, auth, { logg, framsteg, klassFilter, maxPunkter = 6e6 } = {}) {
+    const alla = samlare(maxPunkter);
+    await lasRutvis(rutor, tmBox, auth, { logg, framsteg, klassFilter, mottag: d => {
+      alla.lagg(d);
+      if (alla.full) throw new Error(`Utsnittet innehåller fler än ${(maxPunkter / 1e6).toFixed(0)} miljoner laserpunkter. Välj ett mindre område.`);
+    } });
+    return alla.klar();
   }
 
   /** Projicerar om till vald zon och klipper till utsnittet. Muterar inte indata. */
@@ -273,5 +335,5 @@
     return per;
   }
 
-  return { KLASSER, klassInfo, sokRutor, valjRutor, lasPunkter, tillZon, las, xyzRgb, sammanfattning };
+  return { KLASSER, klassInfo, sokRutor, valjRutor, lasRutvis, lasPunkter, samlare, urval, tillZon, las, xyzRgb, sammanfattning };
 }));

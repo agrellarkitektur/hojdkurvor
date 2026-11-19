@@ -136,6 +136,14 @@ node test/sol.test.js
 ```
 
 ```
+node test/geodata.test.js
+```
+
+```
+node test/laser.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 

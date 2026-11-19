@@ -158,7 +158,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `.htaccess` – `Cache-Control: no-cache` och UTF-8 på en Apache-server (VPS:en kör Caddy och har samma inställningar i `drift/apps.caddy` i agrellarkitektur/apps)
 - `js/karna.js` (`Terrang`) – höjddata, omprojicering, höjdkurvor, DXF, XYZ och
   CSV, lokal vridning och nordpilar
-- `js/laser.js` – laserdata: katalogsök, läsning av COPC, LAS och XYZ
+- `js/laser.js` – laserdata: katalogsök, läsning av COPC ruta för ruta och del för del (`lasRutvis`, inget tak på antalet punkter), LAS och XYZ
 - `js/ortofoto.js` – ortofoto: katalogsök, val av bild, läsning av COG med
   Range från lämplig översiktsnivå och omritning till zonen
 - `js/kommunfil.js` – kommunfiler från Lantmäteriets nedladdning (marktäcke,
@@ -218,6 +218,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - Topografisk webbkarta: dl1.lantmateriet.se/karta/topowebb/data/topowebb-3006.gpkg
   (läses i bitar med Range; kräver inloggning och beställd produkt)
 - Skyddad natur: geodata.naturvardsverket.se (Naturvårdsregistret och Natura 2000, WFS)
+  – frågas med `outputFormat=GEOJSON` och rutan med nordvärdet först (`Geodata.wfsUrl`),
+  kontrollerat mot tjänsterna 19 november 2026
 - Lämningar: pub.raa.se/visning/lamningar_v1/wms (GetFeatureInfo)
 - Översvämning: gis-tjanster.mcf.se, Oversvamningskarteringar (WMS)
 - Vägar och vatten: overpass-api.de (OpenStreetMap)

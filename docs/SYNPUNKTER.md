@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **AÖ**.
+Senast använda nummer: **BF**.
 
 ## Inkorg
 
@@ -17,11 +17,19 @@ Senast använda nummer: **AÖ**.
 
 Grupperat efter den version där testbehovet uppstod.
 
+### 0.13.4
+
+Rättelser efter testet 19 november (BD, BE och BF nedan). Tjänsterna är kontrollerade mot
+Naturvårdsverket härifrån, men appen är inte körd mot dem i en webbläsare.
+
+- **BB** Skydd i platsanalysen, om igen: gör en platsanalys med Skydd ikryssat. Vid testet 19 november kom fornlämningar och översvämning, men Skyddad natur *svarade med ett fel i stället för data* (också 17 november) och Strandskydd 502. Kommer skyddad natur nu, på en plats där du vet att det finns ett naturreservat eller Natura 2000-område, och på en där det inte finns något? Blir det en varning om Skyddad natur ändå: skriv av hela texten, den säger nu vad tjänsten svarade.
+- **BD** Strandskydd och Vägar när OpenStreetMap är överbelastat: appen försöker nu tre gånger med några sekunders paus. Kommer strandskyddet med? Om inte säger varningen *(3 försök)*.
+- **BE** Hämta från kartan efter Skapa: skapa ett underlag, välj *Hämta från kartan* och klicka på fastigheten. Ligger kartans lager, 3D-vyn och *Ladda ner* kvar, och säger texten under fältet att zip-filen har det gamla namnet? Skriv ut en karta i skala: har den det nya namnet?
+- **BF** Hus och träd i större utsnitt: skapa ett utsnitt på 1–2 km sida med Träd, Byggnader med höjd och Skuggstudie, på samma ställe där hus och träd försvann. Finns de med nu, i 3D-vyn och i filerna? Hur lång tid tar det, och orkar webbläsaren? Med Punktmoln ikryssat ska du över 6 miljoner punkter få en varning om att LAS- och XYZ-filerna inte skapades, men träd och hus ska finnas ändå.
+
 ### 0.13.3
 
-- **BA** Synpunktsformuläret efter de nya spärrarna: skicka en synpunkt från <https://hojdkurvor.danaid.cloud/> (BETA-knappen), på datorn och på telefonen. Kommer den fram till Gmail? Svarar formuläret *Formuläret kan bara skickas från appens egen sida* är det kontrollen av avsändande sida som slår fel på servern; säg till.
-- **BB** Skydd i platsanalysen: gör en platsanalys med Skydd ikryssat. Kommer skyddad natur, fornlämningar och översvämning med som förut, utan nya varningar? (`geodata.php` följer inte längre omdirigeringar vart som helst; det gick inte att pröva mot de riktiga tjänsterna.)
-- **BC** Låset under Skapa: välj Skapa och försök under tiden med *Nytt projekt*, *Senaste projekt* och att dra en projektfil till kartan. Knapparna ska vara gråa och filen avvisas med ett besked, och allt ska gå igen när underlaget är klart.
+- **BB** Se 0.13.4: fornlämningar och översvämning kom med vid testet 19 november, skyddad natur och strandskydd inte.
 
 ### 0.13.1
 
@@ -55,9 +63,22 @@ Grupperat efter den version där testbehovet uppstod.
 - **AK** Träd och hus: klicka på ett träd i 3D-vyn, byt art och höjd, dölj ett träd och ett hus, Visa dolda. Välj Skapa igen: är de dolda borta ur DXF:en och skuggstudien?
 - **AL** Till cad-apa: ortofotot i full upplösning (blir cad-apa seg?). Träden har nu art och modell i paketet, men cad-apa ritar dem inte förrän cad-apa läser `tradmodeller` (planerat i cad-apa 0.12.1).
 
+Klart vid testet 19 november (strukna, se CHANGELOG.md under 0.13.4): BA (synpunktsformuläret
+efter de nya spärrarna) och BC (låset under Skapa) godkända.
+
 Klart vid testet 18 november (strukna, se CHANGELOG.md under 0.13.0): AD, AG (utom
 DXF:en, se AÅ) och AI godkända. AA, AE och AH är inte längre aktuella: på telefon finns
 bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
+
+## Inarbetat ur inkorgen
+
+Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 19 november 2026 → 0.13.4
+
+- **BD** Skyddad natur "svarade med ett fel i stället för data" (också 17 november) och Strandskydd 502. Stämmer frågan till Naturvårdsverket fortfarande? Strandskydd: försök igen vid 502. *Frågan stämde inte: tjänsten vill ha `outputFormat=GEOJSON` och rutan med nordvärdet först. Rättat, och nya försök vid 429, 502, 503 och 504.*
+- **BE** Hämta från kartan kräver nytt Skapa för ett redan skapat underlag. Onödigt. *Det var namnbytet som kastade underlaget. Nu ligger det kvar.*
+- **BF** Vid utsnitt på 1–2 km sida försvinner ibland hus och träd. Misstanke: taket på 6 miljoner laserpunkter. Läs och räkna ruta för ruta. *Misstanken stämmer med koden: över taket föll all laserdata bort. Laserdatan räknas nu in del för del, utan tak.*
 
 ## Önskemål
 

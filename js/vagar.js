@@ -130,13 +130,19 @@
     const s = Math.min(...hörn.map(p => p[1])), n = Math.max(...hörn.map(p => p[1]));
     const w = Math.min(...hörn.map(p => p[0])), e = Math.max(...hörn.map(p => p[0]));
     const fraga = `[out:json][timeout:25];way["highway"](${s.toFixed(6)},${w.toFixed(6)},${n.toFixed(6)},${e.toFixed(6)});out geom tags;`;
+    // Overpass svarar ofta 429, 502 eller 504 när den är överbelastad: två nya försök med paus (0.13.4)
+    const pauser = (typeof self !== 'undefined' && self.TERRANG_PAUSER) || [2000, 5000];
     let svar;
-    try {
-      svar = await fetch((typeof self !== 'undefined' && self.TERRANG_OVERPASS) || URL_STD, {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(fraga),
-      });
-    } catch (err) { throw new Error('kunde inte nå OpenStreetMap (Overpass).'); }
-    if (svar.status === 429 || svar.status === 504) throw new Error('OpenStreetMap är överbelastat just nu. Försök igen om en stund.');
+    for (let i = 0; ; i++) {
+      try {
+        svar = await fetch((typeof self !== 'undefined' && self.TERRANG_OVERPASS) || URL_STD, {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(fraga),
+        });
+      } catch (err) { throw new Error('kunde inte nå OpenStreetMap (Overpass).'); }
+      if (![429, 502, 503, 504].includes(svar.status) || i >= pauser.length) break;
+      await new Promise(klar => setTimeout(klar, pauser[i]));
+    }
+    if ([429, 502, 503, 504].includes(svar.status)) throw new Error(`OpenStreetMap är överbelastat just nu (svarade ${svar.status} vid ${pauser.length + 1} försök). Försök igen om en stund.`);
     if (!svar.ok) throw new Error(`OpenStreetMap svarade ${svar.status}.`);
     const d = await svar.json();
     const linjer = tolka(d, tillZon, r, 0), alla = tolka(d, tillZon, r, Math.min(marg, 15));

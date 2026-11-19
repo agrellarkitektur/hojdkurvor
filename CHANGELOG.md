@@ -3,6 +3,46 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.13.4 – 2026-11-19
+
+Rättelser efter testet av 0.13.3 (BD, BE och BF i `docs/SYNPUNKTER.md`).
+
+- **Skyddad natur kom aldrig med**: frågan till Naturvårdsverket stämde inte
+  med tjänsten. Den vill ha `outputFormat=GEOJSON` (appen bad om
+  `application/json` och fick ett XML-fel, *svarade med ett fel i stället för
+  data*) och utsnittets ruta med nordvärdet först; med östvärdet först är
+  svaret tomt utan fel. Natura 2000-områdenas namn, kod och direktiv läses ur
+  tjänstens egna fält (`OMRADESNAMN`, `OMRADESKOD`, `OMRADESTYP`). Ett skydd
+  vars beslut inte gäller än får det utskrivet, till exempel *Naturreservat
+  (överklagat)*. Svarar bara den ena av de två tjänsterna står det i
+  varningen, och platsanalysen säger då inte *inget skyddat område*.
+  Felmeddelandet från en tjänst skrivs ut också när det står i CDATA.
+- **Nya försök när en tjänst är överbelastad**: svarar Naturvårdsverket,
+  Riksantikvarieämbetet, MCF eller OpenStreetMap (strandskyddets vatten och
+  vägarna) 429, 502, 503 eller 504 försöker appen två gånger till, efter 2
+  och 5 sekunder. Går det ändå inte säger varningen hur många försök som
+  gjordes.
+- **Ett nytt projektnamn kastar inte underlaget**: förut nollställdes kartans
+  lager, 3D-vyn och zip-filen så fort namnet ändrades, också av *Hämta från
+  kartan*, så att underlaget måste skapas igen. Nu ligger allt kvar.
+  Utskrifterna och platsen till cad-apa får det nya namnet direkt; zip-filen
+  och filerna i den har det gamla tills du väljer Skapa igen, och det står
+  under fältet.
+- **Hus och träd försvann i större utsnitt**: laserdatan lästes in i sin
+  helhet, med ett tak på 6 miljoner punkter. Över taket (ofta redan vid
+  1–2 km sida) föll all laserdata bort, och med den träden, husens höjder,
+  höjd över mark och skuggorna från dem. Nu läses punkterna ruta för ruta och
+  räknas direkt in i ytmodellen, trädsökningen, horisonten och sektionerna
+  utan att sparas (`Laser.lasRutvis`, `Analys.ytsamlare`), så antalet har
+  inget tak och minnet följer ytan. Trädsökningen skiljer träd från tak med
+  träffar per halv meter i stället för med varje punkt; resultatet på
+  testlandskapet är oförändrat. Bara punktmolnsfilerna (LAS, XYZ) behöver
+  punkterna själva: över 6 miljoner punkter i utsnittet skapas de inte, med
+  en varning, men allt annat räknas. Info-filen säger hur många punkter som
+  lästes ur varje laserruta. Gränsen på 6 km² för analysområdet är kvar.
+- Godkänt vid testet 19 november: synpunktsformuläret efter de nya spärrarna
+  (BA) och låset under Skapa (BC).
+
 ## 0.13.3 – 2026-11-19
 
 Rättelser efter granskningen av 0.13.2. Ett säkerhetsfel är rättat: har du

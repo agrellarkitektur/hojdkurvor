@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.13.3';
+  const FILVERSION = '0.13.4';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -61,7 +61,7 @@
   // ------------------------------------------------------------------
   const KONF = window.TERRANG_KONFIG || {};
   const karta = L.map('karta', { zoomSnap: 0.5, preferCanvas: true, maxZoom: 19 }).fitBounds([[55.2, 10.9], [69.1, 24.2]]);
-  if (window.TERRANG_TEST) window.TERRANG_TEST.karta = karta;   // testkrok: kartan i gränssnittstesterna
+  if (window.TERRANG_TEST) { window.TERRANG_TEST.karta = karta; window.TERRANG_TEST.senaste = () => state.senaste; }   // testkrokar: kartan och det senaste underlaget i gränssnittstesterna
   const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsgivare';
   const inloggning = () => { const a = $('anv').value.trim(), l = $('losen').value; return a && l ? T.basicAuth(a, l) : null; };
   const BAKGRUNDER = [
@@ -854,7 +854,7 @@
       $('projekt').value = ytor[0].beteckning;
       $('projekt').dispatchEvent(new Event('input'));
       $('projekt').dispatchEvent(new Event('change'));
-      fastStatus(`${ytor[0].beteckning}${ytor[0].kommun ? ', ' + ytor[0].kommun : ''}. Du kan ändra namnet i fältet.`);
+      fastStatus(`${ytor[0].beteckning}${ytor[0].kommun ? ', ' + ytor[0].kommun : ''}. Du kan ändra namnet i fältet.` + (namnBytt() ? ' ' + NAMN_NOT : ''));
     } catch (err) {
       console.error(err);
       fastStatus('Fastigheten: ' + (err instanceof T.InloggningsFel ? err.message : err.message.replace(/^./, c => c.toUpperCase())), true);
@@ -968,9 +968,21 @@
   let namnAndrat = false;
   const slug = v => v.trim().replace(/[^\wåäöÅÄÖ.-]+/g, '_').replace(/^_+|_+$/g, '');
   $('namn').addEventListener('input', () => { namnAndrat = true; });
+  // Ett nytt namn kastar inte underlaget (0.13.4, BE): kartan, 3D-vyn och zip-filen ligger kvar.
+  // Utskrifterna och platsen till cad-apa får det nya namnet direkt; filerna i zip:en behåller det
+  // gamla tills underlaget skapas igen, och det säger hjälptexten under fältet.
+  const NAMN_NOT = 'Underlaget ligger kvar. Zip-filen har det gamla namnet tills du väljer Skapa igen.';
+  /** För in det nya namnet i det skapade underlaget. Ger true om zip-filen har ett annat namn. */
+  function namnBytt() {
+    const s = state.senaste, nytt = $('projekt').value.trim();
+    if (!s) return false;
+    if (s.projektSkapat === undefined) s.projektSkapat = s.projekt;
+    s.projekt = nytt;
+    return nytt !== s.projektSkapat;
+  }
   $('projekt').addEventListener('input', () => {
     if (!namnAndrat) $('namn').value = slug($('projekt').value) || 'terrang';
-    nollstallResultat();
+    fastStatus(namnBytt() ? NAMN_NOT : null);
   });
 
   // Tillval
@@ -1645,8 +1657,16 @@
       Object.entries(res.filer).forEach(([f, c]) => { if (f === infoNamn || format[f.split('.').pop() === 'dxf' ? 'dxf' : f.endsWith('.csv') ? 'csv' : 'xyz']) filer[f === infoNamn ? f : 'terrang/' + f] = c; });
       const extraInfo = [], sammanExtra = [];
 
-      // --- Laserdata
-      let pTM = null, pz = null, laserDatum = '';
+      // --- Markmodellen för analyserna. Före laserdatan, som räknas in i den del för del.
+      let dtmZ = null;
+      if (behoverDtm) dtmZ = T.rutnat(mos, rm, 1, epsg);
+
+      // --- Laserdata. Punkterna läses ruta för ruta och nod för nod och räknas direkt in i
+      // ytmodellen, trädträffarna, horisontens modell och sektionerna (0.13.4). Förut sparades
+      // alla punkter först, med ett tak på 6 miljoner: över det föll träd, hushöjder och skuggor
+      // bort ur större utsnitt. Bara punktmolnsfilerna behöver punkterna själva och har taket kvar.
+      const MAX_PUNKTFIL = 6e6;
+      let harLaser = false, laserYta = null, laserTM = null, laserSek = null, laserDatum = '';
       if (behoverLaser) {
         try {
           delFramsteg('laser', 0, 'Söker laserdata');
@@ -1654,20 +1674,45 @@
           const valda = Laser.valjRutor(await Laser.sokRutor(tmBox), tmBox);
           if (!valda.valda.length) varningar.push('Laserdata: det finns ingen laserdata för området.');
           else {
-            pTM = await Laser.lasPunkter(valda.valda, tmBox, auth, {
+            const behoverYtmodell = dtmZ && (behoverYta || (val.byggnader && val.byggnadshojd));
+            const ytsamlare = behoverYtmodell ? Analys.ytsamlare(dtmZ, { traffar: !!val.trad }) : null;
+            // horisonten: tomten räknas bort om det är valt, se Soldiagram nedan
+            const rTM = tmRuta(r, epsg, 0);
+            const tmSamlare = val.sol && val.horisont
+              ? Analys.ytsamlareTM(mos, { utesluts: $('hor-tomt').checked ? null : (E, N) => E >= rTM.xmin && E <= rTM.xmax && N >= rTM.ymin && N <= rTM.ymax }) : null;
+            const vidSektion = sektioner.length ? Analys.vidSektion(sektioner, 2) : null;
+            const sekSamlare = vidSektion ? Laser.samlare() : null;
+            const filSamlare = val.laser ? Laser.samlare(MAX_PUNKTFIL) : null;
+            const iUtsnittet = (x, y) => x >= r.xmin && x <= r.xmax && y >= r.ymin && y <= r.ymax;
+            const last = await Laser.lasRutvis(valda.valda, tmBox, auth, {
               klassFilter: kl => !(Laser.KLASSER[kl] || {}).brus,
               framsteg: f => delFramsteg('laser', 0.05 + 0.85 * f, 'Läser laserdata'),
+              mottag: del => {
+                if (tmSamlare) tmSamlare.lagg(del);
+                if (!ytsamlare && !sekSamlare && !filSamlare) return;
+                const dz = Laser.tillZon(del, epsg, rm);
+                if (ytsamlare) ytsamlare.lagg(dz);
+                if (sekSamlare) sekSamlare.lagg(Laser.urval(dz, vidSektion));
+                if (filSamlare && !filSamlare.full) filSamlare.lagg(Laser.urval(dz, iUtsnittet));
+              },
             });
-            pz = Laser.tillZon(pTM, epsg, rm);
+            harLaser = true;
+            if (ytsamlare) laserYta = ytsamlare.klar();
+            if (tmSamlare) laserTM = tmSamlare.klar();
+            if (sekSamlare) laserSek = sekSamlare.klar();
             laserDatum = [...new Set(valda.valda.map(v => String(v.datum).slice(0, 10)))].join(', ');
             const omr = [...new Set(valda.valda.map(v => v.omrade))].join(', ');
             if (valda.tackning < 0.999) varningar.push(`Laserdata: bara ${fmt(valda.tackning * 100)} % av området täcks av samma skanning.`);
             extraInfo.push('', 'LASERDATA',
               '  Källa: Laserdata Nedladdning, skog. © Lantmäteriet. Bearbetad: utklippt, omprojicerad och analyserad.',
               '  Licens: CC BY 4.0.',
-              `  Skanning: ${laserDatum} (område ${omr}). Rutor: ${valda.valda.map(v => v.id).join(', ')}`);
-            if (val.laser) {
-              const z = Laser.tillZon(pTM, epsg, r);
+              `  Skanning: ${laserDatum} (område ${omr}). Rutor: ${last.rutor.map(v => `${v.id} (${fmt(v.antal)} punkter)`).join(', ')}`,
+              `  Lästa punkter i analysområdet (utsnittet med marginaler): ${fmt(last.antal)} st, räknade ruta för ruta.`);
+            if (val.laser && filSamlare.full) {
+              varningar.push(`Punktmoln: utsnittet har fler än ${fmt(MAX_PUNKTFIL / 1e6)} miljoner laserpunkter, så LAS- och XYZ-filerna skapades inte. Träd, byggnadshöjder, skuggor och sektioner är räknade på alla punkter. Välj ett mindre utsnitt för att få punktmolnet.`);
+              extraInfo.push(`  Punktmoln: inga filer, utsnittet har fler än ${fmt(MAX_PUNKTFIL / 1e6)} miljoner punkter.`);
+            } else if (val.laser) {
+              const z = filSamlare.klar();
               filer[`laser/${namn}_laser_lokal.las`] = Laser.las(z, X0, Y0, Z0, 0);
               filer[`laser/${namn}_laser_sweref.las`] = Laser.las(z, 0, 0, 0, epsg);
               filer[`laser/${namn}_laser_lokal.xyz`] = Laser.xyzRgb(z, X0, Y0, Z0);
@@ -1688,13 +1733,11 @@
         } catch (e) {
           if (e instanceof T.InloggningsFel) varningar.push('Laserdata: ' + e.message);
           else { console.error(e); varningar.push('Laserdata: ' + e.message); }
-          pTM = pz = null;
+          harLaser = false; laserYta = laserTM = laserSek = null;
+          // en halvläst laserdata ska inte ge halva filer
+          Object.keys(filer).filter(f => f.startsWith('laser/')).forEach(f => { delete filer[f]; });
         }
       }
-
-      // --- Analyser: ytmodell, träd, höjd över mark, skuggor
-      let dtmZ = null;
-      if (behoverDtm) dtmZ = T.rutnat(mos, rm, 1, epsg);
 
       // --- Befintliga byggnader (höjd ur ytmodellen, som sedan återanvänds av analyserna)
       let ytaFardig = null;
@@ -1711,7 +1754,7 @@
             bekrafta: async storlek => window.confirm(`Byggnaderna för kommunen är ${fmt(storlek / 1e6)} MB. De hämtas en gång och sparas sedan i webbläsaren. Vill du hämta dem?`),
           });
           delFramsteg('byggnader', 0.85, 'Räknar byggnadshöjder');
-          if (pz && val.byggnadshojd) ytaFardig = Analys.ytmodell(dtmZ, pz);
+          if (laserYta && val.byggnadshojd) ytaFardig = laserYta;
           Byggnad.hojder(byggAlla, ytaFardig || { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length) });
           // hus som användaren har dolt (0.11.0) kommer inte med någonstans
           const { byggnader: bygg, dolda: byggDolda } = Objektval.tillampaHus(byggAlla, husval());
@@ -1742,7 +1785,7 @@
             '  Fotavtrycken är oftast inmätta vid takkanten, inte vid fasaden, och kan avvika någon meter.',
             '  Kontrollera mot grundkartan eller en inmätning innan de används för projektering.',
             '  DXF: fotavtrycket på markhöjden, BYGGNAD_TAK på takhöjden när den är känd, BYGGNAD_TEXT med husnummer, ändamål och höjd.',
-            pz && val.byggnadshojd
+            laserYta && val.byggnadshojd
               ? `  Höjd över mark ur laserdata ${laserDatum} (90:e percentilen inom fotavtrycket) för ${medHojd} av ${bygg.length} byggnader. Taken är förenklade till platta.`
               : '  Ingen höjd: laserdata hämtades inte. Markhöjd ur Markhöjdmodell (median inom fotavtrycket).',
             '  CSV (semikolon): id, typ, ändamål, husnummer, namn, huvudbyggnad, yta, tyngdpunkt, markhöjd och höjd (höjder minus Z0).',
@@ -1762,17 +1805,18 @@
         if ((v.golv == null || !(v.golv === v.golv)) && dtmZ) { const c = Platsanalys.tyngdpunkt(v.fotavtryck); v.golv = Math.round(Analys.nod(dtmZ, dtmZ.z, c[0], c[1]) * 100) / 100; }
       });
       senaste.volymer = volymer.filter(v => v.golv != null && v.golv === v.golv);
-      if (behoverYta && (pz || val.skugga)) {
+      // --- Analyser: träd, höjd över mark, skuggor
+      if (behoverYta && (laserYta || val.skugga)) {
         try {
           delFramsteg('analys', 0, 'Bygger ytmodell');
-          const y = ytaFardig || (pz ? Analys.ytmodell(dtmZ, pz) : { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length), dsm: Float32Array.from(dtmZ.z) });
-          if (!pz) varningar.push(`Skuggstudien räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
+          const y = laserYta || ({ W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length), dsm: Float32Array.from(dtmZ.z) });
+          if (!laserYta) varningar.push(`Skuggstudien räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
           senaste.yta = y;
           const iUtsnitt = t => t.x >= r.xmin && t.x <= r.xmax && t.y >= r.ymin && t.y <= r.ymax;
           let tradDolda = [];
-          if (val.trad && pz) {
+          if (val.trad && laserYta) {
             delFramsteg('analys', 0.1, 'Söker träd');
-            const hittade = Analys.hittaTrad(y, pz).filter(iUtsnitt);
+            const hittade = Analys.hittaTrad(y).filter(iUtsnitt);
             // träd på eller precis vid en byggnad är oftast takkanten, inte ett träd (0.8.0)
             const { kvar: tradHittade, borttagna: tradVidHus } = Byggnad.tradVidByggnader(hittade, senaste.byggnader, TRAD_VID_HUS);
             // egna val för enskilda träd (0.11.0): dolda och rättade
@@ -1795,7 +1839,7 @@
             sammanExtra.push(['Träd', `${fmt(trad.length)} st`]);
             visaTradKarta(trad, tt);
           }
-          if (pz) {   // bilden behövs också som lager i utskriften
+          if (laserYta) {   // bilden behövs också som lager i utskriften
             const homC = Utskrift.homCanvas(y.ndsm, y.W, y.H), bild = homC.toDataURL('image/png');
             senaste.hom = { bild, x0: y.x0, y1: y.y1, W: y.W, H: y.H, s: y.s };
             if (val.hom) {
@@ -1817,7 +1861,7 @@
             }
           }
           // dolda träd och hus (0.11.0) kastar ingen skugga
-          if (pz) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: senaste.byggnaderDolda || [] });
+          if (laserYta) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: senaste.byggnaderDolda || [] });
           if (senaste.volymer.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, senaste.volymer);
           if (val.skugga) {
             delFramsteg('analys', 0.3, 'Räknar skuggor');
@@ -1847,7 +1891,7 @@
             const skuggOpt = {
               utsnitt: r, rader, kurvor: res.kurvor, fonter, byggnader: senaste.byggnader, volymer: senaste.volymer,
               titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
-              notis: [(pz ? `Skuggor från terräng, träd och byggnader enligt laserdata ${laserDatum}. Träd räknas som täta.` : 'Skuggor från terrängen (ingen laserdata).') +
+              notis: [(laserYta ? `Skuggor från terräng, träd och byggnader enligt laserdata ${laserDatum}. Träd räknas som täta.` : 'Skuggor från terrängen (ingen laserdata).') +
                 (senaste.volymer.length ? ' Skissade volymer ingår.' : '') + ` Skuggor från objekt mer än ${MARG_SKUGGA} m utanför utsnittet ingår inte.`,
                 `Grått: skugga på marken${senaste.byggnader && senaste.byggnader.length ? ', svart linje: befintliga hus' : ''}${senaste.volymer.length ? ', orange linje: skissade volymer' : ''}. Rutnätsnord uppåt. Underlag för tidiga skeden.`],
             };
@@ -1867,7 +1911,7 @@
           varningar.push('Analyser: ' + e.message);
         }
       }
-      if ((val.trad || val.hom) && !pz) varningar.push('Träd och höjd över mark kräver laserdata och kunde inte skapas.');
+      if ((val.trad || val.hom) && !laserYta) varningar.push('Träd och höjd över mark kräver laserdata och kunde inte skapas.');
 
       // --- Höjdpunkter, lutning och skyfall ur markmodellen
       if (val.hojdpunkter && dtmZ) {
@@ -1950,6 +1994,11 @@
         ]);
         senaste.lamningar = lam.status === 'fulfilled' ? lam.value : fel(lam.reason);
         senaste.natur = nat.status === 'fulfilled' ? nat.value : fel(nat.reason);
+        // Svarade bara den ena av Naturvårdsverkets två tjänster går det inte att säga att området är fritt (0.13.4)
+        if (nat.status === 'fulfilled' && nat.value.saknas) {
+          if (nat.value.length) varningar.push(`Skyddad natur: listan är inte fullständig (${nat.value.saknas}).`);
+          else senaste.natur = { fel: nat.value.saknas };
+        }
         senaste.oversvamning = ovs.status === 'fulfilled' ? ovs.value : fel(ovs.reason);
         senaste.strand = vat.status === 'fulfilled' ? Platsanalys.narmasteVatten(r, vat.value) : fel(vat.reason);
         if (vat.status === 'fulfilled') senaste.vatten = vat.value;
@@ -1977,7 +2026,7 @@
       if (sektioner.length) {
         try {
           // profilen ritas från vänster till höger sett i blickriktningen: A→B normalt, B→A om linjen är vänd
-          const sek = sektioner.map(s => Object.assign({ namn: s.namn, a: s.a, b: s.b, vand: s.vand }, s.vand ? Analys.sektion(s.b, s.a, dtmZ, pz) : Analys.sektion(s.a, s.b, dtmZ, pz)));
+          const sek = sektioner.map(s => Object.assign({ namn: s.namn, a: s.a, b: s.b, vand: s.vand }, s.vand ? Analys.sektion(s.b, s.a, dtmZ, laserSek) : Analys.sektion(s.a, s.b, dtmZ, laserSek)));
           senaste.sektioner = sek;
           filer[`sektioner/${namn}_sektioner.dxf`] = Analys.dxfSektioner(sek, Z0);
           filer[`sektioner/${namn}_sektionslinjer_lokal.dxf`] = Analys.dxfSektionslinjer(sek, r, X0, Y0);
@@ -1988,7 +2037,7 @@
             '  _sektioner.dxf: x = avstånd längs linjen (m), y = höjd i RH 2000' + (Z0 ? ` minus Z0 (${fmt(Z0, 3)})` : '') + '. Sektionerna ligger under varandra.',
             '  Lager: SEKTION_MARK (marken), SEKTION_YTA (övre kontur av träd och byggnader), SEKTION_PUNKTER (laserpunkter inom 2 m),',
             '         SEKTION_REF (referenslinje med avstånd var 10:e meter), SEKTION_TEXT.',
-            ...(pz ? [] : ['  Laserdata saknas, så sektionerna visar bara marken.']));
+            ...(laserSek ? [] : ['  Laserdata saknas, så sektionerna visar bara marken.']));
           sammanExtra.push(['Sektioner', sek.map(s => s.namn).join(', ')]);
         } catch (e) { console.error(e); varningar.push('Sektioner: ' + e.message); }
       }
@@ -2180,18 +2229,16 @@
           if (val.horisont) {
             // Misslyckas horisonten skapas soldiagrammet ändå, utan horisont (0.12.1).
             try {
-              const rTM = tmRuta(r, epsg, 0);
               const medTomt = $('hor-tomt').checked;
-              const utesluts = medTomt ? null : (E, N) => E >= rTM.xmin && E <= rTM.xmax && N >= rTM.ymin && N <= rTM.ymax;
               const bara = { ...mos, s: 1 };
-              let nara = pTM ? Analys.ytmodellTM(mos, pTM, { utesluts }) : bara;
+              let nara = laserTM || bara;   // laserTM är byggd utan tomten om det är valt, se Laserdata ovan
               if (senaste.volymer.length) {   // skissen räknas med i horisonten
                 const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
                 const volTM = senaste.volymer.map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
                 nara = Object.assign({}, nara, { data: Platsanalys.branInVolymer({ x0: nara.E0 + 0.5, y1: nara.N1 - 0.5, s: 1, W: nara.w, H: nara.h }, nara.data, volTM) });
               }
               // står punkten i ett hus eller under en krona räknas det objektet bort
-              const rensat = pTM ? Analys.rensaVidPunkt(nara, mos, mittTM[0], mittTM[1]) : 0;
+              const rensat = laserTM ? Analys.rensaVidPunkt(nara, mos, mittTM[0], mittTM[1]) : 0;
               const fjarr = await T.lasHojderGrov({ xmin: mittTM[0] - 5000, xmax: mittTM[0] + 5000, ymin: mittTM[1] - 5000, ymax: mittTM[1] + 5000 }, 8, auth);
               const luckor = fjarr.fel.length ? ` ${fjarr.fel.length} av Markhöjdmodellens rutor runt platsen gick inte att läsa (${fjarr.fel.join(', ')}); horisonten saknar terrängen där.` : '';
               if (luckor) varningar.push('Horisont:' + luckor);
@@ -2199,7 +2246,7 @@
               const konvH = konvergens(3006, horLL.lat, horLL.lon);
               const varText = state.horPunkt ? 'i vald punkt' : 'i utsnittets mitt';
               const hor = Analys.horisont(mittTM[0], mittTM[1], z0, nara, fjarr, konvH);
-              const horMark = pTM ? Analys.horisont(mittTM[0], mittTM[1], z0, bara, fjarr, konvH) : null;
+              const horMark = laserTM ? Analys.horisont(mittTM[0], mittTM[1], z0, bara, fjarr, konvH) : null;
               const ogonTxt = String(ogon).replace('.', ',');
               const rensatTxt = rensat ? ` Ett träd eller en byggnad (${fmt(rensat)} m²) står på punkten och räknas inte.` : '';
               extra = {
@@ -2207,13 +2254,13 @@
                 horisontMark: horMark,
                 horisontPunkt: `${ogonTxt} m över mark ${varText}`,
                 horisontText: `Horisont: terräng, sedd ${ogonTxt} m över mark ${varText}.`,
-                horisontNot: `Horisont ur Markhöjdmodell (5 km)${pTM ? ` och Laserdata skog ${laserDatum} (400 m)` : ''}.` +
-                  (pTM ? (medTomt ? ' Träd och byggnader inom utsnittet ingår.' : ' Träd och byggnader inom utsnittet ingår inte.') + rensatTxt : ' Laserdata saknas, så bara terrängen ingår.') + luckor,
+                horisontNot: `Horisont ur Markhöjdmodell (5 km)${laserTM ? ` och Laserdata skog ${laserDatum} (400 m)` : ''}.` +
+                  (laserTM ? (medTomt ? ' Träd och byggnader inom utsnittet ingår.' : ' Träd och byggnader inom utsnittet ingår inte.') + rensatTxt : ' Laserdata saknas, så bara terrängen ingår.') + luckor,
               };
               senaste.horisont = hor;
               extraInfo.push('', 'HORISONT',
                 `  Sedd ${state.horPunkt ? `från vald punkt (X ${fmt(franLL(state.horPunkt)[0])}, Y ${fmt(franLL(state.horPunkt)[1])})` : 'från utsnittets mitt'}, ${ogonTxt} m över mark (${fmt(z0, 2)} m i RH 2000).`,
-                `  Terräng inom 5 km (8 m upplösning) och ${pTM ? 'träd och byggnader inom 400 m' : 'ingen laserdata'}. Jordkrökning och refraktion är med.`,
+                `  Terräng inom 5 km (8 m upplösning) och ${laserTM ? 'träd och byggnader inom 400 m' : 'ingen laserdata'}. Jordkrökning och refraktion är med.`,
                 ...(rensat ? [`  Punkten står i eller under ett träd eller en byggnad (${fmt(rensat)} m²). Det objektet räknas inte.`] : []),
                 ...(luckor ? ['  ' + luckor.trim()] : []),
                 `  Horisontens höjdvinkel var 15:e grad (azimut: ${horMark ? 'terräng / med träd och byggnader' : 'vinkel'}):`,
@@ -2262,7 +2309,7 @@
           delFramsteg('blad', 0, 'Ritar platsanalysbladet');
           await laddaPdf();
           const kap = kapitel();
-          const kallor = [['Markhöjdmodell', pTM && 'Laserdata skog', val.byggnader && 'Byggnad', val.fastigheter && 'Fastighetsindelning', val.marktacke && 'Marktäcke']
+          const kallor = [['Markhöjdmodell', harLaser && 'Laserdata skog', val.byggnader && 'Byggnad', val.fastigheter && 'Fastighetsindelning', val.marktacke && 'Marktäcke']
             .filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' och $1') + ': © Lantmäteriet (CC BY 4.0).'];
           if (val.fastigheter) kallor.push(Fastighet.VARNING);
           if (val.skydd) kallor.push(...Object.values(Geodata.KALLOR));

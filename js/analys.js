@@ -57,56 +57,101 @@
   // Ytmodell
   // ------------------------------------------------------------------
   /**
-   * dtm: nodrutnät i zonen (Terrang.rutnat). p: laserpunkter i zonen {antal, x, y, z, k}.
-   * utesluts(x, y) → true för punkter som inte ska räknas (t.ex. tomten vid horisontberäkning).
-   * Returnerar {W, H, s, x0, y1, dtm, ndsm, dsm}. Höjd över mark är stängd (5×5) så att
-   * glesa trädkronor blir sammanhängande.
+   * Träffar per halv ruta: hur många markpunkter och hur många objektpunkter (träd, hus) som
+   * föll i varje del av rutnätet g. Ersätter listan över alla punkter när träden ska skiljas
+   * från tak (0.13.4): minnet följer ytan, inte antalet punkter. Räknarna stannar på 255.
    */
-  function ytmodell(dtm, p, { utesluts = null, stangning = 2 } = {}) {
+  function traffrutnat(g, del = 2) {
+    const W = g.W * del, H = g.H * del, s = g.s / del;
+    const xv = g.x0 - g.s / 2, yn = g.y1 + g.s / 2;      // rutnätets västra och norra kant
+    const mark = new Uint8Array(W * H), objekt = new Uint8Array(W * H);
+    const tr = {
+      W, H, s, mark, objekt,
+      lagg(p) {
+        for (let n = 0; n < p.antal; n++) {
+          const k = p.k[n], a = k === 2 ? mark : OBJEKT(k) ? objekt : null;
+          if (!a) continue;
+          const i = Math.floor((p.x[n] - xv) / s), j = Math.floor((yn - p.y[n]) / s);
+          if (i < 0 || j < 0 || i >= W || j >= H) continue;
+          const c = j * W + i;
+          if (a[c] < 255) a[c]++;
+        }
+        return tr;
+      },
+      /** Antal träffar inom radien rr från (x, y): { mark, objekt }. */
+      rakna(x, y, rr) {
+        const i0 = Math.max(0, Math.floor((x - rr - xv) / s)), i1 = Math.min(W - 1, Math.floor((x + rr - xv) / s));
+        const j0 = Math.max(0, Math.floor((yn - y - rr) / s)), j1 = Math.min(H - 1, Math.floor((yn - y + rr) / s));
+        let m = 0, o = 0;
+        for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+          if (Math.hypot(xv + (i + 0.5) * s - x, yn - (j + 0.5) * s - y) > rr) continue;
+          m += mark[j * W + i]; o += objekt[j * W + i];
+        }
+        return { mark: m, objekt: o };
+      },
+    };
+    return tr;
+  }
+
+  /**
+   * Ytmodell som byggs del för del (0.13.4): lagg(p) räknar in laserpunkter i zonen
+   * {antal, x, y, z, k} och kan anropas hur många gånger som helst, klar() ger modellen.
+   * dtm: nodrutnät i zonen (Terrang.rutnat). utesluts(x, y) → true för punkter som inte ska
+   * räknas (t.ex. tomten vid horisontberäkning). Med traffar: true följer träffarna per halv
+   * ruta med (y.traffar), som hittaTrad behöver.
+   */
+  function ytsamlare(dtm, { utesluts = null, traffar = false } = {}) {
     const { W, H, s, x0, y1 } = dtm;
     const ra = new Float32Array(W * H);
-    for (let n = 0; n < p.antal; n++) {
-      if (!OBJEKT(p.k[n])) continue;
-      const x = p.x[n], y = p.y[n];
-      if (utesluts && utesluts(x, y)) continue;
-      const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s);
-      if (i < 0 || j < 0 || i >= W || j >= H) continue;
-      const c = j * W + i, g = dtm.z[c];
-      if (!(g === g)) continue;
-      const v = p.z[n] - g;
-      if (v > ra[c]) ra[c] = v;
-    }
-    const ndsm = stangning ? filter(filter(ra, W, H, stangning, true), W, H, stangning, false) : ra;
-    const dsm = new Float32Array(W * H);
-    for (let c = 0; c < W * H; c++) dsm[c] = dtm.z[c] + ndsm[c];
-    return { W, H, s, x0, y1, dtm: dtm.z, ndsm, dsm, ra };
+    const tr = traffar ? traffrutnat(dtm) : null;
+    return {
+      lagg(p) {
+        for (let n = 0; n < p.antal; n++) {
+          if (!OBJEKT(p.k[n])) continue;
+          const x = p.x[n], y = p.y[n];
+          if (utesluts && utesluts(x, y)) continue;
+          const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s);
+          if (i < 0 || j < 0 || i >= W || j >= H) continue;
+          const c = j * W + i, g = dtm.z[c];
+          if (!(g === g)) continue;
+          const v = p.z[n] - g;
+          if (v > ra[c]) ra[c] = v;
+        }
+        if (tr) tr.lagg(p);
+      },
+      /** Höjd över mark stängs (5×5) så att glesa trädkronor blir sammanhängande. */
+      klar({ stangning = 2 } = {}) {
+        const ndsm = stangning ? filter(filter(ra, W, H, stangning, true), W, H, stangning, false) : ra;
+        const dsm = new Float32Array(W * H);
+        for (let c = 0; c < W * H; c++) dsm[c] = dtm.z[c] + ndsm[c];
+        const y = { W, H, s, x0, y1, dtm: dtm.z, ndsm, dsm, ra };
+        if (tr) y.traffar = tr;
+        return y;
+      },
+    };
+  }
+
+  /**
+   * Ytmodell av en färdig punktmängd. Returnerar {W, H, s, x0, y1, dtm, ndsm, dsm, ra}.
+   */
+  function ytmodell(dtm, p, { utesluts = null, stangning = 2, traffar = false } = {}) {
+    const sm = ytsamlare(dtm, { utesluts, traffar });
+    sm.lagg(p);
+    return sm.klar({ stangning });
   }
 
   // ------------------------------------------------------------------
   // Träd
   // ------------------------------------------------------------------
-  /** Index över laserpunkter per cell, för snabba grannsökningar. */
-  function punktIndex(p, g) {
-    const { W, H, s, x0, y1 } = g;
-    const antal = new Uint32Array(W * H + 1);
-    const cell = new Int32Array(p.antal);
-    for (let n = 0; n < p.antal; n++) {
-      const i = Math.round((p.x[n] - x0) / s), j = Math.round((y1 - p.y[n]) / s);
-      cell[n] = (i < 0 || j < 0 || i >= W || j >= H) ? -1 : j * W + i;
-      if (cell[n] >= 0) antal[cell[n] + 1]++;
-    }
-    for (let c = 1; c <= W * H; c++) antal[c] += antal[c - 1];
-    const ordning = new Uint32Array(antal[W * H]), fyllt = antal.slice(0, W * H);
-    for (let n = 0; n < p.antal; n++) if (cell[n] >= 0) ordning[fyllt[cell[n]]++] = n;
-    return { start: antal, ordning };
-  }
-
   /**
    * Hittar enskilda träd i höjd över mark. Toppar utan markträffar under kronan
    * räknas som tak och tas bort (laserpulser går igenom trädkronor men inte tak).
    */
   function hittaTrad(y, p, { minHojd = 3, maxKrona = 16, stangning = 1, fa = 0.5, fb = 0.05, markRadie = 0.5, markKvot = 0.05 } = {}) {
     const { W, H, s } = y;
+    // träffarna per halv ruta: ur punkterna om de finns, annars de som ytmodellen samlade
+    const traffar = p ? traffrutnat(y).lagg(p) : y.traffar;
+    if (!traffar) throw new Error('hittaTrad behöver laserpunkterna eller en ytmodell med träffar.');
     // höjd över mark med lätt stängning (1 cell), sedan utjämnad (1-2-1)
     const bas = stangning ? filter(filter(y.ra, W, H, stangning, true), W, H, stangning, false) : y.ra;
     const chm = new Float32Array(W * H);
@@ -120,7 +165,6 @@
       }
       chm[j * W + i] = sum / vikt;
     }
-    const idx = punktIndex(p, y);
     const kandidater = [];
     for (let j = 1; j < H - 1; j++) for (let i = 1; i < W - 1; i++) {
       const c = j * W + i, h = chm[c];
@@ -155,19 +199,9 @@
       }
       const r = Math.max(0.5, summa / 8);
       // markträffar under kronan
-      const rr = Math.max(1, markRadie * r), rc = Math.ceil(rr / s);
+      const rr = Math.max(1, markRadie * r);
       const xc = y.x0 + k.i * s, yc = y.y1 - k.j * s;
-      let tot = 0, markt = 0;
-      for (let b = -rc; b <= rc; b++) for (let a = -rc; a <= rc; a++) {
-        const ii = k.i + a, jj = k.j + b;
-        if (ii < 0 || jj < 0 || ii >= W || jj >= H) continue;
-        const c = jj * W + ii;
-        for (let q = idx.start[c]; q < idx.start[c + 1]; q++) {
-          const n = idx.ordning[q];
-          if (Math.hypot(p.x[n] - xc, p.y[n] - yc) > rr) continue;
-          if (p.k[n] === 2) markt++; else if (OBJEKT(p.k[n])) tot++;
-        }
-      }
+      const { mark: markt, objekt: tot } = traffar.rakna(xc, yc, rr);
       if (tot + markt >= 5 && markt < Math.max(1, markKvot * (tot + markt))) continue;   // tak
       // höjd: högsta råvärde nära toppen
       let hojd = 0;
@@ -239,6 +273,15 @@
   // ------------------------------------------------------------------
   // Sektioner
   // ------------------------------------------------------------------
+  /** (x, y) → sann om punkten ligger inom band meter från någon av sektionslinjerna [{ a, b }]. */
+  function vidSektion(sektioner, band = 2) {
+    const l = sektioner.map(({ a, b }) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]); return { a, L, ux: (b[0] - a[0]) / L, uy: (b[1] - a[1]) / L }; });
+    return (x, y) => l.some(q => {
+      const dx = x - q.a[0], dy = y - q.a[1], t = dx * q.ux + dy * q.uy;
+      return t >= 0 && t <= q.L && Math.abs(-dx * q.uy + dy * q.ux) <= band;
+    });
+  }
+
   /**
    * Sektion från a till b (zonkoordinater). dtm: nodrutnät. p: laserpunkter i zonen.
    * Returnerar {langd, mark: [[d, z]], punkter: [[d, z, k]], yta: [[d, z]]}.
@@ -290,27 +333,38 @@
   }
 
   /**
-   * Ytmodell i SWEREF 99 TM (pixelrutnät) av höjdmosaiken plus laserpunkterna.
-   * utesluts(E, N) → true för punkter som inte ska räknas.
+   * Ytmodell i SWEREF 99 TM (pixelrutnät) av höjdmosaiken plus laserpunkterna, byggd del för
+   * del som ytsamlare. utesluts(E, N) → true för punkter som inte ska räknas.
    */
-  function ytmodellTM(m, p, { utesluts = null, stangning = 2 } = {}) {
+  function ytsamlareTM(m, { utesluts = null } = {}) {
     const { E0, N1, w, h } = m;
     const ra = new Float32Array(w * h);
-    for (let n = 0; n < p.antal; n++) {
-      if (!OBJEKT(p.k[n])) continue;
-      const E = p.x[n], N = p.y[n];
-      if (utesluts && utesluts(E, N)) continue;
-      const i = Math.floor(E - E0), j = Math.floor(N1 - N);
-      if (i < 0 || j < 0 || i >= w || j >= h) continue;
-      const c = j * w + i, g = m.data[c];
-      if (!(g === g)) continue;
-      const v = p.z[n] - g;
-      if (v > ra[c]) ra[c] = v;
-    }
-    const st = stangning ? filter(filter(ra, w, h, stangning, true), w, h, stangning, false) : ra;
-    const data = new Float32Array(w * h);
-    for (let c = 0; c < w * h; c++) data[c] = m.data[c] + st[c];
-    return { E0, N1, w, h, s: 1, data };
+    return {
+      lagg(p) {
+        for (let n = 0; n < p.antal; n++) {
+          if (!OBJEKT(p.k[n])) continue;
+          const E = p.x[n], N = p.y[n];
+          if (utesluts && utesluts(E, N)) continue;
+          const i = Math.floor(E - E0), j = Math.floor(N1 - N);
+          if (i < 0 || j < 0 || i >= w || j >= h) continue;
+          const c = j * w + i, g = m.data[c];
+          if (!(g === g)) continue;
+          const v = p.z[n] - g;
+          if (v > ra[c]) ra[c] = v;
+        }
+      },
+      klar({ stangning = 2 } = {}) {
+        const st = stangning ? filter(filter(ra, w, h, stangning, true), w, h, stangning, false) : ra;
+        const data = new Float32Array(w * h);
+        for (let c = 0; c < w * h; c++) data[c] = m.data[c] + st[c];
+        return { E0, N1, w, h, s: 1, data };
+      },
+    };
+  }
+  function ytmodellTM(m, p, { utesluts = null, stangning = 2 } = {}) {
+    const sm = ytsamlareTM(m, { utesluts });
+    sm.lagg(p);
+    return sm.klar({ stangning });
   }
 
   /**
@@ -470,6 +524,6 @@
     return [s * c, -s * sn, -s * sn, -s * c, C, F].map(q => q.toFixed(6)).join('\r\n') + '\r\n';
   }
 
-  return { nod, ytmodell, hittaTrad, skuggor, maskKonturer, sektion, ytmodellTM, rensaVidPunkt, horisont, horisontVid, punktIndex,
+  return { nod, ytmodell, ytsamlare, traffrutnat, hittaTrad, skuggor, maskKonturer, sektion, vidSektion, ytmodellTM, ytsamlareTM, rensaVidPunkt, horisont, horisontVid,
     dxfTrad, csvTrad, dxfSkuggor, dxfSektioner, dxfSektionslinjer, varldsfil };
 }));

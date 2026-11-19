@@ -78,9 +78,24 @@ node test/projekt.test.js
 node test/sol.test.js
 ```
 
+```
+node test/geodata.test.js
+```
+
+```
+node test/laser.test.js
+```
+
 `sol.test.js` (0.13.3) prövar solens läge mot referensvärden (NREL:s SPA) för fyra orter,
 dagjämningar och solstånd 2026, svensk tid kring sommartidens gränser, upp- och nedgång, och
 skuggornas längd från en mur där svaret går att räkna för hand, också med vridet rutnät.
+
+`geodata.test.js` (0.13.4) prövar frågan till Naturvårdsverket mot en låtsastjänst som svarar
+som den riktiga gjorde 19 november 2026 (bara `outputFormat=GEOJSON`, rutan med nordvärdet
+först, tjänstens fältnamn), och de nya försöken när en tjänst svarar 429, 502, 503 eller 504.
+`laser.test.js` (0.13.4) prövar att laserdatan läses del för del utan tak (`Laser.lasRutvis`
+mot ett låtsat COPC-bibliotek), och att ytmodellen, trädträffarna, horisontens modell och
+sektionerna blir desamma del för del som i ett svep.
 
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
@@ -202,8 +217,11 @@ Den låtsas vara:
 
 - Lantmäteriets nedladdning (Basic auth, Range, HEAD, CORS), STAC-katalogerna
   för laserdata (`/stac-hojd/`) och ortofoto (`/stac-bild/`) och Stompunkt Direkt
-- Overpass (vägar, och sjön Lillsjön när frågan gäller vatten)
-- Naturvårdsverkets WFS (`/nv/wfs`, ett naturreservat), Natura 2000 (`/n2k/wfs`, tomt)
+- Overpass (vägar, och sjön Lillsjön när frågan gäller vatten). Varannan fråga av varje slag
+  får 502, så att appens nya försök prövas
+- Naturvårdsverkets WFS (`/nv/wfs`, ett naturreservat) och Natura 2000 (`/n2k/wfs`, ett område
+  400 m söder om testtomten). Som de riktiga tjänsterna: annat än `outputFormat=GEOJSON` ger ett
+  XML-fel, och en ruta med östvärdet först ger ett tomt svar
 - Riksantikvarieämbetets WMS (`/raa/wms`, två lämningar)
 - MCF:s översvämnings-WMS (`/mcf/wms`, vänstra tredjedelen för 100-årsflödet)
 

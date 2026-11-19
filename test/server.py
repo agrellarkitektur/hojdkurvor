@@ -4,6 +4,7 @@
 STAC-sök för laserdata och ortofoto, Stompunkt Direkt) och Overpass, Naturvårdsverket, Riksantikvarieämbetet och MCF på port 8765.
 Användning: python3 test/server.py DATAKATALOG APPKATALOG"""
 import base64, os, sys, json, hashlib
+from urllib.parse import unquote
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pyproj import Transformer
 
@@ -60,6 +61,20 @@ OVERPASS = {'version': 0.6, 'elements': [
 NATUR = {'type': 'FeatureCollection', 'features': [{'type': 'Feature', 'id': 'SkyddadeOmraden.1',
     'properties': {'NAMN': 'Starens naturreservat', 'SKYDDSTYP': 'Naturreservat', 'NVRID': '2001234'},
     'geometry': {'type': 'Polygon', 'coordinates': [[[539560, 6427560], [539660, 6427560], [539660, 6427640], [539560, 6427640], [539560, 6427560]]]}}]}
+# Natura 2000 med tjänstens egna fältnamn. Ligger 400 m söder om testtomten, så att den bara kommer med i större utsnitt.
+N2000 = {'type': 'Feature', 'id': 'N2000.7', 'properties': {'OMRADESNAMN': 'Starens ängar', 'OMRADESKOD': 'SE0230999', 'OMRADESTYP': 'SCI'},
+    'geometry': {'type': 'MultiPolygon', 'coordinates': [[[[539500, 6427100], [539700, 6427100], [539700, 6427200], [539500, 6427200], [539500, 6427100]]]]}}
+OVERPASS_FRAGOR = {}
+
+
+def ruta_berors(f, b):
+    """Berör objektet rutan b = [ymin, xmin, ymax, xmax] (nordvärdet först)?"""
+    g = f['geometry']
+    pts = [p for ring in (g['coordinates'] if g['type'] == 'Polygon' else [r for poly in g['coordinates'] for r in poly]) for p in ring]
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return min(xs) <= b[3] and max(xs) >= b[1] and min(ys) <= b[2] and max(ys) >= b[0]
+
+
 LAMNINGAR = {'type': 'FeatureCollection', 'features': [
     {'type': 'Feature', 'id': 'fornlamning.123', 'properties': {'lamningsnummer': 'L1972:4512', 'lamningstyp': 'Gravfält'}, 'geometry': {'type': 'Point', 'coordinates': [539780, 6427720]}},
     {'type': 'Feature', 'id': 'ovrkulthistlamning.9', 'properties': {'lamningsnummer': 'L2001:77', 'lamningstyp': 'Fossil åker'}, 'geometry': {'type': 'Point', 'coordinates': [539640, 6427660]}}]}
@@ -131,6 +146,12 @@ class H(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', len(b)); self.end_headers()
         self.wfile.write(b)
 
+    def svara_xml(self, text, status=200):
+        b = text.encode()
+        self.send_response(status); self.cors(True)
+        self.send_header('Content-Type', 'text/xml'); self.send_header('Content-Length', len(b)); self.end_headers()
+        self.wfile.write(b)
+
     def do_POST(self):
         path, _, q = self.path.partition('?')
         params = dict(kv.split('=', 1) for kv in q.split('&') if '=' in kv)
@@ -138,7 +159,13 @@ class H(BaseHTTPRequestHandler):
         raw = self.rfile.read(n)
         if path == '/api/interpreter':
             assert raw.startswith(b'data='), raw[:20]
-            return self.svara_json(VATTEN if b'natural' in raw else OVERPASS, alla=True)
+            # Som den riktiga tjänsten när den är överbelastad: första frågan av varje slag får 502,
+            # nästa går igenom. Appen ska försöka igen av sig själv (0.13.4).
+            slag = 'vatten' if b'natural' in raw else 'vagar'
+            OVERPASS_FRAGOR[slag] = OVERPASS_FRAGOR.get(slag, 0) + 1
+            if OVERPASS_FRAGOR[slag] % 2 == 1:
+                return self.svara_json({'fel': 'Bad Gateway'}, 502, alla=True)
+            return self.svara_json(VATTEN if slag == 'vatten' else OVERPASS, alla=True)
         body = json.loads(raw or b'null')
         if not path.startswith('/distribution/produkter/stompunkt-direkt/v1.1/'):
             return self.svara_json({'code': 404, 'reason': 'Not Found'}, 404)
@@ -176,7 +203,18 @@ class H(BaseHTTPRequestHandler):
         path = self.path.split('?')[0]
         q = dict(kv.split('=', 1) for kv in self.path.partition('?')[2].split('&') if '=' in kv)
         if path in ('/nv/wfs', '/n2k/wfs'):
-            return self.svara_json(NATUR if path == '/nv/wfs' else {'type': 'FeatureCollection', 'features': []}, alla=True)
+            # Som Naturvårdsverkets tjänster (kontrollerat 19 november 2026): bara outputFormat=GEOJSON
+            # går, annat ger ett XML-fel med status 200. Rutan ska ha nordvärdet först; med östvärdet
+            # först blir svaret tomt utan fel.
+            fmt = unquote(q.get('outputFormat', ''))
+            if fmt != 'GEOJSON':
+                return self.svara_xml('<ExceptionReport version="2.0.0" xmlns="http://www.opengis.net/ows/1.1"><Exception exceptionCode="InvalidParameterValue" locator="outputFormat">'
+                                      f"<ExceptionText><![CDATA[OutputFormat '{fmt}' not supported.]]></ExceptionText></Exception></ExceptionReport>")
+            b = [float(v) for v in unquote(q.get('bbox', '')).split(',')[:4]]
+            nord_forst = len(b) == 4 and b[0] > 5e6 and b[1] < 5e6
+            if path == '/n2k/wfs':
+                return self.svara_json({'type': 'FeatureCollection', 'features': [N2000] if nord_forst and ruta_berors(N2000, b) else []}, alla=True)
+            return self.svara_json({'type': 'FeatureCollection', 'features': NATUR['features'] if nord_forst and ruta_berors(NATUR['features'][0], b) else []}, alla=True)
         if path == '/raa/wms':
             return self.svara_json(LAMNINGAR, alla=True)
         if path == '/mcf/wms':

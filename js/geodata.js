@@ -43,23 +43,44 @@
   /** Testkrok: byt ut tjänsternas adresser. */
   const adress = nyckel => ((typeof self !== 'undefined' && self.TERRANG_GEODATA) || {})[nyckel] || TJANSTER[nyckel];
 
-  /** Hämtar en adress direkt, och via proxyn om webbläsaren spärrar. typ: 'json' | 'text' | 'blob'. */
+  /** Svar som brukar gå över av sig själva: överbelastad eller tillfälligt otillgänglig tjänst. */
+  const TILLFALLIGT = [429, 502, 503, 504];
+  /** Pauser före nya försök (ms). Testkrok: TERRANG_PAUSER. */
+  const pauser = () => (typeof self !== 'undefined' && self.TERRANG_PAUSER) || [2000, 5000];
+  /**
+   * Kör fn och försöker igen efter en paus när tjänsten svarar med ett tillfälligt fel
+   * (felet har då `status`). Andra fel kastas direkt. Efter sista försöket står antalet i felet.
+   */
+  async function medOmforsok(fn, vanta = pauser()) {
+    for (let i = 0; ; i++) {
+      try { return await fn(); } catch (e) {
+        if (!e || !TILLFALLIGT.includes(e.status)) throw e;
+        if (i >= vanta.length) { if (i) e.message += ` (${i + 1} försök)`; throw e; }
+        await new Promise(r => setTimeout(r, vanta[i]));
+      }
+    }
+  }
+
+  /**
+   * Hämtar en adress direkt, och via proxyn om webbläsaren spärrar. typ: 'json' | 'text' | 'blob'.
+   * Svarar tjänsten 429, 502, 503 eller 504 görs två nya försök med några sekunders paus (0.13.4).
+   */
   async function hamta(url, typ = 'json', { tid = 25000, metod = 'GET', kropp = null } = {}) {
-    const forsok = async u => {
+    const forsok = u => medOmforsok(async () => {
       const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), tid);
       try {
         const svar = await fetch(u, { signal: ctrl.signal, method: metod, body: kropp, headers: kropp ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined });
-        if (!svar.ok) throw new Error(`svarade ${svar.status}`);
+        if (!svar.ok) throw Object.assign(new Error(`svarade ${svar.status}`), { status: svar.status });
         if (typ !== 'json') return typ === 'blob' ? await svar.blob() : await svar.text();
         const text = await svar.text();
         try { return JSON.parse(text); } catch (e) {
           // WFS/WMS svarar ofta 200 med ett XML-fel (ServiceException) när tjänsten har problem (0.12.1)
-          const fel = /<(?:\w+:)?(?:ExceptionText|ServiceException)[^>]*>([^<]{1,200})/.exec(text);
+          const fel = /<(?:\w+:)?(?:ExceptionText|ServiceException)[^>]*>\s*(?:<!\[CDATA\[)?([^<\]]{1,200})/.exec(text);   // texten står ofta i CDATA
           if (/^\s*</.test(text)) throw new Error('svarade med ett fel i stället för data' + (fel ? `: ${fel[1].trim()}` : '') + '. Försök igen senare.');
           throw e;
         }
       } finally { clearTimeout(t); }
-    };
+    });
     try {
       return await forsok(url);
     } catch (e) {
@@ -69,6 +90,8 @@
     }
   }
   const bboxText = b => [b.xmin, b.ymin, b.xmax, b.ymax].map(v => Math.round(v)).join(',');
+  /** Rutan med nordvärdet först, som WFS 2.0 vill ha den för EPSG:3006 (axelordning N, E). */
+  const bboxNordOst = b => [b.ymin, b.xmin, b.ymax, b.xmax].map(v => Math.round(v)).join(',');
   const qs = o => Object.entries(o).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 
   /** Första egenskapen som finns, utan hänsyn till skiftläge. */
@@ -82,39 +105,66 @@
     return '';
   }
 
-  /** GeoJSON-ringar (i TM) → [[x,y],...] i zonen. */
+  /**
+   * GeoJSON-ringar (i TM) → [[x,y],...] i zonen. Koordinaterna ska vara [E, N]; kommer de
+   * som [N, E] (nordvärdet är alltid över 6 miljoner, östvärdet under 1) vänds de.
+   */
   function ringar(geom, tillZon) {
     if (!geom) return [];
-    const t = c => tillZon([c[0], c[1]]);
+    const t = c => tillZon(c[0] > 5e6 && c[1] < 5e6 ? [c[1], c[0]] : [c[0], c[1]]);
     if (geom.type === 'Polygon') return geom.coordinates.map(r => r.map(t));
     if (geom.type === 'MultiPolygon') return geom.coordinates.flatMap(p => p.map(r => r.map(t)));
     return [];
   }
 
+  /** Natura 2000-områdets typ (SPA, SCI, SAC) som direktiv i klartext. */
+  function natura2000Typ(t) {
+    const d = [/SPA/i.test(t) && 'fågeldirektivet', /SCI|SAC/i.test(t) && 'art- och habitatdirektivet'].filter(Boolean);
+    return 'Natura 2000' + (d.length ? ', ' + d.join(' och ') : '');
+  }
+
+  /**
+   * Adress till en WFS-fråga om objekt som berör rutan bTM (SWEREF 99 TM).
+   * Naturvårdsverkets tjänster (ArcGIS) vill ha outputFormat=GEOJSON, inte application/json,
+   * som de svarar på med ett XML-fel, och rutan med nordvärdet först: med östvärdet först blir
+   * svaret tomt utan fel. Svarets koordinater är ändå [E, N]. Kontrollerat mot tjänsterna
+   * 19 november 2026.
+   */
+  function wfsUrl(url, typ, bTM) {
+    return `${url}?${qs({ service: 'WFS', version: '2.0.0', request: 'GetFeature', typeNames: typ, outputFormat: 'GEOJSON', srsName: 'EPSG:3006', bbox: bboxNordOst(bTM) + ',EPSG:3006', count: 200 })}`;
+  }
+
   /**
    * Skyddade områden (naturreservat, nationalpark, biotopskydd m.fl.) och Natura 2000 som
    * berör rutan bTM (SWEREF 99 TM). tillZon: [E, N] → zonens [x, y].
+   * Svarar bara den ena tjänsten kommer dess områden med, och `ut.saknas` säger vilken som föll bort.
    */
   async function skyddadNatur(bTM, tillZon) {
-    const fraga = (url, typ) => hamta(`${url}?${qs({ service: 'WFS', version: '2.0.0', request: 'GetFeature', typeNames: typ, outputFormat: 'application/json', srsName: 'EPSG:3006', bbox: bboxText(bTM) + ',EPSG:3006', count: 200 })}`);
+    const fraga = (nyckel, typ) => hamta(wfsUrl(adress(nyckel), typ, bTM));
     const [nat, n2k] = await Promise.allSettled([
-      fraga(adress('naturWfs'), 'Naturvardsregistret_WFS:SkyddadeOmraden'),
-      fraga(adress('natura2000Wfs'), 'N2000_WFS:N2000'),
+      fraga('naturWfs', 'Naturvardsregistret_WFS:SkyddadeOmraden'),
+      fraga('natura2000Wfs', 'N2000_WFS:N2000'),
     ]);
     const ut = [];
-    if (nat.status === 'fulfilled') (nat.value.features || []).forEach(f => ut.push({
-      typ: egenskap(f.properties, ['SKYDDSTYP', 'skyddsform', 'Skyddsform', 'TYP']) || 'Skyddat område',
-      namn: egenskap(f.properties, ['NAMN', 'namn', 'Name', 'OMRADESNAMN']),
-      id: egenskap(f.properties, ['NVRID', 'nvrid', 'OBJECTID', 'id']) || f.id || '',
-      ringar: ringar(f.geometry, tillZon),
-    }));
+    if (nat.status === 'fulfilled') (nat.value.features || []).forEach(f => {
+      const status = egenskap(f.properties, ['BESLUTSSTATUS']);
+      ut.push({
+        typ: (egenskap(f.properties, ['SKYDDSTYP', 'skyddsform', 'Skyddsform', 'TYP']) || 'Skyddat område') + (status && !/^gällande$/i.test(status) ? ` (${status.toLowerCase()})` : ''),
+        namn: egenskap(f.properties, ['NAMN', 'namn', 'Name', 'OMRADESNAMN']),
+        id: egenskap(f.properties, ['NVRID', 'nvrid', 'OBJECTID', 'id']) || f.id || '',
+        ringar: ringar(f.geometry, tillZon),
+      });
+    });
     if (n2k.status === 'fulfilled') (n2k.value.features || []).forEach(f => ut.push({
-      typ: 'Natura 2000' + (egenskap(f.properties, ['DIREKTIV', 'direktiv']) ? ', ' + egenskap(f.properties, ['DIREKTIV', 'direktiv']) : ''),
-      namn: egenskap(f.properties, ['NAMN', 'namn', 'SITENAME']),
-      id: egenskap(f.properties, ['SITECODE', 'sitecode']) || f.id || '',
+      typ: natura2000Typ(egenskap(f.properties, ['OMRADESTYP', 'DIREKTIV'])),
+      namn: egenskap(f.properties, ['OMRADESNAMN', 'NAMN', 'SITENAME']),
+      id: egenskap(f.properties, ['OMRADESKOD', 'SITECODE']) || f.id || '',
       ringar: ringar(f.geometry, tillZon),
     }));
     if (nat.status === 'rejected' && n2k.status === 'rejected') throw nat.reason;
+    // en av två: det som kom är med, men svaret är inte fullständigt
+    const fel = nat.status === 'rejected' ? ['Naturvårdsregistret', nat.reason] : n2k.status === 'rejected' ? ['Natura 2000', n2k.reason] : null;
+    if (fel) ut.saknas = `${fel[0]} ${(fel[1] && fel[1].message) || 'svarade inte'}`;
     return ut;
   }
 
@@ -206,5 +256,5 @@
     vatten: 'Vatten: © OpenStreetMap-bidragsgivare (ODbL).',
   };
 
-  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, hamta, skyddadNatur, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
+  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, TILLFALLIGT, hamta, medOmforsok, wfsUrl, natura2000Typ, ringar, skyddadNatur, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
 }));
