@@ -176,8 +176,9 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 - Skalprov i Node: 20 miljoner punkter över 2,3 × 2,3 km tog 6,5 s och 365 MB för ytmodellen
   och träffarna, och 2 s för trädsökningen. Nedladdningen och uppackningen (laz-perf) är inte
   mätt; det är den som tar tid i webbläsaren.
-- Gränsen 6 km² för analysområdet (`yta > 6e6`) är kvar. Den gäller utsnittet med
-  marginaler: 150 m för skuggor ger högst cirka 2,1 km sida.
+- Gränserna är kvar: utsnittet får vara högst 4 km² (`MAX_AREA`, alltså 2 × 2 km), och
+  analysområdet (utsnittet med marginaler, sektioner och horisontpunkt) högst 6 km²
+  (`yta > 6e6`). Det ägaren såg vid 1–2 km sida låg alltså inom det tillåtna.
 
 ## 0.13.0 (`js/projekt.js`, blocket *Projektet* i `app.js`)
 
