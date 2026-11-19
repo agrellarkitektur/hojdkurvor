@@ -37,6 +37,10 @@ concurrency:
   group: publicera-vps
   cancel-in-progress: false
 
+# Arbetsflödet läser bara repot; nyckeln till servern är en egen secret.
+permissions:
+  contents: read
+
 env:
   HOST: apps.danaid.cloud
   USER: appsdeploy
