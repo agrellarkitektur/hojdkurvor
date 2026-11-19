@@ -271,6 +271,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--kryss-farg); width
 .knapprad { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .knapprad .knapp.liten { margin-top: 0; }
 .koord-knappar { margin-top: 12px; }
+.fastighet-knapp { margin-top: 8px; }
 #koord-inklistring label { margin-top: 12px; }
 .knapp[aria-pressed="true"]:hover { color: var(--bg); border-color: var(--brand); background: var(--brand); }
 .knapp[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
@@ -328,6 +329,7 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .skapa { padding-top: 4px; }
 .status p { margin: 12px 0 0; font-size: 13px; color: var(--muted); white-space: pre-line; }
 .status p.fel { color: var(--fel); background: var(--fel-bg); padding: 8px 10px; }
+.hjalp.fel { color: var(--fel); }
 .matare { height: 3px; background: var(--rule); margin-top: 14px; overflow: hidden; }
 #matare-fyll { height: 100%; width: 0; background: var(--brand); transition: width .3s; }
 .sammanfattning { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 16px 0; font-size: 13px; }
@@ -361,7 +363,7 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .leaflet-container .leaflet-interactive { cursor: pointer; }
 .leaflet-marker-icon.handtag-wrap.ns { cursor: ns-resize; }
 .leaflet-marker-icon.handtag-wrap.ew { cursor: ew-resize; }
-.ritlage #karta, .ritlage #karta .leaflet-interactive, .punktlage #karta, .punktlage #karta .leaflet-interactive { cursor: crosshair; }
+.ritlage #karta, .ritlage #karta .leaflet-interactive, .punktlage #karta, .punktlage #karta .leaflet-interactive, .fastlage #karta, .fastlage #karta .leaflet-interactive { cursor: crosshair; }
 .ramdrag #karta, .ramdrag #karta .leaflet-interactive { cursor: move; }
 
 /* lagerpanelen */

@@ -124,6 +124,10 @@ python3 test/mobil_test.py test/ut
 python3 test/projekt_test.py test/ut ritning
 ```
 
+```
+python3 test/fastighetsnamn_test.py test/ut ritning
+```
+
 Kör enhetstestet efter ändringar i beräkningarna och gränssnittstesterna efter
 ändringar i panelen. Titta på skärmbilderna i alla tre teman, och rendera
 PDF:erna (`pdftoppm`) och titta på dem. WebKit saknas i testmiljön, så be
@@ -145,18 +149,24 @@ sedan via `geodata.php`).
    eller om filer, tjänster eller inställningar har ändrats.
 4. Kör testerna.
 5. Commit och push till `main`. Lista vilka filer som är nya eller ändrade.
-6. Pushen till `main` publicerar appen på webbhotellet med FTP
-   (`.github/workflows/publicera.yml`). Kontrollera körningen med
-   `gh run list` och att <https://agrellarkitektur.se/terrang/> fungerar.
-   Steget Kontrollera webbplatsen jämför varje fil på servern med repot.
-   Arbeta därför på en egen gren tills versionen är klar. Ändras vilka filer
-   appen behöver, se till att urvalet (`git archive … ':!test' …`) stämmer i
-   både `publicera.yml` och `release.yml`.
+6. Pushen till `main` publicerar appen på VPS:en
+   (`.github/workflows/publicera-vps.yml`, rsync till
+   <https://hojdkurvor.danaid.cloud/>). Kontrollera körningen med
+   `gh api repos/agrellarkitektur/hojdkurvor/actions/runs` och att sidan
+   fungerar. Steget som kontrollerar webbplatsen jämför varje fil på servern
+   med repot. Arbeta därför på en egen gren tills versionen är klar. Ändras
+   vilka filer appen behöver, se till att urvalet (`git archive … ':!test' …`)
+   stämmer i både `publicera-vps.yml` och `release.yml`.
+7. Taggen och releasen skapas av sig själv (`release.yml`) när pushen ändrar
+   `js/version.js`: tagg `vX.Y.Z`, versionens avsnitt ur `CHANGELOG.md` som
+   text och zip-filen. Kontrollera att releasen kom. Skapa inte taggen för hand
+   före pushen, då hoppar arbetsflödet över releasen.
 
-Appen heter bara Höjdkurvor (inte höjdkurvor.se). Den ska flytta till
+Appen heter bara Höjdkurvor (inte höjdkurvor.se) och ligger på
 <https://hojdkurvor.danaid.cloud/> på VPS:en (egen underdomän, som reglerna i
-agrellarkitektur/apps säger). Lantmäteriet behöver inte godkänna adressen; cad-apa
-måste godta det nya ursprunget när cad-apa flyttar. Se `docs/FLYTT.md`.
+agrellarkitektur/apps säger). cad-apa ligger på <https://cad-apa.danaid.cloud/>
+(`cadApaUrl` i `config.js`). Den gamla adressen agrellarkitektur.se/terrang/
+är avstängd sedan 0.13.1. Se `docs/FLYTT.md`.
 
 ## Systerprojekt att använda som referens
 

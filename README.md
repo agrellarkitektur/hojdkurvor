@@ -8,43 +8,46 @@ befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
 PDF med lutning, skyfall och skydd och risker (lutning och skyfall också som JPEG med
 världsfil och PDF i vektor), och en samlad DXF med alla DXF-underlag. Skissade volymer kan prövas på
 platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
-[cad-apa](https://github.com/agrellarkitektur/cad-apa). Det man matar in sparas som ett
+[cad-apa](https://cad-apa.danaid.cloud/) ([källkod](https://github.com/agrellarkitektur/cad-apa)). Det man matar in sparas som ett
 projekt i webbläsaren och kan sparas som projektfil (`.hojdkurvor`, se `docs/PROJEKTFIL.md`).
 
-Live: <https://agrellarkitektur.se/terrang/>. Flyttar till
-<https://hojdkurvor.danaid.cloud/>, se `docs/FLYTT.md`.
+Live: <https://hojdkurvor.danaid.cloud/>. Den gamla adressen
+agrellarkitektur.se/terrang/ är avstängd sedan 0.13.1, se `docs/FLYTT.md`.
 Utvecklad av [Agrell Arkitektur](https://agrellarkitektur.se).
 Licens: GPL-3.0 eller senare, se `LICENSE`. Tredjepartskod och data: `THIRD_PARTY.md`.
 
 Allt räknas i besökarens webbläsare. Inloggningen till Lantmäteriet går direkt
-från webbläsaren till dl1.lantmateriet.se och passerar aldrig webbhotellet.
+från webbläsaren till dl1.lantmateriet.se och passerar aldrig servern.
 Inget byggsteg: filerna laddas upp som de är.
 
 ## Publicera
 
 Appen publiceras av GitHub. Vid varje push till `main` kontrollerar
-`.github/workflows/publicera.yml` koden, kör enhetstesterna, stoppar om
-`config.js` innehåller en nyckel eller inloggning och laddar sedan upp appen med
-FTP till webbhotellet (`public_html/terrang/`). Bara ändrade filer laddas upp.
-Sedan hämtas varje fil från webbplatsen och jämförs med repot; det som saknas
-eller är gammalt laddas upp igen med curl
-(`.github/scripts/kontrollera-webbplatsen.sh`). Webbadressen kan ändras med
-variabeln `SIDA_URL`.
-Ändringar som bara rör dokumentationen eller testerna hoppas över. Uppgifterna
-ligger som secrets i repot: `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` och
-`FTP_DIR`. Arbetsflödet kan också köras för hand under Actions → Publicera på
-webbhotellet → Run workflow. `config.js` följer med, så en ändring av den på
-servern skrivs över.
+`.github/workflows/publicera-vps.yml` koden, kör enhetstesterna, stoppar om
+`config.js` innehåller en nyckel eller inloggning och lägger sedan appen på
+VPS:en med rsync över SSH (`/srv/apps/www/hojdkurvor`, sajten
+<https://hojdkurvor.danaid.cloud/>). Efter uppladdningen hämtas varje fil från
+webbplatsen och jämförs med repot. Ändringar som bara rör dokumentationen eller
+testerna hoppas över. Nyckeln ligger som secret `APPS_SSH_KEY`, serverns
+nycklar i `.github/known_hosts`. Servern (Caddy med PHP-FPM) är beskriven i
+repot agrellarkitektur/apps (`drift/apps.caddy`). `config.js` följer med, så en
+ändring av den på servern skrivs över.
 
-Det går fortfarande att göra en zip: när en release publiceras med en tagg som
-`v0.6.0` lägger `.github/workflows/release.yml` filen `hojdkurvor-vX.Y.Z.zip`
-på releasen, med en mapp `hojdkurvor` som innehåller samma filer.
+**Taggar och releaser** sköts av `.github/workflows/release.yml`: när en push
+till `main` ändrar `js/version.js` och taggen för versionen inte finns, skapas
+taggen (`v0.13.1`) och en release med versionens avsnitt ur `CHANGELOG.md` och
+filen `hojdkurvor-vX.Y.Z.zip`, med en mapp `hojdkurvor` som innehåller samma
+filer som publiceras. En release som skapas för hand får också zip-filen.
+
+FTP-publiceringen till webbhotellet togs bort i 0.13.1. Arbetsflödet
+`stang-webbhotellet.yml` (körs för hand) tar bort appen från
+agrellarkitektur.se/terrang/.
 
 Utan GitHub: ladda upp hela mappen (utom `test/`, `docs/`, `.github/` och
-textfilerna, som inte behövs men inte heller skadar) till webbhotellet, till
-exempel som `public_html/terrang/`. Sidan nås då på `https://agrellarkitektur.se/terrang/`.
-WordPress påverkas inte, eftersom riktiga mappar går före WordPress
-omskrivningar. Ingen databas behövs. PHP behövs bara för reservvägarna
+textfilerna, som inte behövs men inte heller skadar) till en webbserver, till
+exempel som `public_html/hojdkurvor/` på ett webbhotell med Apache (`.htaccess`
+sätter då cache och teckenkodning). WordPress påverkas inte, eftersom riktiga
+mappar går före WordPress omskrivningar. Ingen databas behövs. PHP behövs bara för reservvägarna
 `stac.php` och `geodata.php` och för formuläret Skicka synpunkter
 (`synpunkter.php`), se nedan.
 
@@ -81,7 +84,8 @@ Internt heter temana `ritning`, `lugn` och `mork`.
 - `geodataProxy` – reserv om webbläsaren inte får fråga Naturvårdsverket,
   Riksantikvarieämbetet eller Myndigheten för civilt försvar direkt. Standard
   `geodata.php`.
-- `cadApaUrl` – adress till cad-apa. Standard `../cad-apa/`.
+- `cadApaUrl` – adress till cad-apa. Standard `https://cad-apa.danaid.cloud/`.
+  Skissen tillbaka tas bara emot från samma ursprung.
 - `inloggning` – endast för intranät: förifylld inloggning till Lantmäteriet
   för alla som öppnar sidan. Använd organisationens systemkonto.
 
@@ -92,23 +96,23 @@ alla som öppnar sidan, så checka aldrig in riktiga nycklar eller inloggningar.
 
 BETA-knappen i menyraden öppnar formuläret *Skicka synpunkter* (`js/synpunkter.js`),
 som skickar till `synpunkter.php`. Skriptet mejlar synpunkten vidare med
-webbhotellets `mail()`. Vart det skickas står inte i koden, utan i
-`feedback-config.php`, samma fil som cad-apa använder:
+PHP:s `mail()`. Vart det skickas står inte i koden, utan i
+`feedback-config.php` på servern:
 
 ```php
-<?php return ['to' => 'ca@agrellarkitektur.se', 'from' => 'kontakt@agrellarkitektur.se'];
+<?php return ['to' => 'kontakt@agrellarkitektur.se', 'from' => 'noreply@agrellarkitektur.se'];
 ```
 
-Skriptet letar först i mappen ovanför appen (`public_html`, bredvid `terrang`
-och `cad-apa`) och sedan i appens egen mapp. Ligger filen redan i
-`public_html` för cad-apa behövs inget mer. Uppladdningen från GitHub rör inte
-filer som inte finns i repot, så filen ligger kvar vid uppdateringar.
+Skriptet letar först i mappen ovanför appen och sedan i appens egen mapp. På
+VPS:en ligger filen i `/srv/apps/www/hojdkurvor/`; publiceringen skickar aldrig
+`*-config.php` och tar aldrig bort den. Breven går ut genom msmtp och Loopias
+SMTP med inloggning, så att de inte stoppas av SPF/DMARC när de vidarebefordras
+till Gmail (se `docs/FLYTT.md`, steg 5).
 
-`from` ska vara en adress som finns på webbplatsens domän. Den sätts också som
-kuvertavsändare, så att brev som vidarebefordras (till exempel från webbposten
-till Gmail) inte stoppas av SPF/DMARC. Öppna `…/terrang/synpunkter.php` i
-webbläsaren för att se om konfigurationen hittas. Formuläret visar serverns
-felmeddelande om det inte går att skicka, och erbjuder då ett vanligt mejl.
+`from` ska vara en adress på domänen och sätts också som kuvertavsändare. Öppna
+<https://hojdkurvor.danaid.cloud/synpunkter.php> i webbläsaren för att se om
+konfigurationen hittas. Formuläret visar serverns felmeddelande om det inte går
+att skicka, och erbjuder då ett vanligt mejl.
 
 ## stac.php och geodata.php
 
@@ -133,7 +137,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/version.js` – versionsnummer och datum (`window.HOJDKURVOR`). Skript och
   stilmallar laddas med `?v=<version>`; `node test/version.test.js --skriv`
   skriver in den i HTML-sidorna, `app.js` och `vy3d.js`
-- `.htaccess` – `Cache-Control: no-cache` och UTF-8 på webbhotellet
+- `.htaccess` – `Cache-Control: no-cache` och UTF-8 på en Apache-server (VPS:en kör Caddy och har samma inställningar i `drift/apps.caddy` i agrellarkitektur/apps)
 - `js/karna.js` (`Terrang`) – höjddata, omprojicering, höjdkurvor, DXF, XYZ och
   CSV, lokal vridning och nordpilar
 - `js/laser.js` – laserdata: katalogsök, läsning av COPC, LAS och XYZ

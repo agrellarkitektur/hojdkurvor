@@ -1,20 +1,32 @@
-# Packar appen och lägger en färdig zip för webbhotellet på varje release.
+# Packar appen och lägger den på en release med tagg, till exempel v0.13.1.
 #
-# Så används den: gå till Releases på GitHub, välj "Draft a new release",
-# skriv en tagg som v0.5.0 och publicera. Efter någon minut ligger
-# hojdkurvor-v0.5.0.zip under Assets på releasen. Den kan också köras för hand
-# under Actions → "Bygg för webbhotellet" → "Run workflow"; då hamnar zip-filen
-# under körningens Artifacts i stället.
+# Sedan 0.13.1 sker det av sig självt: när en push till main ändrar
+# js/version.js och taggen för versionen inte finns skapas taggen och en
+# release med avsnittet ur CHANGELOG.md som text och hojdkurvor-v0.13.1.zip
+# under Assets. Finns taggen redan händer ingenting.
+#
+# Det går också att skapa en release för hand (Releases → Draft a new release,
+# tagg som v0.13.1); då läggs zip-filen på den. Körs arbetsflödet för hand
+# under Actions → "Release" → "Run workflow" hamnar zip-filen under körningens
+# Artifacts i stället.
 #
 # Appen har inget byggsteg. Arbetsflödet kontrollerar koden, kör enhetstestet och
 # packar filerna i en mapp som heter hojdkurvor, utan tester och dokumentation.
 
-name: Bygg för webbhotellet
+name: Release
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/version.js'
   release:
     types: [published]
   workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -25,11 +37,33 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Version och tagg
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(node -e "global.window={}; require('./js/version.js'); console.log(window.HOJDKURVOR.version)")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$V" >/dev/null 2>&1; then
+              echo "Taggen v$V finns redan, ingen ny release."
+              echo "ny=nej" >> "$GITHUB_OUTPUT"
+            else
+              echo "ny=ja" >> "$GITHUB_OUTPUT"
+            fi
+            echo "tagg=v$V" >> "$GITHUB_OUTPUT"
+          else
+            echo "ny=nej" >> "$GITHUB_OUTPUT"
+            echo "tagg=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v7
+        if: github.event_name != 'push' || steps.v.outputs.ny == 'ja'
         with:
           node-version: 22
 
       - name: Kontrollera koden
+        if: github.event_name != 'push' || steps.v.outputs.ny == 'ja'
         run: |
           for f in js/*.js config.js; do node --check "$f"; done
           # Ubuntu 26 (ubuntu-latest från hösten 2026) har kanske inte PHP med.
@@ -37,9 +71,11 @@ jobs:
           for f in *.php; do php -l "$f"; done
 
       - name: Enhetstest
+        if: github.event_name != 'push' || steps.v.outputs.ny == 'ja'
         run: for f in test/*.test.js; do node "$f"; done
 
       - name: Kontrollera inställningarna
+        if: github.event_name != 'push' || steps.v.outputs.ny == 'ja'
         run: |
           # Inga nycklar eller inloggningar får följa med till webbhotellet.
           node -e "
@@ -58,16 +94,19 @@ jobs:
           fi
 
       - name: Packa zip
+        if: github.event_name != 'push' || steps.v.outputs.ny == 'ja'
         id: zip
         run: |
-          NAME="hojdkurvor-${GITHUB_REF_NAME:-manuell}"
+          TAGG="${{ steps.v.outputs.tagg }}"
+          [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && TAGG=manuell
+          NAME="hojdkurvor-$TAGG"
           NAME="${NAME//\//-}"
           # Zip-filen innehåller en mapp som heter hojdkurvor, färdig att lägga
           # på webbservern så att adressen blir …/hojdkurvor/ (se docs/FLYTT.md).
           mkdir -p package/hojdkurvor
           git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C package/hojdkurvor
           cat > package/hojdkurvor/LASMIG.txt <<TXT
-          Höjdkurvor ${GITHUB_REF_NAME}
+          Höjdkurvor ${TAGG}
 
           Ladda upp innehållet i mappen hojdkurvor till appens mapp på
           webbservern och ersätt de gamla filerna. Sidan finns sedan på
@@ -80,10 +119,23 @@ jobs:
           Vill du behålla en äldre version: döp om den gamla mappen på servern
           först (till exempel hojdkurvor-0.5.0) innan du laddar upp den nya.
 
-          Ändringar: https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md
+          Ändringar: https://github.com/${GITHUB_REPOSITORY}/blob/${TAGG}/CHANGELOG.md
           TXT
           (cd package && zip -r -9 "../$NAME.zip" hojdkurvor)
           echo "file=$NAME.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Skapa tagg och release
+        if: github.event_name == 'push' && steps.v.outputs.ny == 'ja'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          # Avsnittet för versionen ur CHANGELOG.md, från "## V" till nästa "## ".
+          awk -v v="$V" '$0 ~ "^## "v"( |$)" {p=1; next} /^## / && p {exit} p' CHANGELOG.md > noter.md
+          [ -s noter.md ] || echo "Se CHANGELOG.md." > noter.md
+          echo "" >> noter.md
+          echo "Appen: https://hojdkurvor.danaid.cloud/" >> noter.md
+          gh release create "v$V" "${{ steps.zip.outputs.file }}" --target "$GITHUB_SHA" --title "Höjdkurvor $V" --notes-file noter.md
 
       - name: Lägg zip-filen på releasen
         if: github.event_name == 'release'
@@ -92,7 +144,7 @@ jobs:
         run: gh release upload "$GITHUB_REF_NAME" "${{ steps.zip.outputs.file }}" --clobber
 
       - name: Spara zip-filen på körningen
-        if: github.event_name != 'release'
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
           name: hojdkurvor-webbhotell

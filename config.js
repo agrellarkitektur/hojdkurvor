@@ -19,8 +19,8 @@ window.TERRANG_KONFIG = {
   geodataProxy: 'geodata.php',
 
   // Adress till ritprogrammet cad-apa, för "Fortsätt rita i cad-apa".
-  // Relativ adress fungerar när båda ligger på samma webbplats.
-  cadApaUrl: '../cad-apa/',
+  // Skissen tas bara emot från samma ursprung som adressen.
+  cadApaUrl: 'https://cad-apa.danaid.cloud/',
 
   // ENDAST FÖR INTRANÄT eller annan miljö som bara betrodda användare når.
   // Fyller i inloggningen till Lantmäteriet åt alla som öppnar sidan.

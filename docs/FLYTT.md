@@ -10,10 +10,13 @@ reglerna i repot agrellarkitektur/apps (`APPS.md`) säger. Varje underdomän få
 egen lagring i webbläsaren, så apparna kan inte läsa varandras data. cad-apa
 flyttar senare på samma sätt till `https://cad-apa.danaid.cloud/`.
 
-Förberett i 0.12.0: namnet är bytt i appen, PDF:erna, filerna och
-dokumentationen, och release-zippen har mappen `hojdkurvor`. Själva flytten är
-inte gjord. Appen publiceras fortfarande till webbhotellet tills stegen nedan är
-klara.
+**Klar 19 november 2026 (0.13.1).** Höjdkurvor ligger på
+<https://hojdkurvor.danaid.cloud/> och cad-apa på <https://cad-apa.danaid.cloud/>.
+`cadApaUrl` pekar på cad-apas nya adress, FTP-publiceringen är borttagen och
+den gamla adressen agrellarkitektur.se/terrang/ stängs av helt med
+arbetsflödet `stang-webbhotellet.yml`, utan omdirigering och utan varning
+(beslut 19 november: appen har ingen publik än). Det som står nedan är
+historik för hur flytten gick till.
 
 Driften på VPS:en (Caddy, PHP-FPM, msmtp, publicering med rsync) beskrivs i
 README i agrellarkitektur/apps under *Så fungerar driften* och *Flytta en app
@@ -34,13 +37,13 @@ hit*.
    curl.exe -s -D - -o NUL -X OPTIONS "https://dl1.lantmateriet.se/hojd/data/grid/mhm/64_5/m642_53.tif" -H "Origin: https://hojdkurvor.danaid.cloud" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization,range"
    ```
 
-2. **cad-apa godtar det nya ursprunget. Väntar till cad-apa flyttar.** cad-apa
+2. **cad-apa godtar det nya ursprunget. Klart i cad-apa (`site.ts`).** cad-apa
    tar bara emot platspaket från ursprungen i `HOJDKURVOR_ORIGINS` och skickar
    skissen tillbaka till `HOJDKURVOR_URL` (`src/ui/app/site.ts` i cad-apa).
    Lägg till `https://hojdkurvor.danaid.cloud` och byt adressen till
    `https://hojdkurvor.danaid.cloud/`. Det görs i cad-apa-sessionen. Tills dess
    fungerar inte Fortsätt rita i cad-apa från den nya adressen; det är godkänt.
-3. **cad-apas adress i Höjdkurvor. Väntar till cad-apa flyttar.** `config.js`
+3. **cad-apas adress i Höjdkurvor. Klart i 0.13.1.** `config.js`
    har `cadApaUrl: '../cad-apa/'`, som bara fungerar så länge båda ligger på
    agrellarkitektur.se. Med underdomäner blir det
    `cadApaUrl: 'https://cad-apa.danaid.cloud/'` (och standardvärdet i
@@ -157,22 +160,17 @@ hit*.
 2. Prova där: inloggning, Skapa med ortofoto, byggnader och fastigheter, Skicka
    synpunkter. Fortsätt rita i cad-apa och skissen tillbaka provas när cad-apa
    har flyttat (steg 2 och 3).
-3. Lägg en omdirigering på den gamla adressen, så att sparade länkar och
-   projektlänkar (`#p=…`) fungerar. Webbläsaren skickar inte med det som står
-   efter `#` till servern, så omdirigeringen görs med en liten sida som för
-   vidare hela adressen. Byt `public_html/terrang/` mot bara en `index.html`:
-
-   ```html
-   <!doctype html>
-   <meta charset="utf-8">
-   <title>Höjdkurvor har flyttat</title>
-   <script>location.replace('https://hojdkurvor.danaid.cloud/' + location.pathname.replace(/^.*\/terrang\/?/, '') + location.search + location.hash);</script>
-   <p>Höjdkurvor har flyttat till <a href="https://hojdkurvor.danaid.cloud/">hojdkurvor.danaid.cloud</a>.</p>
-   ```
-
-4. Uppdatera adressen i `README.md`, `CLAUDE.md`, `docs/UTBYTE-CAD-APA.md`,
-   `docs/OVERLAMNING.md` och `CLAUDE.md` (steg 6 under Leverera), ta bort
-   `publicera.yml`, och ändra `url` i katalogposten `apps/hojdkurvor/app.json` i agrellarkitektur/apps.
+3. **Ingen omdirigering** (beslut 19 november). Den gamla mappen
+   `public_html/terrang/` tas bort helt med Actions → *Stäng av webbhotellet*
+   (`.github/workflows/stang-webbhotellet.yml`, skriv STÄNG). Adressen ger
+   sedan 404. `feedback-config.php` i `public_html` rörs inte, eftersom cad-apa
+   kan använda den tills cad-apas egen flytt är helt klar.
+4. **Klart i 0.13.1:** adresserna i `README.md`, `CLAUDE.md`,
+   `docs/UTBYTE-CAD-APA.md` och `docs/OVERLAMNING.md`, och `publicera.yml`
+   borttagen. Kvar utanför repot: `url` i katalogposten
+   `apps/hojdkurvor/app.json` i agrellarkitektur/apps, och att ta bort
+   secrets `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` och `FTP_DIR` (och
+   därefter `stang-webbhotellet.yml`) när avstängningen är gjord.
 
 ## Det som inte följer med
 

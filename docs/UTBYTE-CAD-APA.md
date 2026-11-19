@@ -22,10 +22,13 @@ Som reserv kan båda sidor spara och öppna filer.
 
 ## Adresser
 
-- höjdkurvor: `https://agrellarkitektur.se/terrang/` (flyttar till `https://hojdkurvor.danaid.cloud/`, se `docs/FLYTT.md`)
-- cad-apa: `https://agrellarkitektur.se/cad-apa/` (flyttar senare till `https://cad-apa.danaid.cloud/`)
+- höjdkurvor: `https://hojdkurvor.danaid.cloud/` (sedan 17 november 2026)
+- cad-apa: `https://cad-apa.danaid.cloud/` (sedan 19 november 2026)
 
-Höjdkurvor läser cad-apas adress ur `config.js` (`cadApaUrl`, standard `../cad-apa/`).
+De gamla adresserna på agrellarkitektur.se (`/terrang/` och `/cad-apa/`) gäller
+inte längre. Höjdkurvor läser cad-apas adress ur `config.js` (`cadApaUrl`, standard
+`https://cad-apa.danaid.cloud/`). Apparna ligger på olika underdomäner, så
+adressen måste vara fullständig; en relativ adress som `../cad-apa/` fungerar inte.
 cad-apa behöver motsvarande inställning för höjdkurvors adress. Båda sidor ska
 kontrollera `event.origin` mot den andras ursprung och skicka med det som
 `targetOrigin`. Meddelanden från andra ursprung ignoreras.
@@ -141,7 +144,7 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   "ortofoto": {           // ortofotot (Ortofoto Nedladdning), från 0.10.1
     "bild": "data:image/jpeg;base64,…", "x0": 189620.25, "y1": 6430369.75, "s": 0.5, "W": 640, "H": 400, "ar": 2023
   },
-  "lankar": { "projekt": "https://…/terrang/#p=…" },
+  "lankar": { "projekt": "https://hojdkurvor.danaid.cloud/#p=…" },
   "licens": "Höjddata och laserdata © Lantmäteriet (CC BY 4.0). Vägar © OpenStreetMap-bidragsgivare (ODbL)."
 }
 ```

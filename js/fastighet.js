@@ -117,7 +117,7 @@
 
   /**
    * Hämtar fastighetsindelningen kring utsnittet.
-   * opt: { kommuner, utsnitt, epsg, auth, logg, framsteg, bekrafta }
+   * opt: { kommuner, utsnitt, epsg, auth, logg, framsteg, bekrafta, baraSparad }
    */
   async function hamta(opt) {
     const tabell = t => ARYTA(t) || ARGRANS(t) || ARPUNKT(t);
@@ -125,6 +125,11 @@
     if (!res.tabeller.some(t => ARYTA(t.namn) || ARGRANS(t.namn)))
       throw new Error(`hittade inga fastighetsgränser i filen (skikt: ${res.tabeller.map(t => t.namn).join(', ') || 'inga'}).`);
     return franObjekt(res.objekt, opt.utsnitt);
+  }
+
+  /** Fastighetsytorna i f (från franObjekt) som punkten x, y (i zonen) ligger i, största först. */
+  function vid(f, x, y) {
+    return f.ytor.filter(y0 => iYta(y0.ringar, x, y)).sort((a, b) => b.yta - a.yta);
   }
 
   /** DXF-lager för en gräns, t.ex. GRANS_FASTIGHETSGRANS eller GRANS_FASTIGHETSGRANS_OSAKER. */
@@ -162,5 +167,5 @@
     'särskilt där de är digitaliserade från äldre kartor. Det som gäller är förrättningskartor och lantmäteriförrättningar. ' +
     'Beställ en gränsutvisning eller en fastighetsbestämning av Lantmäteriet när gränsens läge har betydelse.';
 
-  return { hamta, franObjekt, dxf, perLager, lagerFor, beteckning, ankare, iYta, VARNING, OSAKER, FALT };
+  return { hamta, franObjekt, vid, dxf, perLager, lagerFor, beteckning, ankare, iYta, VARNING, OSAKER, FALT };
 }));

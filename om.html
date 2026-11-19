@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Om – Höjdkurvor</title>
   <meta name="description" content="Höjdkurvor gör Lantmäteriets öppna geodata till underlag som går att rita på. En gratis betatjänst från Agrell Arkitektur.">
-  <script src="js/version.js?v=0.13.0"></script>
-  <script src="js/tema.js?v=0.13.0"></script>
-  <script src="js/synpunkter.js?v=0.13.0" defer></script>
+  <script src="js/version.js?v=0.13.1"></script>
+  <script src="js/tema.js?v=0.13.1"></script>
+  <script src="js/synpunkter.js?v=0.13.1" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.13.0">
+  <link rel="stylesheet" href="app.css?v=0.13.1">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -78,7 +78,7 @@
         <section>
           <h2>Öppen källkod</h2>
           <p>Källkoden finns på <a href="https://github.com/agrellarkitektur/hojdkurvor">GitHub</a> under GNU General Public License, version 3 eller senare. Du får använda, ändra och sprida den, så länge ändrade versioner också delas under samma licens.</p>
-          <p>Höjdkurvor hänger ihop med ritprogrammet <a href="https://github.com/agrellarkitektur/cad-apa">cad-apa</a>, också det öppen källkod. Platsen kan skickas till cad-apa för att skissa, och skissen tillbaka hit för nya analyser.</p>
+          <p>Höjdkurvor hänger ihop med ritprogrammet <a href="https://cad-apa.danaid.cloud/">cad-apa</a>, också det öppen källkod (<a href="https://github.com/agrellarkitektur/cad-apa">källkoden på GitHub</a>). Platsen kan skickas till cad-apa för att skissa, och skissen tillbaka hit för nya analyser.</p>
         </section>
         <section>
           <h2>Dina uppgifter</h2>
@@ -108,6 +108,7 @@
       <section id="andringar" style="padding-top: 40px; border-top: 1px solid var(--rule)">
         <h2>Ändringar</h2>
         <dl class="par bred">
+          <dt>0.13.1 · 19 nov 2026</dt><dd>Höjdkurvor ligger nu på hojdkurvor.danaid.cloud och cad-apa på cad-apa.danaid.cloud, och Rita i cad-apa fungerar igen mellan de nya adresserna. Den gamla adressen agrellarkitektur.se/terrang/ är avstängd. Ny knapp <em>Hämta från kartan</em> vid Projekt eller fastighet: klicka på en fastighet i kartan så fylls beteckningen i.</dd>
           <dt>0.13.0 · 18 nov 2026</dt><dd>Projekt: det du matar in och väljer sparas i webbläsaren medan du arbetar, och finns kvar när sidan laddas om. Senaste projekt och Nytt projekt i steg 01. Projektet kan sparas som projektfil (.hojdkurvor) och öppnas igen, också genom att dra filen till kartan. Projektfilen ligger också i zip-filen med underlaget. Skissens volymer i DXF:en har väggar och tak, så att de syns som volymer i ritprogrammet.</dd>
           <dt>0.12.2 · 17 nov 2026</dt><dd>Skuggstudien i platsanalysen har samma ritningsram och ritningshuvud som de andra bladen. Husens fotavtryck och skissade volymer syns som linjer i skuggrutorna, även i den fristående skuggstudien.</dd>
           <dt>0.12.1 · 17 nov 2026</dt><dd>Soldiagrammet blir av även när Horisont är vald och någon höjdruta runt platsen inte går att läsa; misslyckas horisonten helt görs diagrammet utan den, med en varning. Den samlade platsanalysen ligger i zip-filens rot, och soldiagrammet i den har samma A3-blad och ritningsram som de andra bladen. Skuggor, lutning och skyfall följer inte längre med som DXF; PDF och bilder räcker. Tydligare fel när en karttjänst svarar med fel i stället för data.</dd>

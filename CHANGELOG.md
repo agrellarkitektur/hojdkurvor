@@ -3,6 +3,31 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.13.1 – 2026-11-19
+
+Flytten är klar, och fastighetsnamnet kan hämtas ur kartan (AX).
+
+- **cad-apa på nya adressen**: `cadApaUrl` i `config.js` (och reservvärdet i
+  `js/app.js`) är `https://cad-apa.danaid.cloud/`. *Rita i cad-apa* och
+  skissen tillbaka fungerar mellan hojdkurvor.danaid.cloud och
+  cad-apa.danaid.cloud. Länkar till appen på Om-sidan och i instruktionerna.
+- **Den gamla adressen stängs av**: FTP-publiceringen (`publicera.yml` och
+  `.github/scripts/kontrollera-webbplatsen.sh`) är borttagen. Det nya
+  arbetsflödet `stang-webbhotellet.yml` (körs för hand) tar bort appen från
+  agrellarkitektur.se/terrang/, utan omdirigering.
+- **Taggar och releaser av sig själv**: `release.yml` skapar tagg och release
+  med zip-filen och versionens avsnitt ur CHANGELOG.md när en push till `main`
+  ändrar `js/version.js`.
+- **Hämta från kartan** (AX) vid *Projekt eller fastighet* i 01 Plats: nästa
+  klick på kartan fyller i fastighetsbeteckningen under punkten. Källa i tur och
+  ordning: det senast skapade underlaget, kommunens fastighetsindelning i
+  webbläsaren (utan att fråga Lantmäteriet) och sist Lantmäteriet, vilket kräver
+  inloggning och beställd Fastighetsindelning. `Fastighet.vid`,
+  `Kommunfil.hamtaKommun({ baraSparad })`.
+- Dokumentationen (README, CLAUDE.md, `docs/UTBYTE-CAD-APA.md`,
+  `docs/FLYTT.md`) har de nya adresserna. Synpunkterna går med e-post från
+  VPS:en; README beskrev fortfarande webbhotellet.
+
 ## 0.13.0 – 2026-11-18
 
 Projektfilen, etapp 1 och 2 i planen (`plan-projektfil.md` i claude.ai-projektet),

@@ -112,12 +112,17 @@
   }
 
   /** Hämtar kommunens zip för produkten (från lokal lagring om den är aktuell). */
-  async function hamtaKommun(produkt, kod, auth, { logg = () => {}, bekrafta = async () => true, framsteg = () => {} } = {}) {
+  async function hamtaKommun(produkt, kod, auth, { logg = () => {}, bekrafta = async () => true, framsteg = () => {}, baraSparad = false } = {}) {
     const p = PRODUKTER[produkt];
     if (!p) throw new Error('Okänd produkt: ' + produkt);
     const url = T().dlUrl(p.url(kod));
     const nyckel = `${produkt}:${kod}`;
     const sparad = await cacheLas(nyckel);
+    // baraSparad (0.13.1): bara webbläsarens lagring, ingen fråga till Lantmäteriet och ingen inloggning
+    if (baraSparad) {
+      if (sparad) return sparad.data;
+      throw Object.assign(new Error(`${p.namn} för kommun ${kod} är inte sparad i webbläsaren.`), { inteSparad: true });
+    }
     const h = await huvud(url, auth);
     if (h && h.nekad) throw nekad(p);
     if (sparad) {
@@ -360,7 +365,7 @@
   /**
    * Hämtar produktens filer för kommunerna och läser objekten kring utsnittet,
    * omräknade till zonen (inte klippta).
-   * opt: { produkt, kommuner, utsnitt, epsg, auth, marginal, tabell, falt, logg, framsteg, bekrafta }
+   * opt: { produkt, kommuner, utsnitt, epsg, auth, marginal, tabell, falt, logg, framsteg, bekrafta, baraSparad }
    * Returnerar { objekt: [{tabell, typ, ringar (zon), attr}], tabeller }
    */
   async function lasUtsnitt(opt) {
@@ -373,7 +378,7 @@
     for (let i = 0; i < opt.kommuner.length; i++) {
       const kod = opt.kommuner[i];
       const zipData = await hamtaKommun(produkt, kod, auth, {
-        logg: opt.logg, bekrafta: opt.bekrafta,
+        logg: opt.logg, bekrafta: opt.bekrafta, baraSparad: !!opt.baraSparad,
         framsteg: f => opt.framsteg && opt.framsteg((i + f * 0.8) / opt.kommuner.length),
       });
       const zip = await JSZip.loadAsync(zipData);

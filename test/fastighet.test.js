@@ -39,6 +39,15 @@ Terrang.registreraZoner();
   const kisa = f.ytor.find(y => y.beteckning === 'Kisa 1:7');
   assert.ok(kisa.ankare && F.iYta(kisa.ringar, kisa.ankare[0], kisa.ankare[1]), 'Kisa 1:7 (yta med hål) får beteckningen inne i ytan');
 
+  // AX (0.13.1): fastigheten under en punkt, också ur en liten ruta kring punkten
+  for (const y of f.ytor) {
+    const [ax, ay] = y.ankare;
+    assert.strictEqual(F.vid(f, ax, ay)[0].beteckning, y.beteckning, 'Fastighet.vid vid ankaret för ' + y.beteckning);
+    const rr = { xmin: ax - 2, xmax: ax + 2, ymin: ay - 2, ymax: ay + 2 };
+    assert.strictEqual(F.vid(las(gpkg, rr), ax, ay)[0].beteckning, y.beteckning, 'liten ruta kring ankaret för ' + y.beteckning);
+  }
+  assert.deepStrictEqual(F.vid(f, 0, 0), [], 'ingen fastighet utanför');
+
   if (process.env.FASTIGHET_GPKG) {
     const t0 = Date.now();
     const rv = { xmin: 552700, xmax: 553100, ymin: 6391500, ymax: 6391900 };

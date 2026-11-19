@@ -1,8 +1,8 @@
 # Kontrollerar appen och lägger den på VPS:en (https://hojdkurvor.danaid.cloud/)
 # med rsync över SSH vid varje push till main (ändringar som bara rör
 # dokumentationen hoppas över). Kan också köras för hand under Actions →
-# "Publicera på VPS:en" → "Run workflow". Ersätter publicera.yml (FTP till
-# webbhotellet) när flytten är klar, se docs/FLYTT.md.
+# "Publicera på VPS:en" → "Run workflow". Det enda stället appen publiceras på
+# sedan 0.13.1; FTP till webbhotellet (publicera.yml) är borttagen, se docs/FLYTT.md.
 #
 # Byggd på mallen drift/publicera-app.yml i agrellarkitektur/apps:
 #   - secret APPS_SSH_KEY: nyckeln från  sudo apps-drift nyckel hojdkurvor www/hojdkurvor
@@ -10,7 +10,7 @@
 #   - .github/known_hosts: serverns nycklar, kopierade från drift/known_hosts i apps.
 #   - Caddy-sajten för hojdkurvor.danaid.cloud ligger i drift/apps.caddy i apps.
 #
-# Samma urval som publicera.yml och release.yml: allt utom test, docs, .github,
+# Samma urval som release.yml: allt utom test, docs, .github,
 # CLAUDE.md och .gitignore. Serverns egna filer (feedback-config.php och annat
 # *-config.php) skickas aldrig och tas aldrig bort. Appens data/ är offentlig
 # (kommuner.json) och följer med; apps.caddy släpper igenom data/*.json för

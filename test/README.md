@@ -212,6 +212,15 @@ webbläsarens), en fil från en nyare version, inmatning utanför utsnittet, Ta 
 Sparat i webbläsaren, en annan flik som ändrar samma projekt och flytten från sessionStorage.
 Andra argumentet är temat.
 
+```
+python3 test/fastighetsnamn_test.py test/ut ritning
+```
+
+`fastighetsnamn_test.py` (0.13.1) prövar *Hämta från kartan* vid Projekt eller
+fastighet: besked utan inloggning, hämtning ur låtsasfilen för Kinda, och läsning
+ur webbläsarens lagring utan inloggning. Kartan nås genom testkroken
+`TERRANG_TEST.karta`.
+
 `ui_test.py` går igenom hela flödet på en dator: BETA-knappen och formuläret
 Skicka synpunkter (anropet till `synpunkter.php` fångas upp i testet), rita och
 ändra utsnittet, dialogen Klistra in koordinater, alla fyra stegen, DXF-skiss, inloggning, Skapa med alla tillval och

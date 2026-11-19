@@ -7,15 +7,20 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **AÅ**.
+Senast använda nummer: **AÖ**.
 
 ## Inkorg
 
-- **AX** Vid projektnamnet på blad 1: ett val *klicka i kartan för att hämta fastighetsnamn*.
+(tom)
 
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.13.1
+
+- **AÄ** cad-apa på nya adressen: på <https://hojdkurvor.danaid.cloud/>, välj *Rita i cad-apa*. Öppnas <https://cad-apa.danaid.cloud/> med platsen? Skicka tillbaka en skiss från cad-apa: dyker volymerna upp i 04 Skiss? Prova också *Fortsätt rita i cad-apa* under resultatet.
+- **AÖ** Hämta från kartan (AX): välj *Hämta från kartan* vid Projekt eller fastighet och klicka på en fastighet, (1) efter Skapa med Fastigheter ikryssat, (2) på ett annat ställe i samma kommun, (3) i en kommun där fastighetsindelningen inte är hämtad. Blir beteckningen rätt, och är beskeden begripliga?
 
 ### 0.13.0
 

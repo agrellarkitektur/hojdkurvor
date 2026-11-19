@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.13.0';
+  const FILVERSION = '0.13.1';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -59,6 +59,7 @@
   // ------------------------------------------------------------------
   const KONF = window.TERRANG_KONFIG || {};
   const karta = L.map('karta', { zoomSnap: 0.5, preferCanvas: true, maxZoom: 19 }).fitBounds([[55.2, 10.9], [69.1, 24.2]]);
+  if (window.TERRANG_TEST) window.TERRANG_TEST.karta = karta;   // testkrok: kartan i gränssnittstesterna
   const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsgivare';
   const inloggning = () => { const a = $('anv').value.trim(), l = $('losen').value; return a && l ? T.basicAuth(a, l) : null; };
   const BAKGRUNDER = [
@@ -798,6 +799,65 @@
     if (state.mitt && state.utsnitt) kvadratKring(state.mitt[0], state.mitt[1]);
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && punktlage) satPunktlage(false); });
+
+  // Fastighetsnamn ur kartan (AX, 0.13.1): nästa klick på kartan fyller i fältet Projekt eller fastighet
+  const fastKnapp = $('projekt-karta'), FAST_HJALP = $('projekt-hjalp').innerHTML;
+  let fastlage = false;
+  const fastStatus = (text, fel = false) => { const p = $('projekt-hjalp'); if (text == null) p.innerHTML = FAST_HJALP; else p.textContent = text; p.classList.toggle('fel', fel); };
+  function satFastlage(pa) {
+    fastlage = pa;
+    fastKnapp.setAttribute('aria-pressed', String(pa));
+    fastKnapp.textContent = pa ? 'Klicka på kartan …' : 'Hämta från kartan';
+    document.body.classList.toggle('fastlage', pa);
+  }
+  fastKnapp.addEventListener('click', () => {
+    if (ritar) satRitlage(false);
+    if (punktlage) satPunktlage(false);
+    satFastlage(!fastlage);
+    fastStatus(fastlage ? 'Klicka på fastigheten i kartan. Esc avbryter.' : null);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && fastlage) { satFastlage(false); fastStatus(null); } });
+  /**
+   * Fastigheterna under punkten (x, y i zonen epsg). Källa i tur och ordning: det senaste underlaget,
+   * kommunens fil i webbläsaren och sist Lantmäteriet (kräver inloggning och beställning).
+   */
+  async function fastigheterVid(x, y, epsg, lat, lon) {
+    const s = state.senaste;
+    if (s && s.fastigheter && s.epsg === epsg && x >= s.r.xmin && x <= s.r.xmax && y >= s.r.ymin && y <= s.r.ymax)
+      return Fastighet.vid(s.fastigheter, x, y);
+    const k = hittaKommun(lon, lat);
+    if (!k) throw new Error('kunde inte avgöra vilken kommun punkten ligger i.');
+    await laddaSkript('vendor/sql-wasm.js');
+    const r = { xmin: x - 2, xmax: x + 2, ymin: y - 2, ymax: y + 2 };
+    const opt = { kommuner: [k.kod], utsnitt: r, epsg };
+    try {
+      return Fastighet.vid(await Fastighet.hamta(Object.assign({ baraSparad: true }, opt)), x, y);
+    } catch (e) { if (!e.inteSparad) throw e; }
+    const auth = inloggning();
+    if (!auth) throw new Error(`fastighetsindelningen för ${k.namn} är inte hämtad än. Fyll i inloggningen till Lantmäteriet först.`);
+    fastStatus(`Hämtar fastighetsindelningen för ${k.namn} …`);
+    return Fastighet.vid(await Fastighet.hamta(Object.assign({ auth, logg: t => fastStatus(t),
+      bekrafta: async storlek => window.confirm(`Fastighetsindelningen för kommunen är ${fmt(storlek / 1e6)} MB. Den hämtas en gång och sparas sedan i webbläsaren. Vill du hämta den?`) }, opt)), x, y);
+  }
+  karta.on('click', async e => {
+    if (!fastlage) return;
+    satFastlage(false);
+    const { lat, lng } = e.latlng;
+    const epsg = state.epsg;
+    const [x, y] = franLatLng(epsg)([lat, lng]);
+    fastStatus('Letar efter fastigheten …');
+    try {
+      const ytor = await fastigheterVid(x, y, epsg, lat, lng);
+      if (!ytor.length) { fastStatus('Ingen fastighet på den punkten. Prova att klicka en bit in från gränsen.', true); return; }
+      $('projekt').value = ytor[0].beteckning;
+      $('projekt').dispatchEvent(new Event('input'));
+      $('projekt').dispatchEvent(new Event('change'));
+      fastStatus(`${ytor[0].beteckning}${ytor[0].kommun ? ', ' + ytor[0].kommun : ''}. Du kan ändra namnet i fältet.`);
+    } catch (err) {
+      console.error(err);
+      fastStatus('Fastigheten: ' + (err instanceof T.InloggningsFel ? err.message : err.message.replace(/^./, c => c.toUpperCase())), true);
+    }
+  });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && ritar) satRitlage(false); });
 
   const kartBehallare = karta.getContainer();
@@ -2656,7 +2716,7 @@
   // ------------------------------------------------------------------
   // cad-apa
   // ------------------------------------------------------------------
-  const CADAPA = window.TERRANG_CADAPA || KONF.cadApaUrl || '../cad-apa/';   // TERRANG_CADAPA: testkrok
+  const CADAPA = window.TERRANG_CADAPA || KONF.cadApaUrl || 'https://cad-apa.danaid.cloud/';   // TERRANG_CADAPA: testkrok
   function platspaket() {
     const s = state.senaste, r = state.utsnitt;
     const np = lasNollpunkt();

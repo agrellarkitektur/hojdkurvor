@@ -1,0 +1,63 @@
+# Stänger av den gamla adressen https://agrellarkitektur.se/terrang/ (0.13.1).
+# Höjdkurvor ligger sedan 17 november 2026 på https://hojdkurvor.danaid.cloud/
+# och publiceras dit med publicera-vps.yml. FTP-publiceringen (publicera.yml)
+# togs bort i 0.13.1.
+#
+# Körs bara för hand: Actions → "Stäng av webbhotellet" → "Run workflow", och
+# skriv STÄNG i rutan. Hela appens mapp på webbhotellet (secret FTP_DIR, till
+# exempel /agrellarkitektur.se/public_html/terrang/) tas bort med FTPS. Ingen
+# omdirigering läggs dit; adressen ger 404. feedback-config.php i public_html
+# rörs inte (cad-apa kan fortfarande använda den).
+#
+# När körningen är klar kan secrets FTP_SERVER, FTP_USERNAME, FTP_PASSWORD och
+# FTP_DIR tas bort, och därefter den här filen.
+
+name: Stäng av webbhotellet
+
+on:
+  workflow_dispatch:
+    inputs:
+      bekrafta:
+        description: 'Skriv STÄNG för att ta bort appen från agrellarkitektur.se/terrang/'
+        required: true
+
+jobs:
+  stang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kontrollera bekräftelsen
+        env:
+          SVAR: ${{ inputs.bekrafta }}
+        run: |
+          [ "$SVAR" = "STÄNG" ] || [ "$SVAR" = "STANG" ] || { echo "::error::Skriv STÄNG för att köra."; exit 1; }
+
+      - name: Kontrollera mappen
+        env:
+          DIR: ${{ secrets.FTP_DIR }}
+        run: |
+          DIR="/${DIR#/}"; DIR="${DIR%/}"
+          # Ta bara bort en mapp som heter terrang, aldrig public_html eller roten.
+          case "$DIR" in
+            */terrang) echo "Tar bort $DIR" ;;
+            *) echo "::error::FTP_DIR ($DIR) slutar inte på /terrang. Avbryter."; exit 1 ;;
+          esac
+
+      - name: Ta bort appen från webbhotellet
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          DIR: ${{ secrets.FTP_DIR }}
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q lftp
+          DIR="/${DIR#/}"; DIR="${DIR%/}"
+          # Webbhotellets certifikat gäller ofta värdnamnet hos leverantören;
+          # anslutningen krypteras ändå (samma som FTP-publiceringen hade).
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$FTP_SERVER" -e "set ftp:ssl-force true; set ssl:verify-certificate false; set net:max-retries 2; set net:timeout 30; rm -r -f '$DIR'; bye"
+
+      - name: Kontrollera att adressen är avstängd
+        run: |
+          sleep 5
+          KOD=$(curl -s -o /dev/null -w '%{http_code}' "https://agrellarkitektur.se/terrang/index.html?k=$GITHUB_RUN_ID")
+          echo "agrellarkitektur.se/terrang/index.html svarar $KOD"
+          [ "$KOD" = 404 ] || [ "$KOD" = 403 ] || { echo "::error::Sidan svarar fortfarande ($KOD)."; exit 1; }

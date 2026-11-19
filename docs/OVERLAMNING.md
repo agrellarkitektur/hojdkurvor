@@ -1,9 +1,18 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 18 november 2026, 0.13.0 (projektfilen).
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.1 (flytten klar, AX).
 
 ## Läget
+
+- **0.13.1** 19 november: flytten är klar. `cadApaUrl` är
+  `https://cad-apa.danaid.cloud/` (cad-apa godtar redan
+  hojdkurvor.danaid.cloud i `site.ts`). FTP-publiceringen är borttagen; appen
+  publiceras bara på VPS:en. Den gamla adressen stängs av helt, utan
+  omdirigering och utan varning (ägarens beslut: ingen publik än), med Actions
+  → *Stäng av webbhotellet*. Taggar och releaser skapas av `release.yml` vid
+  varje push som ändrar `js/version.js`. AX: *Hämta från kartan* vid Projekt
+  eller fastighet. Inte testad av ägaren (AÄ, AÖ).
 
 - **0.13.0** 18 november: projektfilen, etapp 1 och 2 i `plan-projektfil.md`
   (claude.ai-projektet). Projekt i IndexedDB med autospar, Senaste projekt,
@@ -466,42 +475,39 @@ vilka andra system som passar. Text med EPSG eller SWEREF-namn går före.
 
 ## Nästa session
 
-Flytten: appen ligger på <https://hojdkurvor.danaid.cloud/> och på
-agrellarkitektur.se/terrang/, och publiceras till båda vid varje push. Steg 1,
-4, 5 och 6 i `docs/FLYTT.md` är klara. Kvar: cad-apa (steg 2 och 3) när
-cad-apa flyttar, och därefter omdirigeringen, adresserna i dokumentationen och
-att stänga av FTP (*Själva flytten* steg 3–4). Vänta med omdirigeringen tills
-cad-apa har flyttat, annars går det inte att fortsätta rita i cad-apa.
+Flytten är klar (se `docs/FLYTT.md`). Kvar utanför repot: `url` i
+`apps/hojdkurvor/app.json` i agrellarkitektur/apps, och att ta bort
+FTP-secrets och `stang-webbhotellet.yml` när avstängningen är gjord.
 
-Ägaren fyller på med fler testresultat i nästa vända (resten av *Att testa* i
-`docs/SYNPUNKTER.md`).
+Versionsplanen (19 november, kan ändras av ägaren):
+
+| Version | Innehåll |
+|---|---|
+| 0.13.x | Rättelser efter testet (AW, AY, AZ, AÅ, AR–AV, AÄ, AÖ) |
+| 0.14.0 | Sol på fasaderna (`overlamning-solanalys.md` i claude.ai-projektet) |
+| 0.15.0 | Förslag och sparade vyer (projektfilen, etapp 3). Planen säger helst före solanalysen; fråga ägaren om ordningen |
+| 0.16.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
+| 0.17.0 | Bergytemodell och geologiblock i platspaketet (geologi etapp 3–4) |
+| 0.18.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
 
 1. För in testresultaten. Rättelser blir 0.13.x.
-2. **Fastighetsnamn ur kartan (AX)**: förslaget nedan är lagt fram; fråga om
-   det ska byggas och i vilken version.
-3. **0.14.0 sol på fasaderna** (`overlamning-solanalys.md` i claude.ai-projektet).
-   Planen säger att förslagen (projektfilens etapp 3) helst kommer före eller med
-   solanalysen; fråga ägaren om ordningen.
-4. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i
+2. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i
    panelen.
+3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid
+   Skapa, föreslå den fastighet som har störst del av utsnittet
+   (`fi.fastigheter[0]`).
 
-### Förslag: fastighetsnamn ur kartan (AX)
+### Fastighetsnamn ur kartan (AX, byggt i 0.13.1)
 
-Fastighetsindelningen läses redan som vektor (`js/fastighet.js`): varje yta har
-ringar och beteckning (*Vimmerby 3:269*), och `Fastighet.iYta` finns. Kartlagret
-Fastigheter efter Skapa visar samma data. Topografiska webbkartans etiketter är
-en bild och går inte att läsa.
-
-- En liten knapp vid fältet *Projekt eller fastighet*: *Hämta från kartan*.
-  Nästa klick på kartan ger fastigheten under punkten, och fältet fylls i
-  (går att ändra).
-- Källa i tur och ordning: (1) `state.senaste.fastigheter` om punkten ligger i
-  det senaste utsnittet, (2) kommunfilen i IndexedDB (`Kommunfil.lasUtsnitt`
-  med en ruta på några meter kring punkten, utan att fråga), (3) inte hämtad:
-  samma fråga om storleken som vid Skapa, och kräver inloggning. Inte inloggad:
-  statusraden säger det.
-- Tillägg att fråga om: är fältet tomt och Fastigheter ikryssat vid Skapa,
-  föreslå den fastighet som har störst del av utsnittet (`fi.fastigheter[0]`).
+Blocket *Fastighetsnamn ur kartan* i `app.js` (efter Punkt och radie).
+`fastigheterVid` tar i tur och ordning `state.senaste.fastigheter` (om punkten
+ligger i det senaste utsnittet och samma zon), kommunens fil i IndexedDB med
+`baraSparad: true` (ingen HEAD-fråga, ingen inloggning; felet har
+`inteSparad`) och sist Lantmäteriet med samma storleksfråga som Skapa.
+Rutan kring punkten är 4 × 4 m. `Fastighet.vid(f, x, y)` ger ytorna som
+innehåller punkten, största först. Status och fel visas i hjälptexten under
+fältet (`#projekt-hjalp`). Topografiska webbkartans etiketter är en bild och
+går inte att läsa.
 
 ## Lantmäteriets leveranser (kontrollerat 23 oktober)
 
@@ -543,10 +549,8 @@ en bild och går inte att läsa.
 - Licensvillkoren för Riksantikvarieämbetets och MCF:s data och
   kommungränserna (`data/kommuner.json`) är inte kontrollerade.
 - Myndigheternas tjänster i kapitlet Skydd är bara testade mot låtsassvar.
-- Flytten till hojdkurvor.danaid.cloud: Lantmäteriet behöver inte godkänna
-  adressen (kontrollerat 17 november). cad-apa godtar inte det nya ursprunget
-  förrän cad-apa själv flyttar, så Fortsätt rita ligger nere en tid på den nya
-  adressen (godkänt av ägaren). Se `docs/FLYTT.md`.
+- Flytten till hojdkurvor.danaid.cloud är klar (0.13.1). Lantmäteriet behöver
+  inte godkänna adressen (kontrollerat 17 november). Se `docs/FLYTT.md`.
 
 ## Testmiljön
 
