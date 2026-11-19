@@ -5,7 +5,7 @@
 ## Beslutet i korthet
 
 1. **Licens: GNU AGPL-3.0-or-later** (ersätter GPL-3.0).
-2. **Kommersiella undantag** säljs av Agrell Arkitektur till den som vill bygga in koden i något stängt.
+2. **Kommersiella undantag** säljs av Agrell Arkitektur AB till den som vill bygga in koden i något stängt.
 3. **Bidrag från andra kräver ett CLA**, så att möjligheten att sälja undantag finns kvar.
 4. **Namnen skyddas separat**. Licensen täcker koden, inte namnet.
 5. **Finansiering** sker via frivilliga bidrag från privatpersoner och supporteravtal med företag. Inga funktioner läggs bakom betalning.
@@ -27,7 +27,7 @@ GPL-3.0 kräver bara att källkoden delas när programmet *distribueras*. En web
 | Arkitektkontor och privatpersoner som använder programmet | Inga skyldigheter alls. Fri användning, även kommersiellt. |
 | Den som kör en **oförändrad** version på egen server | Fritt. Länken till källkoden ska finnas kvar. |
 | Den som kör en **ändrad** version som tjänst | Måste erbjuda användarna sin ändrade källkod under AGPL. |
-| Den som vill bygga in koden i en **stängd** produkt eller tjänst | Måste köpa ett kommersiellt undantag av Agrell Arkitektur. |
+| Den som vill bygga in koden i en **stängd** produkt eller tjänst | Måste köpa ett kommersiellt undantag av Agrell Arkitektur AB. |
 
 **Säljargument för riskfri övergång:** koden kan aldrig låsas in. Om Agrell Arkitektur slutar utveckla programmet kan vem som helst fortsätta köra det och vidareutveckla det, och användarnas ritningar och data blir aldrig gisslan.
 
@@ -39,12 +39,12 @@ GPL-3.0 kräver bara att källkoden delas när programmet *distribueras*. En web
 - Avtalet skrivs först när någon hör av sig, gärna med hjälp av en jurist.
 - Stora företag som Google förbjuder AGPL-kod helt internt. De kommer alltså inte att använda koden gratis. Målgruppen för undantag är främst mellanstora företag som vill bygga in programmet i egna produkter.
 
-**Om uppköp:** AGPL hindrar inte ett uppköp. Den som köper projektet köper upphovsrätten och kan då själv välja licens för framtida versioner. Det förutsätter att Agrell Arkitektur äger hela koden, vilket är ytterligare ett skäl till CLA. Redan släppta versioner förblir AGPL för alla som har dem.
+**Om uppköp:** AGPL hindrar inte ett uppköp. Den som köper projektet köper upphovsrätten och kan då själv välja licens för framtida versioner. Det förutsätter att Agrell Arkitektur AB äger hela koden, vilket är ytterligare ett skäl till CLA. Redan släppta versioner förblir AGPL för alla som har dem.
 
 ## Bidrag och CLA
 
-- Den som bidrar med kod behåller upphovsrätten till sitt bidrag. Utan avtal kan Agrell Arkitektur inte sälja undantag för den delen.
-- Därför ska alla externa bidrag ske under ett **CLA (Contributor License Agreement)**. I det ger bidragsgivaren Agrell Arkitektur rätt att licensiera bidraget även under andra villkor än AGPL.
+- Den som bidrar med kod behåller upphovsrätten till sitt bidrag. Utan avtal kan Agrell Arkitektur AB inte sälja undantag för den delen.
+- Därför ska alla externa bidrag ske under ett **CLA (Contributor License Agreement)**. I det ger bidragsgivaren Agrell Arkitektur AB rätt att licensiera bidraget även under andra villkor än AGPL.
 - På GitHub kan det skötas automatiskt med till exempel CLA Assistant: bidragsgivaren godkänner en gång via en länk i pull requesten.
 - En DCO ("Signed-off-by") räcker *inte*, eftersom den inte ger rätt att licensiera om.
 
@@ -53,12 +53,22 @@ GPL-3.0 kräver bara att källkoden delas när programmet *distribueras*. En web
 Kontrollera att alla tredjepartsbibliotek och tillgångar har licenser som är förenliga med AGPL-3.0:
 - **Fungerar:** MIT, BSD, ISC, Apache-2.0, LGPL, GPL-3.0, AGPL-3.0, MPL-2.0, SIL Open Font License.
 - **Fungerar inte:** GPL-2.0-*only*, proprietära licenser, "non-commercial"-licenser.
-- Kommersiella undantag gäller bara Agrell Arkitekturs egen kod. Ett undantag kan inte omfatta någon annans GPL-kod.
+- Kommersiella undantag gäller bara Agrell Arkitektur AB:s egen kod. Ett undantag kan inte omfatta någon annans GPL-kod.
 - Lista alla tredjepartstillgångar med licens i en fil, till exempel `THIRD-PARTY.md`, och behåll deras licenstexter i repot.
 
 ### Typsnitten (Höjdkurvor)
 
 Familjen Grotesk och IBM Plex Mono, båda SIL OFL. Ingen risk; de bäddas in i PDF:erna utan att PDF:erna blir OFL.
+
+## Bolagsform och namn (gäller alla projekten)
+
+*19 november 2026, ägarens beslut. Gäller Höjdkurvor, cad-apa och Sisyfos; den som licensierar om Sisyfos eller går igenom cad-apa ska följa det här.*
+
+- Projekten ägs av **Agrell Arkitektur AB**. Det är bolaget som har upphovsrätten, säljer kommersiella undantag, tecknar supporteravtal och är part i CLA:t.
+- **Formella texter** skriver **Agrell Arkitektur AB**: copyrightraden i licenshuvudet (`Copyright (C) 2026 Agrell Arkitektur AB`), `CLA.md`, avtal, `THIRD-PARTY.md` och licensbeslutets juridiska delar.
+- **Synliga texter** skriver **Agrell Arkitektur**, utan AB: appens sidor, Om-sidan, sidfoten, menyer och marknadsföring.
+- I CLA:t är avtalsparten *Agrell Arkitektur AB, Sweden, represented by its authorised signatory (firmatecknare)*. Ägarens namn behövs inte.
+- Status: Höjdkurvor har AB i CLA.md, THIRD-PARTY.md och här sedan 19 november; copyrightraderna i källfilerna byts i nästa version. cad-apa (0.12.5.4) har kvar `Carl August Agrell / Agrell Arkitektur` och en CLA-part som enskild näringsidkare, och behöver samma ändring i en cad-apa-session.
 
 ## Varumärke
 
@@ -102,7 +112,7 @@ Ifylld för Höjdkurvor.
 ### Så gjordes det i Höjdkurvor (0.13.2, 19 november 2026)
 
 - **LICENSE:** gnu.org:s `agpl-3.0.txt`, 661 rader och 34 523 byte (samma fil som i cad-apa, sha256 `8486a10c…07ef`). Den gamla GPL-texten ligger i `LICENSES/GPL-3.0.txt`, eftersom versionerna till och med 0.13.1 är GPL.
-- **Licenshuvudet** i alla egna källfiler (`js/`, `config.js`, `app.css`, php, html, testerna och arbetsflödena), två rader: `SPDX-License-Identifier: AGPL-3.0-or-later` och `Copyright (C) 2026 Agrell Arkitektur`. Ägarens namn står inte i repot (se CLAUDE.md). `vendor/` har kvar sina egna huvuden. `test/kalla.test.js` kontrollerar huvudet.
+- **Licenshuvudet** i alla egna källfiler (`js/`, `config.js`, `app.css`, php, html, testerna och arbetsflödena), två rader: `SPDX-License-Identifier: AGPL-3.0-or-later` och `Copyright (C) 2026 Agrell Arkitektur` (blir `Agrell Arkitektur AB` i nästa version, se Bolagsform nedan). Ägarens namn står inte i repot (se CLAUDE.md). `vendor/` har kvar sina egna huvuden. `test/kalla.test.js` kontrollerar huvudet.
 - **Källkodslänken** (`js/kalla.js`): appen har inget byggsteg, så publiceringen (`publicera-vps.yml`) och releasen (`release.yml`) skriver in commiten på raden `commit: ''` i det som laddas upp och packas. Länken *Källkoden* står i panelens fot på kartan, i sidfoten på de andra sidorna och på Om-sidan (källkoden, licensen och `THIRD-PARTY.md` vid samma commit). I repot går länkarna till repot.
 - **THIRD-PARTY.md** (förut `THIRD_PARTY.md`) med bibliotek, typsnitt, data i repot och data som hämtas. Alla beroenden var förenliga: Leaflet (BSD-2-Clause), proj4js, geotiff.js, JSZip, jsPDF, sql.js, copc.js och three.js (MIT), LERC och laz-perf (Apache-2.0), pako (MIT och Zlib), SQLite (allmän egendom), typsnitten OFL. Lantmäteriets och de andra källornas data är inte kod och har egna villkor. `data/kommuner.json` saknar licensfil hos källan ("Feel free to reuse").
 - **CONTRIBUTING.md** och **CLA.md** efter cad-apa, med Höjdkurvor och de skyddade namnen Höjdkurvor och höjdkurvor.se. CLA:t är märkt som utkast (som i cad-apa), och avtalsparten är Agrell Arkitektur AB genom sin firmatecknare.

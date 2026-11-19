@@ -15,8 +15,10 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   provade i Chromium utan fel och skärmbilderna av Om-sidan är kontrollerade.
   Efteråt (samma dag, bara dokument): CLA.md märkt som utkast, med Agrell
   Arkitektur AB genom sin firmatecknare som avtalspart. **Nästa version** ska
-  ta med grenen `qr-ruta` (en platshållare för Swish-QR:n i Stöd utvecklingen
-  på `om.html`); den är inte publicerad. Slå ihop den med versionsgrenen.
+  ta med grenen `qr-ruta`: en platshållare för Swish-QR:n i Stöd utvecklingen
+  på `om.html`, och copyrightraden `Agrell Arkitektur AB` i alla källfiler
+  (bolagsformen, se `docs/LICENS.md`). Den är inte publicerad. Slå ihop den
+  med versionsgrenen och skriv båda i CHANGELOG.
 
 - **0.13.1** 19 november: flytten är klar. `cadApaUrl` är
   `https://cad-apa.danaid.cloud/` (cad-apa godtar redan

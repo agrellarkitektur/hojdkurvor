@@ -6,8 +6,8 @@ Till och med version 0.13.1 var den GPL-3.0 eller senare
 med licens. Alla licenserna för kod och typsnitt är förenliga med AGPL-3.0.
 Licenstexterna ligger i `vendor/licenses/`.
 
-Ett kommersiellt undantag från Agrell Arkitektur gäller bara Agrell
-Arkitekturs egen kod, aldrig det som står här.
+Ett kommersiellt undantag från Agrell Arkitektur AB gäller bara Agrell
+Arkitektur AB:s egen kod, aldrig det som står här.
 
 Gås igenom när ett beroende eller en tillgång läggs till eller tas bort
 (senast 0.13.2, 19 november 2026).
@@ -64,7 +64,7 @@ OFL eller AGPL för det.
 Datan är inte kod och ingår inte i källkoden. Den hämtas av besökarens
 webbläsare direkt från källan, med egna villkor som gäller oberoende av
 Höjdkurvors licens. AGPL gäller inte datan, och ett kommersiellt undantag
-från Agrell Arkitektur omfattar den inte.
+från Agrell Arkitektur AB omfattar den inte.
 
 **Lantmäteriet** står för det mesta. Höjddata, laserdata, ortofoton, byggnader,
 fastighetsindelning och marktäcke hämtas med användarens eget konto hos

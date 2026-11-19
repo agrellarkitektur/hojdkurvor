@@ -4,7 +4,7 @@
 skarpt. Draft 1, to be reviewed by a lawyer before it is put into use.*
 
 **På svenska, i korthet:** du behåller upphovsrätten till ditt bidrag, men
-ger Agrell Arkitektur rätt att använda det och licensiera det vidare, också
+ger Agrell Arkitektur AB rätt att använda det och licensiera det vidare, också
 under andra villkor än AGPL. Det behövs för att projektet ska kunna sälja
 kommersiella undantag och hållas samman. Ditt bidrag finns alltid kvar under
 AGPL-3.0 för alla andra. Avtalet nedan på engelska är det som gäller.
@@ -14,7 +14,7 @@ AGPL-3.0 för alla andra. Avtalet nedan på engelska är det som gäller.
 This Contributor License Agreement ("Agreement") is between you
 ("You") and Agrell Arkitektur AB, Sweden, represented by its authorised
 signatory (firmatecknare), contact kontakt@agrellarkitektur.se
-("Agrell Arkitektur"),
+("Agrell Arkitektur AB"),
 concerning the software project Höjdkurvor at
 https://github.com/agrellarkitektur/hojdkurvor ("the Project").
 
@@ -30,19 +30,19 @@ maintainers with the purpose of including it in the Project.
 
 ## 2. Copyright licence
 
-You keep the copyright to Your Contributions. You grant Agrell Arkitektur
-and recipients of software distributed by Agrell Arkitektur a perpetual,
+You keep the copyright to Your Contributions. You grant Agrell Arkitektur AB
+and recipients of software distributed by Agrell Arkitektur AB a perpetual,
 worldwide, non-exclusive, no-charge, royalty-free, irrevocable licence to
 reproduce, prepare derivative works of, publicly display, publicly perform,
 sublicense and distribute Your Contributions and such derivative works.
 
 ## 3. Right to relicense
 
-You agree that Agrell Arkitektur may license Your Contributions, alone or
+You agree that Agrell Arkitektur AB may license Your Contributions, alone or
 as part of the Project, under any terms of its choice, including the GNU
 Affero General Public License and proprietary or commercial licences, and
 may transfer the rights granted in this Agreement to a successor who
-acquires the Project. Agrell Arkitektur undertakes that every version of
+acquires the Project. Agrell Arkitektur AB undertakes that every version of
 the Project that includes Your Contribution will also be made available
 under the GNU Affero General Public License version 3 or later, or another
 licence approved by the Free Software Foundation as a free software
@@ -50,8 +50,8 @@ licence.
 
 ## 4. Patent licence
 
-You grant Agrell Arkitektur and recipients of software distributed by
-Agrell Arkitektur a perpetual, worldwide, non-exclusive, no-charge,
+You grant Agrell Arkitektur AB and recipients of software distributed by
+Agrell Arkitektur AB a perpetual, worldwide, non-exclusive, no-charge,
 royalty-free, irrevocable patent licence to make, have made, use, offer to
 sell, sell, import and otherwise transfer Your Contributions, where such
 licence applies only to patent claims licensable by You that are
@@ -73,7 +73,7 @@ You represent that:
 
 ## 6. No obligations
 
-Agrell Arkitektur is not obliged to include Your Contribution in the
+Agrell Arkitektur AB is not obliged to include Your Contribution in the
 Project. Unless required by law or agreed in writing, You provide Your
 Contributions "as is", without warranties or conditions of any kind.
 
