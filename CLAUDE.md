@@ -35,6 +35,8 @@ härnäst och vad som väntar. Skriv om den när sessionen slutar.
   `<script>`-taggarna i `index.html`.
 - `js/app.js` är limmet: karta, panel, lager, ritning och Skapa-flödet. Beräkningar
   hör hemma i de andra modulerna (`karna.js`, `analys.js`, `platsanalys.js` …).
+  Skapa-flödet är uppdelat i steg (`SKAPA_STEG`) som delar körningens objekt `kor`; ett
+  nytt underlag blir ett nytt steg, se *Skapa-flödet i steg* i `docs/OVERLAMNING.md`.
 - Koordinater: SWEREF 99-zonen i meter, höjder i RH 2000. Rutnät är
   `{ W, H, s, x0, y1, z }` där rad 0 är norr och `x0`/`y1` är noder på utsnittets
   kanter. Lokala filer räknas relativt nollpunkten och vridningen, se

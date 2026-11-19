@@ -1,7 +1,8 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.4 (grenen `v0.13.4`).
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.4 och uppdelningen av
+Skapa (grenen `skapa-uppdelning`, som bygger på `v0.13.4`).
 
 ## Läget
 
@@ -33,9 +34,19 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   ur gränssnittstestet är jämförd fil för fil med 0.13.3: alla DXF-, CSV-, LAS-, XYZ- och
   bildfiler är identiska, också träden.
 
-- **Grenen `skapa-uppdelning`** (från `v0.13.4`, ingen ny version): granskningens punkt 7.
-  Skapa-flödet i `app.js` är uppdelat i 23 funktioner, se avsnittet *Skapa-flödet i steg* i
-  den grenens överlämning. Slå ihop den före 0.14.0 (sol på fasaderna), som ska in där.
+- **Grenen `skapa-uppdelning`** (den här grenen, från `v0.13.4`, ingen ny version och
+  inget i CHANGELOG: inget syns för användaren): granskningens punkt 7. Skapa-flödet i
+  `app.js` var en funktion på 860 rader och är nu 23 funktioner (den längsta 107 rader), se *Skapa-flödet i
+  steg* nedan. Uppdelningen är gjord mekaniskt med ett skript som läste koden (variablerna
+  som delas mellan stegen flyttades till körningens objekt), inte för hand. Körda: alla 19
+  enhetstester, `ui_test.py` (ritning), `projekt_test.py`, `mobil_test.py`. Zip-filen ur
+  gränssnittstestet är jämförd med `v0.13.4`: samma 55 filer, och alla utom dem med klockslag
+  eller slumpat id i sig (info-filen, PDF:erna, IFC, projektfilen) är identiska byte för byte;
+  PDF:erna har samma storlek och skiljer på ett sextiotal byte (datum och id). Felvägarna är
+  prövade i webbläsaren: saknad inloggning, fel lösenord (felet visas, knappen och
+  projektlåset släpps, vridningen nollställs) och egen vridning. **Inte prövat**: avbrottet
+  när analysområdet blir över 6 km² (går bara att nå med långa sektioner eller en avlägsen
+  horisontpunkt); den vägen är läst. Slå ihop grenen före 0.14.0 (sol på fasaderna).
 
 - **0.13.3** 19 november: granskningens rättelser (grenen `granskning-2026-11-19`) och
   `qr-ruta` (platshållaren för Swish-QR:n, copyrightraden `Agrell Arkitektur AB`) är
@@ -152,6 +163,51 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
 
+## Skapa-flödet i steg (grenen `skapa-uppdelning`)
+
+Blocket *Skapa underlag* i `app.js`. Lyssnaren på `#skapa` gör bara detta:
+
+1. `lasSkapaVal(kor)`: läser och kontrollerar valen. Ger inget (och ett besked på statusraden)
+   om något saknas. Inget är låst än.
+2. Låser knappen och projektbytet, nollställer resultatet.
+3. `planeraSkapa(kor)`: områdena (`kor.rm` i zonen, `kor.tmBox` i TM, med marginaler för
+   skuggor 150 m, skyfall 60 m, hus 30 m, sektioner och horisontens 400 m) och förloppets
+   vikter (`kor.delFramsteg`). Ger `false` om analysområdet blir över 6 km².
+4. `T.lokal.vrid = kor.vrid`, och sedan stegen i `SKAPA_STEG` i tur och ordning:
+   `skapaTerrang`, `skapaLaser`, `skapaByggnader`, `stallVolymerPaMarken`, `skapaAnalyser`
+   (träd, höjd över mark, skuggor), `skapaMarklager` (höjdpunkter, lutning, skyfall),
+   `skapaSkissfiler`, `skapaSkydd`, `skapaSektioner`, `skapaFastigheter`, `skapaMarktacke`,
+   `skapaOrtofoto`, `skapaStompunkter`, `skapaVagar`, `skapaSol`, `skapaLagerPdf`, `skapaBlad`,
+   `skapaProjektfilen`, `skapaSamladDxf`, `packaZip`, `visaKlart`.
+5. `catch` (inloggningsfel och andra fel på statusraden) och `finally` (knappen, vridningen,
+   projektlåset) som förut.
+
+- **`kor`** är körningens objekt. Varje steg läser det det behöver överst
+  (`const { val, r, epsg, filer, … } = kor;`) och lägger det det tar fram i `kor`
+  (`const mos = …; kor.mos = mos;`). Det som skrivs om efter att det skapats läses alltid som
+  `kor.x`: `vrid`, `vridText`, `rm`, `tmBox`, `dtmZ`, `harLaser`, `laserYta`, `laserTM`,
+  `laserSek`, `laserDatum`. Övrigt som delas: valen (`val`, `format`, `np`, `volymer`,
+  `skuggTider`, `skuggDatum`, `ogon`, `sektioner`), platsen (`r`, `epsg`, `mitt`, `mittTM`,
+  `horLL`, `tt`, `franLL`), `namn`, `projekt`, `auth`, `behoverYta`/`behoverLaser`/`behoverDtm`,
+  `mos` (höjddatan), `res` (terrängen), `X0`/`Y0`/`Z0`, `filer` (zip-filens innehåll),
+  `infoNamn`, `extraInfo` (info-filens rader), `sammanExtra` (sammanfattningens rader),
+  `varningar` och `senaste` (blir `state.senaste` i `visaKlart`).
+- **Ett nytt steg** (till exempel sol på fasaderna): skriv `async function skapaX(kor)` bredvid
+  de andra, läs det den behöver ur `kor`, fånga egna fel och lägg dem i `kor.varningar` så att
+  resten fortsätter, och ställ den på rätt plats i `SKAPA_STEG`. Ska den ha en egen del av
+  mätaren: lägg den i `plan` och `vikt` i `planeraSkapa`.
+- **Ordningen spelar roll**: laserdatan räknas in i markmodellen från `skapaTerrang`,
+  byggnaderna behövs för träden och skuggorna, volymerna ska stå på marken före analyserna,
+  ortofotot läses före vägarna (bredden mäts i det), och bladet, projektfilen, den samlade
+  DXF:en och zip-filen kommer sist.
+- **Vridningen är fortfarande en inställning i `Terrang`** (`T.lokal.vrid`, läses av
+  `Terrang.tillLokal` och `Analys.varldsfil`), satt under körningen och nollställd i
+  `finally`. Granskningen pekade på det. Att göra den till ett argument rör ett tiotal
+  anrop i flera moduler (DXF, LAS, IFC, världsfiler) och är inte gjort.
+- **Inte gjort**: knappen Avbryt (granskningens punkt 8). Den blir enkel nu: en flagga i
+  `kor` som slingan över `SKAPA_STEG` läser mellan stegen.
+- Kommentarerna `// --- …` överst i stegen är kvar från den gamla funktionen.
+
 ## Laserdatan ruta för ruta (0.13.4)
 
 - `Laser.lasRutvis(rutor, tmBox, auth, { klassFilter, framsteg, mottag })` läser varje ruta nod
@@ -168,7 +224,7 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   träden exakt desamma.
 - `Analys.ytsamlareTM` för horisonten (TM), `Analys.vidSektion(sektioner, 2)` för att bara
   spara punkterna inom 2 m från en sektionslinje.
-- Skapa (`skapaLaser` på grenen `skapa-uppdelning`, blocket *Laserdata* på `v0.13.4`):
+- Skapa (`skapaLaser`):
   markmodellen `dtmZ` görs före laserdatan. Per del: `tmSamlare` (TM), sedan
   `Laser.tillZon(del, epsg, rm)` → `ytsamlare`, `sekSamlare`, `filSamlare` (bara utsnittet, tak
   `MAX_PUNKTFIL` = 6 miljoner; över det ingen LAS/XYZ, med varning). `harLaser`, `laserYta`,

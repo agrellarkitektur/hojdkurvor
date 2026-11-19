@@ -1547,8 +1547,16 @@
   // ------------------------------------------------------------------
   // Skapa underlag
   // ------------------------------------------------------------------
-  $('skapa').addEventListener('click', async () => {
-    const anv = $('anv').value.trim(), losen = $('losen').value;
+  // Skapa-flödet är uppdelat i steg. Varje steg får körningens objekt `kor`: det som
+  // användaren har valt (lasSkapaVal), områdena (planeraSkapa) och det som tidigare steg har tagit
+  // fram och senare steg behöver, till exempel kor.mos (höjddatan), kor.dtmZ (markmodellen),
+  // kor.laserYta (ytmodellen), kor.filer (zip-filens innehåll), kor.varningar och kor.senaste
+  // (det som blir state.senaste). Ett steg läser det det behöver ur kor överst och lägger det
+  // det tar fram i kor. Ett steg som misslyckas lägger en varning och låter resten fortsätta;
+  // bara höjddatan och terrängen avbryter hela körningen.
+  /** Läser och kontrollerar det användaren har valt. Ger false (med ett besked på statusraden) om något saknas. */
+  function lasSkapaVal(kor) {
+    const anv = $('anv').value.trim(), losen = $('losen').value; kor.anv = anv; kor.losen = losen;
     if (!state.utsnitt) return;
     if (!anv || !losen) {
       visaStatus('Fyll i användarnamn och lösenord från Geotorget.', true);
@@ -1556,846 +1564,960 @@
       return;
     }
     sparaInlogg();
-    const np = lasNollpunkt();
+    const np = lasNollpunkt(); kor.np = np;
     if (!np.ok) { visaStatus(np.fel, true); $('np-x').focus(); return; }
-    const format = formatVal();
-    const val = effektivaVal();
-    const volymer = (state.volymer || []).map(v => Object.assign({}, v));
+    const format = formatVal(); kor.format = format;
+    const val = effektivaVal(); kor.val = val;
+    const volymer = (state.volymer || []).map(v => Object.assign({}, v)); kor.volymer = volymer;
     if (!Object.values(format).some(Boolean) && !Object.values(val).some(Boolean)) { visaStatus('Välj minst en fil att skapa.', true); return; }
     if (val.platsanalys && !['sol', 'terrang', 'vatten', 'skydd'].some(k => kapitel()[k])) { visaStatus('Välj minst ett kapitel i platsanalysen, eller bocka ur den.', true); visaSteg('analys'); return; }
-    const skuggTider = lasTider($('skuggtider').value);
-    const skuggDatum = [...document.querySelectorAll('input[name=skuggdatum]:checked')].map(c => c.value);
+    const skuggTider = lasTider($('skuggtider').value); kor.skuggTider = skuggTider;
+    const skuggDatum = [...document.querySelectorAll('input[name=skuggdatum]:checked')].map(c => c.value); kor.skuggDatum = skuggDatum;
     if (val.skugga && (!skuggTider.length || !skuggDatum.length)) { visaStatus('Välj minst ett datum och ett klockslag för skuggstudien.', true); return; }
     if (val.sektion && !state.sektioner.length) { visaStatus('Rita minst en sektionslinje på kartan, eller bocka ur Terrängsektioner.', true); return; }
-    const ogon = parseFloat(String($('ogonhojd').value).replace(',', '.'));
+    const ogon = parseFloat(String($('ogonhojd').value).replace(',', '.')); kor.ogon = ogon;
     if (val.sol && val.horisont && !(ogon >= 0 && ogon < 200)) { visaStatus('Ange höjd över mark för horisonten i meter.', true); $('ogonhojd').focus(); return; }
-    const mittV = utsnittsMitt();
-    let vrid = 0, vridText = '';
-    if ($('vrid').value === 'sann') { vrid = mittV.konvergens; vridText = 'sann nord uppåt'; }
+    const mittV = utsnittsMitt(); kor.mittV = mittV;
+    kor.vrid = 0; kor.vridText = '';
+    if ($('vrid').value === 'sann') { kor.vrid = mittV.konvergens; kor.vridText = 'sann nord uppåt'; }
     else if ($('vrid').value === 'egen') {
-      vrid = tal($('vrid-grader').value);
-      if (!isFinite(vrid) || Math.abs(vrid) > 360) { visaStatus('Ange vridningen i grader medurs, till exempel 12,5.', true); visaSteg('plats'); $('g-lokalt').open = true; $('vrid-grader').focus(); return; }
-      vridText = 'egen vinkel';
+      kor.vrid = tal($('vrid-grader').value);
+      if (!isFinite(kor.vrid) || Math.abs(kor.vrid) > 360) { visaStatus('Ange vridningen i grader medurs, till exempel 12,5.', true); visaSteg('plats'); $('g-lokalt').open = true; $('vrid-grader').focus(); return; }
+      kor.vridText = 'egen vinkel';
     }
     if (val.horisont && state.horPunkt && karta.distance(state.horPunkt, [mittV.lat, mittV.lon]) > 3000) {
       visaStatus('Betraktelsepunkten för horisonten ligger mer än 3 km från utsnittet. Välj en punkt närmare.', true); return;
     }
+    return true;
+  }
 
-    const knapp = $('skapa');
-    knapp.disabled = true;
-    lasProjektbyte(true);
-    nollstallResultat();
-    matare(0);
-    const varningar = [];
+  /** Områdena som behövs (utsnittet med marginaler för skuggor, sektioner, skyfall och horisont) och förloppets steg. */
+  function planeraSkapa(kor) {
+    const { anv, losen, mittV, np, val, volymer } = kor;
+    const varningar = []; kor.varningar = varningar;
     if (np.varde) {
       const r0 = state.utsnitt;
       const avst = Math.hypot(np.varde.x - (r0.xmin + r0.xmax) / 2, np.varde.y - (r0.ymin + r0.ymax) / 2);
       if (avst > 5000) varningar.push(`OBS: den egna nollpunkten ligger ${fmt(avst / 1000, 1)} km från utsnittet. Kontrollera att den är angiven i ${T.zon(state.epsg).namn}.`);
     }
-    const namn = ($('namn').value.trim() || 'terrang');
-    const projekt = $('projekt').value.trim();
-    const auth = T.basicAuth(anv, losen);
-    const r = state.utsnitt, epsg = state.epsg;
-    const tt = tillLatLng(epsg), franLL = franLatLng(epsg);
-    const mitt = mittV;
-    const horLL = val.sol && val.horisont && state.horPunkt ? { lat: state.horPunkt[0], lon: state.horPunkt[1] } : { lat: mitt.lat, lon: mitt.lon };
-    const behoverYta = val.trad || val.hom || val.skugga;
-    const behoverLaser = val.laser || behoverYta || val.sektion || (val.sol && val.horisont) || val.byggnadshojd;
-    const behoverDtm = behoverYta || val.sektion || val.hojdpunkter || val.lutning || val.skyfall || volymer.length || val.byggnader;
+    const namn = ($('namn').value.trim() || 'terrang'); kor.namn = namn;
+    const projekt = $('projekt').value.trim(); kor.projekt = projekt;
+    const auth = T.basicAuth(anv, losen); kor.auth = auth;
+    const r = state.utsnitt, epsg = state.epsg; kor.r = r; kor.epsg = epsg;
+    const tt = tillLatLng(epsg), franLL = franLatLng(epsg); kor.tt = tt; kor.franLL = franLL;
+    const mitt = mittV; kor.mitt = mitt;
+    const horLL = val.sol && val.horisont && state.horPunkt ? { lat: state.horPunkt[0], lon: state.horPunkt[1] } : { lat: mitt.lat, lon: mitt.lon }; kor.horLL = horLL;
+    const behoverYta = val.trad || val.hom || val.skugga; kor.behoverYta = behoverYta;
+    const behoverLaser = val.laser || behoverYta || val.sektion || (val.sol && val.horisont) || val.byggnadshojd; kor.behoverLaser = behoverLaser;
+    const behoverDtm = behoverYta || val.sektion || val.hojdpunkter || val.lutning || val.skyfall || volymer.length || val.byggnader; kor.behoverDtm = behoverDtm;
 
     // områden: utsnittet, marginal för skuggor, sektionslinjer, horisontens närområde
-    const MARG_SKUGGA = 150;
-    let rm = { ...r };
-    if (val.skugga) rm = { xmin: r.xmin - MARG_SKUGGA, ymin: r.ymin - MARG_SKUGGA, xmax: r.xmax + MARG_SKUGGA, ymax: r.ymax + MARG_SKUGGA };
-    else if (val.trad || val.hom) rm = { xmin: r.xmin - 10, ymin: r.ymin - 10, xmax: r.xmax + 10, ymax: r.ymax + 10 };
-    const sektioner = val.sektion ? state.sektioner.map(s => ({ namn: s.namn, a: franLL(s.a), b: franLL(s.b), vand: !!s.vand })) : [];
+    const MARG_SKUGGA = 150; kor.MARG_SKUGGA = MARG_SKUGGA;
+    kor.rm = { ...r };
+    if (val.skugga) kor.rm = { xmin: r.xmin - MARG_SKUGGA, ymin: r.ymin - MARG_SKUGGA, xmax: r.xmax + MARG_SKUGGA, ymax: r.ymax + MARG_SKUGGA };
+    else if (val.trad || val.hom) kor.rm = { xmin: r.xmin - 10, ymin: r.ymin - 10, xmax: r.xmax + 10, ymax: r.ymax + 10 };
+    const sektioner = val.sektion ? state.sektioner.map(s => ({ namn: s.namn, a: franLL(s.a), b: franLL(s.b), vand: !!s.vand })) : []; kor.sektioner = sektioner;
     sektioner.forEach(s => {
-      rm = forena(rm, { xmin: Math.min(s.a[0], s.b[0]) - 5, xmax: Math.max(s.a[0], s.b[0]) + 5, ymin: Math.min(s.a[1], s.b[1]) - 5, ymax: Math.max(s.a[1], s.b[1]) + 5 });
+      kor.rm = forena(kor.rm, { xmin: Math.min(s.a[0], s.b[0]) - 5, xmax: Math.max(s.a[0], s.b[0]) + 5, ymin: Math.min(s.a[1], s.b[1]) - 5, ymax: Math.max(s.a[1], s.b[1]) + 5 });
     });
-    const MARG_SKYFALL = 60;
-    if (val.skyfall) rm = forena(rm, { xmin: r.xmin - MARG_SKYFALL, ymin: r.ymin - MARG_SKYFALL, xmax: r.xmax + MARG_SKYFALL, ymax: r.ymax + MARG_SKYFALL });
-    if (val.lutning) rm = forena(rm, { xmin: r.xmin - 3, ymin: r.ymin - 3, xmax: r.xmax + 3, ymax: r.ymax + 3 });
-    if (val.byggnader) rm = forena(rm, { xmin: r.xmin - 30, ymin: r.ymin - 30, xmax: r.xmax + 30, ymax: r.ymax + 30 });   // hus som sticker ut
-    rm = T.avrunda(rm, 1);
-    let tmBox = tmRuta(rm, epsg);
-    const mittTM = T.omvandlare(4326, 3006).forward([horLL.lon, horLL.lat]);
-    if (val.sol && val.horisont) tmBox = forena(tmBox, { xmin: mittTM[0] - 402, xmax: mittTM[0] + 402, ymin: mittTM[1] - 402, ymax: mittTM[1] + 402 });
-    const yta = (tmBox.xmax - tmBox.xmin) * (tmBox.ymax - tmBox.ymin);
+    const MARG_SKYFALL = 60; kor.MARG_SKYFALL = MARG_SKYFALL;
+    if (val.skyfall) kor.rm = forena(kor.rm, { xmin: r.xmin - MARG_SKYFALL, ymin: r.ymin - MARG_SKYFALL, xmax: r.xmax + MARG_SKYFALL, ymax: r.ymax + MARG_SKYFALL });
+    if (val.lutning) kor.rm = forena(kor.rm, { xmin: r.xmin - 3, ymin: r.ymin - 3, xmax: r.xmax + 3, ymax: r.ymax + 3 });
+    if (val.byggnader) kor.rm = forena(kor.rm, { xmin: r.xmin - 30, ymin: r.ymin - 30, xmax: r.xmax + 30, ymax: r.ymax + 30 });   // hus som sticker ut
+    kor.rm = T.avrunda(kor.rm, 1);
+    kor.tmBox = tmRuta(kor.rm, epsg);
+    const mittTM = T.omvandlare(4326, 3006).forward([horLL.lon, horLL.lat]); kor.mittTM = mittTM;
+    if (val.sol && val.horisont) kor.tmBox = forena(kor.tmBox, { xmin: mittTM[0] - 402, xmax: mittTM[0] + 402, ymin: mittTM[1] - 402, ymax: mittTM[1] + 402 });
+    const yta = (kor.tmBox.xmax - kor.tmBox.xmin) * (kor.tmBox.ymax - kor.tmBox.ymin);
     if (yta > 6e6) {
       visaStatus(`Området för analyserna blir ${fmt(yta / 1e6, 1)} km², högst 6 km² går. Välj ett mindre utsnitt, kortare sektioner eller färre analyser.`, true);
-      knapp.disabled = false; lasProjektbyte(false); matare(null); return;
+      return false;
     }
 
     const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.fastigheter && 'fastigheter', val.marktacke && 'marktacke', val.ortofoto && 'ortofoto', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
     const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, fastigheter: 1, marktacke: 2, ortofoto: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
     const totalVikt = plan.reduce((a, k) => a + vikt[k], 0);
     const delStart = k => 100 * plan.slice(0, plan.indexOf(k)).reduce((a, x) => a + vikt[x], 0) / totalVikt;
-    const delFramsteg = (k, f, txt) => { matare(delStart(k) + 100 * vikt[k] / totalVikt * Math.min(1, f)); if (txt) visaStatus(txt + ' …'); };
-    const senaste = { r, epsg, namn, projekt, kommun: kommunText(), intervall: Number($('intervall').value) };
-    T.lokal.vrid = vrid;
+    const delFramsteg = (k, f, txt) => { matare(delStart(k) + 100 * vikt[k] / totalVikt * Math.min(1, f)); if (txt) visaStatus(txt + ' …'); }; kor.delFramsteg = delFramsteg;
+    const senaste = { r, epsg, namn, projekt, kommun: kommunText(), intervall: Number($('intervall').value) }; kor.senaste = senaste;
+    return true;
+  }
 
-    try {
-      // --- Höjddata (en gång för hela analysområdet)
-      delFramsteg('hojd', 0, 'Hämtar höjddata från Lantmäteriet');
-      const mos = await T.lasHojder(tmBox, auth, { logg: t => { if (t.includes('finns inte')) varningar.push(t); } });
-      if (!mos.rutor.length) throw new Error('Det finns ingen höjddata för det här området.');
+  /** Höjddata (en gång för hela analysområdet), terrängfilerna och markmodellen för analyserna. */
+  async function skapaTerrang(kor) {
+    const { auth, behoverDtm, delFramsteg, epsg, format, mitt, namn, np, projekt, r, senaste, varningar } = kor;
+    // --- Höjddata (en gång för hela analysområdet)
+    delFramsteg('hojd', 0, 'Hämtar höjddata från Lantmäteriet');
+    const mos = await T.lasHojder(kor.tmBox, auth, { logg: t => { if (t.includes('finns inte')) varningar.push(t); } }); kor.mos = mos;
+    if (!mos.rutor.length) throw new Error('Det finns ingen höjddata för det här området.');
 
-      // --- Terräng
-      const res = await T.skapaUnderlag({
-        utsnitt: r, epsg, auth, namn, projekt, mosaik: mos,
-        intervall: Number($('intervall').value), meshavstand: Number($('mesh').value),
-        utjamning: utjamning(), tolerans: 0.05, nollpunkt: np.varde, format, konvergens: mitt.konvergens, vridText,
-        kommun: state.kommun && state.kommun.epsg === epsg ? `${state.kommun.namn} kommun` : null,
-        logg: t => { if (t.startsWith('OBS')) varningar.push(t); },
-        framsteg: (p, t) => delFramsteg('terrang', p / 100, t),
-      });
-      const X0 = res.X0, Y0 = res.Y0, Z0 = res.Z0 || 0;
-      senaste.kurvor = res.kurvor; senaste.Z0 = Z0; senaste.nollpunkt = { x: X0, y: Y0 };
-      senaste.rutnat = Utbyte.glesa(T.rutnat(mos, r, 1, epsg));
-      const infoNamn = Object.keys(res.filer).find(f => f.endsWith('_info.txt'));
-      const filer = {};
-      Object.entries(res.filer).forEach(([f, c]) => { if (f === infoNamn || format[f.split('.').pop() === 'dxf' ? 'dxf' : f.endsWith('.csv') ? 'csv' : 'xyz']) filer[f === infoNamn ? f : 'terrang/' + f] = c; });
-      const extraInfo = [], sammanExtra = [];
+    // --- Terräng
+    const res = await T.skapaUnderlag({
+      utsnitt: r, epsg, auth, namn, projekt, mosaik: mos,
+      intervall: Number($('intervall').value), meshavstand: Number($('mesh').value),
+      utjamning: utjamning(), tolerans: 0.05, nollpunkt: np.varde, format, konvergens: mitt.konvergens, vridText: kor.vridText,
+      kommun: state.kommun && state.kommun.epsg === epsg ? `${state.kommun.namn} kommun` : null,
+      logg: t => { if (t.startsWith('OBS')) varningar.push(t); },
+      framsteg: (p, t) => delFramsteg('terrang', p / 100, t),
+    }); kor.res = res;
+    const X0 = res.X0, Y0 = res.Y0, Z0 = res.Z0 || 0; kor.X0 = X0; kor.Y0 = Y0; kor.Z0 = Z0;
+    senaste.kurvor = res.kurvor; senaste.Z0 = Z0; senaste.nollpunkt = { x: X0, y: Y0 };
+    senaste.rutnat = Utbyte.glesa(T.rutnat(mos, r, 1, epsg));
+    const infoNamn = Object.keys(res.filer).find(f => f.endsWith('_info.txt')); kor.infoNamn = infoNamn;
+    const filer = {}; kor.filer = filer;
+    Object.entries(res.filer).forEach(([f, c]) => { if (f === infoNamn || format[f.split('.').pop() === 'dxf' ? 'dxf' : f.endsWith('.csv') ? 'csv' : 'xyz']) filer[f === infoNamn ? f : 'terrang/' + f] = c; });
+    const extraInfo = [], sammanExtra = []; kor.extraInfo = extraInfo; kor.sammanExtra = sammanExtra;
 
-      // --- Markmodellen för analyserna. Före laserdatan, som räknas in i den del för del.
-      let dtmZ = null;
-      if (behoverDtm) dtmZ = T.rutnat(mos, rm, 1, epsg);
+    // --- Markmodellen för analyserna. Före laserdatan, som räknas in i den del för del.
+    kor.dtmZ = null;
+    if (behoverDtm) kor.dtmZ = T.rutnat(mos, kor.rm, 1, epsg);
+  }
 
-      // --- Laserdata. Punkterna läses ruta för ruta och nod för nod och räknas direkt in i
-      // ytmodellen, trädträffarna, horisontens modell och sektionerna (0.13.4). Förut sparades
-      // alla punkter först, med ett tak på 6 miljoner: över det föll träd, hushöjder och skuggor
-      // bort ur större utsnitt. Bara punktmolnsfilerna behöver punkterna själva och har taket kvar.
-      const MAX_PUNKTFIL = 6e6;
-      let harLaser = false, laserYta = null, laserTM = null, laserSek = null, laserDatum = '';
-      if (behoverLaser) {
-        try {
-          delFramsteg('laser', 0, 'Söker laserdata');
-          await laddaSkript('vendor/copc-bundle.js');
-          const valda = Laser.valjRutor(await Laser.sokRutor(tmBox), tmBox);
-          if (!valda.valda.length) varningar.push('Laserdata: det finns ingen laserdata för området.');
-          else {
-            const behoverYtmodell = dtmZ && (behoverYta || (val.byggnader && val.byggnadshojd));
-            const ytsamlare = behoverYtmodell ? Analys.ytsamlare(dtmZ, { traffar: !!val.trad }) : null;
-            // horisonten: tomten räknas bort om det är valt, se Soldiagram nedan
-            const rTM = tmRuta(r, epsg, 0);
-            const tmSamlare = val.sol && val.horisont
-              ? Analys.ytsamlareTM(mos, { utesluts: $('hor-tomt').checked ? null : (E, N) => E >= rTM.xmin && E <= rTM.xmax && N >= rTM.ymin && N <= rTM.ymax }) : null;
-            const vidSektion = sektioner.length ? Analys.vidSektion(sektioner, 2) : null;
-            const sekSamlare = vidSektion ? Laser.samlare() : null;
-            const filSamlare = val.laser ? Laser.samlare(MAX_PUNKTFIL) : null;
-            const iUtsnittet = (x, y) => x >= r.xmin && x <= r.xmax && y >= r.ymin && y <= r.ymax;
-            const last = await Laser.lasRutvis(valda.valda, tmBox, auth, {
-              klassFilter: kl => !(Laser.KLASSER[kl] || {}).brus,
-              framsteg: f => delFramsteg('laser', 0.05 + 0.85 * f, 'Läser laserdata'),
-              mottag: del => {
-                if (tmSamlare) tmSamlare.lagg(del);
-                if (!ytsamlare && !sekSamlare && !filSamlare) return;
-                const dz = Laser.tillZon(del, epsg, rm);
-                if (ytsamlare) ytsamlare.lagg(dz);
-                if (sekSamlare) sekSamlare.lagg(Laser.urval(dz, vidSektion));
-                if (filSamlare && !filSamlare.full) filSamlare.lagg(Laser.urval(dz, iUtsnittet));
-              },
-            });
-            harLaser = true;
-            if (ytsamlare) laserYta = ytsamlare.klar();
-            if (tmSamlare) laserTM = tmSamlare.klar();
-            if (sekSamlare) laserSek = sekSamlare.klar();
-            laserDatum = [...new Set(valda.valda.map(v => String(v.datum).slice(0, 10)))].join(', ');
-            const omr = [...new Set(valda.valda.map(v => v.omrade))].join(', ');
-            if (valda.tackning < 0.999) varningar.push(`Laserdata: bara ${fmt(valda.tackning * 100)} % av området täcks av samma skanning.`);
-            extraInfo.push('', 'LASERDATA',
-              '  Källa: Laserdata Nedladdning, skog. © Lantmäteriet. Bearbetad: utklippt, omprojicerad och analyserad.',
-              '  Licens: CC BY 4.0.',
-              `  Skanning: ${laserDatum} (område ${omr}). Rutor: ${last.rutor.map(v => `${v.id} (${fmt(v.antal)} punkter)`).join(', ')}`,
-              `  Lästa punkter i analysområdet (utsnittet med marginaler): ${fmt(last.antal)} st, räknade ruta för ruta.`);
-            if (val.laser && filSamlare.full) {
-              varningar.push(`Punktmoln: utsnittet har fler än ${fmt(MAX_PUNKTFIL / 1e6)} miljoner laserpunkter, så LAS- och XYZ-filerna skapades inte. Träd, byggnadshöjder, skuggor och sektioner är räknade på alla punkter. Välj ett mindre utsnitt för att få punktmolnet.`);
-              extraInfo.push(`  Punktmoln: inga filer, utsnittet har fler än ${fmt(MAX_PUNKTFIL / 1e6)} miljoner punkter.`);
-            } else if (val.laser) {
-              const z = filSamlare.klar();
-              filer[`laser/${namn}_laser_lokal.las`] = Laser.las(z, X0, Y0, Z0, 0);
-              filer[`laser/${namn}_laser_sweref.las`] = Laser.las(z, 0, 0, 0, epsg);
-              filer[`laser/${namn}_laser_lokal.xyz`] = Laser.xyzRgb(z, X0, Y0, Z0);
-              const per = Laser.sammanfattning(z);
-              extraInfo.push(`  Punktmoln: ${z.antal} st, ${fmt(z.antal / ((r.xmax - r.xmin) * (r.ymax - r.ymin)), 2)} per m². Brus (klass 7 och 18) är borttaget.`,
-                ...Object.keys(per).sort((a, b) => a - b).map(kl => `    Klass ${kl} ${Laser.klassInfo(+kl).namn}: ${per[kl]} st`),
-                '  Filer: _laser_lokal.las och _laser_sweref.las (LAS 1.2, klass bevarad),',
-                '         _laser_lokal.xyz (X Y Z R G B, färg per klass, för Archicad). Samma nollpunkt och Z0 som terrängen.');
-              sammanExtra.push(['Laserpunkter', `${fmt(z.antal)} st, skannat ${laserDatum}`]);
-              const ritare = L.canvas({ padding: 0.3 }), steg = Math.max(1, Math.ceil(z.antal / 25000)), pts = [];
-              for (let i = 0; i < z.antal; i += steg) {
-                const c = Laser.klassInfo(z.k[i]).rgb;
-                pts.push(L.circleMarker(tt([z.x[i], z.y[i]]), { radius: 1.3, stroke: false, fillOpacity: 0.85, fillColor: `rgb(${c[0]},${c[1]},${c[2]})`, renderer: ritare, interactive: false }));
-              }
-              visaResultatLager('laser', L.layerGroup(pts));
-            }
-          }
-        } catch (e) {
-          if (e instanceof T.InloggningsFel) varningar.push('Laserdata: ' + e.message);
-          else { console.error(e); varningar.push('Laserdata: ' + e.message); }
-          harLaser = false; laserYta = laserTM = laserSek = null;
-          // en halvläst laserdata ska inte ge halva filer
-          Object.keys(filer).filter(f => f.startsWith('laser/')).forEach(f => { delete filer[f]; });
-        }
-      }
-
-      // --- Befintliga byggnader (höjd ur ytmodellen, som sedan återanvänds av analyserna)
-      let ytaFardig = null;
-      if (val.byggnader) {
-        try {
-          delFramsteg('byggnader', 0, 'Hämtar byggnader');
-          await laddaSkript('vendor/sql-wasm.js');
-          const kommuner = kommunerIUtsnitt();
-          if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
-          const byggAlla = await Byggnad.hamta({
-            kommuner, utsnitt: r, epsg, auth,
-            logg: t => visaStatus(t),
-            framsteg: f => delFramsteg('byggnader', f * 0.8),
-            bekrafta: async storlek => window.confirm(`Byggnaderna för kommunen är ${fmt(storlek / 1e6)} MB. De hämtas en gång och sparas sedan i webbläsaren. Vill du hämta dem?`),
-          });
-          delFramsteg('byggnader', 0.85, 'Räknar byggnadshöjder');
-          if (laserYta && val.byggnadshojd) ytaFardig = laserYta;
-          Byggnad.hojder(byggAlla, ytaFardig || { W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length) });
-          // hus som användaren har dolt (0.11.0) kommer inte med någonstans
-          const { byggnader: bygg, dolda: byggDolda } = Objektval.tillampaHus(byggAlla, husval());
-          senaste.byggnaderAlla = byggAlla; senaste.byggnader = bygg; senaste.byggnaderDolda = byggDolda;
-          const medHojd = bygg.filter(b => b.hojd != null).length;
-          filer[`byggnader/${namn}_byggnader_lokal.dxf`] = Byggnad.dxf(bygg, r, X0, Y0, Z0);
-          filer[`byggnader/${namn}_byggnader_sweref.dxf`] = Byggnad.dxf(bygg, r, 0, 0, 0);
-          filer[`byggnader/${namn}_byggnader.csv`] = Byggnad.csv(bygg, X0, Y0, Z0);
-          // 3D-modell i IFC för byggnader med höjd (0.8.0)
-          const ifcOpt = { projekt: $('projekt').value.trim() || namn, projektId: state.projektId || namn, systemNamn: T.zon(epsg).namn,
-            kalla: `Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim() };
-          const ifcLokal = Ifc.byggnader(bygg, Object.assign({ dx: X0, dy: Y0, dz: Z0, lokal: true, filnamn: `${namn}_byggnader_lokal.ifc` }, ifcOpt));
-          if (ifcLokal.antal) {
-            filer[`byggnader/${namn}_byggnader_lokal.ifc`] = ifcLokal.text;
-            filer[`byggnader/${namn}_byggnader_sweref.ifc`] = Ifc.byggnader(bygg, Object.assign({ lokal: false, filnamn: `${namn}_byggnader_sweref.ifc` }, ifcOpt)).text;
-          }
-          else if (bygg.length) {
-            // Säg till direkt, inte bara i info-filen (0.8.1)
-            varningar.push('Byggnader: ingen IFC-fil skapades, eftersom ingen byggnad fick någon höjd. '
-              + (!val.byggnadshojd ? 'Kryssa i Höjd ur laserdatan och skapa underlaget igen.' : 'Det finns ingen laserdata för området.'));
-          }
-          const per = Byggnad.perTyp(bygg);
-          extraInfo.push('', 'BEFINTLIGA BYGGNADER',
-            '  Källa: Byggnad Nedladdning, vektor. © Lantmäteriet. Bearbetad: utvald och omprojicerad. Licens: CC BY 4.0.',
-            `  ${bygg.length} byggnader som berör utsnittet. Hela fotavtrycket är med, även den del som ligger utanför.`,
-            ...(byggDolda.length ? [`  ${byggDolda.length} ${byggDolda.length === 1 ? 'byggnad är dold' : 'byggnader är dolda'} i 3D-vyn och är inte med i filerna eller skuggorna.`] : []),
-            ...Object.keys(per).sort().map(t => `    ${t}: ${per[t]} st (lager ${Byggnad.lagerFor({ typ: t })})`),
-            '  Fotavtrycken är oftast inmätta vid takkanten, inte vid fasaden, och kan avvika någon meter.',
-            '  Kontrollera mot grundkartan eller en inmätning innan de används för projektering.',
-            '  DXF: fotavtrycket på markhöjden, BYGGNAD_TAK på takhöjden när den är känd, BYGGNAD_TEXT med husnummer, ändamål och höjd.',
-            laserYta && val.byggnadshojd
-              ? `  Höjd över mark ur laserdata ${laserDatum} (90:e percentilen inom fotavtrycket) för ${medHojd} av ${bygg.length} byggnader. Taken är förenklade till platta.`
-              : '  Ingen höjd: laserdata hämtades inte. Markhöjd ur Markhöjdmodell (median inom fotavtrycket).',
-            '  CSV (semikolon): id, typ, ändamål, husnummer, namn, huvudbyggnad, yta, tyngdpunkt, markhöjd och höjd (höjder minus Z0).',
-            ifcLokal.antal
-              ? `  IFC (IFC4): ${ifcLokal.antal} ${ifcLokal.antal === 1 ? 'byggnad som volym' : 'byggnader som volymer'} från markhöjden till takhöjden, med platta tak och gårdar som hål. Varje hus är ett eget objekt`
-                + ' (IfcBuildingElementProxy) med husnummer, ändamål och höjd i egenskaperna Hojdkurvor_Byggnad. _lokal.ifc har samma nollpunkt, vridning och Z0 som'
-                + ' de lokala DXF-filerna; _sweref.ifc har SWEREF-koordinater och höjder i RH 2000. Samma hus får samma id vid en ny export.'
-                + (ifcLokal.utanHojd ? ` ${ifcLokal.utanHojd} ${ifcLokal.utanHojd === 1 ? 'byggnad' : 'byggnader'} utan höjd är inte med.` : '')
-              : '  IFC: ingen byggnad har höjd, så ingen IFC-fil skapades. Kryssa i Höjd ur laserdatan.');
-          sammanExtra.push(['Byggnader', `${bygg.length} st` + (medHojd ? `, ${medHojd} med höjd` : '')]);
-          visaByggnaderKarta(bygg, tt);
-          visaLagring();
-        } catch (e) { console.error(e); varningar.push('Byggnader: ' + e.message); }
-      }
-      // skissade volymer utan golvnivå står på marken i fotavtryckets tyngdpunkt
-      volymer.forEach(v => {
-        if ((v.golv == null || !(v.golv === v.golv)) && dtmZ) { const c = Platsanalys.tyngdpunkt(v.fotavtryck); v.golv = Math.round(Analys.nod(dtmZ, dtmZ.z, c[0], c[1]) * 100) / 100; }
-      });
-      senaste.volymer = volymer.filter(v => v.golv != null && v.golv === v.golv);
-      // --- Analyser: träd, höjd över mark, skuggor
-      if (behoverYta && (laserYta || val.skugga)) {
-        try {
-          delFramsteg('analys', 0, 'Bygger ytmodell');
-          const y = laserYta || ({ W: dtmZ.W, H: dtmZ.H, s: dtmZ.s, x0: dtmZ.x0, y1: dtmZ.y1, dtm: dtmZ.z, ndsm: new Float32Array(dtmZ.z.length), dsm: Float32Array.from(dtmZ.z) });
-          if (!laserYta) varningar.push(`Skuggstudien räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
-          senaste.yta = y;
-          const iUtsnitt = t => t.x >= r.xmin && t.x <= r.xmax && t.y >= r.ymin && t.y <= r.ymax;
-          let tradDolda = [];
-          if (val.trad && laserYta) {
-            delFramsteg('analys', 0.1, 'Söker träd');
-            const hittade = Analys.hittaTrad(y).filter(iUtsnitt);
-            // träd på eller precis vid en byggnad är oftast takkanten, inte ett träd (0.8.0)
-            const { kvar: tradHittade, borttagna: tradVidHus } = Byggnad.tradVidByggnader(hittade, senaste.byggnader, TRAD_VID_HUS);
-            // egna val för enskilda träd (0.11.0): dolda och rättade
-            const { trad, dolda } = Objektval.tillampaTrad(tradHittade, tradval());
-            senaste.tradAlla = tradHittade; senaste.trad = trad; tradDolda = dolda;
-            filer[`trad/${namn}_trad_lokal.dxf`] = Analys.dxfTrad(trad, r, X0, Y0, Z0);
-            filer[`trad/${namn}_trad_sweref.dxf`] = Analys.dxfTrad(trad, r, 0, 0, 0);
-            filer[`trad/${namn}_trad.csv`] = Analys.csvTrad(trad, X0, Y0, Z0);
-            extraInfo.push('', 'TRÄD',
-              `  ${trad.length} träd med höjd minst 3 m, hittade som toppar i höjd över mark (laserdata ${laserDatum}).`,
-              '  Toppar utan markträffar under kronan räknas som tak och är borttagna. I tät skog hittas inte alla träd.',
-              senaste.byggnader
-                ? (tradVidHus.length
-                  ? `  ${tradVidHus.length} ${tradVidHus.length === 1 ? 'topp' : 'toppar'} på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad ${tradVidHus.length === 1 ? 'är borttagen' : 'är borttagna'}, eftersom det oftast är byggnaden som är inmätt.`
-                  : `  Ingen topp låg på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad.`)
-                : '  Kryssa i Befintliga byggnader för att också ta bort toppar som ligger på eller precis vid en byggnad.',
-              ...(dolda.length || trad.some(t => t.andrat) ? [`  Ändrade i 3D-vyn: ${dolda.length} dolda, ${trad.filter(t => t.andrat).length} med egen höjd, krona eller art. De dolda är inte med i filerna eller skuggorna.`] : []),
-              '  DXF-lager: TRAD_KRONA (cirkel på toppens höjd), TRAD_STAM (punkt på marken), TRAD_TEXT (höjd).',
-              '  CSV: id;x;y;x_lokal;y_lokal;markhojd;tradhojd_m;topphojd;kronbredd_m (höjder minus Z0).');
-            sammanExtra.push(['Träd', `${fmt(trad.length)} st`]);
-            visaTradKarta(trad, tt);
-          }
-          if (laserYta) {   // bilden behövs också som lager i utskriften
-            const homC = Utskrift.homCanvas(y.ndsm, y.W, y.H), bild = homC.toDataURL('image/png');
-            senaste.hom = { bild, x0: y.x0, y1: y.y1, W: y.W, H: y.H, s: y.s };
-            if (val.hom) {
-              const png = await (await fetch(bild)).arrayBuffer();
-              filer[`hojd_over_mark/${namn}_hojd_over_mark.png`] = png;
-              filer[`hojd_over_mark/${namn}_hojd_over_mark_sweref.pgw`] = Analys.varldsfil(y.x0, y.y1, y.s);
-              filer[`hojd_over_mark/${namn}_hojd_over_mark_lokal.pgw`] = Analys.varldsfil(y.x0, y.y1, y.s, X0, Y0);
-              extraInfo.push('', 'HÖJD ÖVER MARK',
-                '  Bild med 1 m pixlar. Färg efter höjd över mark: under 1,5 m genomskinlig, 1,5–4, 4–8, 8–15, 15–25 och över 25 m.',
-                '  Byt namn på en av .pgw-filerna så att den heter som bilden för att få den på rätt plats (lokalt eller SWEREF).');
-              // på kartan bara inom utsnittet, som i utskriften
-              const i0 = Math.max(0, Math.round((r.xmin - y.x0) / y.s)), i1 = Math.min(y.W, Math.round((r.xmax - y.x0) / y.s) + 1);
-              const j0 = Math.max(0, Math.round((y.y1 - r.ymax) / y.s)), j1 = Math.min(y.H, Math.round((y.y1 - r.ymin) / y.s) + 1);
-              const klipp = document.createElement('canvas'); klipp.width = i1 - i0; klipp.height = j1 - j0;
-              klipp.getContext('2d').drawImage(homC, -i0, -j0);
-              const kb = bildTillKarta(klipp, y.x0 + i0 * y.s, y.y1 - j0 * y.s, y.s, epsg);
-              visaResultatLager('hom', L.imageOverlay(kb.url, kb.bounds, { opacity: 0.85, interactive: false }));
-              sammanExtra.push(['Höjd över mark', 'bild med världsfil']);
-            }
-          }
-          // dolda träd och hus (0.11.0) kastar ingen skugga
-          if (laserYta) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: senaste.byggnaderDolda || [] });
-          if (senaste.volymer.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, senaste.volymer);
-          if (val.skugga) {
-            delFramsteg('analys', 0.3, 'Räknar skuggor');
-            const tider = [];
-            for (const k of ['mars', 'juni', 'sept', 'dec'].filter(x => skuggDatum.includes(x))) {
-              const l = Sol.lokal(Sol.solhandelse(SOL_AR, k));
-              for (const [h, mi] of skuggTider) {
-                const ms = Sol.lokalTillMs(l.ar, l.man, l.dag, h, mi);
-                const pos = Sol.solensLage(ms, mitt.lat, mitt.lon);
-                tider.push({ k, ms, ...pos, etikett: `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`,
-                  lager: `SKUGGA_${String(l.man).padStart(2, '0')}${String(l.dag).padStart(2, '0')}_${String(h).padStart(2, '0')}${String(mi).padStart(2, '0')}` });
-              }
-            }
-            const synliga = tider.filter(t => t.h > 2);
-            const sk = Analys.skuggor(y, r, synliga, { konv: mitt.konvergens, maxAvst: MARG_SKUGGA });
-            synliga.forEach((t, i) => { t.konturer = Analys.maskKonturer(sk, sk.masker[i]); t.andel = sk.masker[i].reduce((a, v) => a + v, 0) / sk.masker[i].length; });
-            senaste.skuggor = synliga;
-            await laddaPdf();
-            const DNAMN = { mars: 'Vårdagjämning', juni: 'Sommarsolstånd', sept: 'Höstdagjämning', dec: 'Vintersolstånd' };
-            const rader = ['mars', 'juni', 'sept', 'dec'].filter(x => skuggDatum.includes(x)).map(k => {
-              const l = Sol.lokal(Sol.solhandelse(SOL_AR, k));
-              return {
-                namn: DNAMN[k], under: `${l.dag}/${l.man} ${SOL_AR}, ${Sol.offsetMin(Sol.lokalTillMs(l.ar, l.man, l.dag, 12)) === 120 ? 'sommartid' : 'normaltid'}`,
-                tider: tider.filter(t => t.k === k).map(t => ({ etikett: `kl ${t.etikett}`, konturer: t.konturer || [], text: t.h > 2 ? '' : 'solen står för lågt' })),
-              };
-            });
-            const skuggOpt = {
-              utsnitt: r, rader, kurvor: res.kurvor, fonter, byggnader: senaste.byggnader, volymer: senaste.volymer,
-              titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
-              notis: [(laserYta ? `Skuggor från terräng, träd och byggnader enligt laserdata ${laserDatum}. Träd räknas som täta.` : 'Skuggor från terrängen (ingen laserdata).') +
-                (senaste.volymer.length ? ' Skissade volymer ingår.' : '') + ` Skuggor från objekt mer än ${MARG_SKUGGA} m utanför utsnittet ingår inte.`,
-                `Grått: skugga på marken${senaste.byggnader && senaste.byggnader.length ? ', svart linje: befintliga hus' : ''}${senaste.volymer.length ? ', orange linje: skissade volymer' : ''}. Rutnätsnord uppåt. Underlag för tidiga skeden.`],
-            };
-            senaste.skuggOpt = skuggOpt;
-            filer[`skuggor/${namn}_skuggstudie.pdf`] = Utskrift.skuggblad(skuggOpt);
-            extraInfo.push('', 'SKUGGSTUDIE',
-              `  Skuggor på marken från terräng, träd och byggnader, ${synliga.length} tidpunkter. Träd räknas som täta.`,
-              `  Objekt upp till ${MARG_SKUGGA} m utanför utsnittet är med. Upplösning 1 m.`,
-              '  Fil: _skuggstudie.pdf. Tidpunkter (svensk tid):',
-              ...synliga.map(t => `    ${t.lager.replace(/^SKUGGA_(\d\d)(\d\d)_.*$/, (_, mm, dd) => `${+dd}/${+mm}`)} kl ${t.etikett}: solhöjd ${fmt(t.h, 1)}°, azimut ${fmt(t.az)}°, skugga på ${fmt(t.andel * 100)} % av utsnittet`),
-              ...(tider.length > synliga.length ? [`  ${tider.length - synliga.length} tidpunkter hoppades över eftersom solen stod lägre än 2°.`] : []));
-            sammanExtra.push(['Skuggstudie', `${synliga.length} tidpunkter`]);
-            state.skuggaVal = Math.max(0, synliga.findIndex(t => t.k === 'mars' && t.etikett === '12:00'));
-          }
-        } catch (e) {
-          console.error(e);
-          varningar.push('Analyser: ' + e.message);
-        }
-      }
-      if ((val.trad || val.hom) && !laserYta) varningar.push('Träd och höjd över mark kräver laserdata och kunde inte skapas.');
-
-      // --- Höjdpunkter, lutning och skyfall ur markmodellen
-      if (val.hojdpunkter && dtmZ) {
-        const hp = Platsanalys.hojdpunkter(dtmZ, r, Number($('hojdpunkt-steg').value));
-        senaste.hojdpunkter = hp;
-        filer[`terrang/${namn}_hojdpunkter_lokal.dxf`] = Platsanalys.dxfHojdpunkter(hp, r, X0, Y0, Z0);
-        filer[`terrang/${namn}_hojdpunkter_sweref.dxf`] = Platsanalys.dxfHojdpunkter(hp, r, 0, 0, 0);
-        extraInfo.push('', 'HÖJDPUNKTER',
-          `  ${hp.length} punkter var ${$('hojdpunkt-steg').value} m på jämna koordinater, markhöjd ur Markhöjdmodell (1 m).`,
-          '  DXF-lager: HOJDPUNKT (punkt på rätt höjd och kryss), HOJDPUNKT_TEXT (höjd' + (Z0 ? ' minus Z0' : ' i RH 2000') + ').');
-        sammanExtra.push(['Höjdpunkter', `${fmt(hp.length)} st`]);
-        visaHojdpunkter(hp, epsg);
-      }
-      /** Ett platsanalyslager som JPEG med världsfiler (lokal och SWEREF), som ortofotot. */
-      const lagerBild = async (b, bas) => {
-        const url = b.canvas.toDataURL('image/jpeg', 0.9);
-        filer[`${bas}.jpg`] = await (await fetch(url)).arrayBuffer();
-        filer[`${bas}_sweref.jgw`] = Analys.varldsfil(b.x0, b.y1, b.s);
-        filer[`${bas}_lokal.jgw`] = Analys.varldsfil(b.x0, b.y1, b.s, X0, Y0);
-        return `${b.W} × ${b.H} pixlar, ${String(b.s).replace('.', ',')} m per pixel`;
-      };
-      if ((val.lutning || val.skyfall) && dtmZ) {
-        try {
-          delFramsteg('platsanalys', 0, val.skyfall ? 'Räknar lutning och skyfall' : 'Räknar lutning');
-          if (val.lutning) {
-            const g1 = T.rutnat(mos, { xmin: r.xmin - 2, xmax: r.xmax + 2, ymin: r.ymin - 2, ymax: r.ymax + 2 }, 1, epsg);
-            const ltHel = Platsanalys.lutning(g1, r, 1);
-            const lt = klippRaster(ltHel, r);
-            const konturer = Platsanalys.lutningKonturer(lt);
-            const bild = { url: Platsanalys.lutningCanvas(lt).toDataURL('image/png'), x0: lt.x0, y1: lt.y1, s: lt.s, W: lt.W, H: lt.H };
-            senaste.lutning = { lt: { andel: ltHel.andel }, konturer, bild };
-            const ltBild = await lagerBild(Platsanalys.lutningBild(lt, r), `platsanalys/${namn}_lutning`);
-            extraInfo.push('', 'LUTNING',
-              `  Filer: _lutning.jpg (${ltBild}, med .jgw som ortofotot) och _lutning.pdf (vektor).`,
-              '  Lutning ur Markhöjdmodell (1 m), räknad över 2 m. Klasser efter tillgänglighet:',
-              ...Platsanalys.LUTNING.map((k, i) => `    ${k.namn}: ${fmt(ltHel.andel[i] * 100)} % av utsnittet`));
-            sammanExtra.push(['Lutning', `${fmt((ltHel.andel[0] + ltHel.andel[1]) * 100)} % flackare än 1:20`]);
-            visaRasterLager('lutning', bild, epsg, 0.75);
-          }
-          if (val.skyfall) {
-            delFramsteg('platsanalys', 0.4, 'Räknar skyfall');
-            const omr = { xmin: r.xmin - MARG_SKYFALL, ymin: r.ymin - MARG_SKYFALL, xmax: r.xmax + MARG_SKYFALL, ymax: r.ymax + MARG_SKYFALL };
-            const sSky = Math.max(1, Math.ceil(Math.sqrt((omr.xmax - omr.xmin) * (omr.ymax - omr.ymin) / 1.5e6)));
-            const gs = T.rutnat(mos, omr, sSky, epsg);
-            const befSpar = senaste.byggnader ? Byggnad.somVolymer(senaste.byggnader, { utanHojd: 3 }) : [];
-            const hinder = senaste.volymer.concat(befSpar);
-            if (hinder.length) gs.z = Platsanalys.branInVolymer(gs, gs.z, hinder, { spar: true });
-            await new Promise(ok => setTimeout(ok, 0));
-            const sk = Platsanalys.skyfall(gs, r);
-            senaste.skyfall = sk;
-            const skBild = await lagerBild(Platsanalys.skyfallBild(sk, r), `platsanalys/${namn}_skyfall`);
-            extraInfo.push('', 'SKYFALL',
-              `  Filer: _skyfall.jpg (${skBild}, med .jgw som ortofotot) och _skyfall.pdf (vektor).`,
-              `  Lågpunkter (instängda områden) och flödesvägar ur Markhöjdmodell (${sSky} m), ${MARG_SKYFALL} m runt utsnittet.` + (senaste.volymer.length ? ' Skissade volymer räknas som hinder.' : '') + (befSpar.length ? ` ${befSpar.length} befintliga byggnader räknas som hinder.` : ''),
-              '  Ingen hänsyn till ledningar, trummor, infiltration eller regnets mängd.',
-              ...sk.lagpunkter.map((l, i) => `    L${i + 1}: ${fmt(l.yta)} m², största djup ${fmt(l.maxDjup, 2)} m, ${fmt(l.volym, 1)} m³`));
-            sammanExtra.push(['Skyfall', `${sk.lagpunkter.length} lågpunkter, ${sk.floden.length} flödesvägar`]);
-            visaSkyfall(sk, epsg);
-          }
-        } catch (e) { console.error(e); varningar.push('Platsanalys: ' + e.message); }
-      }
-      if (senaste.volymer.length) {
-        filer[`skiss/${namn}_volymer_lokal.dxf`] = Platsanalys.dxfVolymer(senaste.volymer, r, X0, Y0, Z0);
-        filer[`skiss/${namn}_volymer_sweref.dxf`] = Platsanalys.dxfVolymer(senaste.volymer, r, 0, 0, 0);
-        sammanExtra.push(['Skiss', `${senaste.volymer.length} volymer`]);
-      }
-
-      // --- Skydd och risker från andra myndigheter
-      if (val.skydd) {
-        delFramsteg('skydd', 0, 'Hämtar fornlämningar, skyddad natur och översvämning');
-        const tillZon = epsg === 3006 ? (p => p) : (f => p => f(p))(T.omvandlare(3006, epsg).forward);
-        const llTillZon = (f => p => f(p))(T.omvandlare(4326, epsg).forward);
-        const b100 = tmRuta({ xmin: r.xmin - 100, ymin: r.ymin - 100, xmax: r.xmax + 100, ymax: r.ymax + 100 }, epsg, 0);
-        const bUts = tmRuta(r, epsg, 0);
-        const ll = (() => { const t = tillLatLng(epsg), k = T.kantlinje({ xmin: r.xmin - 300, ymin: r.ymin - 300, xmax: r.xmax + 300, ymax: r.ymax + 300 }).map(t);
-          return { syd: Math.min(...k.map(q => q[0])), nord: Math.max(...k.map(q => q[0])), vast: Math.min(...k.map(q => q[1])), ost: Math.max(...k.map(q => q[1])) }; })();
-        const fel = e => ({ fel: (e && e.message) || 'okänt fel' });
-        const [lam, nat, ovs, vat] = await Promise.allSettled([
-          Geodata.lamningar(b100, tillZon), Geodata.skyddadNatur(bUts, tillZon), Geodata.oversvamning(bUts), Geodata.vatten(ll, llTillZon),
-        ]);
-        senaste.lamningar = lam.status === 'fulfilled' ? lam.value : fel(lam.reason);
-        senaste.natur = nat.status === 'fulfilled' ? nat.value : fel(nat.reason);
-        // Svarade bara den ena av Naturvårdsverkets två tjänster går det inte att säga att området är fritt (0.13.4)
-        if (nat.status === 'fulfilled' && nat.value.saknas) {
-          if (nat.value.length) varningar.push(`Skyddad natur: listan är inte fullständig (${nat.value.saknas}).`);
-          else senaste.natur = { fel: nat.value.saknas };
-        }
-        senaste.oversvamning = ovs.status === 'fulfilled' ? ovs.value : fel(ovs.reason);
-        senaste.strand = vat.status === 'fulfilled' ? Platsanalys.narmasteVatten(r, vat.value) : fel(vat.reason);
-        if (vat.status === 'fulfilled') senaste.vatten = vat.value;
-        if (ovs.status === 'fulfilled') {
-          const tillTM = epsg === 3006 ? ((x, y) => [x, y]) : (f => (x, y) => f([x, y]))(T.omvandlare(epsg, 3006).forward);
-          senaste.oversvamningBilder = ovs.value.filter(o => o.andel > 0).slice(0, 1).map(o => {
-            const s0 = (bUts.xmax - bUts.xmin) / o.bild.width, Wz = Math.ceil((r.xmax - r.xmin) / s0), Hz = Math.ceil((r.ymax - r.ymin) / s0);
-            const c = Topowebb.omprojicera({ canvas: o.bild, x0: bUts.xmin, y1: bUts.ymax, s: s0 }, { x0: r.xmin, y1: r.ymax, s: s0, W: Wz, H: Hz }, tillTM);
-            return { url: c.toDataURL('image/png'), x0: r.xmin + s0 / 2, y1: r.ymax - s0 / 2, s: s0, W: Wz, H: Hz };
-          });
-        }
-        [['Lämningar', senaste.lamningar], ['Skyddad natur', senaste.natur], ['Översvämning', senaste.oversvamning], ['Strandskydd', senaste.strand]]
-          .forEach(([n, v]) => { if (v && v.fel) varningar.push(`${n}: kunde inte hämtas (${v.fel}).`); });
-        extraInfo.push('', 'SKYDD OCH RISKER',
-          '  Lämningar inom 100 m: ' + (Array.isArray(senaste.lamningar) ? (senaste.lamningar.length ? senaste.lamningar.map(l => `${l.klass}${l.id ? ' ' + l.id : ''}`).join('; ') : 'inga registrerade') : 'kunde inte kontrolleras'),
-          '  Skyddad natur: ' + (Array.isArray(senaste.natur) ? (senaste.natur.length ? senaste.natur.map(o => `${o.typ}${o.namn ? ' ' + o.namn : ''}`).join('; ') : 'inget skyddat område') : 'kunde inte kontrolleras'),
-          '  Strandskydd (indikation): ' + (senaste.strand && !senaste.strand.fel ? Platsanalysblad.strandText(senaste.strand).lang : 'kunde inte kontrolleras'),
-          '  Översvämning: ' + (Array.isArray(senaste.oversvamning) ? senaste.oversvamning.map(o => `${o.namn} ${o.andel > 0.001 ? fmt(o.andel * 100) + ' %' : 'nej'}`).join(', ') : 'kunde inte kontrolleras'),
-          '  ' + Object.values(Geodata.KALLOR).join(' '));
-        sammanExtra.push(['Skydd och risker', [Array.isArray(senaste.lamningar) ? `${senaste.lamningar.length} lämningar` : null, Array.isArray(senaste.natur) ? `${senaste.natur.length} skyddade områden` : null].filter(Boolean).join(', ') || 'se varningar']);
-        visaSkydd(senaste, epsg, bUts);
-      }
-
-      // --- Sektioner
-      if (sektioner.length) {
-        try {
-          // profilen ritas från vänster till höger sett i blickriktningen: A→B normalt, B→A om linjen är vänd
-          const sek = sektioner.map(s => Object.assign({ namn: s.namn, a: s.a, b: s.b, vand: s.vand }, s.vand ? Analys.sektion(s.b, s.a, dtmZ, laserSek) : Analys.sektion(s.a, s.b, dtmZ, laserSek)));
-          senaste.sektioner = sek;
-          filer[`sektioner/${namn}_sektioner.dxf`] = Analys.dxfSektioner(sek, Z0);
-          filer[`sektioner/${namn}_sektionslinjer_lokal.dxf`] = Analys.dxfSektionslinjer(sek, r, X0, Y0);
-          filer[`sektioner/${namn}_sektionslinjer_sweref.dxf`] = Analys.dxfSektionslinjer(sek, r, 0, 0);
-          extraInfo.push('', 'SEKTIONER',
-            `  ${sek.map(s => `${s.namn}–${s.namn} ${fmt(s.langd, 1)} m`).join(', ')}.`,
-            '  Blickriktningen visas med pilar i _sektionslinjer-filerna. Profilen ritas så som den syns i blickriktningen.',
-            '  _sektioner.dxf: x = avstånd längs linjen (m), y = höjd i RH 2000' + (Z0 ? ` minus Z0 (${fmt(Z0, 3)})` : '') + '. Sektionerna ligger under varandra.',
-            '  Lager: SEKTION_MARK (marken), SEKTION_YTA (övre kontur av träd och byggnader), SEKTION_PUNKTER (laserpunkter inom 2 m),',
-            '         SEKTION_REF (referenslinje med avstånd var 10:e meter), SEKTION_TEXT.',
-            ...(laserSek ? [] : ['  Laserdata saknas, så sektionerna visar bara marken.']));
-          sammanExtra.push(['Sektioner', sek.map(s => s.namn).join(', ')]);
-        } catch (e) { console.error(e); varningar.push('Sektioner: ' + e.message); }
-      }
-
-      // --- Fastighetsindelning
-      if (val.fastigheter) {
-        try {
-          delFramsteg('fastigheter', 0, 'Hämtar fastighetsindelning');
-          await laddaSkript('vendor/sql-wasm.js');
-          const kommuner = kommunerIUtsnitt();
-          if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
-          const fi = await Fastighet.hamta({
-            kommuner, utsnitt: r, epsg, auth,
-            logg: t => visaStatus(t),
-            framsteg: f => delFramsteg('fastigheter', f * 0.9),
-            bekrafta: async storlek => window.confirm(`Fastighetsindelningen för kommunen är ${fmt(storlek / 1e6)} MB. Den hämtas en gång och sparas sedan i webbläsaren. Vill du hämta den?`),
-          });
-          senaste.fastigheter = fi;
-          filer[`fastigheter/${namn}_fastigheter_lokal.dxf`] = Fastighet.dxf(fi, r, X0, Y0);
-          filer[`fastigheter/${namn}_fastigheter_sweref.dxf`] = Fastighet.dxf(fi, r, 0, 0);
-          const pl = Fastighet.perLager(fi);
-          extraInfo.push('', 'FASTIGHETSINDELNING',
-            '  Källa: Fastighetsindelning Nedladdning, vektor. © Lantmäteriet. Bearbetad: utklippt och omprojicerad. Licens: CC BY 4.0.',
-            ...Fastighet.VARNING.match(/.{1,100}(\s|$)/g).map(t => '  ' + t.trim()),
-            '  DXF-lager:',
-            ...Object.keys(pl).sort().map(l => `    ${l}: ${pl[l]} linjer`),
-            `    _OSAKER i lagernamnet: lägesosäkerhet över ${Fastighet.OSAKER} m enligt registret.`,
-            `    GRANSPUNKT: ${fi.punkter.length} gränspunkter. FASTIGHET_BETECKNING: beteckningen inne i varje område.`,
-            `  Fastigheter som utsnittet berör (${fi.fastigheter.length}), största delen först:`,
-            ...fi.fastigheter.map(f => `    ${f.beteckning}${f.kommun ? ', ' + f.kommun : ''}: ${fmt(f.yta)} m² inom utsnittet` + (f.typ !== 'fastighetsområde' ? ` (${f.typ})` : '')));
-          sammanExtra.push(['Fastigheter', `${fi.fastigheter.length} st`]);
-          const fstil = g => ({ color: farg('fastighet'), weight: 1.6, opacity: 0.95, dashArray: g.osakerhet > Fastighet.OSAKER ? '6 5' : null, interactive: true });
-          const fgrp = L.featureGroup([
-            ...fi.granser.map(g => L.polyline(g.pts.map(tt), fstil(g))
-              .bindTooltip(`${esc(g.typ)}${g.osakerhet != null ? `, osäkerhet ${fmt(g.osakerhet, 2)} m` : ''}${g.metod ? `<br><small>${esc(g.metod)}</small>` : ''}`, { sticky: true })),
-            ...fi.ytor.filter(y => y.ankare).map(y => L.marker(tt(y.ankare), { interactive: false, keyboard: false,
-              icon: L.divIcon({ className: 'fastighet-etikett', html: `<span>${esc(y.etikett)}</span>`, iconSize: null }) })),
-          ]);
-          visaResultatLager('fastigheter', fgrp, () => fgrp.eachLayer(l => { if (l.setStyle) l.setStyle({ color: farg('fastighet') }); }));
-          visaLagring();
-        } catch (e) { console.error(e); varningar.push('Fastighetsindelning: ' + e.message); }
-      }
-
-      // --- Marktäcke
-      if (val.marktacke) {
-        try {
-          delFramsteg('marktacke', 0, 'Hämtar marktäcke');
-          await laddaSkript('vendor/sql-wasm.js');
-          const kommuner = kommunerIUtsnitt();
-          if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
-          const m = await Marktacke.hamtaUtsnitt({
-            kommuner, utsnitt: r, epsg, auth,
-            logg: t => visaStatus(t),
-            framsteg: f => delFramsteg('marktacke', f * 0.9),
-            bekrafta: async storlek => window.confirm(`Marktäcket för kommunen är ${fmt(storlek / 1e6)} MB. Det hämtas en gång och sparas sedan i webbläsaren. Vill du hämta det?`),
-          });
-          senaste.marktacke = m;
-          filer[`marktacke/${namn}_marktacke_lokal.dxf`] = Marktacke.dxf(m, r, X0, Y0);
-          filer[`marktacke/${namn}_marktacke_sweref.dxf`] = Marktacke.dxf(m, r, 0, 0);
-          const typer = Object.keys(m.klasser).sort();
-          extraInfo.push('', 'MARKTÄCKE',
-            '  Källa: Marktäcke Nedladdning, vektor. © Lantmäteriet. Bearbetad: utklippt och omprojicerad.',
-            '  Licens: CC BY 4.0.',
-            `  Kommuner: ${kommuner.map(kod => { const f = state.kommuner.find(x => x.properties.kod === kod); return f ? `${f.properties.namn} (${kod})` : kod; }).join(', ')}`,
-            '  DXF-lager (slutna polylinjer, ett lager per typ):',
-            ...(ln => typer.map(t => `    ${ln[t]}: ${t}, ${m.klasser[t]} st`))(Marktacke.lagerNamn(m.ytor.map(y => y.klass).concat(m.linjer.map(l => l.klass)))));
-          sammanExtra.push(['Marktäcke', `${typer.length} typer, ${m.ytor.length} ytor`]);
-          visaResultatLager('marktacke', L.layerGroup(m.ytor.map(y => {
-            const f = Marktacke.farg(y.klass);
-            return L.polygon(y.ringar.map(ring => ring.map(tt)), { color: f.css, weight: 0.8, fillColor: f.css, fillOpacity: 0.3 }).bindTooltip(esc(y.klass), { sticky: true });
-          })));
-          visaLagring();
-        } catch (e) { console.error(e); varningar.push('Marktäcke: ' + e.message); }
-      }
-
-      // --- Ortofoto
-      if (val.ortofoto) {
-        try {
-          delFramsteg('ortofoto', 0, 'Söker ortofoto');
-          const tmR = tmRuta(r, epsg);
-          const v = Ortofoto.valj(await Ortofoto.sok(tmR), tmR);
-          if (!v) throw new Error('det finns inget ortofoto i färg för området.');
-          const s = Ortofoto.upplosning(r, v.upplosning), mal = Ortofoto.rutnat(r, s);
-          delFramsteg('ortofoto', 0.05, `Läser ortofoto från ${v.ar}`);
-          const b = await Ortofoto.las(v.valda, mal, epsg, auth, { framsteg: f => delFramsteg('ortofoto', 0.05 + 0.8 * f) });
-          if (!b.tackt) throw new Error('bildfilerna innehöll ingen bild inom utsnittet.');
-          delFramsteg('ortofoto', 0.9, 'Sparar ortofotot');
-          const c = document.createElement('canvas'); c.width = b.W; c.height = b.H;
-          const cx = c.getContext('2d');
-          cx.putImageData(new ImageData(b.rgba, b.W, b.H), 0, 0);
-          // JPEG saknar genomskinlighet: tomma delar blir vita
-          const jc = document.createElement('canvas'); jc.width = b.W; jc.height = b.H;
-          const jx = jc.getContext('2d'); jx.fillStyle = '#ffffff'; jx.fillRect(0, 0, b.W, b.H); jx.drawImage(c, 0, 0);
-          const bild = jc.toDataURL('image/jpeg', 0.88);
-          const x0c = mal.x0 + s / 2, y1c = mal.y1 - s / 2;     // mitten av övre vänstra pixeln
-          filer[`ortofoto/${namn}_ortofoto.jpg`] = await (await fetch(bild)).arrayBuffer();
-          filer[`ortofoto/${namn}_ortofoto_sweref.jgw`] = Analys.varldsfil(x0c, y1c, s);
-          filer[`ortofoto/${namn}_ortofoto_lokal.jgw`] = Analys.varldsfil(x0c, y1c, s, X0, Y0);
-          senaste.ortofoto = { bild, x0: x0c, y1: y1c, W: b.W, H: b.H, s, canvas: jc, ar: v.ar };
-          const sTxt = String(s).replace('.', ',');
-          extraInfo.push('', 'ORTOFOTO',
-            '  Källa: ' + Ortofoto.kallText(v) + ' © Lantmäteriet. Bearbetad: utklippt och omprojicerad.',
-            '  Licens: CC BY 4.0.',
-            `  Rutor: ${b.rutor.join(', ')}`,
-            `  Bild: ${b.W} × ${b.H} pixlar, ${sTxt} m per pixel, i ${T.zon(epsg).namn}. JPEG utan genomskinlighet; delar utan bild är vita.`,
-            '  Byt namn på en av .jgw-filerna så att den heter som bilden för att få den på rätt plats (lokalt eller SWEREF).');
-          if (b.tackt < 0.995) varningar.push(`Ortofoto: bara ${fmt(b.tackt * 100)} % av utsnittet har bild från ${v.ar}.`);
-          sammanExtra.push(['Ortofoto', `flygår ${v.ar}, ${sTxt} m per pixel`]);
-          // på kartan i lägre upplösning (stora bilder blir tunga som överlägg)
-          const f = Math.max(1, Math.ceil(Math.max(b.W, b.H) / 2048));
-          const liten = document.createElement('canvas'); liten.width = Math.ceil(b.W / f); liten.height = Math.ceil(b.H / f);
-          liten.getContext('2d').drawImage(c, 0, 0, b.W / f, b.H / f);
-          const kb = bildTillKarta(liten, mal.x0 + s * f / 2, mal.y1 - s * f / 2, s * f, epsg);
-          visaResultatLager('ortofoto', L.imageOverlay(kb.url, kb.bounds, { pane: 'ortofotoPane', interactive: false }));
-        } catch (e) { console.error(e); varningar.push('Ortofoto: ' + e.message); }
-      }
-
-      // --- Stompunkter
-      if (val.stompunkter) {
-        try {
-          delFramsteg('stompunkter', 0, 'Hämtar stompunkter');
-          const sp = await Stompunkt.hamta({ utsnitt: r, epsg, auth });
-          senaste.stompunkter = sp;
-          filer[`stompunkter/${namn}_stompunkter_lokal.dxf`] = Stompunkt.dxf(sp, r, X0, Y0, Z0);
-          filer[`stompunkter/${namn}_stompunkter_sweref.dxf`] = Stompunkt.dxf(sp, r, 0, 0, 0);
-          filer[`stompunkter/${namn}_stompunkter.csv`] = Stompunkt.csv(sp, X0, Y0, Z0);
-          extraInfo.push('', 'STOMPUNKTER',
-            '  Källa: Stompunkt Direkt, Lantmäteriet. Öppna data med villkor enligt CC0.',
-            `  ${sp.length} punkter inom utsnittet (förstörda punkter ingår inte). Koordinater i ${T.zon(epsg).namn}, höjder i RH 2000.`,
-            '  DXF-lager: STOMPUNKT_PLAN, STOMPUNKT_HOJD (punkt på rätt höjd och kryss), STOMPUNKT_TEXT (namn och höjd minus Z0).',
-            '  CSV (semikolon): koordinater, lokala koordinater, kvalitet, osäkerhet, markering, lägesbeskrivning och länk till skiss.',
-            ...sp.map(p => `    ${p.namn || p.id}: ${p.typ}, ${p.x.toFixed(3)} ${p.y.toFixed(3)}${p.z != null ? ' +' + p.z.toFixed(3) : ''}`));
-          sammanExtra.push(['Stompunkter', `${sp.length} st`]);
-          const spStil = () => ({ color: farg('sp'), weight: 2, fillColor: farg('sp-fyll'), fillOpacity: 1 });
-          const spGrp = L.featureGroup(sp.map(p => L.circleMarker(tt([p.x, p.y]), Object.assign({ radius: 6 }, spStil()))
-            .bindPopup(`<strong>${esc(p.namn || p.id)}</strong><br>${esc(p.typ)}${p.kategori ? ', ' + esc(p.kategori) : ''}<br>${p.z != null ? 'Höjd ' + fmt(p.z, 3) + ' m (RH 2000)<br>' : ''}${p.markering ? 'Markering: ' + esc(p.markering) + '<br>' : ''}${p.beskrivning ? '<small>' + esc(p.beskrivning) + '</small>' : ''}`)));
-          visaResultatLager('stompunkter', spGrp, () => spGrp.setStyle(spStil()));
-        } catch (e) { console.error(e); varningar.push('Stompunkter: ' + e.message); }
-      }
-
-      // --- Vägar från OpenStreetMap
-      if (val.vagar) {
-        try {
-          delFramsteg('vagar', 0, 'Hämtar vägar från OpenStreetMap');
-          const v = await Vagar.hamta({ utsnitt: r, epsg });
-          senaste.vagar = v;
-          // utkast till vägytorna (0.11.0): bredden ur OSM, mätt i ortofotot eller schablonen
-          if (val.vagytor) {
-            delFramsteg('vagar', 0.4, senaste.ortofoto ? 'Mäter vägarnas bredd i ortofotot' : 'Ritar vägytorna');
-            await new Promise(res => setTimeout(res, 0));
-            v.ytor = Vagar.utkast(v, r, ortofotoPixlar(senaste.ortofoto));
-          }
-          const slagFil = { bil: 'vagar', gang: 'gangvagar' };
-          for (const sl of ['bil', 'gang']) {
-            if (!v.linjer.some(l => l.slag === sl)) continue;
-            filer[`vagar/${namn}_${slagFil[sl]}_lokal.dxf`] = Vagar.dxf(v, r, X0, Y0, { slag: sl });
-            filer[`vagar/${namn}_${slagFil[sl]}_sweref.dxf`] = Vagar.dxf(v, r, 0, 0, { slag: sl });
-          }
-          const per = {};
-          v.linjer.forEach(l => { per[l.lager] = (per[l.lager] || 0) + 1; });
-          const antalSlag = sl => v.linjer.filter(l => l.slag === sl).length;
-          const y = v.ytor, kallText = { osm: 'bredd i OSM', korfalt: 'antal körfält i OSM', ortofoto: 'mätt i ortofotot', schablon: 'schablon för vägtypen' };
-          const perKalla = {};
-          if (y) y.profiler.forEach(p => { perKalla[p.kalla] = (perKalla[p.kalla] || 0) + 1; });
-          extraInfo.push('', 'VÄGAR',
-            '  Källa: © OpenStreetMap-bidragsgivare, licens ODbL (www.openstreetmap.org/copyright). Hämtat via Overpass API.',
-            '  Mittlinjer i 2D (Z = 0), klippta mot utsnittet. Kvaliteten varierar; kontrollera mot grundkartan.',
-            `  Bilvägar och gångvägar i varsin fil: _vagar (${antalSlag('bil')} linjer) och _gangvagar (${antalSlag('gang')} linjer).`,
-            '  DXF-lager:',
-            ...Object.keys(Vagar.KLASSER).filter(k => per[k]).map(k => `    ${k}: ${Vagar.KLASSER[k].namn}, ${per[k]} linjer`),
-            ...(y ? [
-              '  VÄGYTOR (utkast, beräknade): slutna polylinjer i lagren VAG_YTA_BIL_BERAKNAD och VAG_YTA_GANG_BERAKNAD, ihopslagna i korsningarna. Kanterna är beräknade ur ortofotot (bilvägar), OSM:s bredd eller en schablon, inte inmätta.',
-              '    Bredden kommer från OSM:s bredd eller antal körfält när de finns, annars en schablon för vägtypen.'
-                + (y.medBild ? ' Bilvägarnas bredd och läge är mätta i ortofotot där vägbanan syns (färgen mitt på vägen följs ut till kanterna).' : ' Kryssa i Ortofoto för att mäta bilvägarnas bredd i bilden.'),
-              `    ${Object.keys(perKalla).map(k => `${perKalla[k]} ${perKalla[k] === 1 ? 'väg' : 'vägar'}: ${kallText[k]}`).join(', ')}.`,
-              '    Träd över vägen, skuggor, parkeringar och infarter gör mätningen osäker. Ett utkast att rätta, inte en inmätning.',
-            ] : []));
-          sammanExtra.push(['Vägar', `${antalSlag('bil')} bilvägar, ${antalSlag('gang')} gångvägar (OSM)` + (y ? `, ytor ${y.matta ? `(${y.matta} mätta i ortofotot)` : '(schablon)'}` : '')]);
-          visaVagar(v, tt);
-        } catch (e) { console.error(e); varningar.push('Vägar: ' + e.message); }
-      }
-
-      // --- Soldiagram, med horisont om den är vald
-      if (val.sol) {
-        try {
-          delFramsteg('sol', 0, val.horisont ? 'Räknar horisont' : 'Ritar soldiagram');
-          let extra = {};
-          let horFel = null;
-          if (val.horisont) {
-            // Misslyckas horisonten skapas soldiagrammet ändå, utan horisont (0.12.1).
-            try {
-              const medTomt = $('hor-tomt').checked;
-              const bara = { ...mos, s: 1 };
-              let nara = laserTM || bara;   // laserTM är byggd utan tomten om det är valt, se Laserdata ovan
-              if (senaste.volymer.length) {   // skissen räknas med i horisonten
-                const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
-                const volTM = senaste.volymer.map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
-                nara = Object.assign({}, nara, { data: Platsanalys.branInVolymer({ x0: nara.E0 + 0.5, y1: nara.N1 - 0.5, s: 1, W: nara.w, H: nara.h }, nara.data, volTM) });
-              }
-              // står punkten i ett hus eller under en krona räknas det objektet bort
-              const rensat = laserTM ? Analys.rensaVidPunkt(nara, mos, mittTM[0], mittTM[1]) : 0;
-              const fjarr = await T.lasHojderGrov({ xmin: mittTM[0] - 5000, xmax: mittTM[0] + 5000, ymin: mittTM[1] - 5000, ymax: mittTM[1] + 5000 }, 8, auth);
-              const luckor = fjarr.fel.length ? ` ${fjarr.fel.length} av Markhöjdmodellens rutor runt platsen gick inte att läsa (${fjarr.fel.join(', ')}); horisonten saknar terrängen där.` : '';
-              if (luckor) varningar.push('Horisont:' + luckor);
-              const z0 = T.sampla(mos, mittTM[0], mittTM[1]) + ogon;
-              const konvH = konvergens(3006, horLL.lat, horLL.lon);
-              const varText = state.horPunkt ? 'i vald punkt' : 'i utsnittets mitt';
-              const hor = Analys.horisont(mittTM[0], mittTM[1], z0, nara, fjarr, konvH);
-              const horMark = laserTM ? Analys.horisont(mittTM[0], mittTM[1], z0, bara, fjarr, konvH) : null;
-              const ogonTxt = String(ogon).replace('.', ',');
-              const rensatTxt = rensat ? ` Ett träd eller en byggnad (${fmt(rensat)} m²) står på punkten och räknas inte.` : '';
-              extra = {
-                horisont: hor,
-                horisontMark: horMark,
-                horisontPunkt: `${ogonTxt} m över mark ${varText}`,
-                horisontText: `Horisont: terräng, sedd ${ogonTxt} m över mark ${varText}.`,
-                horisontNot: `Horisont ur Markhöjdmodell (5 km)${laserTM ? ` och Laserdata skog ${laserDatum} (400 m)` : ''}.` +
-                  (laserTM ? (medTomt ? ' Träd och byggnader inom utsnittet ingår.' : ' Träd och byggnader inom utsnittet ingår inte.') + rensatTxt : ' Laserdata saknas, så bara terrängen ingår.') + luckor,
-              };
-              senaste.horisont = hor;
-              extraInfo.push('', 'HORISONT',
-                `  Sedd ${state.horPunkt ? `från vald punkt (X ${fmt(franLL(state.horPunkt)[0])}, Y ${fmt(franLL(state.horPunkt)[1])})` : 'från utsnittets mitt'}, ${ogonTxt} m över mark (${fmt(z0, 2)} m i RH 2000).`,
-                `  Terräng inom 5 km (8 m upplösning) och ${laserTM ? 'träd och byggnader inom 400 m' : 'ingen laserdata'}. Jordkrökning och refraktion är med.`,
-                ...(rensat ? [`  Punkten står i eller under ett träd eller en byggnad (${fmt(rensat)} m²). Det objektet räknas inte.`] : []),
-                ...(luckor ? ['  ' + luckor.trim()] : []),
-                `  Horisontens höjdvinkel var 15:e grad (azimut: ${horMark ? 'terräng / med träd och byggnader' : 'vinkel'}):`,
-                '    ' + Array.from({ length: 24 }, (_, i) => `${i * 15}°: ${horMark ? fmt(Math.max(0, horMark[i * 30]), 1) + ' / ' : ''}${fmt(Math.max(0, hor[i * 30]), 1)}°`).join(', '));
-            } catch (e) {
-              console.error(e);
-              horFel = e.message;
-              extra = {};
-              senaste.horisont = null;
-              varningar.push('Horisont: ' + e.message + ' Soldiagrammet är gjort utan horisont.');
-            }
-          }
-          const sd = await skapaSoldiagram(extra);
-          senaste.solOpt = sd.opt;
-          filer[`soldiagram/soldiagram_${SOL_AR}_svart.pdf`] = sd.svart;
-          filer[`soldiagram/soldiagram_${SOL_AR}_vit.pdf`] = sd.vit;
-          extraInfo.push('', 'SOLDIAGRAM',
-            `  Dagjämningar och solstånd ${SOL_AR} för utsnittets mitt, ${fmt(mitt.lat, 4)}° N ${fmt(mitt.lon, 4)}° Ö.`,
-            '  Beräknat med NOAA:s solalgoritm och Meeus, kontrollerat mot NREL SPA.');
-          sammanExtra.push(['Soldiagram', `${SOL_AR}${extra.horisont ? ', med horisont' : (horFel ? ', utan horisont (fel)' : '')}`]);
-        } catch (e) { console.error(e); varningar.push('Soldiagram: ' + e.message); }
-      }
-      // --- Lutning och skyfall som egna PDF:er (vektor), med hus och gränser för orientering
-      if (senaste.lutning || senaste.skyfall) {
-        try {
-          await laddaPdf();
-          const liggande = r.xmax - r.xmin >= r.ymax - r.ymin;
-          let format = 'a3', skala = Utskrift.foreslaSkala(r, format, liggande);
-          if (skala > 2000) { format = 'a1'; skala = Utskrift.foreslaSkala(r, format, liggande); }
-          const bas = {
-            byggnader: senaste.byggnader ? senaste.byggnader.map(b => Object.assign({ centrum: Byggnad.tyngdpunkt(b.fotavtryck) }, b)) : null,
-            fastigheter: senaste.fastigheter || null, ram: true,
-          };
-          const lagerPdf = (rubrik, lager) => Utskrift.plan({
-            format, liggande, skala, utsnitt: r, fonter, lager: Object.assign({}, bas, lager),
-            titel: { projekt: `${rubrik} – ${projekt || namn}`, kommun: kommunText(), system: `Koordinatsystem ${T.zon(epsg).namn}`, datum: idag(),
-              kallor: `Ur Markhöjdmodell © Lantmäteriet (CC BY 4.0). Skapat med Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}. Underlag för tidiga skeden.` },
-          });
-          if (senaste.lutning) filer[`platsanalys/${namn}_lutning.pdf`] = lagerPdf('Lutning', { lutning: { konturer: senaste.lutning.konturer } });
-          if (senaste.skyfall) filer[`platsanalys/${namn}_skyfall.pdf`] = lagerPdf('Skyfall', { skyfall: senaste.skyfall });
-        } catch (e) { console.error(e); varningar.push('Lagren som PDF: ' + e.message); }
-      }
-      // --- Platsanalysbladet
-      if (val.platsanalys) {
-        try {
-          delFramsteg('blad', 0, 'Ritar platsanalysbladet');
-          await laddaPdf();
-          const kap = kapitel();
-          const kallor = [['Markhöjdmodell', harLaser && 'Laserdata skog', val.byggnader && 'Byggnad', val.fastigheter && 'Fastighetsindelning', val.marktacke && 'Marktäcke']
-            .filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' och $1') + ': © Lantmäteriet (CC BY 4.0).'];
-          if (val.fastigheter) kallor.push(Fastighet.VARNING);
-          if (val.skydd) kallor.push(...Object.values(Geodata.KALLOR));
-          if (val.sol) kallor.push('Solens läge: NOAA:s solalgoritm och Meeus, kontrollerat mot NREL SPA.');
-          kallor.push(`Skapat ${idag()} med Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}.`);
-          filer[`${namn}_platsanalys.pdf`] = Platsanalysblad.skapa({
-            fonter, r, kurvor: res.kurvor, markhojd: { lo: res.lo, hi: res.hi },
-            titel: { projekt: projekt || namn, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000`, datum: idag() },
-            kapitel: { sol: kap.sol, terrang: kap.terrang, vatten: kap.vatten, skydd: kap.skydd },
-            lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: senaste.volymer, byggnader: senaste.byggnader, fastigheter: senaste.fastigheter,
-            sol: kap.sol ? senaste.solOpt : null, skuggor: kap.sol ? senaste.skuggOpt : null,
-            solSammanfattning: senaste.horisont ? [['Horisont', state.horPunkt ? 'från vald punkt, se blad 2' : 'från utsnittets mitt, se blad 2']] : null,
-            natur: senaste.natur, lamningar: senaste.lamningar, oversvamning: senaste.oversvamning, oversvamningBilder: senaste.oversvamningBilder, strand: senaste.strand,
-            kallor,
-          });
-          sammanExtra.push(['Platsanalys', 'blad i PDF']);
-        } catch (e) { console.error(e); varningar.push('Platsanalysbladet: ' + e.message); }
-      }
-      // --- Projektfilen i roten (0.13.0): mappen räcker för att öppna projektet och skapa underlaget igen
+  /** Laserdata: läses ruta för ruta och räknas in i ytmodellen, trädträffarna, horisontens modell och sektionerna. */
+  async function skapaLaser(kor) {
+    const { X0, Y0, Z0, auth, behoverLaser, behoverYta, delFramsteg, epsg, extraInfo, filer, mos, namn, r, sammanExtra, sektioner, tt, val, varningar } = kor;
+    // --- Laserdata. Punkterna läses ruta för ruta och nod för nod och räknas direkt in i
+    // ytmodellen, trädträffarna, horisontens modell och sektionerna (0.13.4). Förut sparades
+    // alla punkter först, med ett tak på 6 miljoner: över det föll träd, hushöjder och skuggor
+    // bort ur större utsnitt. Bara punktmolnsfilerna behöver punkterna själva och har taket kvar.
+    const MAX_PUNKTFIL = 6e6;
+    kor.harLaser = false; kor.laserYta = null; kor.laserTM = null; kor.laserSek = null; kor.laserDatum = '';
+    if (behoverLaser) {
       try {
-        projektEfterSkapa(senaste, val);
-        filer[`${namn}${Projekt.ANDELSE}`] = await projektfilData('uint8array');
-        extraInfo.push('', 'PROJEKTFIL',
-          `  ${namn}${Projekt.ANDELSE} innehåller utsnittet, valen och det du har matat in (volymer, sektioner, rättelser),`,
-          '  men inget underlag från Lantmäteriet. Öppna den i Höjdkurvor med Öppna projektfil under 01 Plats,',
-          '  eller dra den till kartan, och välj Skapa för att hämta underlaget igen.');
-      } catch (e) { console.error(e); varningar.push('Projektfilen: ' + e.message); }
-      // --- Samlad DXF i roten: alla DXF-underlag i en fil, en för lokala koordinater och en för SWEREF
-      for (const sys of ['lokal', 'sweref']) {
-        const delar = Object.keys(filer).filter(f => f.includes('/') && f.endsWith(`_${sys}.dxf`)).sort();
-        if (delar.length < 2) continue;
-        try {
-          filer[`${namn}_samlad_${sys}.dxf`] = Dxf.sammanfoga(delar.map(f => filer[f]));
-          if (sys === 'lokal') extraInfo.push('', 'SAMLAD DXF',
-            `  _samlad_lokal.dxf och _samlad_sweref.dxf innehåller alla ${delar.length} DXF-underlag med sina lager, kopierade in i en fil:`,
-            ...delar.map(f => '    ' + f.replace(`_${sys}.dxf`, '')),
-            '  Ortofotot och lagren som bild (JPEG) ingår inte; lägg in dem med världsfilerna.');
-        } catch (e) { console.error(e); varningar.push('Samlad DXF: ' + e.message); }
+        delFramsteg('laser', 0, 'Söker laserdata');
+        await laddaSkript('vendor/copc-bundle.js');
+        const valda = Laser.valjRutor(await Laser.sokRutor(kor.tmBox), kor.tmBox);
+        if (!valda.valda.length) varningar.push('Laserdata: det finns ingen laserdata för området.');
+        else {
+          const behoverYtmodell = kor.dtmZ && (behoverYta || (val.byggnader && val.byggnadshojd));
+          const ytsamlare = behoverYtmodell ? Analys.ytsamlare(kor.dtmZ, { traffar: !!val.trad }) : null;
+          // horisonten: tomten räknas bort om det är valt, se Soldiagram nedan
+          const rTM = tmRuta(r, epsg, 0);
+          const tmSamlare = val.sol && val.horisont
+            ? Analys.ytsamlareTM(mos, { utesluts: $('hor-tomt').checked ? null : (E, N) => E >= rTM.xmin && E <= rTM.xmax && N >= rTM.ymin && N <= rTM.ymax }) : null;
+          const vidSektion = sektioner.length ? Analys.vidSektion(sektioner, 2) : null;
+          const sekSamlare = vidSektion ? Laser.samlare() : null;
+          const filSamlare = val.laser ? Laser.samlare(MAX_PUNKTFIL) : null;
+          const iUtsnittet = (x, y) => x >= r.xmin && x <= r.xmax && y >= r.ymin && y <= r.ymax;
+          const last = await Laser.lasRutvis(valda.valda, kor.tmBox, auth, {
+            klassFilter: kl => !(Laser.KLASSER[kl] || {}).brus,
+            framsteg: f => delFramsteg('laser', 0.05 + 0.85 * f, 'Läser laserdata'),
+            mottag: del => {
+              if (tmSamlare) tmSamlare.lagg(del);
+              if (!ytsamlare && !sekSamlare && !filSamlare) return;
+              const dz = Laser.tillZon(del, epsg, kor.rm);
+              if (ytsamlare) ytsamlare.lagg(dz);
+              if (sekSamlare) sekSamlare.lagg(Laser.urval(dz, vidSektion));
+              if (filSamlare && !filSamlare.full) filSamlare.lagg(Laser.urval(dz, iUtsnittet));
+            },
+          });
+          kor.harLaser = true;
+          if (ytsamlare) kor.laserYta = ytsamlare.klar();
+          if (tmSamlare) kor.laserTM = tmSamlare.klar();
+          if (sekSamlare) kor.laserSek = sekSamlare.klar();
+          kor.laserDatum = [...new Set(valda.valda.map(v => String(v.datum).slice(0, 10)))].join(', ');
+          const omr = [...new Set(valda.valda.map(v => v.omrade))].join(', ');
+          if (valda.tackning < 0.999) varningar.push(`Laserdata: bara ${fmt(valda.tackning * 100)} % av området täcks av samma skanning.`);
+          extraInfo.push('', 'LASERDATA',
+            '  Källa: Laserdata Nedladdning, skog. © Lantmäteriet. Bearbetad: utklippt, omprojicerad och analyserad.',
+            '  Licens: CC BY 4.0.',
+            `  Skanning: ${kor.laserDatum} (område ${omr}). Rutor: ${last.rutor.map(v => `${v.id} (${fmt(v.antal)} punkter)`).join(', ')}`,
+            `  Lästa punkter i analysområdet (utsnittet med marginaler): ${fmt(last.antal)} st, räknade ruta för ruta.`);
+          if (val.laser && filSamlare.full) {
+            varningar.push(`Punktmoln: utsnittet har fler än ${fmt(MAX_PUNKTFIL / 1e6)} miljoner laserpunkter, så LAS- och XYZ-filerna skapades inte. Träd, byggnadshöjder, skuggor och sektioner är räknade på alla punkter. Välj ett mindre utsnitt för att få punktmolnet.`);
+            extraInfo.push(`  Punktmoln: inga filer, utsnittet har fler än ${fmt(MAX_PUNKTFIL / 1e6)} miljoner punkter.`);
+          } else if (val.laser) {
+            const z = filSamlare.klar();
+            filer[`laser/${namn}_laser_lokal.las`] = Laser.las(z, X0, Y0, Z0, 0);
+            filer[`laser/${namn}_laser_sweref.las`] = Laser.las(z, 0, 0, 0, epsg);
+            filer[`laser/${namn}_laser_lokal.xyz`] = Laser.xyzRgb(z, X0, Y0, Z0);
+            const per = Laser.sammanfattning(z);
+            extraInfo.push(`  Punktmoln: ${z.antal} st, ${fmt(z.antal / ((r.xmax - r.xmin) * (r.ymax - r.ymin)), 2)} per m². Brus (klass 7 och 18) är borttaget.`,
+              ...Object.keys(per).sort((a, b) => a - b).map(kl => `    Klass ${kl} ${Laser.klassInfo(+kl).namn}: ${per[kl]} st`),
+              '  Filer: _laser_lokal.las och _laser_sweref.las (LAS 1.2, klass bevarad),',
+              '         _laser_lokal.xyz (X Y Z R G B, färg per klass, för Archicad). Samma nollpunkt och Z0 som terrängen.');
+            sammanExtra.push(['Laserpunkter', `${fmt(z.antal)} st, skannat ${kor.laserDatum}`]);
+            const ritare = L.canvas({ padding: 0.3 }), steg = Math.max(1, Math.ceil(z.antal / 25000)), pts = [];
+            for (let i = 0; i < z.antal; i += steg) {
+              const c = Laser.klassInfo(z.k[i]).rgb;
+              pts.push(L.circleMarker(tt([z.x[i], z.y[i]]), { radius: 1.3, stroke: false, fillOpacity: 0.85, fillColor: `rgb(${c[0]},${c[1]},${c[2]})`, renderer: ritare, interactive: false }));
+            }
+            visaResultatLager('laser', L.layerGroup(pts));
+          }
+        }
+      } catch (e) {
+        if (e instanceof T.InloggningsFel) varningar.push('Laserdata: ' + e.message);
+        else { console.error(e); varningar.push('Laserdata: ' + e.message); }
+        kor.harLaser = false; kor.laserYta = kor.laserTM = kor.laserSek = null;
+        // en halvläst laserdata ska inte ge halva filer
+        Object.keys(filer).filter(f => f.startsWith('laser/')).forEach(f => { delete filer[f]; });
       }
-      if (extraInfo.length) filer[infoNamn] = res.filer[infoNamn] + extraInfo.join('\r\n') + '\r\n';
+    }
+  }
 
-      // --- Paketera
-      visaStatus('Packar zip-filen …');
-      matare(99);
-      const zip = new JSZip();
-      const mapp = namn.replace(/[^\wåäöÅÄÖ.-]+/g, '_');
-      Object.entries(filer).forEach(([fil, innehall]) => zip.file(fil, innehall));
-      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-      state.zipBlob = blob; state.zipNamn = `${mapp}.zip`;
-      $('ladda-ner').textContent = `Ladda ner ${mapp}.zip (${fmt(blob.size / 1e6, 1)} MB)`;
+  /** Befintliga byggnader, med höjd ur ytmodellen. */
+  async function skapaByggnader(kor) {
+    const { X0, Y0, Z0, auth, delFramsteg, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, tt, val, varningar } = kor;
+    // --- Befintliga byggnader (höjd ur ytmodellen, som sedan återanvänds av analyserna)
+    let ytaFardig = null;
+    if (val.byggnader) {
+      try {
+        delFramsteg('byggnader', 0, 'Hämtar byggnader');
+        await laddaSkript('vendor/sql-wasm.js');
+        const kommuner = kommunerIUtsnitt();
+        if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
+        const byggAlla = await Byggnad.hamta({
+          kommuner, utsnitt: r, epsg, auth,
+          logg: t => visaStatus(t),
+          framsteg: f => delFramsteg('byggnader', f * 0.8),
+          bekrafta: async storlek => window.confirm(`Byggnaderna för kommunen är ${fmt(storlek / 1e6)} MB. De hämtas en gång och sparas sedan i webbläsaren. Vill du hämta dem?`),
+        });
+        delFramsteg('byggnader', 0.85, 'Räknar byggnadshöjder');
+        if (kor.laserYta && val.byggnadshojd) ytaFardig = kor.laserYta;
+        Byggnad.hojder(byggAlla, ytaFardig || { W: kor.dtmZ.W, H: kor.dtmZ.H, s: kor.dtmZ.s, x0: kor.dtmZ.x0, y1: kor.dtmZ.y1, dtm: kor.dtmZ.z, ndsm: new Float32Array(kor.dtmZ.z.length) });
+        // hus som användaren har dolt (0.11.0) kommer inte med någonstans
+        const { byggnader: bygg, dolda: byggDolda } = Objektval.tillampaHus(byggAlla, husval());
+        senaste.byggnaderAlla = byggAlla; senaste.byggnader = bygg; senaste.byggnaderDolda = byggDolda;
+        const medHojd = bygg.filter(b => b.hojd != null).length;
+        filer[`byggnader/${namn}_byggnader_lokal.dxf`] = Byggnad.dxf(bygg, r, X0, Y0, Z0);
+        filer[`byggnader/${namn}_byggnader_sweref.dxf`] = Byggnad.dxf(bygg, r, 0, 0, 0);
+        filer[`byggnader/${namn}_byggnader.csv`] = Byggnad.csv(bygg, X0, Y0, Z0);
+        // 3D-modell i IFC för byggnader med höjd (0.8.0)
+        const ifcOpt = { projekt: $('projekt').value.trim() || namn, projektId: state.projektId || namn, systemNamn: T.zon(epsg).namn,
+          kalla: `Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim() };
+        const ifcLokal = Ifc.byggnader(bygg, Object.assign({ dx: X0, dy: Y0, dz: Z0, lokal: true, filnamn: `${namn}_byggnader_lokal.ifc` }, ifcOpt));
+        if (ifcLokal.antal) {
+          filer[`byggnader/${namn}_byggnader_lokal.ifc`] = ifcLokal.text;
+          filer[`byggnader/${namn}_byggnader_sweref.ifc`] = Ifc.byggnader(bygg, Object.assign({ lokal: false, filnamn: `${namn}_byggnader_sweref.ifc` }, ifcOpt)).text;
+        }
+        else if (bygg.length) {
+          // Säg till direkt, inte bara i info-filen (0.8.1)
+          varningar.push('Byggnader: ingen IFC-fil skapades, eftersom ingen byggnad fick någon höjd. '
+            + (!val.byggnadshojd ? 'Kryssa i Höjd ur laserdatan och skapa underlaget igen.' : 'Det finns ingen laserdata för området.'));
+        }
+        const per = Byggnad.perTyp(bygg);
+        extraInfo.push('', 'BEFINTLIGA BYGGNADER',
+          '  Källa: Byggnad Nedladdning, vektor. © Lantmäteriet. Bearbetad: utvald och omprojicerad. Licens: CC BY 4.0.',
+          `  ${bygg.length} byggnader som berör utsnittet. Hela fotavtrycket är med, även den del som ligger utanför.`,
+          ...(byggDolda.length ? [`  ${byggDolda.length} ${byggDolda.length === 1 ? 'byggnad är dold' : 'byggnader är dolda'} i 3D-vyn och är inte med i filerna eller skuggorna.`] : []),
+          ...Object.keys(per).sort().map(t => `    ${t}: ${per[t]} st (lager ${Byggnad.lagerFor({ typ: t })})`),
+          '  Fotavtrycken är oftast inmätta vid takkanten, inte vid fasaden, och kan avvika någon meter.',
+          '  Kontrollera mot grundkartan eller en inmätning innan de används för projektering.',
+          '  DXF: fotavtrycket på markhöjden, BYGGNAD_TAK på takhöjden när den är känd, BYGGNAD_TEXT med husnummer, ändamål och höjd.',
+          kor.laserYta && val.byggnadshojd
+            ? `  Höjd över mark ur laserdata ${kor.laserDatum} (90:e percentilen inom fotavtrycket) för ${medHojd} av ${bygg.length} byggnader. Taken är förenklade till platta.`
+            : '  Ingen höjd: laserdata hämtades inte. Markhöjd ur Markhöjdmodell (median inom fotavtrycket).',
+          '  CSV (semikolon): id, typ, ändamål, husnummer, namn, huvudbyggnad, yta, tyngdpunkt, markhöjd och höjd (höjder minus Z0).',
+          ifcLokal.antal
+            ? `  IFC (IFC4): ${ifcLokal.antal} ${ifcLokal.antal === 1 ? 'byggnad som volym' : 'byggnader som volymer'} från markhöjden till takhöjden, med platta tak och gårdar som hål. Varje hus är ett eget objekt`
+              + ' (IfcBuildingElementProxy) med husnummer, ändamål och höjd i egenskaperna Hojdkurvor_Byggnad. _lokal.ifc har samma nollpunkt, vridning och Z0 som'
+              + ' de lokala DXF-filerna; _sweref.ifc har SWEREF-koordinater och höjder i RH 2000. Samma hus får samma id vid en ny export.'
+              + (ifcLokal.utanHojd ? ` ${ifcLokal.utanHojd} ${ifcLokal.utanHojd === 1 ? 'byggnad' : 'byggnader'} utan höjd är inte med.` : '')
+            : '  IFC: ingen byggnad har höjd, så ingen IFC-fil skapades. Kryssa i Höjd ur laserdatan.');
+        sammanExtra.push(['Byggnader', `${bygg.length} st` + (medHojd ? `, ${medHojd} med höjd` : '')]);
+        visaByggnaderKarta(bygg, tt);
+        visaLagring();
+      } catch (e) { console.error(e); varningar.push('Byggnader: ' + e.message); }
+    }
+  }
 
-      const rader = [
-        ['Nollpunkt', `X ${fmt(res.X0, res.X0 % 1 ? 3 : 0)}, Y ${fmt(res.Y0, res.Y0 % 1 ? 3 : 0)}` + (res.Z0 ? `, Z ${fmt(res.Z0, 3)}` : '') + (res.egen ? ' (egen)' : '')],
-        ...(vrid ? [['Vridning', `${fmt(vrid, 2)}° medurs (${vridText})`]] : []),
-        ['System', T.zon(epsg).namn],
-        ['Storlek', `${fmt(r.xmax - r.xmin)} × ${fmt(r.ymax - r.ymin)} m`],
-        ['Markhöjd', `${fmt(res.lo, 2)}–${fmt(res.hi, 2)} m`],
-        ['Kurvor', `${fmt(res.kurvor.length)} linjer`],
-        ...sammanExtra,
-        ['Filer', Object.keys(filer).length + ' st i zip-filen'],
-      ];
-      const dl = $('sammanfattning');
-      dl.innerHTML = '';
-      rader.forEach(([a, b]) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = a; dd.textContent = b; dl.append(dt, dd); });
-      state.senaste = senaste;
-      visaSkugga();
-      $('resultat').hidden = false;
-      $('visa-3d').hidden = !senaste.rutnat;
-      $('skapa').classList.add('gjord');
-      matare(null);
-      visaStatus(varningar.length ? varningar.join('\n') : 'Klart. Resultatet visas på kartan som kontroll.', false);
+  /** Skissade volymer utan golvnivå ställs på marken. */
+  function stallVolymerPaMarken(kor) {
+    const { senaste, volymer } = kor;
+    // skissade volymer utan golvnivå står på marken i fotavtryckets tyngdpunkt
+    volymer.forEach(v => {
+      if ((v.golv == null || !(v.golv === v.golv)) && kor.dtmZ) { const c = Platsanalys.tyngdpunkt(v.fotavtryck); v.golv = Math.round(Analys.nod(kor.dtmZ, kor.dtmZ.z, c[0], c[1]) * 100) / 100; }
+    });
+    senaste.volymer = volymer.filter(v => v.golv != null && v.golv === v.golv);
+  }
 
-      const stil = {
-        HOJDKURVA_10M: { weight: 2.4, opacity: 1 }, HOJDKURVA_5M: { weight: 1.7, opacity: 0.95 }, HOJDKURVA_1M: { weight: 1, opacity: 0.85 },
-        HOJDKURVA_0_5M: { weight: 0.6, opacity: 0.7 }, HOJDKURVA_0_25M: { weight: 0.4, opacity: 0.6 },
-      };
-      const kGrp = L.featureGroup(res.kurvor.map(k => {
-        const pts = k.pts.map(tt);
-        if (k.sluten) pts.push(pts[0]);
-        return L.polyline(pts, Object.assign({ color: farg('kurva'), renderer: kurvRitare, interactive: false }, stil[k.lager]));
-      }));
-      visaResultatLager('kurvor', kGrp, () => kGrp.setStyle({ color: farg('kurva') }));
-      fyllUtskrift();
-      visaPaKartan();
-      $('resultat').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      if (window.innerWidth >= 760) lagerpanel.classList.remove('ihop');
+  /** Träd, höjd över mark och skuggstudie ur ytmodellen. */
+  async function skapaAnalyser(kor) {
+    const { MARG_SKUGGA, X0, Y0, Z0, behoverYta, delFramsteg, epsg, extraInfo, filer, mitt, namn, projekt, r, res, sammanExtra, senaste, skuggDatum, skuggTider, tt, val, varningar } = kor;
+    // --- Analyser: träd, höjd över mark, skuggor
+    if (behoverYta && (kor.laserYta || val.skugga)) {
+      try {
+        delFramsteg('analys', 0, 'Bygger ytmodell');
+        const y = kor.laserYta || ({ W: kor.dtmZ.W, H: kor.dtmZ.H, s: kor.dtmZ.s, x0: kor.dtmZ.x0, y1: kor.dtmZ.y1, dtm: kor.dtmZ.z, ndsm: new Float32Array(kor.dtmZ.z.length), dsm: Float32Array.from(kor.dtmZ.z) });
+        if (!kor.laserYta) varningar.push(`Skuggstudien räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
+        senaste.yta = y;
+        const iUtsnitt = t => t.x >= r.xmin && t.x <= r.xmax && t.y >= r.ymin && t.y <= r.ymax;
+        let tradDolda = [];
+        if (val.trad && kor.laserYta) {
+          delFramsteg('analys', 0.1, 'Söker träd');
+          const hittade = Analys.hittaTrad(y).filter(iUtsnitt);
+          // träd på eller precis vid en byggnad är oftast takkanten, inte ett träd (0.8.0)
+          const { kvar: tradHittade, borttagna: tradVidHus } = Byggnad.tradVidByggnader(hittade, senaste.byggnader, TRAD_VID_HUS);
+          // egna val för enskilda träd (0.11.0): dolda och rättade
+          const { trad, dolda } = Objektval.tillampaTrad(tradHittade, tradval());
+          senaste.tradAlla = tradHittade; senaste.trad = trad; tradDolda = dolda;
+          filer[`trad/${namn}_trad_lokal.dxf`] = Analys.dxfTrad(trad, r, X0, Y0, Z0);
+          filer[`trad/${namn}_trad_sweref.dxf`] = Analys.dxfTrad(trad, r, 0, 0, 0);
+          filer[`trad/${namn}_trad.csv`] = Analys.csvTrad(trad, X0, Y0, Z0);
+          extraInfo.push('', 'TRÄD',
+            `  ${trad.length} träd med höjd minst 3 m, hittade som toppar i höjd över mark (laserdata ${kor.laserDatum}).`,
+            '  Toppar utan markträffar under kronan räknas som tak och är borttagna. I tät skog hittas inte alla träd.',
+            senaste.byggnader
+              ? (tradVidHus.length
+                ? `  ${tradVidHus.length} ${tradVidHus.length === 1 ? 'topp' : 'toppar'} på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad ${tradVidHus.length === 1 ? 'är borttagen' : 'är borttagna'}, eftersom det oftast är byggnaden som är inmätt.`
+                : `  Ingen topp låg på eller högst ${fmt(TRAD_VID_HUS, 1)} m från en byggnad.`)
+              : '  Kryssa i Befintliga byggnader för att också ta bort toppar som ligger på eller precis vid en byggnad.',
+            ...(dolda.length || trad.some(t => t.andrat) ? [`  Ändrade i 3D-vyn: ${dolda.length} dolda, ${trad.filter(t => t.andrat).length} med egen höjd, krona eller art. De dolda är inte med i filerna eller skuggorna.`] : []),
+            '  DXF-lager: TRAD_KRONA (cirkel på toppens höjd), TRAD_STAM (punkt på marken), TRAD_TEXT (höjd).',
+            '  CSV: id;x;y;x_lokal;y_lokal;markhojd;tradhojd_m;topphojd;kronbredd_m (höjder minus Z0).');
+          sammanExtra.push(['Träd', `${fmt(trad.length)} st`]);
+          visaTradKarta(trad, tt);
+        }
+        if (kor.laserYta) {   // bilden behövs också som lager i utskriften
+          const homC = Utskrift.homCanvas(y.ndsm, y.W, y.H), bild = homC.toDataURL('image/png');
+          senaste.hom = { bild, x0: y.x0, y1: y.y1, W: y.W, H: y.H, s: y.s };
+          if (val.hom) {
+            const png = await (await fetch(bild)).arrayBuffer();
+            filer[`hojd_over_mark/${namn}_hojd_over_mark.png`] = png;
+            filer[`hojd_over_mark/${namn}_hojd_over_mark_sweref.pgw`] = Analys.varldsfil(y.x0, y.y1, y.s);
+            filer[`hojd_over_mark/${namn}_hojd_over_mark_lokal.pgw`] = Analys.varldsfil(y.x0, y.y1, y.s, X0, Y0);
+            extraInfo.push('', 'HÖJD ÖVER MARK',
+              '  Bild med 1 m pixlar. Färg efter höjd över mark: under 1,5 m genomskinlig, 1,5–4, 4–8, 8–15, 15–25 och över 25 m.',
+              '  Byt namn på en av .pgw-filerna så att den heter som bilden för att få den på rätt plats (lokalt eller SWEREF).');
+            // på kartan bara inom utsnittet, som i utskriften
+            const i0 = Math.max(0, Math.round((r.xmin - y.x0) / y.s)), i1 = Math.min(y.W, Math.round((r.xmax - y.x0) / y.s) + 1);
+            const j0 = Math.max(0, Math.round((y.y1 - r.ymax) / y.s)), j1 = Math.min(y.H, Math.round((y.y1 - r.ymin) / y.s) + 1);
+            const klipp = document.createElement('canvas'); klipp.width = i1 - i0; klipp.height = j1 - j0;
+            klipp.getContext('2d').drawImage(homC, -i0, -j0);
+            const kb = bildTillKarta(klipp, y.x0 + i0 * y.s, y.y1 - j0 * y.s, y.s, epsg);
+            visaResultatLager('hom', L.imageOverlay(kb.url, kb.bounds, { opacity: 0.85, interactive: false }));
+            sammanExtra.push(['Höjd över mark', 'bild med världsfil']);
+          }
+        }
+        // dolda träd och hus (0.11.0) kastar ingen skugga
+        if (kor.laserYta) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: senaste.byggnaderDolda || [] });
+        if (senaste.volymer.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, senaste.volymer);
+        if (val.skugga) {
+          delFramsteg('analys', 0.3, 'Räknar skuggor');
+          const tider = [];
+          for (const k of ['mars', 'juni', 'sept', 'dec'].filter(x => skuggDatum.includes(x))) {
+            const l = Sol.lokal(Sol.solhandelse(SOL_AR, k));
+            for (const [h, mi] of skuggTider) {
+              const ms = Sol.lokalTillMs(l.ar, l.man, l.dag, h, mi);
+              const pos = Sol.solensLage(ms, mitt.lat, mitt.lon);
+              tider.push({ k, ms, ...pos, etikett: `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`,
+                lager: `SKUGGA_${String(l.man).padStart(2, '0')}${String(l.dag).padStart(2, '0')}_${String(h).padStart(2, '0')}${String(mi).padStart(2, '0')}` });
+            }
+          }
+          const synliga = tider.filter(t => t.h > 2);
+          const sk = Analys.skuggor(y, r, synliga, { konv: mitt.konvergens, maxAvst: MARG_SKUGGA });
+          synliga.forEach((t, i) => { t.konturer = Analys.maskKonturer(sk, sk.masker[i]); t.andel = sk.masker[i].reduce((a, v) => a + v, 0) / sk.masker[i].length; });
+          senaste.skuggor = synliga;
+          await laddaPdf();
+          const DNAMN = { mars: 'Vårdagjämning', juni: 'Sommarsolstånd', sept: 'Höstdagjämning', dec: 'Vintersolstånd' };
+          const rader = ['mars', 'juni', 'sept', 'dec'].filter(x => skuggDatum.includes(x)).map(k => {
+            const l = Sol.lokal(Sol.solhandelse(SOL_AR, k));
+            return {
+              namn: DNAMN[k], under: `${l.dag}/${l.man} ${SOL_AR}, ${Sol.offsetMin(Sol.lokalTillMs(l.ar, l.man, l.dag, 12)) === 120 ? 'sommartid' : 'normaltid'}`,
+              tider: tider.filter(t => t.k === k).map(t => ({ etikett: `kl ${t.etikett}`, konturer: t.konturer || [], text: t.h > 2 ? '' : 'solen står för lågt' })),
+            };
+          });
+          const skuggOpt = {
+            utsnitt: r, rader, kurvor: res.kurvor, fonter, byggnader: senaste.byggnader, volymer: senaste.volymer,
+            titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
+            notis: [(kor.laserYta ? `Skuggor från terräng, träd och byggnader enligt laserdata ${kor.laserDatum}. Träd räknas som täta.` : 'Skuggor från terrängen (ingen laserdata).') +
+              (senaste.volymer.length ? ' Skissade volymer ingår.' : '') + ` Skuggor från objekt mer än ${MARG_SKUGGA} m utanför utsnittet ingår inte.`,
+              `Grått: skugga på marken${senaste.byggnader && senaste.byggnader.length ? ', svart linje: befintliga hus' : ''}${senaste.volymer.length ? ', orange linje: skissade volymer' : ''}. Rutnätsnord uppåt. Underlag för tidiga skeden.`],
+          };
+          senaste.skuggOpt = skuggOpt;
+          filer[`skuggor/${namn}_skuggstudie.pdf`] = Utskrift.skuggblad(skuggOpt);
+          extraInfo.push('', 'SKUGGSTUDIE',
+            `  Skuggor på marken från terräng, träd och byggnader, ${synliga.length} tidpunkter. Träd räknas som täta.`,
+            `  Objekt upp till ${MARG_SKUGGA} m utanför utsnittet är med. Upplösning 1 m.`,
+            '  Fil: _skuggstudie.pdf. Tidpunkter (svensk tid):',
+            ...synliga.map(t => `    ${t.lager.replace(/^SKUGGA_(\d\d)(\d\d)_.*$/, (_, mm, dd) => `${+dd}/${+mm}`)} kl ${t.etikett}: solhöjd ${fmt(t.h, 1)}°, azimut ${fmt(t.az)}°, skugga på ${fmt(t.andel * 100)} % av utsnittet`),
+            ...(tider.length > synliga.length ? [`  ${tider.length - synliga.length} tidpunkter hoppades över eftersom solen stod lägre än 2°.`] : []));
+          sammanExtra.push(['Skuggstudie', `${synliga.length} tidpunkter`]);
+          state.skuggaVal = Math.max(0, synliga.findIndex(t => t.k === 'mars' && t.etikett === '12:00'));
+        }
+      } catch (e) {
+        console.error(e);
+        varningar.push('Analyser: ' + e.message);
+      }
+    }
+    if ((val.trad || val.hom) && !kor.laserYta) varningar.push('Träd och höjd över mark kräver laserdata och kunde inte skapas.');
+  }
+
+  /** Höjdpunkter, lutning och skyfall ur markmodellen. */
+  async function skapaMarklager(kor) {
+    const { MARG_SKYFALL, X0, Y0, Z0, delFramsteg, epsg, extraInfo, filer, mos, namn, r, sammanExtra, senaste, val, varningar } = kor;
+    // --- Höjdpunkter, lutning och skyfall ur markmodellen
+    if (val.hojdpunkter && kor.dtmZ) {
+      const hp = Platsanalys.hojdpunkter(kor.dtmZ, r, Number($('hojdpunkt-steg').value));
+      senaste.hojdpunkter = hp;
+      filer[`terrang/${namn}_hojdpunkter_lokal.dxf`] = Platsanalys.dxfHojdpunkter(hp, r, X0, Y0, Z0);
+      filer[`terrang/${namn}_hojdpunkter_sweref.dxf`] = Platsanalys.dxfHojdpunkter(hp, r, 0, 0, 0);
+      extraInfo.push('', 'HÖJDPUNKTER',
+        `  ${hp.length} punkter var ${$('hojdpunkt-steg').value} m på jämna koordinater, markhöjd ur Markhöjdmodell (1 m).`,
+        '  DXF-lager: HOJDPUNKT (punkt på rätt höjd och kryss), HOJDPUNKT_TEXT (höjd' + (Z0 ? ' minus Z0' : ' i RH 2000') + ').');
+      sammanExtra.push(['Höjdpunkter', `${fmt(hp.length)} st`]);
+      visaHojdpunkter(hp, epsg);
+    }
+    /** Ett platsanalyslager som JPEG med världsfiler (lokal och SWEREF), som ortofotot. */
+    const lagerBild = async (b, bas) => {
+      const url = b.canvas.toDataURL('image/jpeg', 0.9);
+      filer[`${bas}.jpg`] = await (await fetch(url)).arrayBuffer();
+      filer[`${bas}_sweref.jgw`] = Analys.varldsfil(b.x0, b.y1, b.s);
+      filer[`${bas}_lokal.jgw`] = Analys.varldsfil(b.x0, b.y1, b.s, X0, Y0);
+      return `${b.W} × ${b.H} pixlar, ${String(b.s).replace('.', ',')} m per pixel`;
+    };
+    if ((val.lutning || val.skyfall) && kor.dtmZ) {
+      try {
+        delFramsteg('platsanalys', 0, val.skyfall ? 'Räknar lutning och skyfall' : 'Räknar lutning');
+        if (val.lutning) {
+          const g1 = T.rutnat(mos, { xmin: r.xmin - 2, xmax: r.xmax + 2, ymin: r.ymin - 2, ymax: r.ymax + 2 }, 1, epsg);
+          const ltHel = Platsanalys.lutning(g1, r, 1);
+          const lt = klippRaster(ltHel, r);
+          const konturer = Platsanalys.lutningKonturer(lt);
+          const bild = { url: Platsanalys.lutningCanvas(lt).toDataURL('image/png'), x0: lt.x0, y1: lt.y1, s: lt.s, W: lt.W, H: lt.H };
+          senaste.lutning = { lt: { andel: ltHel.andel }, konturer, bild };
+          const ltBild = await lagerBild(Platsanalys.lutningBild(lt, r), `platsanalys/${namn}_lutning`);
+          extraInfo.push('', 'LUTNING',
+            `  Filer: _lutning.jpg (${ltBild}, med .jgw som ortofotot) och _lutning.pdf (vektor).`,
+            '  Lutning ur Markhöjdmodell (1 m), räknad över 2 m. Klasser efter tillgänglighet:',
+            ...Platsanalys.LUTNING.map((k, i) => `    ${k.namn}: ${fmt(ltHel.andel[i] * 100)} % av utsnittet`));
+          sammanExtra.push(['Lutning', `${fmt((ltHel.andel[0] + ltHel.andel[1]) * 100)} % flackare än 1:20`]);
+          visaRasterLager('lutning', bild, epsg, 0.75);
+        }
+        if (val.skyfall) {
+          delFramsteg('platsanalys', 0.4, 'Räknar skyfall');
+          const omr = { xmin: r.xmin - MARG_SKYFALL, ymin: r.ymin - MARG_SKYFALL, xmax: r.xmax + MARG_SKYFALL, ymax: r.ymax + MARG_SKYFALL };
+          const sSky = Math.max(1, Math.ceil(Math.sqrt((omr.xmax - omr.xmin) * (omr.ymax - omr.ymin) / 1.5e6)));
+          const gs = T.rutnat(mos, omr, sSky, epsg);
+          const befSpar = senaste.byggnader ? Byggnad.somVolymer(senaste.byggnader, { utanHojd: 3 }) : [];
+          const hinder = senaste.volymer.concat(befSpar);
+          if (hinder.length) gs.z = Platsanalys.branInVolymer(gs, gs.z, hinder, { spar: true });
+          await new Promise(ok => setTimeout(ok, 0));
+          const sk = Platsanalys.skyfall(gs, r);
+          senaste.skyfall = sk;
+          const skBild = await lagerBild(Platsanalys.skyfallBild(sk, r), `platsanalys/${namn}_skyfall`);
+          extraInfo.push('', 'SKYFALL',
+            `  Filer: _skyfall.jpg (${skBild}, med .jgw som ortofotot) och _skyfall.pdf (vektor).`,
+            `  Lågpunkter (instängda områden) och flödesvägar ur Markhöjdmodell (${sSky} m), ${MARG_SKYFALL} m runt utsnittet.` + (senaste.volymer.length ? ' Skissade volymer räknas som hinder.' : '') + (befSpar.length ? ` ${befSpar.length} befintliga byggnader räknas som hinder.` : ''),
+            '  Ingen hänsyn till ledningar, trummor, infiltration eller regnets mängd.',
+            ...sk.lagpunkter.map((l, i) => `    L${i + 1}: ${fmt(l.yta)} m², största djup ${fmt(l.maxDjup, 2)} m, ${fmt(l.volym, 1)} m³`));
+          sammanExtra.push(['Skyfall', `${sk.lagpunkter.length} lågpunkter, ${sk.floden.length} flödesvägar`]);
+          visaSkyfall(sk, epsg);
+        }
+      } catch (e) { console.error(e); varningar.push('Platsanalys: ' + e.message); }
+    }
+  }
+
+  /** Skissens volymer som DXF. */
+  function skapaSkissfiler(kor) {
+    const { X0, Y0, Z0, filer, namn, r, sammanExtra, senaste } = kor;
+    if (senaste.volymer.length) {
+      filer[`skiss/${namn}_volymer_lokal.dxf`] = Platsanalys.dxfVolymer(senaste.volymer, r, X0, Y0, Z0);
+      filer[`skiss/${namn}_volymer_sweref.dxf`] = Platsanalys.dxfVolymer(senaste.volymer, r, 0, 0, 0);
+      sammanExtra.push(['Skiss', `${senaste.volymer.length} volymer`]);
+    }
+  }
+
+  /** Skydd och risker från andra myndigheter. */
+  async function skapaSkydd(kor) {
+    const { delFramsteg, epsg, extraInfo, r, sammanExtra, senaste, val, varningar } = kor;
+    // --- Skydd och risker från andra myndigheter
+    if (val.skydd) {
+      delFramsteg('skydd', 0, 'Hämtar fornlämningar, skyddad natur och översvämning');
+      const tillZon = epsg === 3006 ? (p => p) : (f => p => f(p))(T.omvandlare(3006, epsg).forward);
+      const llTillZon = (f => p => f(p))(T.omvandlare(4326, epsg).forward);
+      const b100 = tmRuta({ xmin: r.xmin - 100, ymin: r.ymin - 100, xmax: r.xmax + 100, ymax: r.ymax + 100 }, epsg, 0);
+      const bUts = tmRuta(r, epsg, 0);
+      const ll = (() => { const t = tillLatLng(epsg), k = T.kantlinje({ xmin: r.xmin - 300, ymin: r.ymin - 300, xmax: r.xmax + 300, ymax: r.ymax + 300 }).map(t);
+        return { syd: Math.min(...k.map(q => q[0])), nord: Math.max(...k.map(q => q[0])), vast: Math.min(...k.map(q => q[1])), ost: Math.max(...k.map(q => q[1])) }; })();
+      const fel = e => ({ fel: (e && e.message) || 'okänt fel' });
+      const [lam, nat, ovs, vat] = await Promise.allSettled([
+        Geodata.lamningar(b100, tillZon), Geodata.skyddadNatur(bUts, tillZon), Geodata.oversvamning(bUts), Geodata.vatten(ll, llTillZon),
+      ]);
+      senaste.lamningar = lam.status === 'fulfilled' ? lam.value : fel(lam.reason);
+      senaste.natur = nat.status === 'fulfilled' ? nat.value : fel(nat.reason);
+      // Svarade bara den ena av Naturvårdsverkets två tjänster går det inte att säga att området är fritt (0.13.4)
+      if (nat.status === 'fulfilled' && nat.value.saknas) {
+        if (nat.value.length) varningar.push(`Skyddad natur: listan är inte fullständig (${nat.value.saknas}).`);
+        else senaste.natur = { fel: nat.value.saknas };
+      }
+      senaste.oversvamning = ovs.status === 'fulfilled' ? ovs.value : fel(ovs.reason);
+      senaste.strand = vat.status === 'fulfilled' ? Platsanalys.narmasteVatten(r, vat.value) : fel(vat.reason);
+      if (vat.status === 'fulfilled') senaste.vatten = vat.value;
+      if (ovs.status === 'fulfilled') {
+        const tillTM = epsg === 3006 ? ((x, y) => [x, y]) : (f => (x, y) => f([x, y]))(T.omvandlare(epsg, 3006).forward);
+        senaste.oversvamningBilder = ovs.value.filter(o => o.andel > 0).slice(0, 1).map(o => {
+          const s0 = (bUts.xmax - bUts.xmin) / o.bild.width, Wz = Math.ceil((r.xmax - r.xmin) / s0), Hz = Math.ceil((r.ymax - r.ymin) / s0);
+          const c = Topowebb.omprojicera({ canvas: o.bild, x0: bUts.xmin, y1: bUts.ymax, s: s0 }, { x0: r.xmin, y1: r.ymax, s: s0, W: Wz, H: Hz }, tillTM);
+          return { url: c.toDataURL('image/png'), x0: r.xmin + s0 / 2, y1: r.ymax - s0 / 2, s: s0, W: Wz, H: Hz };
+        });
+      }
+      [['Lämningar', senaste.lamningar], ['Skyddad natur', senaste.natur], ['Översvämning', senaste.oversvamning], ['Strandskydd', senaste.strand]]
+        .forEach(([n, v]) => { if (v && v.fel) varningar.push(`${n}: kunde inte hämtas (${v.fel}).`); });
+      extraInfo.push('', 'SKYDD OCH RISKER',
+        '  Lämningar inom 100 m: ' + (Array.isArray(senaste.lamningar) ? (senaste.lamningar.length ? senaste.lamningar.map(l => `${l.klass}${l.id ? ' ' + l.id : ''}`).join('; ') : 'inga registrerade') : 'kunde inte kontrolleras'),
+        '  Skyddad natur: ' + (Array.isArray(senaste.natur) ? (senaste.natur.length ? senaste.natur.map(o => `${o.typ}${o.namn ? ' ' + o.namn : ''}`).join('; ') : 'inget skyddat område') : 'kunde inte kontrolleras'),
+        '  Strandskydd (indikation): ' + (senaste.strand && !senaste.strand.fel ? Platsanalysblad.strandText(senaste.strand).lang : 'kunde inte kontrolleras'),
+        '  Översvämning: ' + (Array.isArray(senaste.oversvamning) ? senaste.oversvamning.map(o => `${o.namn} ${o.andel > 0.001 ? fmt(o.andel * 100) + ' %' : 'nej'}`).join(', ') : 'kunde inte kontrolleras'),
+        '  ' + Object.values(Geodata.KALLOR).join(' '));
+      sammanExtra.push(['Skydd och risker', [Array.isArray(senaste.lamningar) ? `${senaste.lamningar.length} lämningar` : null, Array.isArray(senaste.natur) ? `${senaste.natur.length} skyddade områden` : null].filter(Boolean).join(', ') || 'se varningar']);
+      visaSkydd(senaste, epsg, bUts);
+    }
+  }
+
+  /** Terrängsektioner. */
+  function skapaSektioner(kor) {
+    const { X0, Y0, Z0, extraInfo, filer, namn, r, sammanExtra, sektioner, senaste, varningar } = kor;
+    // --- Sektioner
+    if (sektioner.length) {
+      try {
+        // profilen ritas från vänster till höger sett i blickriktningen: A→B normalt, B→A om linjen är vänd
+        const sek = sektioner.map(s => Object.assign({ namn: s.namn, a: s.a, b: s.b, vand: s.vand }, s.vand ? Analys.sektion(s.b, s.a, kor.dtmZ, kor.laserSek) : Analys.sektion(s.a, s.b, kor.dtmZ, kor.laserSek)));
+        senaste.sektioner = sek;
+        filer[`sektioner/${namn}_sektioner.dxf`] = Analys.dxfSektioner(sek, Z0);
+        filer[`sektioner/${namn}_sektionslinjer_lokal.dxf`] = Analys.dxfSektionslinjer(sek, r, X0, Y0);
+        filer[`sektioner/${namn}_sektionslinjer_sweref.dxf`] = Analys.dxfSektionslinjer(sek, r, 0, 0);
+        extraInfo.push('', 'SEKTIONER',
+          `  ${sek.map(s => `${s.namn}–${s.namn} ${fmt(s.langd, 1)} m`).join(', ')}.`,
+          '  Blickriktningen visas med pilar i _sektionslinjer-filerna. Profilen ritas så som den syns i blickriktningen.',
+          '  _sektioner.dxf: x = avstånd längs linjen (m), y = höjd i RH 2000' + (Z0 ? ` minus Z0 (${fmt(Z0, 3)})` : '') + '. Sektionerna ligger under varandra.',
+          '  Lager: SEKTION_MARK (marken), SEKTION_YTA (övre kontur av träd och byggnader), SEKTION_PUNKTER (laserpunkter inom 2 m),',
+          '         SEKTION_REF (referenslinje med avstånd var 10:e meter), SEKTION_TEXT.',
+          ...(kor.laserSek ? [] : ['  Laserdata saknas, så sektionerna visar bara marken.']));
+        sammanExtra.push(['Sektioner', sek.map(s => s.namn).join(', ')]);
+      } catch (e) { console.error(e); varningar.push('Sektioner: ' + e.message); }
+    }
+  }
+
+  /** Fastighetsindelning. */
+  async function skapaFastigheter(kor) {
+    const { X0, Y0, auth, delFramsteg, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, tt, val, varningar } = kor;
+    // --- Fastighetsindelning
+    if (val.fastigheter) {
+      try {
+        delFramsteg('fastigheter', 0, 'Hämtar fastighetsindelning');
+        await laddaSkript('vendor/sql-wasm.js');
+        const kommuner = kommunerIUtsnitt();
+        if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
+        const fi = await Fastighet.hamta({
+          kommuner, utsnitt: r, epsg, auth,
+          logg: t => visaStatus(t),
+          framsteg: f => delFramsteg('fastigheter', f * 0.9),
+          bekrafta: async storlek => window.confirm(`Fastighetsindelningen för kommunen är ${fmt(storlek / 1e6)} MB. Den hämtas en gång och sparas sedan i webbläsaren. Vill du hämta den?`),
+        });
+        senaste.fastigheter = fi;
+        filer[`fastigheter/${namn}_fastigheter_lokal.dxf`] = Fastighet.dxf(fi, r, X0, Y0);
+        filer[`fastigheter/${namn}_fastigheter_sweref.dxf`] = Fastighet.dxf(fi, r, 0, 0);
+        const pl = Fastighet.perLager(fi);
+        extraInfo.push('', 'FASTIGHETSINDELNING',
+          '  Källa: Fastighetsindelning Nedladdning, vektor. © Lantmäteriet. Bearbetad: utklippt och omprojicerad. Licens: CC BY 4.0.',
+          ...Fastighet.VARNING.match(/.{1,100}(\s|$)/g).map(t => '  ' + t.trim()),
+          '  DXF-lager:',
+          ...Object.keys(pl).sort().map(l => `    ${l}: ${pl[l]} linjer`),
+          `    _OSAKER i lagernamnet: lägesosäkerhet över ${Fastighet.OSAKER} m enligt registret.`,
+          `    GRANSPUNKT: ${fi.punkter.length} gränspunkter. FASTIGHET_BETECKNING: beteckningen inne i varje område.`,
+          `  Fastigheter som utsnittet berör (${fi.fastigheter.length}), största delen först:`,
+          ...fi.fastigheter.map(f => `    ${f.beteckning}${f.kommun ? ', ' + f.kommun : ''}: ${fmt(f.yta)} m² inom utsnittet` + (f.typ !== 'fastighetsområde' ? ` (${f.typ})` : '')));
+        sammanExtra.push(['Fastigheter', `${fi.fastigheter.length} st`]);
+        const fstil = g => ({ color: farg('fastighet'), weight: 1.6, opacity: 0.95, dashArray: g.osakerhet > Fastighet.OSAKER ? '6 5' : null, interactive: true });
+        const fgrp = L.featureGroup([
+          ...fi.granser.map(g => L.polyline(g.pts.map(tt), fstil(g))
+            .bindTooltip(`${esc(g.typ)}${g.osakerhet != null ? `, osäkerhet ${fmt(g.osakerhet, 2)} m` : ''}${g.metod ? `<br><small>${esc(g.metod)}</small>` : ''}`, { sticky: true })),
+          ...fi.ytor.filter(y => y.ankare).map(y => L.marker(tt(y.ankare), { interactive: false, keyboard: false,
+            icon: L.divIcon({ className: 'fastighet-etikett', html: `<span>${esc(y.etikett)}</span>`, iconSize: null }) })),
+        ]);
+        visaResultatLager('fastigheter', fgrp, () => fgrp.eachLayer(l => { if (l.setStyle) l.setStyle({ color: farg('fastighet') }); }));
+        visaLagring();
+      } catch (e) { console.error(e); varningar.push('Fastighetsindelning: ' + e.message); }
+    }
+  }
+
+  /** Marktäcke. */
+  async function skapaMarktacke(kor) {
+    const { X0, Y0, auth, delFramsteg, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, tt, val, varningar } = kor;
+    // --- Marktäcke
+    if (val.marktacke) {
+      try {
+        delFramsteg('marktacke', 0, 'Hämtar marktäcke');
+        await laddaSkript('vendor/sql-wasm.js');
+        const kommuner = kommunerIUtsnitt();
+        if (!kommuner.length) throw new Error('kunde inte avgöra vilken kommun området ligger i.');
+        const m = await Marktacke.hamtaUtsnitt({
+          kommuner, utsnitt: r, epsg, auth,
+          logg: t => visaStatus(t),
+          framsteg: f => delFramsteg('marktacke', f * 0.9),
+          bekrafta: async storlek => window.confirm(`Marktäcket för kommunen är ${fmt(storlek / 1e6)} MB. Det hämtas en gång och sparas sedan i webbläsaren. Vill du hämta det?`),
+        });
+        senaste.marktacke = m;
+        filer[`marktacke/${namn}_marktacke_lokal.dxf`] = Marktacke.dxf(m, r, X0, Y0);
+        filer[`marktacke/${namn}_marktacke_sweref.dxf`] = Marktacke.dxf(m, r, 0, 0);
+        const typer = Object.keys(m.klasser).sort();
+        extraInfo.push('', 'MARKTÄCKE',
+          '  Källa: Marktäcke Nedladdning, vektor. © Lantmäteriet. Bearbetad: utklippt och omprojicerad.',
+          '  Licens: CC BY 4.0.',
+          `  Kommuner: ${kommuner.map(kod => { const f = state.kommuner.find(x => x.properties.kod === kod); return f ? `${f.properties.namn} (${kod})` : kod; }).join(', ')}`,
+          '  DXF-lager (slutna polylinjer, ett lager per typ):',
+          ...(ln => typer.map(t => `    ${ln[t]}: ${t}, ${m.klasser[t]} st`))(Marktacke.lagerNamn(m.ytor.map(y => y.klass).concat(m.linjer.map(l => l.klass)))));
+        sammanExtra.push(['Marktäcke', `${typer.length} typer, ${m.ytor.length} ytor`]);
+        visaResultatLager('marktacke', L.layerGroup(m.ytor.map(y => {
+          const f = Marktacke.farg(y.klass);
+          return L.polygon(y.ringar.map(ring => ring.map(tt)), { color: f.css, weight: 0.8, fillColor: f.css, fillOpacity: 0.3 }).bindTooltip(esc(y.klass), { sticky: true });
+        })));
+        visaLagring();
+      } catch (e) { console.error(e); varningar.push('Marktäcke: ' + e.message); }
+    }
+  }
+
+  /** Ortofoto. */
+  async function skapaOrtofoto(kor) {
+    const { X0, Y0, auth, delFramsteg, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, val, varningar } = kor;
+    // --- Ortofoto
+    if (val.ortofoto) {
+      try {
+        delFramsteg('ortofoto', 0, 'Söker ortofoto');
+        const tmR = tmRuta(r, epsg);
+        const v = Ortofoto.valj(await Ortofoto.sok(tmR), tmR);
+        if (!v) throw new Error('det finns inget ortofoto i färg för området.');
+        const s = Ortofoto.upplosning(r, v.upplosning), mal = Ortofoto.rutnat(r, s);
+        delFramsteg('ortofoto', 0.05, `Läser ortofoto från ${v.ar}`);
+        const b = await Ortofoto.las(v.valda, mal, epsg, auth, { framsteg: f => delFramsteg('ortofoto', 0.05 + 0.8 * f) });
+        if (!b.tackt) throw new Error('bildfilerna innehöll ingen bild inom utsnittet.');
+        delFramsteg('ortofoto', 0.9, 'Sparar ortofotot');
+        const c = document.createElement('canvas'); c.width = b.W; c.height = b.H;
+        const cx = c.getContext('2d');
+        cx.putImageData(new ImageData(b.rgba, b.W, b.H), 0, 0);
+        // JPEG saknar genomskinlighet: tomma delar blir vita
+        const jc = document.createElement('canvas'); jc.width = b.W; jc.height = b.H;
+        const jx = jc.getContext('2d'); jx.fillStyle = '#ffffff'; jx.fillRect(0, 0, b.W, b.H); jx.drawImage(c, 0, 0);
+        const bild = jc.toDataURL('image/jpeg', 0.88);
+        const x0c = mal.x0 + s / 2, y1c = mal.y1 - s / 2;     // mitten av övre vänstra pixeln
+        filer[`ortofoto/${namn}_ortofoto.jpg`] = await (await fetch(bild)).arrayBuffer();
+        filer[`ortofoto/${namn}_ortofoto_sweref.jgw`] = Analys.varldsfil(x0c, y1c, s);
+        filer[`ortofoto/${namn}_ortofoto_lokal.jgw`] = Analys.varldsfil(x0c, y1c, s, X0, Y0);
+        senaste.ortofoto = { bild, x0: x0c, y1: y1c, W: b.W, H: b.H, s, canvas: jc, ar: v.ar };
+        const sTxt = String(s).replace('.', ',');
+        extraInfo.push('', 'ORTOFOTO',
+          '  Källa: ' + Ortofoto.kallText(v) + ' © Lantmäteriet. Bearbetad: utklippt och omprojicerad.',
+          '  Licens: CC BY 4.0.',
+          `  Rutor: ${b.rutor.join(', ')}`,
+          `  Bild: ${b.W} × ${b.H} pixlar, ${sTxt} m per pixel, i ${T.zon(epsg).namn}. JPEG utan genomskinlighet; delar utan bild är vita.`,
+          '  Byt namn på en av .jgw-filerna så att den heter som bilden för att få den på rätt plats (lokalt eller SWEREF).');
+        if (b.tackt < 0.995) varningar.push(`Ortofoto: bara ${fmt(b.tackt * 100)} % av utsnittet har bild från ${v.ar}.`);
+        sammanExtra.push(['Ortofoto', `flygår ${v.ar}, ${sTxt} m per pixel`]);
+        // på kartan i lägre upplösning (stora bilder blir tunga som överlägg)
+        const f = Math.max(1, Math.ceil(Math.max(b.W, b.H) / 2048));
+        const liten = document.createElement('canvas'); liten.width = Math.ceil(b.W / f); liten.height = Math.ceil(b.H / f);
+        liten.getContext('2d').drawImage(c, 0, 0, b.W / f, b.H / f);
+        const kb = bildTillKarta(liten, mal.x0 + s * f / 2, mal.y1 - s * f / 2, s * f, epsg);
+        visaResultatLager('ortofoto', L.imageOverlay(kb.url, kb.bounds, { pane: 'ortofotoPane', interactive: false }));
+      } catch (e) { console.error(e); varningar.push('Ortofoto: ' + e.message); }
+    }
+  }
+
+  /** Stompunkter. */
+  async function skapaStompunkter(kor) {
+    const { X0, Y0, Z0, auth, delFramsteg, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, tt, val, varningar } = kor;
+    // --- Stompunkter
+    if (val.stompunkter) {
+      try {
+        delFramsteg('stompunkter', 0, 'Hämtar stompunkter');
+        const sp = await Stompunkt.hamta({ utsnitt: r, epsg, auth });
+        senaste.stompunkter = sp;
+        filer[`stompunkter/${namn}_stompunkter_lokal.dxf`] = Stompunkt.dxf(sp, r, X0, Y0, Z0);
+        filer[`stompunkter/${namn}_stompunkter_sweref.dxf`] = Stompunkt.dxf(sp, r, 0, 0, 0);
+        filer[`stompunkter/${namn}_stompunkter.csv`] = Stompunkt.csv(sp, X0, Y0, Z0);
+        extraInfo.push('', 'STOMPUNKTER',
+          '  Källa: Stompunkt Direkt, Lantmäteriet. Öppna data med villkor enligt CC0.',
+          `  ${sp.length} punkter inom utsnittet (förstörda punkter ingår inte). Koordinater i ${T.zon(epsg).namn}, höjder i RH 2000.`,
+          '  DXF-lager: STOMPUNKT_PLAN, STOMPUNKT_HOJD (punkt på rätt höjd och kryss), STOMPUNKT_TEXT (namn och höjd minus Z0).',
+          '  CSV (semikolon): koordinater, lokala koordinater, kvalitet, osäkerhet, markering, lägesbeskrivning och länk till skiss.',
+          ...sp.map(p => `    ${p.namn || p.id}: ${p.typ}, ${p.x.toFixed(3)} ${p.y.toFixed(3)}${p.z != null ? ' +' + p.z.toFixed(3) : ''}`));
+        sammanExtra.push(['Stompunkter', `${sp.length} st`]);
+        const spStil = () => ({ color: farg('sp'), weight: 2, fillColor: farg('sp-fyll'), fillOpacity: 1 });
+        const spGrp = L.featureGroup(sp.map(p => L.circleMarker(tt([p.x, p.y]), Object.assign({ radius: 6 }, spStil()))
+          .bindPopup(`<strong>${esc(p.namn || p.id)}</strong><br>${esc(p.typ)}${p.kategori ? ', ' + esc(p.kategori) : ''}<br>${p.z != null ? 'Höjd ' + fmt(p.z, 3) + ' m (RH 2000)<br>' : ''}${p.markering ? 'Markering: ' + esc(p.markering) + '<br>' : ''}${p.beskrivning ? '<small>' + esc(p.beskrivning) + '</small>' : ''}`)));
+        visaResultatLager('stompunkter', spGrp, () => spGrp.setStyle(spStil()));
+      } catch (e) { console.error(e); varningar.push('Stompunkter: ' + e.message); }
+    }
+  }
+
+  /** Vägar från OpenStreetMap. Efter ortofotot, som bredden mäts i. */
+  async function skapaVagar(kor) {
+    const { X0, Y0, delFramsteg, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, tt, val, varningar } = kor;
+    // --- Vägar från OpenStreetMap
+    if (val.vagar) {
+      try {
+        delFramsteg('vagar', 0, 'Hämtar vägar från OpenStreetMap');
+        const v = await Vagar.hamta({ utsnitt: r, epsg });
+        senaste.vagar = v;
+        // utkast till vägytorna (0.11.0): bredden ur OSM, mätt i ortofotot eller schablonen
+        if (val.vagytor) {
+          delFramsteg('vagar', 0.4, senaste.ortofoto ? 'Mäter vägarnas bredd i ortofotot' : 'Ritar vägytorna');
+          await new Promise(res => setTimeout(res, 0));
+          v.ytor = Vagar.utkast(v, r, ortofotoPixlar(senaste.ortofoto));
+        }
+        const slagFil = { bil: 'vagar', gang: 'gangvagar' };
+        for (const sl of ['bil', 'gang']) {
+          if (!v.linjer.some(l => l.slag === sl)) continue;
+          filer[`vagar/${namn}_${slagFil[sl]}_lokal.dxf`] = Vagar.dxf(v, r, X0, Y0, { slag: sl });
+          filer[`vagar/${namn}_${slagFil[sl]}_sweref.dxf`] = Vagar.dxf(v, r, 0, 0, { slag: sl });
+        }
+        const per = {};
+        v.linjer.forEach(l => { per[l.lager] = (per[l.lager] || 0) + 1; });
+        const antalSlag = sl => v.linjer.filter(l => l.slag === sl).length;
+        const y = v.ytor, kallText = { osm: 'bredd i OSM', korfalt: 'antal körfält i OSM', ortofoto: 'mätt i ortofotot', schablon: 'schablon för vägtypen' };
+        const perKalla = {};
+        if (y) y.profiler.forEach(p => { perKalla[p.kalla] = (perKalla[p.kalla] || 0) + 1; });
+        extraInfo.push('', 'VÄGAR',
+          '  Källa: © OpenStreetMap-bidragsgivare, licens ODbL (www.openstreetmap.org/copyright). Hämtat via Overpass API.',
+          '  Mittlinjer i 2D (Z = 0), klippta mot utsnittet. Kvaliteten varierar; kontrollera mot grundkartan.',
+          `  Bilvägar och gångvägar i varsin fil: _vagar (${antalSlag('bil')} linjer) och _gangvagar (${antalSlag('gang')} linjer).`,
+          '  DXF-lager:',
+          ...Object.keys(Vagar.KLASSER).filter(k => per[k]).map(k => `    ${k}: ${Vagar.KLASSER[k].namn}, ${per[k]} linjer`),
+          ...(y ? [
+            '  VÄGYTOR (utkast, beräknade): slutna polylinjer i lagren VAG_YTA_BIL_BERAKNAD och VAG_YTA_GANG_BERAKNAD, ihopslagna i korsningarna. Kanterna är beräknade ur ortofotot (bilvägar), OSM:s bredd eller en schablon, inte inmätta.',
+            '    Bredden kommer från OSM:s bredd eller antal körfält när de finns, annars en schablon för vägtypen.'
+              + (y.medBild ? ' Bilvägarnas bredd och läge är mätta i ortofotot där vägbanan syns (färgen mitt på vägen följs ut till kanterna).' : ' Kryssa i Ortofoto för att mäta bilvägarnas bredd i bilden.'),
+            `    ${Object.keys(perKalla).map(k => `${perKalla[k]} ${perKalla[k] === 1 ? 'väg' : 'vägar'}: ${kallText[k]}`).join(', ')}.`,
+            '    Träd över vägen, skuggor, parkeringar och infarter gör mätningen osäker. Ett utkast att rätta, inte en inmätning.',
+          ] : []));
+        sammanExtra.push(['Vägar', `${antalSlag('bil')} bilvägar, ${antalSlag('gang')} gångvägar (OSM)` + (y ? `, ytor ${y.matta ? `(${y.matta} mätta i ortofotot)` : '(schablon)'}` : '')]);
+        visaVagar(v, tt);
+      } catch (e) { console.error(e); varningar.push('Vägar: ' + e.message); }
+    }
+  }
+
+  /** Soldiagram, med horisont om den är vald. */
+  async function skapaSol(kor) {
+    const { auth, delFramsteg, epsg, extraInfo, filer, franLL, horLL, mitt, mittTM, mos, ogon, sammanExtra, senaste, val, varningar } = kor;
+    // --- Soldiagram, med horisont om den är vald
+    if (val.sol) {
+      try {
+        delFramsteg('sol', 0, val.horisont ? 'Räknar horisont' : 'Ritar soldiagram');
+        let extra = {};
+        let horFel = null;
+        if (val.horisont) {
+          // Misslyckas horisonten skapas soldiagrammet ändå, utan horisont (0.12.1).
+          try {
+            const medTomt = $('hor-tomt').checked;
+            const bara = { ...mos, s: 1 };
+            let nara = kor.laserTM || bara;   // laserTM är byggd utan tomten om det är valt, se Laserdata ovan
+            if (senaste.volymer.length) {   // skissen räknas med i horisonten
+              const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
+              const volTM = senaste.volymer.map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
+              nara = Object.assign({}, nara, { data: Platsanalys.branInVolymer({ x0: nara.E0 + 0.5, y1: nara.N1 - 0.5, s: 1, W: nara.w, H: nara.h }, nara.data, volTM) });
+            }
+            // står punkten i ett hus eller under en krona räknas det objektet bort
+            const rensat = kor.laserTM ? Analys.rensaVidPunkt(nara, mos, mittTM[0], mittTM[1]) : 0;
+            const fjarr = await T.lasHojderGrov({ xmin: mittTM[0] - 5000, xmax: mittTM[0] + 5000, ymin: mittTM[1] - 5000, ymax: mittTM[1] + 5000 }, 8, auth);
+            const luckor = fjarr.fel.length ? ` ${fjarr.fel.length} av Markhöjdmodellens rutor runt platsen gick inte att läsa (${fjarr.fel.join(', ')}); horisonten saknar terrängen där.` : '';
+            if (luckor) varningar.push('Horisont:' + luckor);
+            const z0 = T.sampla(mos, mittTM[0], mittTM[1]) + ogon;
+            const konvH = konvergens(3006, horLL.lat, horLL.lon);
+            const varText = state.horPunkt ? 'i vald punkt' : 'i utsnittets mitt';
+            const hor = Analys.horisont(mittTM[0], mittTM[1], z0, nara, fjarr, konvH);
+            const horMark = kor.laserTM ? Analys.horisont(mittTM[0], mittTM[1], z0, bara, fjarr, konvH) : null;
+            const ogonTxt = String(ogon).replace('.', ',');
+            const rensatTxt = rensat ? ` Ett träd eller en byggnad (${fmt(rensat)} m²) står på punkten och räknas inte.` : '';
+            extra = {
+              horisont: hor,
+              horisontMark: horMark,
+              horisontPunkt: `${ogonTxt} m över mark ${varText}`,
+              horisontText: `Horisont: terräng, sedd ${ogonTxt} m över mark ${varText}.`,
+              horisontNot: `Horisont ur Markhöjdmodell (5 km)${kor.laserTM ? ` och Laserdata skog ${kor.laserDatum} (400 m)` : ''}.` +
+                (kor.laserTM ? (medTomt ? ' Träd och byggnader inom utsnittet ingår.' : ' Träd och byggnader inom utsnittet ingår inte.') + rensatTxt : ' Laserdata saknas, så bara terrängen ingår.') + luckor,
+            };
+            senaste.horisont = hor;
+            extraInfo.push('', 'HORISONT',
+              `  Sedd ${state.horPunkt ? `från vald punkt (X ${fmt(franLL(state.horPunkt)[0])}, Y ${fmt(franLL(state.horPunkt)[1])})` : 'från utsnittets mitt'}, ${ogonTxt} m över mark (${fmt(z0, 2)} m i RH 2000).`,
+              `  Terräng inom 5 km (8 m upplösning) och ${kor.laserTM ? 'träd och byggnader inom 400 m' : 'ingen laserdata'}. Jordkrökning och refraktion är med.`,
+              ...(rensat ? [`  Punkten står i eller under ett träd eller en byggnad (${fmt(rensat)} m²). Det objektet räknas inte.`] : []),
+              ...(luckor ? ['  ' + luckor.trim()] : []),
+              `  Horisontens höjdvinkel var 15:e grad (azimut: ${horMark ? 'terräng / med träd och byggnader' : 'vinkel'}):`,
+              '    ' + Array.from({ length: 24 }, (_, i) => `${i * 15}°: ${horMark ? fmt(Math.max(0, horMark[i * 30]), 1) + ' / ' : ''}${fmt(Math.max(0, hor[i * 30]), 1)}°`).join(', '));
+          } catch (e) {
+            console.error(e);
+            horFel = e.message;
+            extra = {};
+            senaste.horisont = null;
+            varningar.push('Horisont: ' + e.message + ' Soldiagrammet är gjort utan horisont.');
+          }
+        }
+        const sd = await skapaSoldiagram(extra);
+        senaste.solOpt = sd.opt;
+        filer[`soldiagram/soldiagram_${SOL_AR}_svart.pdf`] = sd.svart;
+        filer[`soldiagram/soldiagram_${SOL_AR}_vit.pdf`] = sd.vit;
+        extraInfo.push('', 'SOLDIAGRAM',
+          `  Dagjämningar och solstånd ${SOL_AR} för utsnittets mitt, ${fmt(mitt.lat, 4)}° N ${fmt(mitt.lon, 4)}° Ö.`,
+          '  Beräknat med NOAA:s solalgoritm och Meeus, kontrollerat mot NREL SPA.');
+        sammanExtra.push(['Soldiagram', `${SOL_AR}${extra.horisont ? ', med horisont' : (horFel ? ', utan horisont (fel)' : '')}`]);
+      } catch (e) { console.error(e); varningar.push('Soldiagram: ' + e.message); }
+    }
+  }
+
+  /** Lutning och skyfall som egna PDF:er (vektor), med hus och gränser för orientering. */
+  async function skapaLagerPdf(kor) {
+    const { epsg, filer, namn, projekt, r, senaste, varningar } = kor;
+    // --- Lutning och skyfall som egna PDF:er (vektor), med hus och gränser för orientering
+    if (senaste.lutning || senaste.skyfall) {
+      try {
+        await laddaPdf();
+        const liggande = r.xmax - r.xmin >= r.ymax - r.ymin;
+        let format = 'a3', skala = Utskrift.foreslaSkala(r, format, liggande);
+        if (skala > 2000) { format = 'a1'; skala = Utskrift.foreslaSkala(r, format, liggande); }
+        const bas = {
+          byggnader: senaste.byggnader ? senaste.byggnader.map(b => Object.assign({ centrum: Byggnad.tyngdpunkt(b.fotavtryck) }, b)) : null,
+          fastigheter: senaste.fastigheter || null, ram: true,
+        };
+        const lagerPdf = (rubrik, lager) => Utskrift.plan({
+          format, liggande, skala, utsnitt: r, fonter, lager: Object.assign({}, bas, lager),
+          titel: { projekt: `${rubrik} – ${projekt || namn}`, kommun: kommunText(), system: `Koordinatsystem ${T.zon(epsg).namn}`, datum: idag(),
+            kallor: `Ur Markhöjdmodell © Lantmäteriet (CC BY 4.0). Skapat med Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}. Underlag för tidiga skeden.` },
+        });
+        if (senaste.lutning) filer[`platsanalys/${namn}_lutning.pdf`] = lagerPdf('Lutning', { lutning: { konturer: senaste.lutning.konturer } });
+        if (senaste.skyfall) filer[`platsanalys/${namn}_skyfall.pdf`] = lagerPdf('Skyfall', { skyfall: senaste.skyfall });
+      } catch (e) { console.error(e); varningar.push('Lagren som PDF: ' + e.message); }
+    }
+  }
+
+  /** Platsanalysbladet. */
+  async function skapaBlad(kor) {
+    const { delFramsteg, epsg, filer, namn, projekt, r, res, sammanExtra, senaste, val, varningar } = kor;
+    // --- Platsanalysbladet
+    if (val.platsanalys) {
+      try {
+        delFramsteg('blad', 0, 'Ritar platsanalysbladet');
+        await laddaPdf();
+        const kap = kapitel();
+        const kallor = [['Markhöjdmodell', kor.harLaser && 'Laserdata skog', val.byggnader && 'Byggnad', val.fastigheter && 'Fastighetsindelning', val.marktacke && 'Marktäcke']
+          .filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' och $1') + ': © Lantmäteriet (CC BY 4.0).'];
+        if (val.fastigheter) kallor.push(Fastighet.VARNING);
+        if (val.skydd) kallor.push(...Object.values(Geodata.KALLOR));
+        if (val.sol) kallor.push('Solens läge: NOAA:s solalgoritm och Meeus, kontrollerat mot NREL SPA.');
+        kallor.push(`Skapat ${idag()} med Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}.`);
+        filer[`${namn}_platsanalys.pdf`] = Platsanalysblad.skapa({
+          fonter, r, kurvor: res.kurvor, markhojd: { lo: res.lo, hi: res.hi },
+          titel: { projekt: projekt || namn, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000`, datum: idag() },
+          kapitel: { sol: kap.sol, terrang: kap.terrang, vatten: kap.vatten, skydd: kap.skydd },
+          lutning: senaste.lutning, skyfall: senaste.skyfall, volymer: senaste.volymer, byggnader: senaste.byggnader, fastigheter: senaste.fastigheter,
+          sol: kap.sol ? senaste.solOpt : null, skuggor: kap.sol ? senaste.skuggOpt : null,
+          solSammanfattning: senaste.horisont ? [['Horisont', state.horPunkt ? 'från vald punkt, se blad 2' : 'från utsnittets mitt, se blad 2']] : null,
+          natur: senaste.natur, lamningar: senaste.lamningar, oversvamning: senaste.oversvamning, oversvamningBilder: senaste.oversvamningBilder, strand: senaste.strand,
+          kallor,
+        });
+        sammanExtra.push(['Platsanalys', 'blad i PDF']);
+      } catch (e) { console.error(e); varningar.push('Platsanalysbladet: ' + e.message); }
+    }
+  }
+
+  /** Projektfilen i zip:ens rot. */
+  async function skapaProjektfilen(kor) {
+    const { extraInfo, filer, namn, senaste, val, varningar } = kor;
+    // --- Projektfilen i roten (0.13.0): mappen räcker för att öppna projektet och skapa underlaget igen
+    try {
+      projektEfterSkapa(senaste, val);
+      filer[`${namn}${Projekt.ANDELSE}`] = await projektfilData('uint8array');
+      extraInfo.push('', 'PROJEKTFIL',
+        `  ${namn}${Projekt.ANDELSE} innehåller utsnittet, valen och det du har matat in (volymer, sektioner, rättelser),`,
+        '  men inget underlag från Lantmäteriet. Öppna den i Höjdkurvor med Öppna projektfil under 01 Plats,',
+        '  eller dra den till kartan, och välj Skapa för att hämta underlaget igen.');
+    } catch (e) { console.error(e); varningar.push('Projektfilen: ' + e.message); }
+  }
+
+  /** Samlad DXF i roten. */
+  function skapaSamladDxf(kor) {
+    const { extraInfo, filer, namn, varningar } = kor;
+    // --- Samlad DXF i roten: alla DXF-underlag i en fil, en för lokala koordinater och en för SWEREF
+    for (const sys of ['lokal', 'sweref']) {
+      const delar = Object.keys(filer).filter(f => f.includes('/') && f.endsWith(`_${sys}.dxf`)).sort();
+      if (delar.length < 2) continue;
+      try {
+        filer[`${namn}_samlad_${sys}.dxf`] = Dxf.sammanfoga(delar.map(f => filer[f]));
+        if (sys === 'lokal') extraInfo.push('', 'SAMLAD DXF',
+          `  _samlad_lokal.dxf och _samlad_sweref.dxf innehåller alla ${delar.length} DXF-underlag med sina lager, kopierade in i en fil:`,
+          ...delar.map(f => '    ' + f.replace(`_${sys}.dxf`, '')),
+          '  Ortofotot och lagren som bild (JPEG) ingår inte; lägg in dem med världsfilerna.');
+      } catch (e) { console.error(e); varningar.push('Samlad DXF: ' + e.message); }
+    }
+  }
+
+  /** Info-filen och zip-filen. */
+  async function packaZip(kor) {
+    const { extraInfo, filer, infoNamn, namn, res } = kor;
+    if (extraInfo.length) filer[infoNamn] = res.filer[infoNamn] + extraInfo.join('\r\n') + '\r\n';
+
+    // --- Paketera
+    visaStatus('Packar zip-filen …');
+    matare(99);
+    const zip = new JSZip();
+    const mapp = namn.replace(/[^\wåäöÅÄÖ.-]+/g, '_');
+    Object.entries(filer).forEach(([fil, innehall]) => zip.file(fil, innehall));
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    state.zipBlob = blob; state.zipNamn = `${mapp}.zip`;
+    $('ladda-ner').textContent = `Ladda ner ${mapp}.zip (${fmt(blob.size / 1e6, 1)} MB)`;
+  }
+
+  /** Sammanfattningen, resultatet på kartan och statusraden. */
+  function visaKlart(kor) {
+    const { epsg, filer, r, res, sammanExtra, senaste, tt, varningar } = kor;
+    const rader = [
+      ['Nollpunkt', `X ${fmt(res.X0, res.X0 % 1 ? 3 : 0)}, Y ${fmt(res.Y0, res.Y0 % 1 ? 3 : 0)}` + (res.Z0 ? `, Z ${fmt(res.Z0, 3)}` : '') + (res.egen ? ' (egen)' : '')],
+      ...(kor.vrid ? [['Vridning', `${fmt(kor.vrid, 2)}° medurs (${kor.vridText})`]] : []),
+      ['System', T.zon(epsg).namn],
+      ['Storlek', `${fmt(r.xmax - r.xmin)} × ${fmt(r.ymax - r.ymin)} m`],
+      ['Markhöjd', `${fmt(res.lo, 2)}–${fmt(res.hi, 2)} m`],
+      ['Kurvor', `${fmt(res.kurvor.length)} linjer`],
+      ...sammanExtra,
+      ['Filer', Object.keys(filer).length + ' st i zip-filen'],
+    ];
+    const dl = $('sammanfattning');
+    dl.innerHTML = '';
+    rader.forEach(([a, b]) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = a; dd.textContent = b; dl.append(dt, dd); });
+    state.senaste = senaste;
+    visaSkugga();
+    $('resultat').hidden = false;
+    $('visa-3d').hidden = !senaste.rutnat;
+    $('skapa').classList.add('gjord');
+    matare(null);
+    visaStatus(varningar.length ? varningar.join('\n') : 'Klart. Resultatet visas på kartan som kontroll.', false);
+
+    const stil = {
+      HOJDKURVA_10M: { weight: 2.4, opacity: 1 }, HOJDKURVA_5M: { weight: 1.7, opacity: 0.95 }, HOJDKURVA_1M: { weight: 1, opacity: 0.85 },
+      HOJDKURVA_0_5M: { weight: 0.6, opacity: 0.7 }, HOJDKURVA_0_25M: { weight: 0.4, opacity: 0.6 },
+    };
+    const kGrp = L.featureGroup(res.kurvor.map(k => {
+      const pts = k.pts.map(tt);
+      if (k.sluten) pts.push(pts[0]);
+      return L.polyline(pts, Object.assign({ color: farg('kurva'), renderer: kurvRitare, interactive: false }, stil[k.lager]));
+    }));
+    visaResultatLager('kurvor', kGrp, () => kGrp.setStyle({ color: farg('kurva') }));
+    fyllUtskrift();
+    visaPaKartan();
+    $('resultat').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (window.innerWidth >= 760) lagerpanel.classList.remove('ihop');
+  }
+
+  /**
+   * Stegen efter förberedelserna, i den ordning de körs. Ordningen spelar roll: laserdatan
+   * räknas in i markmodellen från skapaTerrang, byggnaderna behövs för träden och skuggorna,
+   * ortofotot för vägarnas bredd, och bladet, den samlade DXF:en och zip-filen kommer sist.
+   */
+  const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaLagerPdf, skapaBlad, skapaProjektfilen, skapaSamladDxf, packaZip, visaKlart];
+
+  $('skapa').addEventListener('click', async () => {
+    const kor = {};
+    if (!lasSkapaVal(kor)) return;
+    const knapp = $('skapa');
+    knapp.disabled = true;
+    lasProjektbyte(true);
+    nollstallResultat();
+    matare(0);
+    try {
+      if (!planeraSkapa(kor)) { matare(null); return; }
+      // De lokala filernas vridning läses av Terrang.tillLokal under hela körningen och
+      // nollställs i finally. Den är fortfarande en inställning i Terrang, inte ett argument.
+      T.lokal.vrid = kor.vrid;
+      for (const steg of SKAPA_STEG) await steg(kor);
     } catch (err) {
       matare(null);
       if (err instanceof T.InloggningsFel) { visaStatus(err.message, true); $('anv').focus(); }
@@ -2406,6 +2528,7 @@
       lasProjektbyte(false);
     }
   });
+
 
   $('ladda-ner').addEventListener('click', async () => {
     if (!state.zipBlob) return;
