@@ -128,5 +128,41 @@ T.registreraZoner();
   assert.notStrictEqual(kop.projekt.id, proj.projekt.id); assert.strictEqual(kop.projekt.namn, 'Ölandet 1:2 (kopia)');
   assert.strictEqual(kop.inmatning.volymer.length, 2);
 
+  // --- trasiga filer (0.13.3): fält av fel sort ersätts med standardvärden, och det som inte går att rita tas bort
+  for (const [vad, andra] of Object.entries({
+    'projekt som text': x => { x.projekt = 'hej'; }, 'projekt null': x => { x.projekt = null; }, 'inmatning null': x => { x.inmatning = null; },
+    'inmatning lista': x => { x.inmatning = []; }, 'rättelser null': x => { x.inmatning.rattelser = null; }, 'tak null': x => { x.inmatning.rattelser.tak = null; },
+    'plats null': x => { x.plats = null; }, 'val null': x => { x.val = null; }, 'underlag null': x => { x.underlag = null; },
+  })) {
+    const x = P.nytt({ namn: 'Trasig' }); andra(x);
+    const l = P.las(JSON.stringify(x));
+    assert.ok(l.projekt.id && typeof l.projekt.id === 'string', vad);
+    assert.deepStrictEqual(Object.keys(l.inmatning.rattelser).sort(), ['hus', 'tak', 'trad'], vad);
+    assert.ok(l.inmatning.rattelser.tak && l.plats && l.plats.nollpunkt && l.val && l.underlag && Array.isArray(l.inmatning.volymer), vad);
+  }
+  const skrap = P.nytt();
+  skrap.inmatning.volymer = [null, { id: 'a' }, { id: 'b', fotavtryck: [[0, 0], [1, 'x'], [1, 1]] }, { id: 'c', fotavtryck: [[0, 0], [1, 0], [1, 1]] }];
+  skrap.inmatning.sektioner = [null, { namn: 'A' }, { namn: 'B', a: [1, 2], b: [3, null] }, { namn: 'C', a: [1, 2], b: [3, 4] }];
+  skrap.plats.utsnitt = { xmin: 0, ymin: 0, xmax: 'bred', ymax: 10 }; skrap.plats.mitt = 'mitten'; skrap.plats.horisontpunkt = [1];
+  const rensad = P.las(skrap);
+  assert.deepStrictEqual(rensad.inmatning.volymer.map(v => v.id), ['c']); assert.deepStrictEqual(rensad.inmatning.sektioner.map(v => v.namn), ['C']);
+  assert.strictEqual(rensad.plats.utsnitt, null); assert.strictEqual(rensad.plats.mitt, null); assert.strictEqual(rensad.plats.horisontpunkt, null);
+  assert.strictEqual(P.las({ format: P.FORMAT, version: 1, projekt: { id: 7 } }).projekt.id, '7');
+
+  // --- trädvalen slås ihop utan tvillingar (0.13.3): zon → TM → zon flyttar var femte nyckel en decimeter,
+  // och förut låg då både den gamla och den nya nyckeln kvar, så att ett träd som visades igen förblev dolt
+  const globala = {}; let fro = 1; const slump = () => (fro = (fro * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 500; i++) globala[`${(150000 + slump() * 400).toFixed(1)},${(6430000 + slump() * 400).toFixed(1)}`] = { dolt: true };
+  const antalFore = Object.keys(globala).length;
+  const iFilen = P.flyttaTradval(globala, tillTM);
+  assert.ok(Object.keys(Object.assign({}, globala, P.flyttaTradval(iFilen, franTM))).length > antalFore, 'utan sammanslagningen blir det tvillingar');
+  P.slaIhopTradval(globala, P.flyttaTradval(iFilen, franTM));
+  assert.strictEqual(Object.keys(globala).length, antalFore, 'inga tvillingar');
+  P.slaIhopTradval(globala, { '150999.9,6430999.9': { art: 'tall' }, 'trasig': { dolt: true } });
+  assert.strictEqual(Object.keys(globala).length, antalFore + 2); assert.deepStrictEqual(globala['150999.9,6430999.9'], { art: 'tall' });
+  const en = { '10.0,20.0': { dolt: true } };
+  P.slaIhopTradval(en, { '10.1,20.0': { hojd: 12 } });
+  assert.deepStrictEqual(en, { '10.0,20.0': { hojd: 12 } }, 'valet i filen gäller, på den nyckel som redan fanns');
+
   console.log('projekt: ok');
 })().catch(e => { console.error(e); process.exit(1); });

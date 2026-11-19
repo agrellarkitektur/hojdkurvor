@@ -1,4 +1,5 @@
-# Höjdkurvor på webbhotellet (0.8.1)
+# Höjdkurvor på en server med Apache (0.8.1). På hojdkurvor.danaid.cloud används den inte:
+# Caddy läser inte .htaccess, och samma regler står i drift/apps.caddy i agrellarkitektur/apps.
 #
 # Webbläsaren ska fråga servern om sidorna har ändrats i stället för att
 # använda en gammal kopia, så att en ny version syns direkt. Skript och
@@ -7,7 +8,6 @@
 # öppnas direkt.
 #
 # Allt ligger inom IfModule, så att webbhotellet hoppar över det som saknas.
-# Svarar sidan 500 efter publiceringen tar publicera.yml bort filen från servern.
 
 <IfModule mod_mime.c>
   AddCharset utf-8 .html .js .css .json .md .txt

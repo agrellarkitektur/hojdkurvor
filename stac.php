@@ -36,7 +36,7 @@ $ctx = stream_context_create(['http' => [
     'method' => 'GET',
     'timeout' => 20,
     'ignore_errors' => true,
-    'header' => "Accept: application/geo+json, application/json\r\nUser-Agent: Terrangunderlag\r\n",
+    'header' => "Accept: application/geo+json, application/json\r\nUser-Agent: Hojdkurvor\r\n",
 ]]);
 $svar = @file_get_contents($url, false, $ctx);
 if ($svar === false) {
@@ -49,5 +49,6 @@ if (isset($http_response_header[0]) && preg_match('#\s(\d{3})\s#', $http_respons
     $status = (int) $m[1];
 }
 http_response_code($status);
-header('Cache-Control: public, max-age=3600');
+// Bara lyckade svar sparas i webbläsaren. Ett tillfälligt fel ska inte ligga kvar i en timme.
+header($status === 200 ? 'Cache-Control: public, max-age=3600' : 'Cache-Control: no-store');
 echo $svar;

@@ -60,5 +60,6 @@ if (isset($http_response_header)) {
 if (!in_array($typ, $TYPER, true)) fel(502, 'Oväntat svar från tjänsten');
 http_response_code($status);
 header('Content-Type: ' . $typ);
-header('Cache-Control: public, max-age=3600');
+// Bara lyckade svar sparas i webbläsaren. Ett tillfälligt fel ska inte ligga kvar i en timme.
+header($status === 200 ? 'Cache-Control: public, max-age=3600' : 'Cache-Control: no-store');
 echo $svar;

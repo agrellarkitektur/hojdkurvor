@@ -120,6 +120,18 @@ node test/projekt.test.js
 ```
 
 ```
+node test/vagar.test.js
+```
+
+```
+node test/objektval.test.js
+```
+
+```
+node test/sol.test.js
+```
+
+```
 python3 test/server.py test/data .
 ```
 

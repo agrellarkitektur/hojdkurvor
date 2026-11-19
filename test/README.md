@@ -74,6 +74,14 @@ node test/horisont.test.js
 node test/projekt.test.js
 ```
 
+```
+node test/sol.test.js
+```
+
+`sol.test.js` (0.13.3) prövar solens läge mot referensvärden (NREL:s SPA) för fyra orter,
+dagjämningar och solstånd 2026, svensk tid kring sommartidens gränser, upp- och nedgång, och
+skuggornas längd från en mur där svaret går att räkna för hand, också med vridet rutnät.
+
 Versionstestet kontrollerar att `?v=` i HTML-sidorna, `FILVERSION` i `app.js`
 och `Vy3D.version` är samma som i `version.js`. Med `--skriv` rättar det dem.
 Gränssnittstestet sätter `window.TERRANG_TEST = {}`; appen lägger då 3D-vyn i
@@ -155,7 +163,9 @@ python3.12 test/data/make_dtm.py test/data
 python3.12 test/data/make_landskap.py test/data test/data/wkt5845.txt
 ```
 
-Kräver numpy, scipy, GDAL (osgeo) och copclib. `make_dtm.py` skapar
+Kräver numpy, scipy, GDAL (osgeo) och copclib (`pip install copclib`). Saknas GDAL går
+höjdrutorna och ortofotona att skriva med rasterio i stället (drivrutinen `COG`, samma
+inställningar); det gjordes vid granskningen 19 november 2026. `make_dtm.py` skapar
 höjdmodellens två rutor (`m642_53.tif`, `m642_54.tif`) och `make_landskap.py`
 en COPC-fil med träd och ett hus (`y21c007-64275_5375_25.copc.laz`) och facit
 (`facit.json`) på samma markyta.

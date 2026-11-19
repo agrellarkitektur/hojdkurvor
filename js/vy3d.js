@@ -693,7 +693,8 @@
     const tangentUpp = e => { const t = TANGENTER[e.code]; if (t) tangent[t] = false; };
     window.addEventListener('keydown', tangentNed);
     window.addEventListener('keyup', tangentUpp);
-    window.addEventListener('blur', () => { for (const t in tangent) tangent[t] = false; });
+    const slappTangenter = () => { for (const t in tangent) tangent[t] = false; };
+    window.addEventListener('blur', slappTangenter);
 
     // spaken på pekskärmen: dra från mitten för att gå, längst ut springer man
     const spak = document.createElement('div');
@@ -1493,6 +1494,7 @@
         window.removeEventListener('keydown', tangentNed);
         window.removeEventListener('keyup', tangentUpp);
         window.removeEventListener('keydown', redigeraTangent);
+        window.removeEventListener('blur', slappTangenter);
         document.removeEventListener('mousemove', musLas);
         document.removeEventListener('pointerlockchange', lasAndrat);
         renderer.dispose();

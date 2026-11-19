@@ -60,11 +60,13 @@
   /** Lägger till det som saknas i mal ur std, utan att ändra det som finns. Listor fylls inte i. */
   function fyll(mal, std) {
     for (const k of Object.keys(std)) {
-      if (!(k in mal) || mal[k] === undefined) mal[k] = kopia(std[k]);
+      // ett fält som ska vara ett objekt men är något annat (null, text, lista) räknas som saknat
+      if (!(k in mal) || mal[k] === undefined || (arObjekt(std[k]) && !arObjekt(mal[k]))) mal[k] = kopia(std[k]);
       else if (arObjekt(mal[k]) && arObjekt(std[k])) fyll(mal[k], std[k]);
     }
     return mal;
   }
+  const arPunkt = p => Array.isArray(p) && typeof p[0] === 'number' && typeof p[1] === 'number' && isFinite(p[0]) && isFinite(p[1]);
 
   /**
    * Migrering: MIGRERA[n](d) gör en fil i version n till version n + 1. Lägg till en funktion här
@@ -85,11 +87,19 @@
       if (!MIGRERA[ut.version]) throw new Error(`projektfilens format ${ut.version} kan inte läsas.`);
       ut = MIGRERA[ut.version](ut);
     }
-    fyll(ut, standard(ut.projekt && ut.projekt.id));
-    if (!ut.projekt.id) ut.projekt.id = nyttId();
+    fyll(ut, standard(arObjekt(ut.projekt) ? ut.projekt.id : undefined));
+    if (typeof ut.projekt.id !== 'string' || !ut.projekt.id) ut.projekt.id = typeof ut.projekt.id === 'number' ? String(ut.projekt.id) : nyttId();
     for (const k of ['forslag', 'volymer', 'sektioner', 'punkter', 'overlagringar', 'anteckningar', 'vyer']) {
       if (!Array.isArray(ut.inmatning[k])) ut.inmatning[k] = [];
     }
+    // det appen ritar måste gå att rita: volymer med fotavtryck och sektioner med två punkter
+    ut.inmatning.forslag = ut.inmatning.forslag.filter(arObjekt);
+    ut.inmatning.volymer = ut.inmatning.volymer.filter(v => arObjekt(v) && Array.isArray(v.fotavtryck) && v.fotavtryck.length >= 3 && v.fotavtryck.every(arPunkt));
+    ut.inmatning.sektioner = ut.inmatning.sektioner.filter(s => arObjekt(s) && arPunkt(s.a) && arPunkt(s.b));
+    const u = ut.plats.utsnitt;
+    if (u && !(['xmin', 'ymin', 'xmax', 'ymax'].every(k => typeof u[k] === 'number' && isFinite(u[k])) && u.xmax > u.xmin && u.ymax > u.ymin)) ut.plats.utsnitt = null;
+    if (ut.plats.mitt && !arPunkt(ut.plats.mitt)) ut.plats.mitt = null;
+    if (ut.plats.horisontpunkt && !arPunkt(ut.plats.horisontpunkt)) ut.plats.horisontpunkt = null;
     if (!ut.inmatning.forslag.length) ut.inmatning.forslag = [{ id: nyttId(), namn: 'Basfall', aktivt: true }];
     if (!Array.isArray(ut.historik)) ut.historik = [];
     return ut;
@@ -209,6 +219,22 @@
     }
     return ut;
   }
+  /**
+   * För in trädvalen nya i mal (ändrar mal och returnerar det). Ett val som redan finns i mal inom
+   * tol meter skrivs över i stället för att få en tvilling: när nycklarna (läget i dm) räknas till
+   * SWEREF 99 TM och tillbaka kan de hamna en decimeter bredvid, och då fanns valet kvar när det togs bort.
+   */
+  function slaIhopTradval(mal, nya, tol = 0.15) {
+    const lagen = Object.keys(mal).map(k => { const [x, y] = k.split(',').map(Number); return { k, x, y }; }).filter(p => isFinite(p.x) && isFinite(p.y));
+    for (const [k, v] of Object.entries(nya || {})) {
+      if (Object.prototype.hasOwnProperty.call(mal, k)) { mal[k] = v; continue; }
+      const [x, y] = k.split(',').map(Number);
+      const nara = isFinite(x) && isFinite(y) ? lagen.find(p => Math.abs(p.x - x) <= tol && Math.abs(p.y - y) <= tol) : null;
+      if (nara) mal[nara.k] = v;
+      else { mal[k] = v; lagen.push({ k, x, y }); }
+    }
+    return mal;
+  }
   /** Hur många volymer och sektioner (i samma system som r) som ligger helt utanför utsnittet r. */
   function utanfor(volymer, sektioner, r) {
     if (!r) return { volymer: 0, sektioner: 0 };
@@ -317,7 +343,7 @@
   return {
     FORMAT, VERSION, ANDELSE, NyareVersion, MIGRERA,
     nyttId, standard, nytt, las, bevara, stabil, innehall, logga, somKopia, sammanfatta, sammanfattningText,
-    runda, vinkel, flyttaVolym, flyttaTradval, utanfor, utanforText,
+    runda, vinkel, flyttaVolym, flyttaTradval, slaIhopTradval, utanfor, utanforText,
     packa, lasFil,
     uppgradera, oppnaDb, dbSpara, dbLas, dbTaBort, dbAlla, storlek,
   };

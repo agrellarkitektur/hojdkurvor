@@ -1333,7 +1333,7 @@
     lista.innerHTML = '';
     state.sektioner.forEach((s, i) => {
       const linje = L.polyline([s.a, s.b], { color: farg('annot'), weight: 1.3, interactive: true, bubblingMouseEvents: false })
-        .bindTooltip(`${s.namn}–${s.namn}: klicka för att vända blickriktningen`, { sticky: true });
+        .bindTooltip(`${esc(s.namn)}–${esc(s.namn)}: klicka för att vända blickriktningen`, { sticky: true });
       linje.on('click', () => vandSektion(i));
       linje.addTo(sektionLager);
       L.marker(s.a, { interactive: false, keyboard: false, icon: sektionsAnde(s, 'a') }).addTo(sektionLager);
@@ -1462,7 +1462,7 @@
       const k = state.kommuner && state.kommuner.find(x => x.properties.kod === f.kod);
       const li = document.createElement('li');
       const prod = Kommunfil.PRODUKTER[f.produkt];
-      li.innerHTML = `<span>${prod ? prod.namn : f.produkt} ${k ? k.properties.namn : f.kod}, ${storlekText(f.storlek)}<br><small>hämtat ${datumKort(f.sparad)}, använt ${datumKort(f.anvand)}</small></span>`;
+      li.innerHTML = `<span>${esc(prod ? prod.namn : f.produkt)} ${esc(k ? k.properties.namn : f.kod)}, ${storlekText(f.storlek)}<br><small>hämtat ${datumKort(f.sparad)}, använt ${datumKort(f.anvand)}</small></span>`;
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'lank-ta-bort'; b.textContent = 'Ta bort';
       b.addEventListener('click', async () => { await Kommunfil.taBort(f.nyckel); visaLagring(); });
@@ -2057,7 +2057,7 @@
           sammanExtra.push(['Marktäcke', `${typer.length} typer, ${m.ytor.length} ytor`]);
           visaResultatLager('marktacke', L.layerGroup(m.ytor.map(y => {
             const f = Marktacke.farg(y.klass);
-            return L.polygon(y.ringar.map(ring => ring.map(tt)), { color: f.css, weight: 0.8, fillColor: f.css, fillOpacity: 0.3 }).bindTooltip(y.klass, { sticky: true });
+            return L.polygon(y.ringar.map(ring => ring.map(tt)), { color: f.css, weight: 0.8, fillColor: f.css, fillOpacity: 0.3 }).bindTooltip(esc(y.klass), { sticky: true });
           })));
           visaLagring();
         } catch (e) { console.error(e); varningar.push('Marktäcke: ' + e.message); }
@@ -2123,7 +2123,7 @@
           sammanExtra.push(['Stompunkter', `${sp.length} st`]);
           const spStil = () => ({ color: farg('sp'), weight: 2, fillColor: farg('sp-fyll'), fillOpacity: 1 });
           const spGrp = L.featureGroup(sp.map(p => L.circleMarker(tt([p.x, p.y]), Object.assign({ radius: 6 }, spStil()))
-            .bindPopup(`<strong>${p.namn || p.id}</strong><br>${p.typ}${p.kategori ? ', ' + p.kategori : ''}<br>${p.z != null ? 'Höjd ' + fmt(p.z, 3) + ' m (RH 2000)<br>' : ''}${p.markering ? 'Markering: ' + p.markering + '<br>' : ''}${p.beskrivning ? '<small>' + p.beskrivning + '</small>' : ''}`)));
+            .bindPopup(`<strong>${esc(p.namn || p.id)}</strong><br>${esc(p.typ)}${p.kategori ? ', ' + esc(p.kategori) : ''}<br>${p.z != null ? 'Höjd ' + fmt(p.z, 3) + ' m (RH 2000)<br>' : ''}${p.markering ? 'Markering: ' + esc(p.markering) + '<br>' : ''}${p.beskrivning ? '<small>' + esc(p.beskrivning) + '</small>' : ''}`)));
           visaResultatLager('stompunkter', spGrp, () => spGrp.setStyle(spStil()));
         } catch (e) { console.error(e); varningar.push('Stompunkter: ' + e.message); }
       }
@@ -2535,7 +2535,7 @@
     }
     if (Array.isArray(s.natur) && s.natur.length) {
       const stil = () => ({ color: farg('natur'), weight: 2, dashArray: '6 4', fillColor: farg('natur'), fillOpacity: 0.08 });
-      const pol = s.natur.flatMap(o => o.ringar.map(rg => L.polygon(rg.map(t), stil()).bindTooltip(`${o.typ}${o.namn ? ': ' + o.namn : ''}`, { sticky: true })));
+      const pol = s.natur.flatMap(o => o.ringar.map(rg => L.polygon(rg.map(t), stil()).bindTooltip(esc(`${o.typ}${o.namn ? ': ' + o.namn : ''}`), { sticky: true })));
       const grp = L.featureGroup(pol);
       visaResultatLager('natur', grp, () => pol.forEach(p => p.setStyle(stil())));
     }
@@ -2799,14 +2799,18 @@
     if (p.i) $('intervall').value = p.i;
     if (p.m) $('mesh').value = p.m;
     if (p.hp) $('hojdpunkt-steg').value = p.hp;
-    if (p.u != null) { const rr = document.querySelector(`input[name=utjamning][value="${p.u}"]`); if (rr) rr.checked = true; }
+    if (p.u != null) { const rr = [...document.querySelectorAll('input[name=utjamning]')].find(c => c.value === String(p.u)); if (rr) rr.checked = true; }
     if (p.n) { $('projekt').value = p.n; $('projekt').dispatchEvent(new Event('input')); }
     if (p.np) {
       document.querySelector('input[name=nollpunkt][value=egen]').checked = true; $('egen-nollpunkt').hidden = false;
       [$('np-x').value, $('np-y').value, $('np-z').value] = p.np.map(String);
     }
     if (p.vr) { $('vrid').value = p.vr[0]; $('vrid-grader').value = p.vr[1] || ''; $('vrid-egen-rad').hidden = p.vr[0] !== 'egen'; }
-    if (p.s) { state.sektioner = p.s.map(x => ({ id: Utbyte.nyttId(), namn: x[0], a: [x[1], x[2]], b: [x[3], x[4]], vand: !!x[5] })); sparaSektioner(); }
+    if (Array.isArray(p.s)) {
+      state.sektioner = p.s.filter(x => Array.isArray(x) && [1, 2, 3, 4].every(i => typeof x[i] === 'number' && isFinite(x[i])))
+        .map(x => ({ id: Utbyte.nyttId(), namn: String(x[0] == null ? '' : x[0]).slice(0, 40), a: [x[1], x[2]], b: [x[3], x[4]], vand: !!x[5] }));
+      sparaSektioner(); ritaSektioner();
+    }
     if (p.h) state.horPunkt = p.h;
     state.epsg = p.e; state.zonManuell = true; zonVal.value = p.e;
     state.utsnitt = { xmin: p.r[0], ymin: p.r[1], xmax: p.r[2], ymax: p.r[3] };
@@ -2873,7 +2877,7 @@
     if (v.intervall) $('intervall').value = v.intervall;
     if (v.mesh) $('mesh').value = v.mesh;
     if (v.hojdpunktSteg) $('hojdpunkt-steg').value = v.hojdpunktSteg;
-    if (v.utjamning != null) { const r = document.querySelector(`input[name=utjamning][value="${v.utjamning}"]`); if (r) r.checked = true; }
+    if (v.utjamning != null) { const r = [...document.querySelectorAll('input[name=utjamning]')].find(c => c.value === String(v.utjamning)); if (r) r.checked = true; }
     if (v.ritprogram !== undefined) { state.ritprogram = v.ritprogram; visaRitprogram(); }
     const a = v.analys;
     if (a) {
@@ -3034,7 +3038,7 @@
       // rättelserna gäller samma hus och träd i alla projekt, så de förs in bland de globala
       const rt = im.rattelser || {};
       const tak = takval(), hus = husval(), trad = tradval();
-      Object.assign(tak, rt.tak || {}); Object.assign(hus, rt.hus || {}); Object.assign(trad, Projekt.flyttaTradval(rt.trad || {}, f));
+      Object.assign(tak, rt.tak || {}); Object.assign(hus, rt.hus || {}); Projekt.slaIhopTradval(trad, Projekt.flyttaTradval(rt.trad || {}, f));
       lager.spara('localStorage', TAKVAL, tak); lager.spara('localStorage', HUSVAL, hus); lager.spara('localStorage', TRADVAL, trad);
       if (pl.utsnitt) {
         state.utsnitt = Object.assign({}, pl.utsnitt);
