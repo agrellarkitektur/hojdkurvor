@@ -39,6 +39,14 @@ node test/version.test.js
 ```
 
 ```
+node test/kalla.test.js
+```
+
+`kalla.test.js` kontrollerar licensen: länken till källkoden (`js/kalla.js`) på
+alla sidor, Stöd utvecklingen på Om-sidan, att `LICENSE` är AGPL-3.0 och att
+alla egna källfiler har licenshuvudet.
+
+```
 node test/vy3d.test.js
 ```
 

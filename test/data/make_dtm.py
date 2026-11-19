@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Agrell Arkitektur
 """Höjdmodell för testlandskapet: 1 m, E 537750–541750, N 6425700–6429700, två COG-rutor.
 Kör med python3.12 (GDAL)."""
 import sys, os

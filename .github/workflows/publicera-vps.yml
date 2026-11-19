@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Agrell Arkitektur
 # Kontrollerar appen och lägger den på VPS:en (https://hojdkurvor.danaid.cloud/)
 # med rsync över SSH vid varje push till main (ändringar som bara rör
 # dokumentationen hoppas över). Kan också köras för hand under Actions →
@@ -9,6 +11,8 @@
 #     Den är låst till rsync i /srv/apps/www/hojdkurvor och kan inte köra kommandon.
 #   - .github/known_hosts: serverns nycklar, kopierade från drift/known_hosts i apps.
 #   - Caddy-sajten för hojdkurvor.danaid.cloud ligger i drift/apps.caddy i apps.
+#
+# Commiten skrivs in i js/kalla.js (länken till källkoden, AGPL §13).
 #
 # Samma urval som release.yml: allt utom test, docs, .github,
 # CLAUDE.md och .gitignore. Serverns egna filer (feedback-config.php och annat
@@ -71,6 +75,9 @@ jobs:
         run: |
           mkdir -p ut
           git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C ut
+          # Länken till källkoden går till just den här commiten (AGPL §13, js/kalla.js).
+          grep -q "commit: ''" ut/js/kalla.js || { echo "::error::js/kalla.js saknar raden commit: ''"; exit 1; }
+          sed -i "s/commit: ''/commit: '$GITHUB_SHA'/" ut/js/kalla.js
 
       - name: Ladda upp till VPS:en
         env:

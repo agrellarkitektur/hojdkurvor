@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * BETA-knappen i menyraden och formuläret Skicka synpunkter (0.7.0), på alla sidor.
  *

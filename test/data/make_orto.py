@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Agrell Arkitektur
 """Låtsasortofoton för testerna, i samma form som Lantmäteriets Ortofoto Nedladdning (COG, SWEREF 99 TM).
 
     python3.12 test/data/make_orto.py test/data

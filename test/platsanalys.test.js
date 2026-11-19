@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 // Kör med: node test/platsanalys.test.js
 const assert = require('assert');
 globalThis.proj4 = require('../vendor/proj4.js');

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Kommunfiler från Lantmäteriets nedladdning (STAC-vektor): en zip med en
  * GeoPackage per kommun och produkt. Gemensamt för marktäcke, byggnader och

@@ -1,9 +1,18 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.1 (flytten klar, AX).
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.2 (AGPL och Stöd utvecklingen).
 
 ## Läget
+
+- **0.13.2** 19 november: licensbytet till AGPL-3.0-or-later och avsnittet
+  Stöd utvecklingen på Om-sidan, efter `docs/LICENS.md` (samma beslut som i
+  cad-apa 0.12.5.4). Länken *Källkoden* (`js/kalla.js`) får commiten inskriven
+  av `publicera-vps.yml` och `release.yml`. `THIRD_PARTY.md` heter nu
+  `THIRD-PARTY.md`. Inget nytt i kartan. Kvar för ägaren: CLA Assistant,
+  juristen och Swish (se `docs/LICENS.md`). Gränssnittstesterna med testdata
+  kördes inte (testmiljön saknade GDAL och copclib för testdatan); sidorna är
+  provade i Chromium utan fel och skärmbilderna av Om-sidan är kontrollerade.
 
 - **0.13.1** 19 november: flytten är klar. `cadApaUrl` är
   `https://cad-apa.danaid.cloud/` (cad-apa godtar redan

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Sidan Beställ: samlar beställningen och öppnar den som e-post i besökarens eget e-postprogram.
  * Ingenting skickas från sidan.

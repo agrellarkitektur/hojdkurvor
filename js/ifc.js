@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * IFC4-skrivare för befintliga byggnader (0.8.0): varje byggnad med känd höjd blir en
  * IfcBuildingElementProxy med en extruderad volym från markhöjden upp till takhöjden

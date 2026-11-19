@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Enhetstest för volymerna i 3D-vyn (0.10.0, js/volym3d.js): primitiver, taket, snäpp,
  * kontakter, länkar och konturerna när volymer går in i varandra.

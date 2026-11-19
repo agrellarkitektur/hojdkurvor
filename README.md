@@ -14,7 +14,8 @@ projekt i webbläsaren och kan sparas som projektfil (`.hojdkurvor`, se `docs/PR
 Live: <https://hojdkurvor.danaid.cloud/>. Den gamla adressen
 agrellarkitektur.se/terrang/ är avstängd sedan 0.13.1, se `docs/FLYTT.md`.
 Utvecklad av [Agrell Arkitektur](https://agrellarkitektur.se).
-Licens: GPL-3.0 eller senare, se `LICENSE`. Tredjepartskod och data: `THIRD_PARTY.md`.
+Licens: AGPL-3.0 eller senare från 0.13.2, se avsnittet [Licens](#licens) och `LICENSE`.
+Tredjepartskod och data: `THIRD-PARTY.md`.
 
 Allt räknas i besökarens webbläsare. Inloggningen till Lantmäteriet går direkt
 från webbläsaren till dl1.lantmateriet.se och passerar aldrig servern.
@@ -38,6 +39,11 @@ till `main` ändrar `js/version.js` och taggen för versionen inte finns, skapas
 taggen (`v0.13.1`) och en release med versionens avsnitt ur `CHANGELOG.md` och
 filen `hojdkurvor-vX.Y.Z.zip`, med en mapp `hojdkurvor` som innehåller samma
 filer som publiceras. En release som skapas för hand får också zip-filen.
+
+**Länken till källkoden**: båda arbetsflödena skriver in commiten i
+`js/kalla.js` (raden `commit: ''`) i det som publiceras och packas, så att
+*Källkoden* på sidorna går till koden för just den versionen. I repot står
+raden tom, och länkarna går då till repot.
 Saknas en release för en äldre version skapar `releaser-i-efterhand.yml`
 (körs för hand, med till exempel `0.12.0=78b0480`) tagg, release och zip-fil.
 
@@ -65,7 +71,7 @@ behöver godkännas (kontrollerat 17 november 2026, se `docs/FLYTT.md`).
   med en ram, kopiera, skicka länken till datorn eller beställ.
 - `instruktioner.html` – konto, produkter, arbetsgång, platsanalys, cad-apa,
   ritprogram, mobil (blad 02)
-- `om.html` – om tjänsten, ansvar, källor, licenser och ändringar (blad 03)
+- `om.html` – om tjänsten, ansvar, licensen och källkoden, stöd utvecklingen, källor och ändringar (blad 03)
 - `bestall.html` – beställ underlaget av Agrell Arkitektur mot betalning (blad 04).
   Formuläret skickar ingenting själv: det öppnar ett ifyllt e-postmeddelande i
   besökarens e-postprogram, eller kopierar beställningen.
@@ -136,6 +142,7 @@ Inga inloggningsuppgifter passerar någon av filerna.
 Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `window`.
 
 - `js/tema.js` – temaval och temamenyn (laddas först i `<head>`)
+- `js/kalla.js` (`Kalla`) – länken till källkoden vid den commit som körs (AGPL §13), på alla sidor
 - `js/version.js` – versionsnummer och datum (`window.HOJDKURVOR`). Skript och
   stilmallar laddas med `?v=<version>`; `node test/version.test.js --skriv`
   skriver in den i HTML-sidorna, `app.js` och `vy3d.js`
@@ -183,7 +190,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `data/kommuner.json` – förenklade kommungränser med kommunkod och föreslagen
   SWEREF 99-zon (fältet `epsg`; Kiruna saknar värde eftersom kommunen använder
   flera zoner)
-- `vendor/` – tredjepartsbibliotek och typsnitt, se `THIRD_PARTY.md`
+- `vendor/` – tredjepartsbibliotek och typsnitt, se `THIRD-PARTY.md`
 - `test/` – tester, testserver och testdata, se `test/README.md`
 
 ## Externa tjänster
@@ -256,6 +263,37 @@ Myndigheten för civilt försvar. Vägar och vatten: © OpenStreetMap-bidragsgiv
 ODbL. Källan anges i varje nedladdad info-fil, i utskriften och i
 platsanalysbladet. Laserdata och ortofoton kan enligt Lantmäteriets villkor innehålla
 personuppgifter. Den som hämtar datan ansvarar för att hantera den enligt GDPR.
+
+## Licens
+
+**Licens**
+Höjdkurvor är fri programvara under GNU Affero General Public License v3.0
+eller senare (AGPL-3.0-or-later, se `LICENSE`). Du får använda, studera,
+ändra och dela programmet fritt, även i kommersiellt arbete. Kör du en
+ändrad version som tjänst måste du erbjuda användarna din källkod. Låt
+länken *Källkoden* på sidorna (`js/kalla.js`) finnas kvar och peka på din
+kod. AGPL gäller från version 0.13.2; tidigare versioner är GPL-3.0 eller
+senare (`LICENSES/GPL-3.0.txt`).
+
+**Kommersiell licens**
+Vill du bygga in Höjdkurvor i en produkt eller tjänst utan AGPL:s villkor
+finns kommersiella licenser. Kontakta kontakt@agrellarkitektur.se.
+
+**Namn och varumärke**
+Namnen Höjdkurvor och höjdkurvor.se och logotypen får inte användas för
+ändrade versioner utan skriftligt tillstånd.
+
+**Bidrag**
+Bidrag välkomnas och kräver att du godkänner vårt CLA, se
+`CONTRIBUTING.md`.
+
+**Data**
+Lantmäteriets och de andra källornas data är inte kod och omfattas inte av
+AGPL; den har egna villkor, se `THIRD-PARTY.md` och avsnittet ovan.
+
+**Stöd utvecklingen**
+Privatpersoner kan ge ett frivilligt bidrag, och företag kan teckna
+supporteravtal mot faktura. Se Om-sidan och kontakt@agrellarkitektur.se.
 
 ## Ändra en kommuns zon
 

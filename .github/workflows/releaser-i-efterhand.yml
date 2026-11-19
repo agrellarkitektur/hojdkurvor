@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Agrell Arkitektur
 # Skapar taggar och releaser i efterhand för versioner som saknar dem.
 #
 # Körs för hand: Actions → "Releaser i efterhand" → "Run workflow". Skriv
@@ -48,6 +50,8 @@ jobs:
             printf '\n*Release skapad i efterhand.*\n' >> noter.md
             rm -rf package && mkdir -p package/hojdkurvor
             git archive "$SHA" -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C package/hojdkurvor
+            # Från 0.13.2: länken till källkoden går till commiten (js/kalla.js).
+            [ -f package/hojdkurvor/js/kalla.js ] && sed -i "s/commit: ''/commit: '$(git rev-parse "$SHA")'/" package/hojdkurvor/js/kalla.js
             printf 'Höjdkurvor v%s\n\nLadda upp innehållet i mappen hojdkurvor till appens mapp på webbservern.\n\nÄndringar: https://github.com/%s/blob/v%s/CHANGELOG.md\n' "$V" "$GITHUB_REPOSITORY" "$V" > package/hojdkurvor/LASMIG.txt
             (cd package && zip -q -r -9 "../hojdkurvor-v$V.zip" hojdkurvor)
             gh release create "v$V" "hojdkurvor-v$V.zip" --target "$SHA" --title "Höjdkurvor $V" --notes-file noter.md --latest=false

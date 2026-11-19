@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Agrell Arkitektur
 # Packar appen och lägger den på en release med tagg, till exempel v0.13.1.
 #
 # Sedan 0.13.1 sker det av sig självt: när en push till main ändrar
@@ -12,6 +14,7 @@
 #
 # Appen har inget byggsteg. Arbetsflödet kontrollerar koden, kör enhetstestet och
 # packar filerna i en mapp som heter hojdkurvor, utan tester och dokumentation.
+# Commiten skrivs in i js/kalla.js, så att länken Källkoden går till den.
 
 name: Release
 
@@ -105,6 +108,9 @@ jobs:
           # på webbservern så att adressen blir …/hojdkurvor/ (se docs/FLYTT.md).
           mkdir -p package/hojdkurvor
           git archive HEAD -- . ':!test' ':!docs' ':!.github' ':!CLAUDE.md' ':!.gitignore' | tar -x -C package/hojdkurvor
+          # Länken till källkoden går till just den här commiten (AGPL §13, js/kalla.js).
+          grep -q "commit: ''" package/hojdkurvor/js/kalla.js || { echo "::error::js/kalla.js saknar raden commit: ''"; exit 1; }
+          sed -i "s/commit: ''/commit: '$GITHUB_SHA'/" package/hojdkurvor/js/kalla.js
           cat > package/hojdkurvor/LASMIG.txt <<TXT
           Höjdkurvor ${TAGG}
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 // Kör med: node test/objektval.test.js
 // Egna val för träd och hus (0.11.0): dölja, rätta höjd, krona och art, känna igen trädet på nytt
 // och skära bort dolda träd och hus ur ytmodellen för skuggorna.

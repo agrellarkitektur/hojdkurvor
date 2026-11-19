@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Platsanalysblad: ett A3-häfte (PDF) med sammanställning, sol, skuggor, terräng och
  * vatten, skydd och risker samt källor. Ritas med jsPDF och Utskriftens hjälpfunktioner.

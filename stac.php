@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Vidarebefordrar frågor till Lantmäteriets öppna STAC-katalog, för webbläsare
  * som inte får fråga katalogen direkt. Bara GET, bara katalogsökvägar, inga

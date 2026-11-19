@@ -1,7 +1,8 @@
 # Höjdkurvor
 
 Webbapp som gör Lantmäteriets öppna geodata till ritunderlag och platsanalyser,
-helt i webbläsaren. Vanlig JavaScript utan byggsteg. GPL-3.0 eller senare.
+helt i webbläsaren. Vanlig JavaScript utan byggsteg. AGPL-3.0 eller senare
+(från 0.13.2; beslutet och vad som gjordes står i `docs/LICENS.md`).
 Läs `README.md` (vad som finns, filer, tjänster, inställningar) innan du ändrar
 något, och `docs/UTBYTE-CAD-APA.md` innan du rör utbytet med cad-apa.
 **Börja varje session med `docs/OVERLAMNING.md`**: läget, vad som ska göras
@@ -38,6 +39,12 @@ härnäst och vad som väntar. Skriv om den när sessionen slutar.
   Färger som variabler per tema i `app.css`. Ändra alla tre.
 - Menyraden, ritningshuvudet och sidfoten finns i alla fyra HTML-sidor. BETA-knappen
   och formuläret Skicka synpunkter (`js/synpunkter.js`) laddas på alla fyra.
+- Nya egna filer börjar med licenshuvudet (`SPDX-License-Identifier:
+  AGPL-3.0-or-later` och `Copyright (C) 2026 Agrell Arkitektur`, se
+  `CONTRIBUTING.md`); `test/kalla.test.js` kontrollerar det. Nya bibliotek,
+  typsnitt och data skrivs in i `THIRD-PARTY.md` med licens.
+- Länken *Källkoden* (`js/kalla.js`, AGPL §13) ska finnas på alla fyra sidor.
+  Arbetsflödena skriver in commiten på raden `commit: ''`; ändra inte den.
 - Inga hemligheter i repot. `config.js` ska ha `esriNyckel: ''` och
   `inloggning: null`. Testinloggningen `test` / `hemligt-åäö` finns bara i
   testservern.
@@ -86,6 +93,10 @@ node test/ifc.test.js
 
 ```
 node test/version.test.js
+```
+
+```
+node test/kalla.test.js
 ```
 
 ```

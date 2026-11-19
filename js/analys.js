@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Analyser av höjddata och laserdata:
  *   ytmodell  – höjd över mark (träd och byggnader) och ytmodell på 1 m-rutnät

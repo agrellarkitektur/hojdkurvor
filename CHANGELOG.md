@@ -3,6 +3,32 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.13.2 – 2026-11-19
+
+Ny licens: **AGPL-3.0 eller senare gäller från och med den här versionen.**
+Versionerna till och med 0.13.1 är GPL-3.0 eller senare och förblir det.
+Beslutet och genomförandet står i `docs/LICENS.md` (samma beslut som i
+cad-apa 0.12.5.4).
+
+- **Licensen**: `LICENSE` är den officiella AGPL-3.0-texten från gnu.org. Den
+  gamla GPL-texten ligger i `LICENSES/GPL-3.0.txt`. Alla egna källfiler har
+  licenshuvudet `SPDX-License-Identifier: AGPL-3.0-or-later` och en
+  copyrightrad för Agrell Arkitektur. Licensavsnitt i README med kommersiell
+  licens, namnen Höjdkurvor och höjdkurvor.se och bidrag.
+- **Länken till källkoden** (AGPL §13): *Källkoden* i panelens fot på kartan,
+  i sidfoten på de andra sidorna och på Om-sidan. Publiceringen och releasen
+  skriver in commiten i `js/kalla.js`, så att länken går till koden för just
+  den version som körs.
+- **Stöd utvecklingen** på Om-sidan: frivilligt bidrag för privatpersoner
+  (Swish är på väg, till dess kontakt), supporteravtal mot faktura och
+  kommersiella licenser för företag. Inga funktioner läggs bakom betalning.
+- **THIRD-PARTY.md** (förut `THIRD_PARTY.md`) är genomgången: alla bibliotek
+  och typsnitt har licenser som går ihop med AGPL. Lantmäteriets och de andra
+  källornas data är inte kod och har egna villkor.
+- **Bidrag**: `CONTRIBUTING.md` och `CLA.md`, som i cad-apa.
+- Nytt test `test/kalla.test.js`: länkarna, Om-sidan, licensen och
+  licenshuvudet i alla egna filer.
+
 ## 0.13.1 – 2026-11-19
 
 Flytten är klar, och fastighetsnamnet kan hämtas ur kartan (AX).

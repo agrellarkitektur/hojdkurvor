@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Bilder ur 3D-vyn (0.9.0): räknar fram kantlinjer och djupkarta ur de pixlar 3D-vyn läser
  * tillbaka från grafikkortet. Ren beräkning utan three.js, så att den kan testas i Node.

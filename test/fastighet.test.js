@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 // Kör med: node test/fastighet.test.js
 // Läser låtsasfilen test/data/fastighetsindelning_kn0513.zip (skapas av test/data/make_vektor.py).
 // Med FASTIGHET_GPKG=sökväg/fastighetsindelning_kn0884.gpkg körs kontrollerna även på en riktig fil.

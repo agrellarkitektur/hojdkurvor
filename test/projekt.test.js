@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 // Kör med: node test/projekt.test.js
 // Projektfilen (0.13.0, docs/PROJEKTFIL.md): nytt projekt, läsning och migrering, okända fält som
 // bevaras, spara → öppna → spara ger samma fil, volymer och trädval mellan zon och SWEREF 99 TM,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Marktäcke Nedladdning, vektor – klipper ut utsnittet ur kommunens GeoPackage och
  * skriver DXF med ett lager per marktäckesklass.

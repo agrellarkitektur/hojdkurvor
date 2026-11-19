@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 // Kör med: node test/vagar.test.js
 // Vägar (0.11.0): bil- och gångvägar, bredden ur OSM eller schablonen, mätningen i ett låtsat
 // ortofoto och vägytorna (ihopslagna i korsningar, hål i en rondell).

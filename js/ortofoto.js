@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Ortofoto Nedladdning – sök bilder i Lantmäteriets STAC (stac-bild), välj den
  * senaste färgbilden som täcker utsnittet och läs bara utsnittet ur

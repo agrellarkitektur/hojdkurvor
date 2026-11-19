@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Tar emot synpunkter från formuläret Skicka synpunkter och mejlar dem vidare
  * (Höjdkurvor 0.7.0). Samma upplägg som feedback.php i cad-apa.

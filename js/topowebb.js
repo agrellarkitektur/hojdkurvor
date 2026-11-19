@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Topografisk webbkarta Nedladdning, raster (Lantmäteriet, CC BY 4.0).
  * En GeoPackage på ca 170 GB med kartrutor 256 × 256 px i SWEREF 99 TM, nivå 0–13 (4096–0,5 m/px).

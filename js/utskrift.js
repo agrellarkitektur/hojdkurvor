@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Skalenlig utskrift (PDF) med samma lager som kartan, A4–A1, och skuggstudieblad.
  * Kräver jsPDF (window.jspdf). Grafiken följer Höjdkurvor: blå ram, orange markeringar.

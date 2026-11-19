@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Tema (Blueprint, Ljust, Mörkt). Laddas först i <head> så att sidan ritas i rätt tema direkt.
  * Valet sparas i webbläsaren. Utan sparat val följer sidan datorns mörka läge.

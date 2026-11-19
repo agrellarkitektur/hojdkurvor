@@ -1,4 +1,6 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Agrell Arkitektur -->
 <html lang="sv" data-tema="ritning">
 <head>
   <meta charset="utf-8">
@@ -6,6 +8,7 @@
   <title>Höjdkurvor – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
   <script src="js/version.js?v=0.13.1"></script>
+  <script src="js/kalla.js?v=0.13.1" defer></script>
   <script src="js/tema.js?v=0.13.1"></script>
   <script src="js/synpunkter.js?v=0.13.1" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -446,7 +449,7 @@
           <details class="resultat-detaljer"><summary>Sammanfattning</summary><dl class="sammanfattning" id="sammanfattning"></dl></details>
           <p class="lokalt">Spara filerna lokalt, inte i molnet. <a href="instruktioner.html#datan">Varför?</a> · <button type="button" class="lank-knapp" id="spara-platsfil">Spara platsfil för cad-apa</button></p>
         </div>
-        <p class="fot-lankar"><button type="button" class="lank-knapp" data-synpunkter>Skicka synpunkter</button> · <button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button></p>
+        <p class="fot-lankar"><button type="button" class="lank-knapp" data-synpunkter>Skicka synpunkter</button> · <button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button> · <a data-kalla href="https://github.com/agrellarkitektur/hojdkurvor" target="_blank" rel="noopener">Källkoden</a></p>
       </div>
     </aside>
   </div>

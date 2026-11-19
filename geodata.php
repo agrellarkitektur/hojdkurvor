@@ -1,4 +1,6 @@
 <?php
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Vidarebefordrar GET-frågor till ett fåtal öppna geodatatjänster, för webbläsare
  * som inte får fråga dem direkt (CORS). Bara adresser som börjar som i $VITLISTA

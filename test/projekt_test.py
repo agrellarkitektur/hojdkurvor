@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Agrell Arkitektur
 """
 Gränssnittstest för projektet (0.13.0) mot testservern (test/server.py) med Playwright och Chromium.
 

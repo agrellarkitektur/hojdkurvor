@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Agrell Arkitektur
 /*
  * Inställningar för den här installationen av Höjdkurvor.
  * Lämna ett värde tomt ('') eller null för att stänga av funktionen.

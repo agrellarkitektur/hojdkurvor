@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Agrell Arkitektur
 # Stänger av den gamla adressen https://agrellarkitektur.se/terrang/ (0.13.1).
 # Höjdkurvor ligger sedan 17 november 2026 på https://hojdkurvor.danaid.cloud/
 # och publiceras dit med publicera-vps.yml. FTP-publiceringen (publicera.yml)
