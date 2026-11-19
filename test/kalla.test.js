@@ -44,6 +44,7 @@ for (const sida of ['index.html', 'om.html', 'instruktioner.html', 'bestall.html
 const om = las('om.html');
 assert.ok(om.includes('<h2>Stöd utvecklingen</h2>'), 'om.html saknar Stöd utvecklingen');
 assert.ok(!/donation/i.test(om), 'om.html säger donation');
+assert.ok(/class="swish-qr/.test(om), 'om.html saknar rutan för Swish-QR:n');
 
 assert.ok(/^\s*GNU AFFERO GENERAL PUBLIC LICENSE\s+Version 3, 19 November 2007/.test(las('LICENSE')), 'LICENSE är inte AGPL-3.0');
 assert.ok(las('LICENSES/GPL-3.0.txt').startsWith('GNU GENERAL PUBLIC LICENSE'), 'LICENSES/GPL-3.0.txt saknas');
