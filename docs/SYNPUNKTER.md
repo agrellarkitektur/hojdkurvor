@@ -13,6 +13,7 @@ Senast använda nummer: **BM**.
 
 - **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0.*
 - **BL** Stöd-knappen blir ett hjärta när gränssnittet går över till ikoner.
+- **BS** Mobilen: välj utsnittets format (förhållandet mellan sidorna) själv, inte bara storleken; nu är proportionerna fasta. Mobilen behöver bara det grundläggande: markera ett område och skicka det till datorn eller beställa underlaget. Annat mobilstöd behöver vi inte lägga tid på.
 
 ## Att testa
 
