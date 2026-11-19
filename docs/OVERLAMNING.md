@@ -1,9 +1,41 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.3.
+överlämning; historiken finns i git. Senast: 19 november 2026, 0.13.4 (grenen `v0.13.4`).
 
 ## Läget
+
+- **0.13.4** 19 november, på grenen `v0.13.4`, **inte sammanslagen med `main` och inte
+  publicerad**. Sessionen hade inte skrivrätt till GitHub; grenarna lämnades till ägaren som
+  en git-bundle. Finns de inte på GitHub: be om filen, eller gör om ändringarna efter
+  CHANGELOG. Rättelser efter ägarens test 19 november (BA och BC godkända, BB delvis; BD, BE
+  och BF i `docs/SYNPUNKTER.md`):
+  1. **Skyddad natur** (BD): frågan stämde inte med Naturvårdsverkets tjänster. De vill ha
+     `outputFormat=GEOJSON` (inte `application/json`, som ger ett XML-fel med status 200) och
+     rutan med nordvärdet först (`bbox=ymin,xmin,ymax,xmax,EPSG:3006`; med östvärdet först blir
+     svaret tomt utan fel). Svarets koordinater är [E, N]. Natura 2000 har fälten
+     `OMRADESNAMN`, `OMRADESKOD`, `OMRADESTYP` (SPA, SCI). **Kontrollerat mot de riktiga
+     tjänsterna** 19 november med webbhämtning (GetCapabilities och GetFeature för båda), men
+     appen är inte körd mot dem i en webbläsare: CORS är inte prövat. Se `Geodata.wfsUrl`.
+  2. **Nya försök** (BD): `Geodata.medOmforsok` och samma sak i `Vagar.hamta`: 429, 502, 503
+     och 504 ger två nya försök efter 2 och 5 s (testkrok `TERRANG_PAUSER`). Ingen andra
+     Overpass-server är inlagd; det vore nästa steg om 502 fortsätter (kräver ägarens besked,
+     det är en ny tjänst att lita på).
+  3. **Namnbyte utan nytt Skapa** (BE): `input` på `#projekt` anropade `nollstallResultat`.
+     Nu `namnBytt()`: `state.senaste.projekt` får det nya namnet (utskrifterna läser det),
+     `projektSkapat` minns det som zip-filen har, och hjälptexten under fältet säger det.
+  4. **Laserdatan ruta för ruta** (BF): se avsnittet nedan. Ägarens misstanke stämmer med
+     koden (över 6 miljoner punkter kastades all laserdata, med en varning på statusraden),
+     men det är **inte återskapat på riktig data**: testlandskapet har bara 0,8 miljoner
+     punkter. BF under *Att testa* är det riktiga provet.
+  Körda: alla 19 enhetstester, `ui_test.py` i temat ritning (inte lugn och mork: inget i
+  temana är ändrat), `mobil_test.py`, `projekt_test.py`, `fastighetsnamn_test.py`. Zip-filen
+  ur gränssnittstestet är jämförd fil för fil med 0.13.3: alla DXF-, CSV-, LAS-, XYZ- och
+  bildfiler är identiska, också träden.
+
+- **Grenen `skapa-uppdelning`** (från `v0.13.4`, ingen ny version): granskningens punkt 7.
+  Skapa-flödet i `app.js` är uppdelat i 23 funktioner, se avsnittet *Skapa-flödet i steg* i
+  den grenens överlämning. Slå ihop den före 0.14.0 (sol på fasaderna), som ska in där.
 
 - **0.13.3** 19 november: granskningens rättelser (grenen `granskning-2026-11-19`) och
   `qr-ruta` (platshållaren för Swish-QR:n, copyrightraden `Agrell Arkitektur AB`) är
@@ -120,6 +152,33 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
 
+## Laserdatan ruta för ruta (0.13.4)
+
+- `Laser.lasRutvis(rutor, tmBox, auth, { klassFilter, framsteg, mottag })` läser varje ruta nod
+  för nod och lämnar punkterna i TM till `mottag(del, ruta)`, en del per COPC-nod, som typade
+  arrayer. Inget sparas, inget tak. Ger `{ antal, rutor: [{ id, antal }] }` (står i info-filen).
+  `Laser.lasPunkter` finns kvar (allt i minnet, tak 6 miljoner) men används inte av appen.
+- `Laser.samlare(max)` (lägg delar, `full` om taket sprängs) och `Laser.urval(p, behall)`.
+- `Analys.ytsamlare(dtm, { utesluts, traffar })` → `lagg(p)`, `klar()` ger samma ytmodell som
+  `Analys.ytmodell`. Med `traffar: true` följer `y.traffar` med: `Analys.traffrutnat`, antal
+  mark- och objektträffar per halv ruta (två `Uint8Array`, 8 byte per m²).
+  `Analys.hittaTrad(y)` läser träffarna där (eller bygger dem ur punkterna om de skickas med);
+  den gamla listan över alla punkter (`punktIndex`) är borta. Provet träd/tak räknar träffar
+  vars halvruta har mitten inom radien, i stället för varje punkt: på testlandskapet blir
+  träden exakt desamma.
+- `Analys.ytsamlareTM` för horisonten (TM), `Analys.vidSektion(sektioner, 2)` för att bara
+  spara punkterna inom 2 m från en sektionslinje.
+- Skapa (`skapaLaser` på grenen `skapa-uppdelning`, blocket *Laserdata* på `v0.13.4`):
+  markmodellen `dtmZ` görs före laserdatan. Per del: `tmSamlare` (TM), sedan
+  `Laser.tillZon(del, epsg, rm)` → `ytsamlare`, `sekSamlare`, `filSamlare` (bara utsnittet, tak
+  `MAX_PUNKTFIL` = 6 miljoner; över det ingen LAS/XYZ, med varning). `harLaser`, `laserYta`,
+  `laserTM`, `laserSek` ersätter `pTM` och `pz`.
+- Skalprov i Node: 20 miljoner punkter över 2,3 × 2,3 km tog 6,5 s och 365 MB för ytmodellen
+  och träffarna, och 2 s för trädsökningen. Nedladdningen och uppackningen (laz-perf) är inte
+  mätt; det är den som tar tid i webbläsaren.
+- Gränsen 6 km² för analysområdet (`yta > 6e6`) är kvar. Den gäller utsnittet med
+  marginaler: 150 m för skuggor ger högst cirka 2,1 km sida.
+
 ## 0.13.0 (`js/projekt.js`, blocket *Projektet* i `app.js`)
 
 - `Projekt` är ren data utom `db*`: `nytt`, `las` (kontroll, `MIGRERA`, fyller
@@ -194,7 +253,8 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   hjälper inte). Varningarna 17 november (Skyddad natur med `<Exception`,
   Strandskydd och Vägar 502) kom från tjänsterna själva: Strandskydd och
   Vägar frågar Overpass direkt, och Naturvårdsverket svarade med ett
-  XML-fel. `geodata.php` på VPS:en är ändå inte kontrollerad härifrån
+  XML-fel. (0.13.4: XML-felet berodde på appens fråga, inte på tjänsten, se
+  överst.) `geodata.php` på VPS:en är ändå inte kontrollerad härifrån
   (testmiljön når inte servern).
 
 ## 0.12.0
@@ -531,13 +591,16 @@ Versionsplanen (19 november, kan ändras av ägaren):
 
 | Version | Innehåll |
 |---|---|
-| 0.13.x | Rättelser efter testet (AW, AY, AZ, AÅ, AR–AV, AÄ, AÖ) |
+| 0.13.4 | Grenen `v0.13.4`: slå ihop med `main` när ägaren sagt till. Sedan `skapa-uppdelning` |
+| 0.13.x | Rättelser efter testet (BB, BD–BF, AW, AY, AZ, AÅ, AR–AV, AÄ, AÖ) |
 | 0.14.0 | Sol på fasaderna (`overlamning-solanalys.md` i claude.ai-projektet) |
 | 0.15.0 | Förslag och sparade vyer (projektfilen, etapp 3). Planen säger helst före solanalysen; fråga ägaren om ordningen |
 | 0.16.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
 | 0.17.0 | Bergytemodell och geologiblock i platspaketet (geologi etapp 3–4) |
 | 0.18.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
 
+0. `v0.13.4` och `skapa-uppdelning`: fråga ägaren om de ska slås ihop med `main` (det
+   publicerar appen). Kör då `ui_test.py` också i lugn och mork.
 1. För in testresultaten. Rättelser blir 0.13.x.
 2. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i
    panelen.
@@ -601,6 +664,13 @@ går inte att läsa.
   inte godkänna adressen (kontrollerat 17 november). Se `docs/FLYTT.md`.
 
 ## Testmiljön
+
+Utan GDAL går testdatan att bygga med en liten ersättare för `osgeo` ovanpå rasterio
+(`pip install rasterio`, en mapp `osgeo/` med `gdal.py` och `osr.py` på `PYTHONPATH`, som bara
+har det skripten använder: `GetDriverByName('MEM').Create`, `Open`, `Translate` till COG). Så
+gjordes 19 november; ersättaren ligger inte i repot. Ett helt varv av `ui_test.py` tar
+12–15 minuter med swiftshader. Testservern svarar sedan 0.13.4 som Naturvårdsverkets tjänster
+och ger 502 på varannan Overpass-fråga, så två 502 i konsolfelen är väntade.
 
 GDAL saknas från början. Kör `apt-get update` först, annars hittas inte
 paketen: `apt-get install gdal-bin python3-gdal poppler-utils`, och
