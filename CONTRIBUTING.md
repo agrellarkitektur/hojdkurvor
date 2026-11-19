@@ -7,7 +7,7 @@ tjänster och inställningar, och vad som väntar under Kommande) och
 ## Avtal om bidrag (CLA)
 
 Alla bidrag kräver att du godkänner vårt **CLA**, `CLA.md`. Du behåller
-upphovsrätten till ditt bidrag, men ger Agrell Arkitektur rätt att
+upphovsrätten till ditt bidrag, men ger Agrell Arkitektur AB rätt att
 licensiera det också under andra villkor än AGPL. Det är vad som gör det
 möjligt att sälja kommersiella undantag och att hålla ihop projektet;
 bidraget finns alltid kvar under AGPL-3.0 för alla andra.
@@ -31,7 +31,7 @@ inte ger rätt att licensiera om.
 
    ```js
    // SPDX-License-Identifier: AGPL-3.0-or-later
-   // Copyright (C) 2026 Agrell Arkitektur
+   // Copyright (C) 2026 Agrell Arkitektur AB
    ```
 
 4. Lägger du till ett bibliotek, ett typsnitt, data eller någon annan

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Platsanalys ur höjddatan: höjdpunkter, lutning, skyfall (lågpunkter och flödesvägar)
  * och skissade volymer (från cad-apa eller DXF) som påverkar skuggor och vatten.

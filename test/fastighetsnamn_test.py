@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 """
 Gränssnittstest för Hämta från kartan vid Projekt eller fastighet (AX, 0.13.1).
 

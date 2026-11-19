@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Enhetstest för 3D-vyns hjälpmoduler (0.9.0): trädmodellerna (js/trad3d.js) och
  * beräkningarna för bilderna (js/bild3d.js). Själva 3D-vyn testas i ui_test.py.

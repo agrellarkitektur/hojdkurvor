@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Länken till källkoden (0.13.2, AGPL-3.0 §13): den som använder appen över
  * nätet ska erbjudas källkoden till just den version som körs.

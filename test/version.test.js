@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Kontrollerar att versionen är densamma överallt (0.8.1):
  * - ?v=<version> på alla egna skript och stilmallar i de fyra HTML-sidorna, så att

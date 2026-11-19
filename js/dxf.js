@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Enkel DXF R12-skrivare: polylinjer, punkter och text på namngivna lager.
  * Texter med tecken utanför ASCII skrivs som \U+XXXX, som AutoCAD och Archicad läser.

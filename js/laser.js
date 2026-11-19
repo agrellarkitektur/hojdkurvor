@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Laserdata Nedladdning, skog (COPC) – sök rutor i Lantmäteriets STAC, läs bara
  * utsnittets punkter och skriv LAS och XYZ.

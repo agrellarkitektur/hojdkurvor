@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 """
 Test av mobilflödet (390 × 844, pekskärm) mot testservern.
 

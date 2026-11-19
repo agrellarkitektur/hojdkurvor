@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Projektet (0.13.0): det användaren har matat in och valt för en plats. Sparas i webbläsaren
  * (IndexedDB, objektlagringen `projekt` i databasen `terrangunderlag`) och som projektfil

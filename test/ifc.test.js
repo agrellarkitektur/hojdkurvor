@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 // Kör med: node test/ifc.test.js
 // IFC-filen för befintliga byggnader (js/ifc.js) och rensningen av träd vid byggnader (Byggnad.tradVidByggnader).
 // Med IFC_UT=mapp sparas testfilerna, så att de kan kontrolleras med IfcOpenShell (se test/README.md).

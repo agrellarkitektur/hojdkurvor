@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 // Kör med: node test/ortofoto.test.js
 // Urvalet prövas på ett riktigt svar från Lantmäteriets bildkatalog (Vimmerby, test/data/stac-bild-sok-vimmerby.json).
 // Läsningen prövas på låtsasortofotona från test/data/make_orto.py (hoppas över om de saknas).

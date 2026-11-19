@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 // Kör med: node test/byggnad.test.js
 // Läser låtsasfilen test/data/byggnad_kn0513.zip (skapas av test/data/make_vektor.py).
 // Med BYGGNAD_GPKG=sökväg/byggnad_kn0884.gpkg körs samma kontroller även på en riktig fil.

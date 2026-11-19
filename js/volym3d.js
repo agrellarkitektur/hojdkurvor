@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Volymer att modellera i 3D-vyn (0.10.0). Ren geometri utan three.js, så att den kan testas i Node.
  *

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Agrell Arkitektur
+# Copyright (C) 2026 Agrell Arkitektur AB
 # Skapar taggar och releaser i efterhand för versioner som saknar dem.
 #
 # Körs för hand: Actions → "Releaser i efterhand" → "Run workflow". Skriv

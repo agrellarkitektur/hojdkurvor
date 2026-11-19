@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Stompunkt Direkt v1.1 – plan- och höjdpunkter i Lantmäteriets referensnät.
  * Teknisk beskrivning 1.0.1: POST /filter (sök inom geometri, max 5000 träffar),

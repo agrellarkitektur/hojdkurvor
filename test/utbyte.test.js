@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 // Kör med: node test/utbyte.test.js
 // Platspaketet till cad-apa (docs/UTBYTE-CAD-APA.md): grundfälten, byggnader och fastighetsgränser.
 // Fastigheterna läses ur låtsasfilen test/data/fastighetsindelning_kn0513.zip (test/data/make_vektor.py).

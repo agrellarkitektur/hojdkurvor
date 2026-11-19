@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later
-   Copyright (C) 2026 Agrell Arkitektur */
+   Copyright (C) 2026 Agrell Arkitektur AB */
 /* Höjdkurvor – stilmall. Färger som variabler per tema: ritning = Blueprint (standard), lugn = Ljust, mork = Mörkt.
    Kartans orange (--annot) är densamma i alla teman och har tillräcklig kontrast mot både ljus och mörk karta. */
 @font-face { font-family: "Familjen Grotesk"; src: url("vendor/fonts/familjen-grotesk-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }

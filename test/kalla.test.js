@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Licensen och länken till källkoden (0.13.2):
  * - js/kalla.js ger rätt adresser med och utan commit, och raden `commit: ''`
@@ -57,7 +57,7 @@ for (const [kat, re] of MONSTER) {
   for (const f of fs.readdirSync(path.join(rot, kat)).filter(n => re.test(n))) {
     const huvud = las(path.join(kat, f)).split('\n').slice(0, 4).join('\n');
     assert.ok(huvud.includes('SPDX-License-Identifier: AGPL-3.0-or-later'), `${kat}/${f} saknar licenshuvudet`);
-    assert.ok(huvud.includes('Copyright (C) 2026 Agrell Arkitektur'), `${kat}/${f} saknar copyrightraden`);
+    assert.ok(huvud.includes('Copyright (C) 2026 Agrell Arkitektur AB'), `${kat}/${f} saknar copyrightraden`);
     antal++;
   }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Agrell Arkitektur
+// Copyright (C) 2026 Agrell Arkitektur AB
 /*
  * Byggnad Nedladdning, vektor – befintliga byggnader ur kommunens GeoPackage:
  * fotavtryck med typ, ändamål och husnummer, höjd ur laserdatan och DXF.
