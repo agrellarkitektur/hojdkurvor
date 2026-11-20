@@ -126,7 +126,7 @@ with sync_playwright() as p:
     pg.click('#ritprogram button[data-prog=archicad]')
     for g in ['g-laser', 'g-kartdata', 'g-sektioner']:
         pg.evaluate(f"document.getElementById('{g}').open = true")
-    for v in ['laser', 'trad', 'hom', 'ortofoto', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion']:
+    for v in ['laser', 'trad', 'hom', 'ortofoto', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar']:
         pg.check(f'input[name=tillval][value={v}]')
     pg.screenshot(path=f'{UT}/02_underlag.png')
 
@@ -258,10 +258,27 @@ with sync_playwright() as p:
     # utskrift i skala med Lantmäteriets karta
     pg.click('#lp-bakgrund button:has-text("LANTMÄTERIET")'); pg.wait_for_timeout(2000)
     pg.click('#lp-skriv'); pg.wait_for_timeout(200)
-    with pg.expect_download(timeout=120000) as d:
+    # förhandsramen på kartan (0.14.4); i 1:200 på A4 får utsnittet inte plats
+    assert pg.locator('.leaflet-ram-pane path[stroke-dasharray="8 6"]').count() == 1, 'förhandsramen syns'
+    pg.select_option('#pr-format', 'a4'); pg.select_option('#pr-skala', '200'); pg.wait_for_timeout(300)
+    print('  passar:', pg.inner_text('#pr-passar'), pg.locator('.leaflet-ram-pane path[stroke-dasharray="8 6"]').bounding_box())
+    assert 'streckade ramen' in pg.inner_text('#pr-passar')
+    pg.screenshot(path=f'{UT}/05c_utskriftsram.png')
+    pg.select_option('#pr-format', 'a3'); pg.dispatch_event('#pr-format', 'change'); pg.wait_for_timeout(200)
+    # PDF:en öppnas i en ny flik med en Spara-knapp (0.14.4)
+    with pg.context.expect_page(timeout=120000) as ny:
         pg.click('#pr-skapa')
+    flik = ny.value
+    flik.wait_for_selector('a[download]', timeout=120000)
+    namn = flik.get_attribute('a[download]', 'download')
+    with flik.expect_download() as d:
+        flik.click('a[download]')
     open(f'{UT}/utskrift.pdf', 'wb').write(open(d.value.path(), 'rb').read())
-    print('utskrift:', d.value.suggested_filename)
+    print('utskrift:', namn, d.value.suggested_filename)
+    assert namn.endswith('.pdf') and d.value.suggested_filename == namn
+    flik.close()
+    pg.click('#lp-skriv'); pg.wait_for_timeout(150)
+    assert pg.locator('.leaflet-ram-pane path[stroke-dasharray="8 6"]').count() == 0, 'ramen släcks med rutan'
 
     # 3D
     pg.click('#visa-3d'); pg.wait_for_timeout(4000)
@@ -479,6 +496,14 @@ with sync_playwright() as p:
             print('  lasso:', pg.inner_text('#lasso-info'), '| på skärmen:', pa_skarm)
             pg.screenshot(path=f'{UT}/06r_3d_lasso.png')
             assert pa_skarm > 0 and f'{pa_skarm} träd' in pg.inner_text('#lasso-info'), 'lassot fångar träden som syns'
+            assert not pg.get_attribute('svg.vy3d-lasso path', 'd'), 'slingan släcks vid släpp (0.14.4)'
+            # Shift-klick tar bort ett markerat träd ur urvalet och lägger till det igen (0.14.4)
+            t0 = pg.evaluate('TERRANG_TEST.vy3d.tradPaSkarm()[0]')
+            pg.keyboard.down('Shift'); pg.mouse.click(t0['x'], t0['y']); pg.keyboard.up('Shift'); pg.wait_for_timeout(200)
+            efter_shift = pg.inner_text('#lasso-info')
+            pg.keyboard.down('Shift'); pg.mouse.click(t0['x'], t0['y']); pg.keyboard.up('Shift'); pg.wait_for_timeout(200)
+            print('  shift-klick:', efter_shift, '|', pg.inner_text('#lasso-info'))
+            assert f'{pa_skarm - 1} träd' in efter_shift and f'{pa_skarm} träd' in pg.inner_text('#lasso-info'), 'Shift-klick växlar trädet'
             fore = pg.evaluate('TERRANG_TEST.senaste().trad.length')
             pg.click('#lasso-dolj'); pg.wait_for_timeout(300)
             assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore - pa_skarm and pg.locator('#vy3d-lassopanel').is_hidden(), 'Dölj träden'

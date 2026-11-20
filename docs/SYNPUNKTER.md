@@ -7,18 +7,31 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **BÅ**.
+Senast använda nummer: **CF**.
 
 ## Inkorg
 
 - **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0. 0.14.3: med hämtminnet hämtas inget igen för samma område (AY); själva beräkningarna görs fortfarande om.*
 - **BL** Stöd-knappen blir ett hjärta när gränssnittet går över till ikoner.
 - **BÅ** Skicka med datan: kan zip-filen och projektfilen räcka för att någon annan ska kunna öppna platsen och snurra i 3D, utan egen inloggning hos Lantmäteriet? *Bedömning: går, eftersom Lantmäteriets öppna data får spridas med källangivelse (CC BY 4.0). Det sparade resultatet (0.13.6) är redan det som behövs; det skulle läggas i projektfilen som bilaga (etapp 4) eller läsas ur zip-filen. Hänger ihop med AP. Inte gjort.*
+- **CC** (efter BJ) När utsnittet ändras försvinner underlaget. Förväntat, men kan det lösas på annat sätt? Det som redan är skapat fortsätter att synas, och *Skapa igen* fyller i tomrummen (skapar underlag för hela platsen igen). *Hämtminnet (0.14.3) töms i dag när området byts; det skulle behöva behålla rutorna som fortfarande täcker platsen.*
+- **CD** Mer linjär arbetsgång med flikarna. 01 Plats: bara låsa platsen, inget Skapa där. 02 Underlag: välj underlag; skapar man bara underlaget får man höjdkurvorna och terrängsektionerna. 03 Analys: fyll i analyserna, de skapas, och först då kommer en samlad zip med allt. 04 Skiss: skissa vidare där, eller ta det till cad-apa. *Hänger ihop med AY och BZ (Lås området och hämtminnet finns; Skapa är fortfarande en knapp för allt).*
+- **CE** Markera och dölja träd och byggnader även i planvyn, inte bara i 3D-vyn.
+- **CF** Konkurrent: hojdkartan.se (C. Frid AB) läser in allt underlag dynamiskt utan att man anger inloggning till Lantmäteriet. Går det med licensvillkoren? *Bedömning: Markhöjdmodellen är en värdefull datamängd under CC BY 4.0 utan personuppgifter och får spridas fritt med källangivelse, också från egen server. Byggnad, Fastighetsindelning och Ortofoto räknar Lantmäteriet som personuppgifter, med egna villkor (prövning, lagring inom EU/EES) som måste läsas innan de visas fritt. Rätten till datan är inte rätt att låta andra använda ditt konto mot tjänsten: det kräver att data hämtas och lagras på egen server, eller besked från Lantmäteriet. Att vem som helst kan hämta datan är redan fallet: den är öppen. Fråga Lantmäteriet (geodatasupport@lm.se) innan något byggs. Hänger ihop med BÅ.*
 - **BS** Mobilen: välj utsnittets format (förhållandet mellan sidorna) själv, inte bara storleken; nu är proportionerna fasta. Mobilen behöver bara det grundläggande: markera ett område och skicka det till datorn eller beställa underlaget. Annat mobilstöd behöver vi inte lägga tid på.
 
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.14.4
+
+Rättelser efter testet 20 november av AÄ–BM.
+
+- **BÄ** Skriv ut i skala (efter BE): öppna *Skriv ut i skala*. Syns en streckad ram på kartan, och är kartan nedtonad utanför? Byt format och skala: följer ramen med, och zoomar kartan ut när utsnittet inte får plats? Välj *Skapa PDF*: öppnas PDF:en i en ny flik, och sparar *Spara PDF* den med rätt namn? Stäng rutan: försvinner ramen?
+- **BÖ** Skyddad natur (efter BB): gör en platsanalys med Skydd vid naturreservatet du vet om. Svarar Naturvårdsverket fortfarande inte: kommer reservatet nu från OpenStreetMap, märkt *(OpenStreetMap)*, och vad säger varningen (skriv av den; den säger om frågan gick via servern)? Svarar Naturvårdsverket: kommer reservatet utan märkning?
+- **CA** Terrängsektioner: rita en sektion och skapa, utan någon kryssruta. Kommer sektionen med? Ta bort den och skapa igen: går det utan besked, och kommer allt annat?
+- **CB** Trädvalet i 3D-vyn: välj *Lasso* och dra en slinga. Släcks slingan när du släpper musknappen, och har träden en ring vid marken (ingen cylinder)? Shift-klicka på ett omarkerat träd och på ett markerat: läggs det till och tas det bort? Shift-klicka på ett träd utan att lassot är på: öppnas urvalet? Dölj, och *Visa dolda*.
 
 ### 0.14.3
 
@@ -26,7 +39,7 @@ Rättelser efter testet 20 november av AJ–AÅ.
 
 - **BW** Vägytor (efter AJ och AV): kryssa i Vägar, Utkast till vägytor och Ortofoto på en plats med riktiga gator. Har varje gata samma bredd mellan korsningarna, och är hörnen i korsningarna rundade? Syns de blå ytorna mot ortofotot? Vad säger info-filen om hur många sträckor som är mätta? Öppna `_vagar_lokal.dxf` i AutoCAD.
 - **BX** Bilderna (efter AR och AW): läs `SA_ANVANDER_DU_BILDERNA.txt` i zip:ens rot och `ortofoto/ORTOFOTO_SOM_TEXTUR.txt`. Är de begripliga, och stämmer måtten och arbetsflödet i Archicad? Prova också med egen nollpunkt eller vridning, där texturen behöver justeras. Räcker två världsfiler per bild (`.jgw` i SWEREF och `_lokal.jgw`)?
-- **BY** Ramen (efter AT) och lassot (efter AU): skapa några utsnitt efter varandra i samma fönster, med Punktmoln ikryssat. Går det fortfarande att dra i ramen? Ringa in träd med lassot i 3D-vyn och flytta vyn: släcks slingan, och är träden fortfarande markerade?
+- **BY** Ramen (efter AT): skapa några utsnitt efter varandra i samma fönster, med Punktmoln ikryssat. Går det fortfarande att dra i ramen? (Lassot ändrades igen i 0.14.4, se CB.)
 - **BZ** Lås och hämta inte igen (AY): välj *Lås området*. Försvinner handtagen och krysset, och flyttas området inte när du drar i kartan? Skapa, skissa en byggnad under 04 Skiss och välj *Uppdatera analyserna*: går det fort, och säger sammanfattningen att allt fanns? Ladda om sidan: är området fortfarande låst (underlaget i minnet är borta efter omladdning, så nästa Skapa hämtar igen)? Lås upp med samma knapp. Räcker det här, eller ska Skapa delas i Hämta underlag och Skapa analys på var sin flik som i AY?
 
 ### 0.14.1
@@ -43,37 +56,18 @@ Rättelser efter testet 20 november av AJ–AÅ.
 - **BQ** **På iPhone**: öppnas planvyn och går den att läsa (panelen under ritningen)? Ritandet är tänkt för datorn.
 - **BR** Saknas något för att kunna använda planen som grund för en situationsplan (etapp 3, 0.16.0): text, linjer, symboler, skala?
 
-### 0.13.6
-
-- **BJ** Skapa underlag, gå till Instruktioner, Om eller Beställ och tillbaka till kartan: kommer lagren, sammanfattningen och *Ladda ner* tillbaka utan nytt Skapa, och säger statusraden när underlaget skapades? Fungerar *Förhandsvisa i 3D*, utskriften och *Fortsätt rita i cad-apa* med det inlästa? Ladda om sidan: likadant. Ändra området eller nollpunkten: försvinner underlaget, och kommer det inte tillbaka efter omladdning? Prova också med ett stort område (1–2 km sida, mycket laserdata): vad säger raden *Sparat* i sammanfattningen, och hur lång tid tar det att komma tillbaka till kartan? **På iPhone**: finns underlaget kvar efter byte av sida?
-- **BM** Stöd-rutan på dator och iPhone, i alla tre teman: får e-postadressen plats, och ser rutan bra ut med rubrikerna ovanför? Gå att skanna QR-koden från datorskärmen med Swish i telefonen (mottagaren ska vara Danaid Open Source)? **På iPhone**: öppnar ett tryck på koden Swish med rätt nummer och meddelandet *Stort tack för ditt stöd!*?
-
 ### 0.13.5
 
-Synpunkter från egen användning 19 november (BG–BL): strandskyddet, zip-filen, STÖD och att
-underlaget försvinner vid byte av sida. BJ och BK väntar till 0.13.6 respektive senare.
-
-- **BG** Strandskydd på en riktig plats nära en sjö: kommer strandskyddet med, utan *signal is aborted without reason*? Syns lagret *Strandskydd (indikation)* med en heldragen linje 100 m och en streckad 300 m från vattnet, och stämmer de ungefär med kartan? Prova med och utan Marktäcke ikryssat. Står det rätt sjö i texten? Prova också nära en liten damm eller bäck: säger texten att den saknar strandskydd enligt reglerna från 2025?
-- **BH** Zip-filen: blir Skapa klar fortare? Välj *Ladda ner*: packas filen (statusraden visar procent) och sparas den? Andra gången ska den sparas direkt. **På iPhone**: kommer nedladdningen fram, eller stoppar Chrome den eftersom den startar först efter packningen?
-- **BI** STÖD i menyraden på alla fyra sidor: öppnas rutan, går den att stänga med krysset, Stäng, Esc och klick utanför, och ser den bra ut på iPhone?
-### 0.13.4
-
-Rättelser efter testet 19 november (BD, BE och BF nedan). Tjänsterna är kontrollerade mot
-Naturvårdsverket härifrån, men appen är inte körd mot dem i en webbläsare.
-
-- **BB** Skydd i platsanalysen, om igen: gör en platsanalys med Skydd ikryssat. Vid testet 19 november kom fornlämningar och översvämning, men Skyddad natur *svarade med ett fel i stället för data* (också 17 november) och Strandskydd 502. Kommer skyddad natur nu, på en plats där du vet att det finns ett naturreservat eller Natura 2000-område, och på en där det inte finns något? Blir det en varning om Skyddad natur ändå: skriv av hela texten, den säger nu vad tjänsten svarade.
-- **BD** Strandskydd och Vägar när OpenStreetMap är överbelastat: appen försöker nu tre gånger med några sekunders paus. Kommer strandskyddet med? Om inte säger varningen *(3 försök)*.
-- **BE** Hämta från kartan efter Skapa: skapa ett underlag, välj *Hämta från kartan* och klicka på fastigheten. Ligger kartans lager, 3D-vyn och *Ladda ner* kvar, och säger texten under fältet att zip-filen har det gamla namnet? Skriv ut en karta i skala: har den det nya namnet?
-- **BF** Hus och träd i större utsnitt: skapa ett utsnitt på 1–2 km sida med Träd, Byggnader med höjd och Skuggstudie, på samma ställe där hus och träd försvann. Finns de med nu, i 3D-vyn och i filerna? Hur lång tid tar det, och orkar webbläsaren? Med Punktmoln ikryssat ska du över 6 miljoner punkter få en varning om att LAS- och XYZ-filerna inte skapades, men träd och hus ska finnas ändå.
-
-### 0.13.3
-
-- **BB** Se 0.13.4: fornlämningar och översvämning kom med vid testet 19 november, skyddad natur och strandskydd inte.
+- **BG** Strandskydd på en riktig plats nära en sjö (vid havet godkänt 20 november): kommer strandskyddet med, utan *signal is aborted without reason*? Syns lagret *Strandskydd (indikation)* med en heldragen linje 100 m och en streckad 300 m från vattnet, och stämmer de ungefär med kartan? Prova med och utan Marktäcke ikryssat. Står det rätt sjö i texten? Prova också nära en liten damm eller bäck: säger texten att den saknar strandskydd enligt reglerna från 2025?
 
 ### 0.13.1
 
-- **AÄ** cad-apa på nya adressen: på <https://hojdkurvor.danaid.cloud/>, välj *Rita i cad-apa*. Öppnas <https://cad-apa.danaid.cloud/> med platsen? Skicka tillbaka en skiss från cad-apa: dyker volymerna upp i 04 Skiss? Prova också *Fortsätt rita i cad-apa* under resultatet.
-- **AÖ** Hämta från kartan (AX): välj *Hämta från kartan* vid Projekt eller fastighet och klicka på en fastighet, (1) efter Skapa med Fastigheter ikryssat, (2) på ett annat ställe i samma kommun, (3) i en kommun där fastighetsindelningen inte är hämtad. Blir beteckningen rätt, och är beskeden begripliga?
+- **AÄ** (20 november: skissen kan inte skickas tillbaka från cad-apa än; det arbetas på där. Analyserna och vad skissen behöver står i `docs/UTBYTE-CAD-APA.md`.) cad-apa på nya adressen: på <https://hojdkurvor.danaid.cloud/>, välj *Rita i cad-apa*. Öppnas <https://cad-apa.danaid.cloud/> med platsen? Skicka tillbaka en skiss från cad-apa: dyker volymerna upp i 04 Skiss? Prova också *Fortsätt rita i cad-apa* under resultatet.
+
+Klart vid testet 20 november, andra omgången (strukna, se CHANGELOG.md under 0.14.4): AÖ, BD, BF,
+BH (på datorn; mobilen behöver bara det enkla flödet), BI, BJ och BM godkända. BE godkänd, med
+önskemål om förhandsvy och PDF i ny flik (gjort, testas som BÄ). BB: skyddad natur svarade fortfarande
+503, testas som BÖ. BJ:s fråga om att behålla underlaget när utsnittet ändras ligger i inkorgen (CC).
 
 Klart vid testet 20 november (strukna, se CHANGELOG.md under 0.14.3): AK, AL, AS, AZ och AÅ
 godkända. AJ, AR, AT, AU, AV, AW och AY ledde till ändringar, testas som BW–BZ. AZ: projektfilen
@@ -90,6 +84,12 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 21 november 2026 → 0.14.4 (övriga synpunkter vid testet 20 november, utan nummer)
+
+- Kravet *Rita minst en sektionslinje på kartan eller bocka ur Terrängsektioner* är jobbigt. Har man ritat en sektion exporteras den, annars inte, men allt annat exporteras. *Kryssrutan är borta.*
+- Lassots streckade slinga ska slockna när musknappen släpps och växla till att visa de markerade träden. Markerade träd som en cirkel i marknivå, inte en cylinder (man tror lätt att det är för många träd). Shift-klick lägger till träd, och på ett markerat träd tar bort det. *Gjort så.*
+- BE: *Skriv ut i skala* ska visa en förhandsvy av utsnittet om inte hela får plats i ritningsramen, och PDF:en ska öppnas i ett nytt fönster i stället för att måste laddas ner. *Ram på kartan och PDF i ny flik.*
 
 ### 20 november 2026 → 0.14.3 (svar på de äldre testpunkterna)
 

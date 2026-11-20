@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.14.3"></script>
-  <script src="js/kalla.js?v=0.14.3" defer></script>
-  <script src="js/tema.js?v=0.14.3"></script>
-  <script src="js/synpunkter.js?v=0.14.3" defer></script>
-  <script src="js/stod.js?v=0.14.3" defer></script>
+  <script src="js/version.js?v=0.14.4"></script>
+  <script src="js/kalla.js?v=0.14.4" defer></script>
+  <script src="js/tema.js?v=0.14.4"></script>
+  <script src="js/synpunkter.js?v=0.14.4" defer></script>
+  <script src="js/stod.js?v=0.14.4" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.14.3">
+  <link rel="stylesheet" href="app.css?v=0.14.4">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -179,7 +179,7 @@
         <p><em>Skuggor</em> tänder solen. Välj datum och dra i tiden, eller välj <em>Vårdagjämning</em>, <em>Midsommar</em> eller <em>Vintersolstånd</em>. <em>Spela dagen</em> går från soluppgång till solnedgång. Terrängen, husen, volymerna och träden kastar skugga; <em>Trädskuggor</em> stänger av trädens om vyn blir seg. Solen räknas som i soldiagrammet.</p>
         <p><em>Konturer</em> ritar kanter på husen och volymerna. <em>Husfärg</em> och <em>Skissfärg</em> byter färg på befintliga byggnader och på dina volymer, <em>Konturfärg</em> på kanterna och <em>Gränsfärg</em> på fastighetsgränserna. <em>Takformer</em> ger husen ett enkelt tak, sadeltak, valmat eller platt, med nockhöjd och takvinkel ur laserdatan. Det visar ungefär hur taken ser ut; de är inte inmätta. Träden visas som granar, tallar, lövträd och björkar efter formen i laserdatan. Under <em>Träd</em> väljer du Enkla eller Detaljerade; de detaljerade gäller träden närmast dig.</p>
         <p><strong>Rätta ett tak.</strong> Klicka på ett befintligt hus i 3D-vyn. I rutan som öppnas väljer du takform (sadeltak, valmat, pulpettak eller platt), lutning, om nocken går längs eller tvärs huset och nockhöjden. Det du lämnar tomt tas ur laserdatan, och <em>Ur laserdatan</em> tar bort dina val. Valen sparas i webbläsaren och gäller nästa gång du öppnar samma hus, och följer med i projektfilen. <em>Dölj huset</em> tar bort ett hus som inte finns eller är fel.</p>
-        <p><strong>Rätta eller dölj ett träd.</strong> Klicka på ett träd i 3D-vyn. Välj art (gran, tall, lövträd eller björk), höjd och kronbredd; det du lämnar tomt tas ur laserdatan. <em>Dölj trädet</em> tar bort det, till exempel en topp som egentligen är en flaggstång eller ett tak. Vill du dölja många träd: välj <em>Lasso</em>, dra en slinga runt dem och välj <em>Dölj</em>. <em>Visa dolda</em> bland knapparna överst visar alla dolda träd och hus igen. Ändringarna syns direkt på kartan och följer med till cad-apa. Välj <em>Skapa</em> igen för att få dem i filerna och skuggstudien. Valen sparas i webbläsaren och gäller nästa gång du skapar underlaget för samma plats.</p>
+        <p><strong>Rätta eller dölj ett träd.</strong> Klicka på ett träd i 3D-vyn. Välj art (gran, tall, lövträd eller björk), höjd och kronbredd; det du lämnar tomt tas ur laserdatan. <em>Dölj trädet</em> tar bort det, till exempel en topp som egentligen är en flaggstång eller ett tak. Vill du dölja många träd: välj <em>Lasso</em> och dra en slinga runt dem, eller Shift-klicka på träden ett och ett (Shift-klick på ett markerat träd tar bort det ur urvalet). De markerade träden får en ring vid marken. Välj sedan <em>Dölj</em>. <em>Visa dolda</em> bland knapparna överst visar alla dolda träd och hus igen. Ändringarna syns direkt på kartan och följer med till cad-apa. Välj <em>Skapa</em> igen för att få dem i filerna och skuggstudien. Valen sparas i webbläsaren och gäller nästa gång du skapar underlaget för samma plats.</p>
         <p><strong>Modellera.</strong> På datorn kan du rita volymer direkt i 3D-vyn. Välj <em>Modellera</em> och <em>Ny volym</em>: ett rätblock, en cylinder eller ett prisma med tak, med mått i meter. Klicka där volymen ska stå. Klicka på en volym för att välja den och dra för att flytta den; dra i <span aria-hidden="true">⟳</span> för att vrida, och håll ned skift för steg om 15°. Mått, höjd, tak, vridning och golv ändrar du i rutan. <em>Toppvy</em> visar platsen rakt uppifrån med norr uppåt, så att du kan lägga ut volymerna exakt.</p>
         <ul>
           <li><strong>Snäpp.</strong> En volym som dras nära en annan volym, ett hus eller en fastighetsgräns lägger sig an mot den, sida mot sida, och hörnen ställer sig i linje. Därefter kan du skriva in avståndet till det den snäppte mot. Håll ned Alt för att slippa snäppet.</li>
@@ -197,7 +197,7 @@
       <section id="kartan">
         <h2><span class="nr">07</span>Kartan och utskriften</h2>
         <p>Rutan uppe till höger på kartan styr bakgrund och vilka lager som visas, grupperade som underlag, analys och skiss. Lantmäteriets karta går att välja som bakgrund när du har fyllt i inloggningen. Temat, Blueprint, Ljust eller Mörkt, väljer du i menyraden högst upp.</p>
-        <p>Välj <em>Skriv ut i skala</em> för en PDF i A4 till A1. Utskriften visar samma lager som kartan. Bakgrunden kommer med om du har valt Lantmäteriets karta; OpenStreetMap och terrängkartan får inte skrivas ut. Ortofotot kommer med inom utsnittet om lagret är på. Skriv ut i verklig storlek (100 %) och kontrollera skalan med skalstocken.</p>
+        <p>Välj <em>Skriv ut i skala</em> för en PDF i A4 till A1. En streckad ram på kartan visar vad som får plats på pappret i vald skala; det som ligger utanför ramen kommer inte med. PDF:en öppnas i en ny flik, där du kan titta på den och spara den med <em>Spara PDF</em>. Utskriften visar samma lager som kartan. Bakgrunden kommer med om du har valt Lantmäteriets karta; OpenStreetMap och terrängkartan får inte skrivas ut. Ortofotot kommer med inom utsnittet om lagret är på. Skriv ut i verklig storlek (100 %) och kontrollera skalan med skalstocken.</p>
       </section>
 
       <section id="ritprogram">

@@ -87,5 +87,5 @@ utskriften och i platsanalysbladet.
 | Naturvårdsverket: Naturvårdsregistret, Natura 2000 | CC0 |
 | Riksantikvarieämbetet: Kulturmiljöregistret (lämningar) | Se Riksantikvarieämbetets villkor |
 | Myndigheten för civilt försvar: översvämningskarteringar | Se myndighetens villkor |
-| OpenStreetMap (vägar, vatten, bakgrundskarta, adressök) | ODbL |
+| OpenStreetMap (vägar, vatten, skyddad natur som reserv, bakgrundskarta, adressök) | ODbL |
 | OpenTopoMap (bakgrundskarta) | CC BY-SA |

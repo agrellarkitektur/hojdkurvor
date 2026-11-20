@@ -1,9 +1,37 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 20 november 2026, 0.14.3.
+överlämning; historiken finns i git. Senast: 21 november 2026, 0.14.4.
 
 ## Läget
+
+- **0.14.4** 21 november (grenen `v0.14.4`): svar på ägarens test 20 november (AÄ–BM). AÖ, BD, BF,
+  BH, BI, BJ, BM godkända och strukna; ändrat och testas som BÄ, BÖ, CA, CB; nytt i inkorgen CC–CF
+  (CF: licensfrågan om dynamisk inläsning utan inloggning, med bedömning).
+  1. **Skyddad natur** (BB, fortfarande 503 efter 3 försök): `Geodata.skyddadNatur(bTM, tillZon,
+     llRuta, llTillZon)` hämtar `skyddadNaturOsm` (Overpass: `leisure=nature_reserve`,
+     `boundary=protected_area|national_park`; protected_area bara med `protect_class` 1–7 eller
+     `protection_title`) när någon av Naturvårdsverkets tjänster faller bort. Relationernas ytterringar
+     fogas med `fogaRingar`. Områdena har `kalla: 'osm'`; `ut.reserv` = { antal, fel } ger varningen,
+     `senaste.naturReserv` märkningen i info-filen. Ett fel via proxyn slutar på *via servern*.
+     `geodata.php` skickar en webbläsarlik User-Agent. **Orsaken till 503 är inte hittad**: tjänsten
+     nås inte härifrån (testmiljöns proxy spärrar geodata.naturvardsverket.se, och WebFetch fick fel
+     vid GetCapabilities 21 november). Ägarens varning i BÖ säger om det är direkt eller via servern.
+  2. **Sektioner utan kryssruta**: `effektivaVal().sektion` = det finns ritade sektioner. Kryssrutan
+     `tillval=sektion` är borttagen ur `index.html`; äldre projekt med värdet i `tillval` läses utan fel.
+  3. **Trädvalet** (`vy3d.js` `markeraTrad`: en ring vid marken; `valjObjekt(sx, sy, shift)` skickar
+     `{ shift: true }` till `lyssnaTrad`; `app.js` `vaxlaUrval`, `visaUrval`). Lassots slinga töms vid
+     `pointerup`. Shift vid lassots start lägger till.
+  4. **Utskriften** (BE): `visaUtskriftsram` ritar kartfältet (`Utskrift.kartfalt`) i `ramPane` med
+     nedtoning utanför, så länge `#lp-utskrift` är öppen; `fitBounds` när utsnittet inte får plats.
+     `oppnaPdfFlik` öppnar fliken vid klicket (annars stoppas den), `visaPdfIFlik` lägger PDF:en i en
+     iframe med *Spara PDF* (`a[download]`). Stoppas fliken: `valjFil`/`skrivFil` som förut.
+  5. `docs/UTBYTE-CAD-APA.md`: *Analyserna och vad skissen behöver* (AÄ), med önskemål till skissens
+     version 2. Inget i formatet är ändrat.
+  Körda: alla 22 enhetstester (utökat `geodata.test.js`), `ui_test.py`, `las_test.py`,
+  `projekt_test.py`, `resultat_test.py`, `mobil_test.py`, `planvy_test.py`,
+  `fastighetsnamn_test.py` (temat ritning). Testdatan byggdes med rasterio och en ersättare för
+  `osgeo` utanför repot. **Inte provat**: riktiga Naturvårdsverket och Overpass, iPhone, Safari.
 
 - **0.14.3** 20 november (grenen `v0.14.3`): svar på ägarens test av de äldre punkterna AJ–AÅ.
   AK, AL, AS, AZ, AÅ godkända och strukna; resten ändrat och testas som BW–BZ. Frågan om att

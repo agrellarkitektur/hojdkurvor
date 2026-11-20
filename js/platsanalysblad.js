@@ -407,7 +407,9 @@
       const n = opt.natur;
       if (!Array.isArray(n)) { y = stycke(`Kunde inte kontrolleras: ${(n && n.fel) || 'okänt fel'}.`, x, y, kol, 7.5); return; }
       if (!n.length) { y = stycke('Utsnittet berör inget naturreservat, biotopskyddsområde, Natura 2000-område eller annat skyddat område i Naturvårdsregistret.', x, y, kol, 7.5); return; }
-      n.slice(0, 10).forEach(o => { linje(doc, GRON, 0.45, [2, 1])(x, y); y = stycke(`${o.typ}${o.namn ? ': ' + o.namn : ''}`, x + 9, y, kol - 9, 7.5) + 1; });
+      n.slice(0, 10).forEach(o => { linje(doc, GRON, 0.45, [2, 1])(x, y); y = stycke(`${o.typ}${o.namn ? ': ' + o.namn : ''}${o.kalla === 'osm' ? ' (OpenStreetMap)' : ''}`, x + 9, y, kol - 9, 7.5) + 1; });
+      // Reserv ur OpenStreetMap när Naturvårdsverket inte svarade (0.14.4)
+      if (n.some(o => o.kalla === 'osm')) y = stycke('Naturvårdsverket svarade inte. Områdena märkta OpenStreetMap är inte kontrollerade mot Naturvårdsregistret.', x, y + 1, kol, 7, { farg: F.gra });
     });
     avsnitt('STRANDSKYDD (INDIKATION)', () => {
       const s = opt.strand;

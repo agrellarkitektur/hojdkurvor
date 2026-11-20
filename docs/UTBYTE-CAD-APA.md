@@ -252,6 +252,37 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
 - Fler takformer, våningar och öppningar kan läggas till i en senare version.
   Höjdkurvor visar ett felmeddelande om skissens `version` är högre än den klarar.
 
+## Analyserna och vad skissen behöver
+
+Svar på AÄ (21 november 2026): vilka analyser Höjdkurvor gör och vad cad-apa därför
+bör skicka tillbaka. Version 1 av skissen räcker för allt som finns i dag. Det som
+behövs för det planerade står under *Önskat i version 2* och är inte bestämt; ändras
+formatet ska båda sidor och `test/cad-apa-mock.html` följa med.
+
+### Analyser i dag (0.14.4) och vad de läser ur skissen
+
+| Analys | Läser ur skissen |
+|---|---|
+| Skuggstudie (valda datum och klockslag, PDF och karta) | fotavtryck, golv, takfot, takform, taklutning, nockriktning |
+| Soldiagram med horisont | volymerna höjer horisonten från ögonpunkten |
+| Skyfall (lågpunkter, rinnvägar, volym i svackorna) | fotavtryck och tak: volymerna bränns in i markmodellen som hinder |
+| Lutning | inget (bara marken) |
+| Terrängsektioner | inget i dag: mark, träd och befintliga hus ur laserdatan. Skissen i sektionen vore ett tillägg |
+| Skydd och risker: lämningar, skyddad natur, översvämning, strandskydd | inget: gäller utsnittet, inte husen |
+| Platsanalysbladet (PDF) | samma som analyserna ovan |
+| 3D-vyn och planvyn (byggnadskroppar) | allt i version 1; planvyn använder också fälten nedan när kroppen är ritad i Höjdkurvor |
+
+### Önskat i version 2 (för det planerade)
+
+| Planerat | Behöver från cad-apa |
+|---|---|
+| Situationsplanen (0.16.0) | per volym `status` (`ny`, `tillbyggnad`, `befintlig`, `rivs`), `huvudbyggnad`, `entre` ({ sida, t }), vilken byggnad volymen hör till (för mått mellan kroppar), och `kalla` när volymen ersätter ett befintligt hus (Lantmäteriets objektidentitet). Samma fält som `js/kropp.js` |
+| Sol på fasaderna (0.15.0) | fasaderna ur fotavtryck och höjder räcker för klar himmel. Senare: våningar med utkragning per våning, och fönster per fasad om instrålningen ska räknas per fönster |
+| Förslag (projektfilens etapp 3) | `forslag` med samma id som i projektfilen, och förslagets namn (Basfall, Förslag A …) |
+| Geologi och bergschakt | per volym schaktbotten (eller grundläggningsnivå) så att sprängning kan räknas per bergart; egna bergpunkter (x, y, berg-z) åt båda håll |
+| Skyfall och lutning med ny mark | planerad markyta (höjdsättning) som rutnät eller brytlinjer; först när markplaneringen kommer |
+| Urtag och egna takfotslinjer (AF, AB) | hål i fotavtrycket och egna takytor, om cad-apa ska äga den formen |
+
 ## Koordinater
 
 Vridningen `v` är i grader, samma värde som fältet Vrid i höjdkurvor. Ritningen

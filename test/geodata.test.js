@@ -113,5 +113,39 @@ const somDen = p => p;
   assert.strictEqual(v[0].namn, 'Lillsjön');
   assert.strictEqual(v[0].sluten, true); assert.strictEqual(v[0].typ, 'sjö');
 
+  // --- skyddad natur ur OpenStreetMap när Naturvårdsverket inte svarar (0.14.4)
+  assert.deepStrictEqual(G.fogaRingar([[[0, 0], [1, 0]], [[1, 1], [1, 0]], [[1, 1], [0, 0]]]), [[[0, 0], [1, 0], [1, 1], [0, 0]]], 'vägarna fogas, också baklänges');
+  const OSM = { elements: [
+    { type: 'relation', id: 7, tags: { leisure: 'nature_reserve', boundary: 'protected_area', protect_class: '4', name: 'Hornsberget' }, members: [
+      { type: 'way', role: 'outer', geometry: [{ lat: 58, lon: 15 }, { lat: 58, lon: 15.01 }] },
+      { type: 'way', role: 'outer', geometry: [{ lat: 58.01, lon: 15.01 }, { lat: 58, lon: 15.01 }] },
+      { type: 'way', role: 'outer', geometry: [{ lat: 58.01, lon: 15.01 }, { lat: 58, lon: 15 }] },
+      { type: 'way', role: 'inner', geometry: [{ lat: 58.004, lon: 15.004 }, { lat: 58.004, lon: 15.005 }, { lat: 58.005, lon: 15.005 }, { lat: 58.004, lon: 15.004 }] }] },
+    { type: 'way', id: 8, tags: { boundary: 'protected_area', protect_class: '12', name: 'Vattenskydd' }, geometry: [{ lat: 58, lon: 15 }, { lat: 58, lon: 15.01 }, { lat: 58.01, lon: 15 }, { lat: 58, lon: 15 }] },
+    { type: 'way', id: 9, tags: { boundary: 'protected_area', protection_title: 'biotopskyddsområde' }, geometry: [{ lat: 58, lon: 15 }, { lat: 58, lon: 15.01 }, { lat: 58.01, lon: 15 }, { lat: 58, lon: 15 }] }] };
+  const ll = { syd: 57.9, vast: 14.9, nord: 58.1, ost: 15.1 };
+  anrop = [];
+  globalThis.fetch = async (url, o) => { anrop.push(url); return url.includes('overpass') ? svar(200, JSON.stringify(OSM)) : svar(503, ''); };
+  n = await G.skyddadNatur(bTM, somDen, ll, somDen);
+  assert.strictEqual(n.length, 2, 'naturreservat och biotopskydd, inte vattenskyddet');
+  assert.deepStrictEqual([n[0].typ, n[0].namn, n[0].kalla, n[0].ringar.length, n[0].ringar[0].length], ['Naturreservat', 'Hornsberget', 'osm', 1, 4]);
+  assert.strictEqual(n[1].typ, 'Biotopskyddsområde');
+  assert.strictEqual(n.reserv.antal, 2);
+  assert.match(n.reserv.fel, /Naturvårdsregistret svarade 503 \(3 försök\); Natura 2000 svarade 503 \(3 försök\)/);
+  // utan rutan i WGS 84: som förut
+  await assert.rejects(G.skyddadNatur(bTM, somDen), /svarade 503/);
+  // den ena svarar: OSM fyller på, men inte med samma namn igen
+  globalThis.fetch = async url => (url.includes('overpass') ? svar(200, JSON.stringify({ elements: [{ type: 'way', id: 1, tags: { leisure: 'nature_reserve', name: 'Borgberget' }, geometry: OSM.elements[1].geometry }] }))
+    : url.includes('n2000') ? svar(503, '') : naturvardsverket(url));
+  n = await G.skyddadNatur(bTM, somDen, ll, somDen);
+  assert.strictEqual(n.length, 2, 'Borgberget en gång');
+  assert.strictEqual(n.reserv.antal, 0);
+  assert.match(n.saknas, /^Natura 2000/);
+  // via servern står i felet
+  globalThis.TERRANG_KONFIG = { geodataProxy: 'geodata.php' };
+  globalThis.fetch = async url => (url.startsWith('geodata.php') ? svar(503, '') : Promise.reject(new TypeError('Failed to fetch')));
+  await assert.rejects(G.hamta('https://x/wfs'), /^Error: svarade 503 \(3 försök\) via servern$/);
+  globalThis.TERRANG_KONFIG = { geodataProxy: '' };
+
   console.log('geodata.test.js: allt godkänt');
 })().catch(e => { console.error(e); process.exit(1); });

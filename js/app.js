@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.14.3';
+  const FILVERSION = '0.14.4';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -293,10 +293,12 @@
       el.append(rad);
     }
     $('lp-skriv').disabled = !state.senaste;
+    if (!state.senaste && utskriftsram) visaUtskriftsram();
   }
   const KORT_DATUM = { mars: '20 mar', juni: '21 jun', sept: '23 sep', dec: '21 dec' };
   document.addEventListener('temabyte', () => {
     ritaValjare();
+    if (utskriftsram) utskriftsram.linje.setStyle({ color: farg('annot') });
     if (utsnittLager) utsnittLager.setStyle({ color: farg('ram') });
     ritaSektioner();
     Object.values(resultat).forEach(r => { if (r.stil) r.stil(); });
@@ -1095,6 +1097,8 @@
       sol: pa && k.sol && t.sol, horisont: pa && k.sol && t.sol && t.horisont, skugga: pa && k.sol && t.skugga,
       lutning: pa && k.terrang, skyfall: pa && k.vatten, skydd: pa && k.skydd,
       byggnadshojd: !!(t.byggnader && t.byggnadshojd), vagytor: !!(t.vagar && t.vagytor),
+      // Ritade sektioner kommer alltid med, utan kryssruta (0.14.4)
+      sektion: !!(state.sektioner && state.sektioner.length),
     });
   }
 
@@ -1128,7 +1132,7 @@
     $('sf-laser').textContent = lista([['tillval', 'punktmoln', 'laser'], ['tillval', 'träd', 'trad'], ['tillval', 'höjd över mark', 'hom']]);
     $('sf-kartdata').textContent = lista([['tillval', 'ortofoto', 'ortofoto'], ['tillval', 'byggnader', 'byggnader'], ['tillval', 'fastighetsgränser', 'fastigheter'], ['tillval', 'marktäcke', 'marktacke'], ['tillval', 'stompunkter', 'stompunkter'], ['tillval', 'vägar', 'vagar']]);
     const sek = state.sektioner || [];
-    $('sf-sektioner').textContent = kryssad('tillval', 'sektion') ? (sek.length ? sek.map(x => `${x.namn}–${x.namn}`).join(', ') : 'ingen ritad') : 'av';
+    $('sf-sektioner').textContent = sek.length ? sek.map(x => `${x.namn}–${x.namn}`).join(', ') : 'ingen ritad';
     const np = document.querySelector('input[name=nollpunkt]:checked');
     $('sf-lokalt').textContent = `${np && np.value === 'egen' ? 'egen nollpunkt' : 'SV-hörnet'} · ${({ ingen: 'ej vriden', sann: 'mot sann nord', egen: 'egen vinkel' })[$('vrid').value]}`;
     const k = kapitel(), kn = ['sol', 'terrang', 'vatten', 'skydd'].filter(x => k[x]).length;
@@ -1308,6 +1312,40 @@
     } catch (e) {
       return e && e.name === 'AbortError' ? AVBRUTET : null;
     }
+  }
+  /**
+   * Öppnar en tom flik för en PDF som håller på att skapas (0.14.4). null om webbläsaren stoppar
+   * fliken; då sparas filen som förut.
+   */
+  function oppnaPdfFlik(filnamn) {
+    let f = null;
+    try { f = window.open('', '_blank'); } catch (e) { f = null; }
+    if (!f) return null;
+    try {
+      const d = f.document;
+      d.title = filnamn;
+      d.body.style.cssText = 'margin:0;font:14px system-ui,sans-serif;background:#525659;color:#eee;display:grid;place-items:center;height:100vh';
+      d.body.textContent = 'Skapar PDF …';
+    } catch (e) { /* fliken kan inte skrivas i: visas ändå när PDF:en är klar */ }
+    return f;
+  }
+  /** Visar PDF:en i fliken, med en knapp som sparar den under rätt filnamn. */
+  function visaPdfIFlik(f, blob, filnamn) {
+    const url = URL.createObjectURL(blob);
+    try {
+      const d = f.document;
+      d.body.textContent = '';
+      d.body.style.cssText = 'margin:0;height:100vh;display:flex;flex-direction:column;background:#525659;font:14px system-ui,sans-serif';
+      const rad = d.createElement('div');
+      rad.style.cssText = 'display:flex;gap:12px;align-items:center;padding:6px 12px;background:#323639;color:#eee';
+      const namn = d.createElement('span'); namn.textContent = filnamn; namn.style.flex = '1';
+      const spara = d.createElement('a'); spara.href = url; spara.download = filnamn; spara.textContent = 'Spara PDF';
+      spara.style.cssText = 'color:#fff;background:#e85528;padding:5px 12px;border-radius:3px;text-decoration:none';
+      rad.append(namn, spara);
+      const ram = d.createElement('iframe'); ram.src = url; ram.title = filnamn;
+      ram.style.cssText = 'flex:1;border:0;width:100%';
+      d.body.append(rad, ram);
+    } catch (e) { f.location.href = url; }
   }
   async function skrivFil(mal, blob, filnamn) {
     if (mal) { const w = await mal.createWritable(); await w.write(blob); await w.close(); return; }
@@ -1674,7 +1712,6 @@
     const skuggTider = lasTider($('skuggtider').value); kor.skuggTider = skuggTider;
     const skuggDatum = [...document.querySelectorAll('input[name=skuggdatum]:checked')].map(c => c.value); kor.skuggDatum = skuggDatum;
     if (val.skugga && (!skuggTider.length || !skuggDatum.length)) { visaStatus('Välj minst ett datum och ett klockslag för skuggstudien.', true); return; }
-    if (val.sektion && !state.sektioner.length) { visaStatus('Rita minst en sektionslinje på kartan, eller bocka ur Terrängsektioner.', true); return; }
     const ogon = parseFloat(String($('ogonhojd').value).replace(',', '.')); kor.ogon = ogon;
     if (val.sol && val.horisont && !(ogon >= 0 && ogon < 200)) { visaStatus('Ange höjd över mark för horisonten i meter.', true); $('ogonhojd').focus(); return; }
     const mittV = utsnittsMitt(); kor.mittV = mittV;
@@ -2135,18 +2172,25 @@
       const llTillZon = (f => p => f(p))(T.omvandlare(4326, epsg).forward);
       const b100 = tmRuta({ xmin: r.xmin - 100, ymin: r.ymin - 100, xmax: r.xmax + 100, ymax: r.ymax + 100 }, epsg, 0);
       const bUts = tmRuta(r, epsg, 0);
+      const llUts = (() => { const t = tillLatLng(epsg), k = T.kantlinje(r).map(t);
+        return { syd: Math.min(...k.map(q => q[0])), nord: Math.max(...k.map(q => q[0])), vast: Math.min(...k.map(q => q[1])), ost: Math.max(...k.map(q => q[1])) }; })();
       const ll = (() => { const t = tillLatLng(epsg), k = T.kantlinje({ xmin: r.xmin - 300, ymin: r.ymin - 300, xmax: r.xmax + 300, ymax: r.ymax + 300 }).map(t);
         return { syd: Math.min(...k.map(q => q[0])), nord: Math.max(...k.map(q => q[0])), vast: Math.min(...k.map(q => q[1])), ost: Math.max(...k.map(q => q[1])) }; })();
       const fel = e => ({ fel: (e && e.message) || 'okänt fel' });
       // Vattnet till strandskyddet tas om hand i skapaStrandskydd, efter marktäcket (0.13.5); frågan går under tiden
       kor.vattenOsm = Geodata.vatten(ll, llTillZon).then(v => ({ v }), e => ({ fel: (e && e.message) || 'okänt fel' }));
       const [lam, nat, ovs] = await Promise.allSettled([
-        Geodata.lamningar(b100, tillZon), Geodata.skyddadNatur(bUts, tillZon), Geodata.oversvamning(bUts),
+        Geodata.lamningar(b100, tillZon), Geodata.skyddadNatur(bUts, tillZon, llUts, llTillZon), Geodata.oversvamning(bUts),
       ]);
       senaste.lamningar = lam.status === 'fulfilled' ? lam.value : fel(lam.reason);
       senaste.natur = nat.status === 'fulfilled' ? nat.value : fel(nat.reason);
-      // Svarade bara den ena av Naturvårdsverkets två tjänster går det inte att säga att området är fritt (0.13.4)
-      if (nat.status === 'fulfilled' && nat.value.saknas) {
+      if (nat.status === 'fulfilled' && nat.value.reserv) {
+        // Naturvårdsverket svarade inte: det som finns i OpenStreetMap visas i stället (0.14.4)
+        const rv = nat.value.reserv;
+        varningar.push(`Skyddad natur: Naturvårdsverket svarade inte (${rv.fel}). ${rv.antal ? `${rv.antal} område${rv.antal > 1 ? 'n' : ''} från OpenStreetMap visas i stället, inte kontrollerade mot Naturvårdsregistret.` : 'OpenStreetMap har inget skyddat område här, men det är inte säkert att det stämmer.'}`);
+        senaste.naturReserv = true;
+      } else if (nat.status === 'fulfilled' && nat.value.saknas) {
+        // Svarade bara den ena av Naturvårdsverkets två tjänster går det inte att säga att området är fritt (0.13.4)
         if (nat.value.length) varningar.push(`Skyddad natur: listan är inte fullständig (${nat.value.saknas}).`);
         else senaste.natur = { fel: nat.value.saknas };
       }
@@ -2163,9 +2207,10 @@
         .forEach(([n, v]) => { if (v && v.fel) varningar.push(`${n}: kunde inte hämtas (${v.fel}).`); });
       extraInfo.push('', 'SKYDD OCH RISKER',
         '  Lämningar inom 100 m: ' + (Array.isArray(senaste.lamningar) ? (senaste.lamningar.length ? senaste.lamningar.map(l => `${l.klass}${l.id ? ' ' + l.id : ''}`).join('; ') : 'inga registrerade') : 'kunde inte kontrolleras'),
-        '  Skyddad natur: ' + (Array.isArray(senaste.natur) ? (senaste.natur.length ? senaste.natur.map(o => `${o.typ}${o.namn ? ' ' + o.namn : ''}`).join('; ') : 'inget skyddat område') : 'kunde inte kontrolleras'),
+        '  Skyddad natur: ' + (Array.isArray(senaste.natur) ? (senaste.natur.length ? senaste.natur.map(o => `${o.typ}${o.namn ? ' ' + o.namn : ''}${o.kalla === 'osm' ? ' (OpenStreetMap)' : ''}`).join('; ') : 'inget skyddat område') : 'kunde inte kontrolleras')
+          + (senaste.naturReserv ? '. Naturvårdsverket svarade inte; områdena märkta OpenStreetMap är inte kontrollerade mot Naturvårdsregistret.' : ''),
         '  Översvämning: ' + (Array.isArray(senaste.oversvamning) ? senaste.oversvamning.map(o => `${o.namn} ${o.andel > 0.001 ? fmt(o.andel * 100) + ' %' : 'nej'}`).join(', ') : 'kunde inte kontrolleras'),
-        '  ' + [Geodata.KALLOR.natur, Geodata.KALLOR.lamningar, Geodata.KALLOR.oversvamning].join(' '));
+        '  ' + [Geodata.KALLOR.natur, senaste.naturReserv && Geodata.KALLOR.naturOsm, Geodata.KALLOR.lamningar, Geodata.KALLOR.oversvamning].filter(Boolean).join(' '));
       sammanExtra.push(['Skydd och risker', [Array.isArray(senaste.lamningar) ? `${senaste.lamningar.length} lämningar` : null, Array.isArray(senaste.natur) ? `${senaste.natur.length} skyddade områden` : null].filter(Boolean).join(', ') || 'se varningar']);
       visaSkydd(senaste, epsg, bUts);
     }
@@ -2930,6 +2975,7 @@
     ruta.hidden = !visa;
     $('lp-skriv').setAttribute('aria-expanded', String(visa));
     if (visa) { fyllUtskrift(); requestAnimationFrame(() => $('pr-skapa').scrollIntoView({ block: 'nearest' })); }
+    else visaUtskriftsram();
   });
   function fyllUtskrift() {
     const s = state.senaste;
@@ -2937,12 +2983,39 @@
     $('pr-skala').value = String(Utskrift.foreslaSkala(s.r, $('pr-format').value, $('pr-orient').value === '1'));
     passar();
   }
+  /**
+   * Förhandsvy av utskriften (0.14.4): kartfältet på pappret som en streckad ram på kartan,
+   * så länge utskriftsrutan är öppen. Det som ligger utanför ramen kommer inte med.
+   */
+  let utskriftsram = null;
+  function visaUtskriftsram(passa) {
+    if (utskriftsram) { utskriftsram.remove(); utskriftsram = null; }
+    const s = state.senaste;
+    if (!s || $('lp-utskrift').hidden) return;
+    const f = Utskrift.kartfalt(s.r, $('pr-format').value, $('pr-orient').value === '1', +$('pr-skala').value);
+    const t = tillLatLng(s.epsg);
+    const ram = [[f.xmin, f.ymin], [f.xmax, f.ymin], [f.xmax, f.ymax], [f.xmin, f.ymax]].map(t);
+    // Utanför pappret tonas kartan ned, så att det som kommer med syns tydligt
+    const M = 5000, utanfor = [[f.xmin - M, f.ymin - M], [f.xmax + M, f.ymin - M], [f.xmax + M, f.ymax + M], [f.xmin - M, f.ymax + M]].map(t);
+    const linje = L.polygon(ram, { pane: 'ramPane', renderer: ramRitare, color: farg('annot'), weight: 2.5, dashArray: '8 6', fill: false, interactive: false });
+    utskriftsram = L.featureGroup([
+      L.polygon([utanfor, ram], { pane: 'ramPane', renderer: ramRitare, stroke: false, fillColor: '#000', fillOpacity: 0.35, interactive: false }),
+      linje,
+    ]).addTo(karta);
+    utskriftsram.linje = linje;
+    if (passa) {
+      const uts = [[s.r.xmin, s.r.ymin], [s.r.xmax, s.r.ymax]].map(t);
+      karta.fitBounds(linje.getBounds().extend(L.latLngBounds(uts)), { padding: [30, 30], maxZoom: 19 });
+    }
+  }
   function passar() {
     const s = state.senaste;
-    if (!s || !$('pr-passar')) return;
+    if (!s || !$('pr-passar')) { visaUtskriftsram(); return; }
     const [W, H] = Utskrift.papper($('pr-format').value, $('pr-orient').value === '1');
     const sk = +$('pr-skala').value, bw = (s.r.xmax - s.r.xmin) * 1000 / sk, bh = (s.r.ymax - s.r.ymin) * 1000 / sk;
-    $('pr-passar').textContent = `Utsnittet blir ${fmt(bw)} × ${fmt(bh)} mm.` + (bw > W - 20 || bh > H - 56 ? ' Det får inte plats helt.' : '');
+    const ryms = !(bw > W - 20 || bh > H - 56);
+    $('pr-passar').textContent = `Utsnittet blir ${fmt(bw)} × ${fmt(bh)} mm.` + (ryms ? ' Den streckade ramen på kartan visar vad som kommer med.' : ' Det får inte plats helt: bara det inom den streckade ramen på kartan kommer med.');
+    visaUtskriftsram(!ryms);
     const lm = state.bakgrund === 'lm';
     $('pr-bg-rad').hidden = !lm;
     $('pr-bg-info').textContent = lm
@@ -2990,7 +3063,9 @@
     const knapp = $('pr-skapa');
     const format = $('pr-format').value, liggande = $('pr-orient').value === '1', skala = +$('pr-skala').value;
     const filnamn = `${s.namn}_1-${skala}_${format.toUpperCase()}.pdf`;
-    const mal = await valjFil(filnamn, 'application/pdf', 'PDF');
+    // PDF:en öppnas i en ny flik (0.14.4). Fliken måste öppnas direkt vid klicket, annars stoppas den.
+    const flik = oppnaPdfFlik(filnamn);
+    const mal = flik ? null : await valjFil(filnamn, 'application/pdf', 'PDF');
     if (mal === AVBRUTET) return;
     knapp.disabled = true; knapp.textContent = 'SKAPAR …';
     try {
@@ -3024,10 +3099,12 @@
           ekvidistans: `${String(s.intervall).replace('.', ',')} m`,
           kallor: ['© Lantmäteriet (CC BY 4.0)', bakgrund ? 'Bakgrund: Topografisk webbkarta' : '', syns('vagar') || syns('gangvagar') ? 'Vägar © OpenStreetMap-bidragsgivare (ODbL)' : '', 'Underlag för tidiga skeden.'].filter(Boolean).join('. ') },
       });
-      await skrivFil(mal, new Blob([pdf], { type: 'application/pdf' }), filnamn);
+      const blob = new Blob([pdf], { type: 'application/pdf' });
+      if (flik) visaPdfIFlik(flik, blob, filnamn); else await skrivFil(mal, blob, filnamn);
       if (bgFel) lagerpanelMeddelande('PDF:en skapades utan bakgrundskarta: ' + bgFel);
     } catch (e) {
       console.error(e);
+      if (flik && !flik.closed) flik.close();
       lagerpanelMeddelande('Utskriften kunde inte skapas: ' + e.message);
     } finally { knapp.disabled = false; knapp.textContent = 'SKAPA PDF'; }
   });
@@ -3083,7 +3160,7 @@
     }
     if (Array.isArray(s.natur) && s.natur.length) {
       const stil = () => ({ color: farg('natur'), weight: 2, dashArray: '6 4', fillColor: farg('natur'), fillOpacity: 0.08 });
-      const pol = s.natur.flatMap(o => o.ringar.map(rg => L.polygon(rg.map(t), stil()).bindTooltip(esc(`${o.typ}${o.namn ? ': ' + o.namn : ''}`), { sticky: true })));
+      const pol = s.natur.flatMap(o => o.ringar.map(rg => L.polygon(rg.map(t), stil()).bindTooltip(esc(`${o.typ}${o.namn ? ': ' + o.namn : ''}${o.kalla === 'osm' ? ' (OpenStreetMap)' : ''}`), { sticky: true })));
       const grp = L.featureGroup(pol);
       visaResultatLager('natur', grp, () => pol.forEach(p => p.setStyle(stil())));
     }
@@ -4382,7 +4459,8 @@
     $('vy3d-trad').hidden = true; tradVal = null;
     if (vy3d) vy3d.markeraTrad(null);
   }
-  function visaTradpanel(i) {
+  function visaTradpanel(i, o) {
+    if (o && o.shift) { vaxlaUrval(i); return; }
     const t = i != null && trad3d[i];
     if (!t || !vy3d || vy3d.modellera()) { stangTradpanel(); return; }
     tradVal = i;
@@ -4451,13 +4529,37 @@
     }
     return c;
   };
+  /** Visar urvalet (lassot och Shift-klick) i vyn och i lassopanelen. */
+  function visaUrval() {
+    vy3d.markeraTrad(lassoTrad);
+    const n = lassoTrad.length;
+    $('lasso-info').textContent = (n ? `${n} träd markerade.` : 'Inga träd markerade.') + ' Shift-klicka på ett träd för att lägga till eller ta bort det.';
+    $('lasso-dolj').disabled = !n;
+    $('lasso-dolj').textContent = n ? `Dölj ${n} träd` : 'Dölj träden';
+  }
+  /**
+   * Shift-klick på ett träd i 3D-vyn (0.14.4): lägger till det i urvalet, eller tar bort det om
+   * det redan är markerat. Ett träd som var valt med vanligt klick följer med in i urvalet.
+   */
+  function vaxlaUrval(i) {
+    if (!vy3d || i == null || !trad3d[i]) return;
+    if ($('vy3d-lassopanel').hidden) {
+      const forut = tradVal != null && !$('vy3d-trad').hidden ? [tradVal] : [];
+      stangTradpanel(); stangTakpanel();
+      lassoTrad = forut;
+      $('vy3d-lassopanel').hidden = false;
+    }
+    const k = lassoTrad.indexOf(i);
+    if (k >= 0) lassoTrad.splice(k, 1); else lassoTrad.push(i);
+    visaUrval();
+  }
   function startaLasso() {
     if (!vy3d) return;
     if (lassoYta) lassoYta.remove();
     stangTradpanel(); stangTakpanel();
     lassoTrad = []; vy3d.markeraTrad(null);
     $('lasso-dolj').disabled = true; $('lasso-dolj').textContent = 'Dölj träden';
-    $('lasso-info').textContent = 'Dra en slinga runt träden som ska döljas.';
+    $('lasso-info').textContent = 'Dra en slinga runt träden som ska döljas, eller Shift-klicka på dem ett och ett.';
     $('vy3d-lassopanel').hidden = false;
     $('vy3d-lasso').setAttribute('aria-pressed', 'true');
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -4469,9 +4571,11 @@
     let pts = null;
     const lokal = e => { const b = svg.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const rita = stang => { vag.setAttribute('d', pts.length ? 'M' + pts.map(p => p.join(' ')).join(' L') + (stang ? ' Z' : '') : ''); };
+    let shiftNed = false;
     svg.addEventListener('pointerdown', e => {
       if (e.button) return;
       e.preventDefault(); svg.setPointerCapture(e.pointerId);
+      shiftNed = e.shiftKey;
       pts = [lokal(e)]; rita(false);
     });
     svg.addEventListener('pointermove', e => {
@@ -4483,25 +4587,15 @@
       if (!pts) return;
       const poly = pts; pts = null;
       if (poly.length < 3) { rita(false); return; }
-      vag.setAttribute('d', 'M' + poly.map(p => p.join(' ')).join(' L') + ' Z');
+      // Slingan släcks så fort musknappen släpps; de markerade träden visas i stället (0.14.4)
+      vag.setAttribute('d', '');
       const b = svg.getBoundingClientRect();
-      lassoTrad = vy3d.tradPaSkarm().filter(t => innanfor([t.x - b.left, t.y - b.top], poly)).map(t => t.i);
-      vy3d.markeraTrad(lassoTrad);
-      const n = lassoTrad.length;
-      $('lasso-info').textContent = n ? `${n} ${n === 1 ? 'träd' : 'träd'} inom slingan.` : 'Inga träd inom slingan. Rita om.';
-      $('lasso-dolj').disabled = !n;
-      $('lasso-dolj').textContent = n ? `Dölj ${n} träd` : 'Dölj träden';
-      // lassot släpper vyn igen, så att man kan snurra och se vilka som är markerade.
-      // Slingan är ritad på skärmen och följer inte med vyn: den släcks så fort vyn rörs (AU).
+      const inom = vy3d.tradPaSkarm().filter(t => innanfor([t.x - b.left, t.y - b.top], poly)).map(t => t.i);
+      // Shift: slingan läggs till det som redan är markerat
+      lassoTrad = shiftNed ? [...new Set(lassoTrad.concat(inom))] : inom;
+      visaUrval();
+      // lassot släpper vyn igen, så att man kan snurra och Shift-klicka på fler träd
       svg.style.pointerEvents = 'none';
-      const slack = () => {
-        vag.setAttribute('d', '');
-        yta.removeEventListener('pointerdown', slack, true);
-        yta.removeEventListener('wheel', slack, true);
-      };
-      const yta = $('vy3d-yta');
-      yta.addEventListener('pointerdown', slack, true);
-      yta.addEventListener('wheel', slack, true);
     });
   }
   $('vy3d-lasso').addEventListener('click', () => { if (lassoYta) stangLasso(); else startaLasso(); });

@@ -3,6 +3,31 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.14.4 – 2026-11-21
+
+Rättelser och förbättringar efter ägarens test 20 november (AÄ–BM i
+`docs/SYNPUNKTER.md`).
+
+- **Skyddad natur** (BB): svarar inte Naturvårdsverket hämtas naturreservat,
+  nationalparker och andra skyddade områden ur OpenStreetMap i stället
+  (`Geodata.skyddadNaturOsm`). Varningen säger det, och områdena är märkta
+  *(OpenStreetMap)* på kartan, i info-filen och på platsanalysbladet.
+  Vattenskyddsområden och liknande räknas inte. Felet säger om frågan gick via
+  servern (`geodata.php`), och servern presenterar sig som en webbläsare mot
+  myndigheterna.
+- **Terrängsektioner utan kryssruta**: ritade sektioner kommer alltid med, och
+  utan sektioner skapas allt annat. Kryssrutan och beskedet *Rita minst en
+  sektionslinje* är borta.
+- **Trädvalet i 3D-vyn**: lassots slinga släcks när musknappen släpps. De
+  markerade träden får en ring vid marken i stället för en cylinder. Shift-klick
+  på ett träd lägger till det i urvalet, och på ett markerat träd tar bort det.
+  Shift med lassot lägger till det inringade.
+- **Skriv ut i skala** (BE): en streckad ram på kartan visar vad som får plats
+  på pappret; kartan utanför tonas ned. PDF:en öppnas i en ny flik med knappen
+  *Spara PDF*. Stoppar webbläsaren fliken sparas filen som förut.
+- `docs/UTBYTE-CAD-APA.md` listar analyserna och vad skissen från cad-apa
+  behöver för det som är planerat (AÄ).
+
 ## 0.14.3 – 2026-11-20
 
 Rättelser och förbättringar efter ägarens test av de äldre punkterna (AJ–AÅ i

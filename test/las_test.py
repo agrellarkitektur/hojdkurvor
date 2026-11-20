@@ -142,12 +142,11 @@ with sync_playwright() as p:
     pg.mouse.move(mx - 150, my - 100); pg.mouse.down()
     for x, y in ((mx + 150, my - 100), (mx + 150, my + 100), (mx - 150, my + 100), (mx - 150, my - 95)):
         pg.mouse.move(x, y, steps=10)
+    d0 = pg.get_attribute('svg.vy3d-lasso path', 'd') or ''
     pg.mouse.up(); pg.wait_for_timeout(200)
     d1 = pg.get_attribute('svg.vy3d-lasso path', 'd') or ''
-    pg.mouse.move(mx, my); pg.mouse.down(); pg.mouse.move(mx + 60, my, steps=5); pg.mouse.up(); pg.wait_for_timeout(200)
-    d2 = pg.get_attribute('svg.vy3d-lasso path', 'd')
-    print('  lasso före/efter att vyn rörts:', len(d1), len(d2 or ''), '|', pg.inner_text('#lasso-info'))
-    assert d1 and not d2, 'slingan släcks när vyn rörs'
+    print('  lasso medan musknappen är nere/efter släpp:', len(d0), len(d1), '|', pg.inner_text('#lasso-info'))
+    assert d0 and not d1, 'slingan syns medan man ritar och släcks när musknappen släpps (0.14.4)'
 
     print('fel:', [l for l in logg if 'PAGEERROR' in l])
     assert not [l for l in logg if 'PAGEERROR' in l]

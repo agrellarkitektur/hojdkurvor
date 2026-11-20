@@ -231,7 +231,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   kontrollerat mot tjänsterna 19 november 2026
 - Lämningar: pub.raa.se/visning/lamningar_v1/wms (GetFeatureInfo)
 - Översvämning: gis-tjanster.mcf.se, Oversvamningskarteringar (WMS)
-- Vägar och vatten: overpass-api.de (OpenStreetMap)
+- Vägar, vatten och skyddad natur när Naturvårdsverket inte svarar: overpass-api.de (OpenStreetMap)
 - Bakgrundskartor: tile.openstreetmap.org, tile.opentopomap.org, samt Esri om
   nyckel finns i config.js
 - Adressök: nominatim.openstreetmap.org

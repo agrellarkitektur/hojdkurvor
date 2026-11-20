@@ -992,13 +992,19 @@
         return true;
       }
       // utanför modelleringen: ett klick på ett befintligt hus väljer det (egen takform), på ett träd trädet (0.11.0)
-      return valjObjekt(e.clientX, e.clientY);
+      return valjObjekt(e.clientX, e.clientY, e.shiftKey);
     };
-    const valjObjekt = (sx, sy) => {
+    /** shift: lägg till eller ta bort trädet ur urvalet (0.14.4); husen och tomma klick berörs inte. */
+    const valjObjekt = (sx, sy, shift = false) => {
       const t = husLager && traffA(sx, sy, husLager.children, 'hus');
       const tr = traffTrad(sx, sy);
       const husD = t ? straleFran(sx, sy).ray.origin.distanceTo(t.punkt) : Infinity;
       const tradVald = !!tr && tr.d < husD;
+      if (shift) {
+        if (!tradVald) return false;
+        tradLyssnare.forEach(f => { try { f(tr.i, { shift: true }); } catch (err) { console.error(err); } });
+        return true;
+      }
       husLyssnare.forEach(f => { try { f(t && !tradVald ? t.id : null); } catch (err) { console.error(err); } });
       tradLyssnare.forEach(f => { try { f(tradVald ? tr.i : null); } catch (err) { console.error(err); } });
       return !!t || tradVald;
@@ -1132,8 +1138,10 @@
     const tradLyssnare = [];
     const tradMarkMat = new THREE.LineBasicMaterial({ color: '#ffb000', depthTest: false, transparent: true });
     let tradMark = null, markeratTrad = null;
-    /** Ringar vid marken och toppen och fyra lodräta linjer runt det valda trädet. */
-    /** i = ett index, en lista med index (lassot, 0.12.0) eller null. */
+    /**
+     * En ring i marknivå runt det valda trädet, kronans bredd (0.14.4; förut en cylinder, som såg ut
+     * som fler träd än det var). i = ett index, en lista med index (lassot, 0.12.0) eller null.
+     */
     const markeraTrad = i => {
       if (tradMark) { tradMark.parent.remove(tradMark); tradMark.geometry.dispose(); tradMark = null; }
       markeratTrad = i == null || Array.isArray(i) ? null : i;
@@ -1141,10 +1149,9 @@
       if (!lista.length || !tradLager) return;
       const p = [];
       for (const t of lista) {
-        const n = lista.length > 50 ? 12 : 32, R = t.kr / 2, y0 = t.b + 0.1, y1 = t.b + t.h;
+        const n = lista.length > 50 ? 16 : 32, R = Math.max(0.5, t.kr / 2), y0 = t.b + 0.15;
         const pk = a => [t.x + R * Math.cos(a), t.z + R * Math.sin(a)];
-        for (const y of [y0, y1]) for (let k = 0; k < n; k++) { const [a, b] = pk(k / n * 2 * Math.PI), [c, d] = pk((k + 1) / n * 2 * Math.PI); p.push(a, y, b, c, y, d); }
-        for (let k = 0; k < 4; k++) { const [a, b] = pk(k / 4 * 2 * Math.PI + 0.4); p.push(a, y0, b, a, y1, b); }
+        for (let k = 0; k < n; k++) { const [a, b] = pk(k / n * 2 * Math.PI), [c, d] = pk((k + 1) / n * 2 * Math.PI); p.push(a, y0, b, c, y0, d); }
       }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
       tradMark = new THREE.LineSegments(g, tradMarkMat); tradMark.renderOrder = 10;
@@ -1505,5 +1512,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.14.3' };
+  window.Vy3D = { visa, version: '0.14.4' };
 }());

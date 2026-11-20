@@ -62,7 +62,8 @@ $ctx = stream_context_create(['http' => [
     'ignore_errors' => true,
     'follow_location' => 0,
     'max_redirects' => 0,
-    'header' => "User-Agent: Hojdkurvor\r\nAccept: application/json, image/png, */*\r\n",
+    // En del brandväggar spärrar okända klienter; säg vilka vi är som en webbläsare gör (0.14.4)
+    'header' => "User-Agent: Mozilla/5.0 (compatible; Hojdkurvor/1.0; +https://hojdkurvor.se/)\r\nAccept: application/json, application/geo+json, image/png, */*\r\n",
 ]]);
 $adress = $u;
 for ($steg = 0; ; $steg++) {

@@ -7,6 +7,7 @@
  * - Fornlämningar och andra lämningar: Riksantikvarieämbetet, Kulturmiljöregistret (WMS)
  * - Översvämning: Myndigheten för civilt försvar (f.d. MSB), översvämningskarteringar (WMS)
  * - Vatten för strandskyddsindikation: OpenStreetMap via Overpass
+ * - Skyddad natur som reserv när Naturvårdsverket inte svarar: OpenStreetMap via Overpass (0.14.4)
  *
  * Varje anrop görs först direkt från webbläsaren. Spärras det (CORS) går det via
  * geodata.php på webbhotellet, som bara släpper igenom adresserna i VITLISTA.
@@ -94,7 +95,11 @@
     } catch (e) {
       const p = proxyUrl();
       if (!p || metod !== 'GET' || (e && e.message && e.message.startsWith('svarade'))) throw e;
-      return forsok(`${p}?u=${encodeURIComponent(url)}`);
+      // Felet säger att frågan gick via servern, så att det går att se var det stoppade (0.14.4)
+      try { return await forsok(`${p}?u=${encodeURIComponent(url)}`); } catch (e2) {
+        if (e2 && e2.message && !/via servern/.test(e2.message)) e2.message += ' via servern';
+        throw e2;
+      }
     }
   }
   const bboxText = b => [b.xmin, b.ymin, b.xmax, b.ymax].map(v => Math.round(v)).join(',');
@@ -146,8 +151,10 @@
    * Skyddade områden (naturreservat, nationalpark, biotopskydd m.fl.) och Natura 2000 som
    * berör rutan bTM (SWEREF 99 TM). tillZon: [E, N] → zonens [x, y].
    * Svarar bara den ena tjänsten kommer dess områden med, och `ut.saknas` säger vilken som föll bort.
+   * Med llRuta (WGS 84: syd, vast, nord, ost) och llTillZon ([lon, lat] → zonen) fylls listan på
+   * ur OpenStreetMap när Naturvårdsverket inte svarar; `ut.reserv` säger då hur många som kom därifrån.
    */
-  async function skyddadNatur(bTM, tillZon) {
+  async function skyddadNatur(bTM, tillZon, llRuta = null, llTillZon = null) {
     const fraga = (nyckel, typ) => hamta(wfsUrl(adress(nyckel), typ, bTM));
     const [nat, n2k] = await Promise.allSettled([
       fraga('naturWfs', 'Naturvardsregistret_WFS:SkyddadeOmraden'),
@@ -169,10 +176,79 @@
       id: egenskap(f.properties, ['OMRADESKOD', 'SITECODE']) || f.id || '',
       ringar: ringar(f.geometry, tillZon),
     }));
-    if (nat.status === 'rejected' && n2k.status === 'rejected') throw nat.reason;
+    const fel = [nat.status === 'rejected' && ['Naturvårdsregistret', nat.reason], n2k.status === 'rejected' && ['Natura 2000', n2k.reason]].filter(Boolean);
+    const felText = fel.map(([n, e]) => `${n} ${(e && e.message) || 'svarade inte'}`).join('; ');
+    // Svarar inte Naturvårdsverket fylls listan på ur OpenStreetMap (0.14.4), om rutan i WGS 84 finns med
+    if (fel.length && llRuta && llTillZon) {
+      try {
+        const osm = await skyddadNaturOsm(llRuta, llTillZon);
+        const kanda = new Set(ut.map(o => o.namn.toLowerCase()).filter(Boolean));
+        const nya = osm.filter(o => !o.namn || !kanda.has(o.namn.toLowerCase()));
+        ut.push(...nya);
+        ut.reserv = { antal: nya.length, fel: felText };
+        if (fel.length === 2) { ut.saknas = felText; ut.helaReserv = true; return ut; }
+      } catch (e) { /* OpenStreetMap svarade inte heller: som förut */ }
+    }
+    if (fel.length === 2) throw nat.reason;
     // en av två: det som kom är med, men svaret är inte fullständigt
-    const fel = nat.status === 'rejected' ? ['Naturvårdsregistret', nat.reason] : n2k.status === 'rejected' ? ['Natura 2000', n2k.reason] : null;
-    if (fel) ut.saknas = `${fel[0]} ${(fel[1] && fel[1].message) || 'svarade inte'}`;
+    if (fel.length) ut.saknas = felText;
+    return ut;
+  }
+
+  /**
+   * Fogar ihop linjer (OSM-vägar ur en relation) till ringar där ändpunkterna möts.
+   * Linjer som inte går att sluta kommer med som de är.
+   */
+  function fogaRingar(linjer) {
+    const kvar = linjer.filter(l => l && l.length >= 2).map(l => l.slice());
+    const lika = (a, b) => Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+    const ut = [];
+    while (kvar.length) {
+      let ring = kvar.shift();
+      let vaxte = true;
+      while (!lika(ring[0], ring[ring.length - 1]) && vaxte) {
+        vaxte = false;
+        for (let i = 0; i < kvar.length; i++) {
+          const l = kvar[i], slut = ring[ring.length - 1];
+          if (lika(l[0], slut)) ring = ring.concat(l.slice(1));
+          else if (lika(l[l.length - 1], slut)) ring = ring.concat(l.slice(0, -1).reverse());
+          else continue;
+          kvar.splice(i, 1); vaxte = true; break;
+        }
+      }
+      ut.push(ring);
+    }
+    return ut;
+  }
+
+  /** Skyddsform i klartext ur OSM-taggarna. */
+  function osmSkyddstyp(t) {
+    if (t.boundary === 'national_park') return 'Nationalpark';
+    if (t.protection_title) return t.protection_title.charAt(0).toUpperCase() + t.protection_title.slice(1);
+    if (t.leisure === 'nature_reserve') return 'Naturreservat';
+    return 'Skyddat område';
+  }
+
+  /**
+   * Skyddade områden ur OpenStreetMap (naturreservat, nationalparker, protected_area) inom en
+   * WGS 84-ruta. Reserv när Naturvårdsverket inte svarar (0.14.4). Ger samma form som
+   * skyddadNatur, med `kalla: 'osm'`. Vattenskyddsområden och liknande (protect_class 12, 14 …) tas inte med.
+   */
+  async function skyddadNaturOsm(llRuta, tillZon) {
+    const bb = `${llRuta.syd},${llRuta.vast},${llRuta.nord},${llRuta.ost}`;
+    const q = `[out:json][timeout:35];(nwr["leisure"="nature_reserve"](${bb});nwr["boundary"~"^(protected_area|national_park)$"](${bb}););out geom;`;
+    const svar = await hamta(adress('overpass'), 'json', { metod: 'POST', kropp: 'data=' + encodeURIComponent(q), tid: 40000 });
+    const ut = [];
+    for (const e of (svar.elements || [])) {
+      const t = e.tags || {};
+      if (e.type === 'node') continue;
+      const klass = parseInt(t.protect_class, 10);
+      if (t.boundary === 'protected_area' && t.leisure !== 'nature_reserve' && !(klass >= 1 && klass <= 7) && !t.protection_title) continue;
+      const linjer = e.type === 'way' ? [e.geometry] : (e.members || []).filter(m => m.geometry && m.role !== 'inner').map(m => m.geometry);
+      const ringarna = fogaRingar(linjer.filter(Boolean).map(g => g.map(p => [p.lon, p.lat]))).filter(r => r.length >= 3).map(r => r.map(tillZon));
+      if (!ringarna.length) continue;
+      ut.push({ typ: osmSkyddstyp(t), namn: t.name || '', id: `osm ${e.type}/${e.id}`, ringar: ringarna, kalla: 'osm' });
+    }
     return ut;
   }
 
@@ -270,7 +346,8 @@
     lamningar: 'Lämningar: Riksantikvarieämbetet, Kulturmiljöregistret.',
     oversvamning: 'Översvämning: Myndigheten för civilt försvar, översvämningskarteringar.',
     vatten: 'Vatten: © OpenStreetMap-bidragsgivare (ODbL).',
+    naturOsm: 'Skyddad natur (reserv): © OpenStreetMap-bidragsgivare (ODbL).',
   };
 
-  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, TILLFALLIGT, hamta, medOmforsok, wfsUrl, natura2000Typ, ringar, skyddadNatur, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
+  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, TILLFALLIGT, hamta, medOmforsok, wfsUrl, natura2000Typ, ringar, skyddadNatur, skyddadNaturOsm, fogaRingar, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
 }));
