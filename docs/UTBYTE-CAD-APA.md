@@ -22,7 +22,9 @@ Som reserv kan båda sidor spara och öppna filer.
 
 ## Adresser
 
-- höjdkurvor: `https://hojdkurvor.danaid.cloud/` (sedan 17 november 2026)
+- höjdkurvor: `https://hojdkurvor.se/` (sedan 20 november 2026, 0.14.1). Den tidigare
+  adressen `https://hojdkurvor.danaid.cloud/` (17–20 november) omdirigeras dit.
+  cad-apa ska godta ursprunget `https://hojdkurvor.se` och skicka skissen tillbaka dit.
 - cad-apa: `https://cad-apa.danaid.cloud/` (sedan 19 november 2026)
 
 De gamla adresserna på agrellarkitektur.se (`/terrang/` och `/cad-apa/`) gäller
@@ -144,7 +146,7 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   "ortofoto": {           // ortofotot (Ortofoto Nedladdning), från 0.10.1
     "bild": "data:image/jpeg;base64,…", "x0": 189620.25, "y1": 6430369.75, "s": 0.5, "W": 640, "H": 400, "ar": 2023
   },
-  "lankar": { "projekt": "https://hojdkurvor.danaid.cloud/#p=…" },
+  "lankar": { "projekt": "https://hojdkurvor.se/#p=…" },
   "licens": "Höjddata och laserdata © Lantmäteriet (CC BY 4.0). Vägar © OpenStreetMap-bidragsgivare (ODbL)."
 }
 ```

@@ -1,9 +1,24 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 19 november 2026, 0.14.0.
+överlämning; historiken finns i git. Senast: 20 november 2026, 0.14.1.
 
 ## Läget
+
+- **0.14.1** 20 november (grenen `v0.14.1`): **ny adress <https://hojdkurvor.se/>** och loggan
+  **höjdkurvor.se** igen. Ägaren registrerade hojdkurvor.se och höjdkurvor.se hos one.com 20
+  november; apps-sessionen lade sajten på hojdkurvor.se i `drift/apps.caddy` och omdirigerar
+  höjdkurvor.se, www-adresserna och hojdkurvor.danaid.cloud dit. Här: adressen i README,
+  `CLAUDE.md`, `docs/FLYTT.md` (ruta överst), `docs/UTBYTE-CAD-APA.md`, `.htaccess` och
+  arbetsflödena. **`SIDA` i `publicera-vps.yml` är `https://hojdkurvor.se/`**: kontrollen efter
+  uppladdningen följer inte omdirigeringar, så den måste gå mot den riktiga adressen. `HOST`
+  (SSH) är fortfarande apps.danaid.cloud. Länkarna som appen skapar bygger på `location.origin`
+  och behövde ingen ändring. `synpunkter.php` jämför Origin med Host och fungerar på vilken
+  adress som helst. Loggan: `.ordbild` med `.punkt` på alla fyra sidor, `Utskrift.ordbild` i
+  PDF:erna (ritningen, skuggstudien, platsanalysbladet). Appen heter Höjdkurvor i löpande text,
+  i `<title>`, i PDF:ernas `creator` och i `aria-label`. **Kvar i cad-apa** (egen session):
+  `https://hojdkurvor.se` i `HOJDKURVOR_ORIGINS` och `HOJDKURVOR_URL`; till dess fungerar inte
+  utbytet från den nya adressen. **Att testa**: BT–BV i `docs/SYNPUNKTER.md`.
 
 - **0.14.0** 19 november (grenen `v0.14.0`, sammanslagen och publicerad): byggnadskroppar och planvyn, etapp 1–2 i
   `plan-skiss-situationsplan.md` (claude.ai-projektet), med ägarens ändringar samma dag:

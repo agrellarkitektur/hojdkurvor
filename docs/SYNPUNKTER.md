@@ -19,6 +19,12 @@ Senast använda nummer: **BM**.
 
 Grupperat efter den version där testbehovet uppstod.
 
+### 0.14.1
+
+- **BT** Nya adressen: öppna <https://hojdkurvor.se/>, <https://höjdkurvor.se/>, <https://www.hojdkurvor.se/> och <https://hojdkurvor.danaid.cloud/>. Hamnar alla på hojdkurvor.se med giltigt lås? Öppna en äldre projektlänk (`…danaid.cloud/#p=…`): kommer området och valen fram på den nya adressen? Skicka en synpunkt från appen.
+- **BU** Loggan höjdkurvor.se: ryms den i menyraden på datorn och på iPhone, i alla tre teman? Skapa en ritning, en skuggstudie och ett platsanalysblad och titta på loggan i ritningshuvudet.
+- **BV** cad-apa (när cad-apa har fått den nya adressen): *Rita i cad-apa* från hojdkurvor.se, skicka tillbaka en skiss, och *Fortsätt rita i cad-apa*.
+
 ### 0.14.0
 
 - **BN** *Rita i plan* på en riktig tomt (Windows, Chrome), skapad med Fastighetsgränser och Befintliga byggnader: blir ritriktningen rätt från början? Rita en rektangel med klick och med `12,6x9`, en polygon med klick och med inmatningsraden (`6`, `6<90`, `@3;4`). Fäster snäppet där du väntar dig, och är det lätt att se vad det fäster mot? Ortho (F8) och Snäpp (F3)? Flytta med ett hörn mot en gräns eller ett hus, dra i hörnen, vrid, kopiera, ångra.

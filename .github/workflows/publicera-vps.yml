@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Agrell Arkitektur AB
-# Kontrollerar appen och lägger den på VPS:en (https://hojdkurvor.danaid.cloud/)
+# Kontrollerar appen och lägger den på VPS:en (https://hojdkurvor.se/)
 # med rsync över SSH vid varje push till main (ändringar som bara rör
 # dokumentationen hoppas över). Kan också köras för hand under Actions →
 # "Publicera på VPS:en" → "Run workflow". Det enda stället appen publiceras på
@@ -10,7 +10,9 @@
 #   - secret APPS_SSH_KEY: nyckeln från  sudo apps-drift nyckel hojdkurvor www/hojdkurvor
 #     Den är låst till rsync i /srv/apps/www/hojdkurvor och kan inte köra kommandon.
 #   - .github/known_hosts: serverns nycklar, kopierade från drift/known_hosts i apps.
-#   - Caddy-sajten för hojdkurvor.danaid.cloud ligger i drift/apps.caddy i apps.
+#   - Caddy-sajten för hojdkurvor.se ligger i drift/apps.caddy i apps. Den tidigare
+#     adressen hojdkurvor.danaid.cloud omdirigeras dit, så kontrollen måste gå mot
+#     hojdkurvor.se (curl följer inte omdirigeringar här).
 #
 # Commiten skrivs in i js/kalla.js (länken till källkoden, AGPL §13).
 #
@@ -44,7 +46,7 @@ permissions:
 env:
   HOST: apps.danaid.cloud
   USER: appsdeploy
-  SIDA: https://hojdkurvor.danaid.cloud/
+  SIDA: https://hojdkurvor.se/
 
 jobs:
   publicera:
@@ -106,7 +108,7 @@ jobs:
           k="kontroll=$GITHUB_RUN_ID"
           kod=$(curl -s -o /dev/null -w '%{http_code}' "${SIDA}index.html?$k")
           if [ "$kod" = "000" ]; then
-            echo "::warning::${SIDA} gick inte att nå (saknas DNS-posten hojdkurvor?). Filerna är uppladdade men inte kontrollerade."
+            echo "::warning::${SIDA} gick inte att nå (saknas DNS-posten för hojdkurvor.se?). Filerna är uppladdade men inte kontrollerade."
             exit 0
           fi
           fel=0

@@ -204,7 +204,7 @@ sedan via `geodata.php`).
 5. Commit och push till `main`. Lista vilka filer som är nya eller ändrade.
 6. Pushen till `main` publicerar appen på VPS:en
    (`.github/workflows/publicera-vps.yml`, rsync till
-   <https://hojdkurvor.danaid.cloud/>). Kontrollera körningen med
+   <https://hojdkurvor.se/>). Kontrollera körningen med
    `gh api repos/agrellarkitektur/hojdkurvor/actions/runs` och att sidan
    fungerar. Steget som kontrollerar webbplatsen jämför varje fil på servern
    med repot. Arbeta därför på en egen gren tills versionen är klar. Ändras
@@ -215,9 +215,13 @@ sedan via `geodata.php`).
    text och zip-filen. Kontrollera att releasen kom. Skapa inte taggen för hand
    före pushen, då hoppar arbetsflödet över releasen.
 
-Appen heter bara Höjdkurvor (inte höjdkurvor.se) och ligger på
-<https://hojdkurvor.danaid.cloud/> på VPS:en (egen underdomän, som reglerna i
-agrellarkitektur/apps säger). cad-apa ligger på <https://cad-apa.danaid.cloud/>
+Appen heter Höjdkurvor i löpande text. Loggan (menyraden och PDF:erna) skriver
+höjdkurvor.se med punkten i accentfärgen (från 0.14.1; `.ordbild` i sidorna,
+`Utskrift.ordbild` i PDF:erna). Adressen är <https://hojdkurvor.se/> (från
+0.14.1). höjdkurvor.se, www-adresserna och den tidigare adressen
+hojdkurvor.danaid.cloud omdirigeras dit av Caddy (`drift/apps.caddy` i
+agrellarkitektur/apps). Appen ligger kvar på samma VPS; publiceringen går med
+SSH till apps.danaid.cloud. cad-apa ligger på <https://cad-apa.danaid.cloud/>
 (`cadApaUrl` i `config.js`). Den gamla adressen agrellarkitektur.se/terrang/
 är avstängd sedan 0.13.1. Se `docs/FLYTT.md`.
 

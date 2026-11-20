@@ -59,6 +59,14 @@
     return { xmin: mx - fw / 2 / k, xmax: mx + fw / 2 / k, ymax: my + cyOff / k, ymin: my - (fh - cyOff) / k };
   }
 
+  /** Ordbilden höjdkurvor.se med punkten i accentfärgen, som i menyraden. Typsnitt och storlek sätts av anroparen. */
+  function ordbild(doc, x, y) {
+    const o = { baseline: 'middle' }, wl = doc.getTextWidth('höjdkurvor');
+    doc.setTextColor(...F.blck); doc.text('höjdkurvor', x, y, o);
+    doc.setTextColor(...F.annot); doc.text('.', x + wl, y, o);
+    doc.setTextColor(...F.blck); doc.text('se', x + wl + doc.getTextWidth('.'), y, o);
+  }
+
   /** Märket (tre höjdkurvor och ett kors) ritat i PDF. */
   function marke(doc, x, y, sz, ring, kors) {
     const sk = sz / 64;
@@ -427,10 +435,10 @@
     text(t.system || '', bx + 3, ty, 6.5); ty += 3.5;
     text('Höjdsystem RH 2000', bx + 3, ty, 6.5); ty += 3.5;
     if (t.datum) text(t.datum, bx + 3, ty, 6.5, { mono: true });
-    // Höjdkurvor
+    // höjdkurvor.se
     marke(doc, bx + 3, by + bh - 7.2, 5, F.blck, F.annot);
-    doc.setFont(font, 'bold'); doc.setFontSize(8.5); doc.setTextColor(...F.blck);
-    doc.text('Höjdkurvor', bx + 9.4, by + bh - 4, { baseline: 'middle' });
+    doc.setFont(font, 'bold'); doc.setFontSize(8.5);
+    ordbild(doc, bx + 9.4, by + bh - 4);
     let ly = by + 4.2;
     for (const [rita, txt] of rader) { rita(bx + 67, ly); text(txt, bx + 76, ly, 5.8); ly += 3.3; }
     kallor.forEach((k, i) => text(k, bx + 67, by + bh - 2.6 - (kallor.length - 1 - i) * 2.3, 5));
@@ -503,11 +511,10 @@
     text('N', nx, ny - 7 + (ruta ? 7 : 0), 7, { ha: 'center', vikt: 'bold' });
     (opt.notis || []).forEach((n, i) => text(n, B.x, B.y + B.h - 9 + i * 3.2, 6.2));
     if (ruta) return doc;
-    // Höjdkurvor
+    // höjdkurvor.se
     marke(doc, PW - MARG - 30, PH - MARG - 4.6, 4.5, F.blck, F.annot);
-    doc.setFont(font, 'bold'); doc.setFontSize(8); doc.setTextColor(...F.blck);
-    const x0 = PW - MARG - 24.4, y0 = PH - MARG - 1.8;
-    doc.text('Höjdkurvor', x0, y0, { baseline: 'middle' });
+    doc.setFont(font, 'bold'); doc.setFontSize(8);
+    ordbild(doc, PW - MARG - 24.4, PH - MARG - 1.8);
     if (opt.dok) return doc;
     return doc.output('arraybuffer');
   }
@@ -530,5 +537,5 @@
   /** Färgad bild av höjd över mark (dataURL). */
   function homBild(ndsm, W, H) { return homCanvas(ndsm, W, H).toDataURL('image/png'); }
 
-  return { plan, skuggblad, foreslaSkala, papper, kartfalt, homBild, homCanvas, marke, nyttDokument, F, FORMAT, MARG };
+  return { plan, skuggblad, foreslaSkala, papper, kartfalt, homBild, homCanvas, marke, ordbild, nyttDokument, F, FORMAT, MARG };
 }));

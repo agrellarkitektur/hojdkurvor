@@ -1,4 +1,4 @@
-# Höjdkurvor på en server med Apache (0.8.1). På hojdkurvor.danaid.cloud används den inte:
+# Höjdkurvor på en server med Apache (0.8.1). På hojdkurvor.se används den inte:
 # Caddy läser inte .htaccess, och samma regler står i drift/apps.caddy i agrellarkitektur/apps.
 #
 # Webbläsaren ska fråga servern om sidorna har ändrats i stället för att

@@ -82,8 +82,8 @@
     text('DATUM', bx + 118, by + 3.5, 5.5, { mono: true, farg: F.gra }); text(t.datum || '', bx + 118, by + 8, 6.5, { mono: true });
     text('BLAD', bx + 118, by + 14.5, 5.5, { mono: true, farg: F.gra }); text(`${nr} / ${ctx.sidor.length}`, bx + 118, by + 19, 6.5, { mono: true });
     U().marke(doc, bx + 73, by + 13.2, 5, F.blck, F.annot);
-    doc.setFont(ctx.dok.font, 'bold'); doc.setFontSize(8.5); doc.setTextColor(...F.blck);
-    doc.text('Höjdkurvor', bx + 79.5, by + 16.5, { baseline: 'middle' });
+    doc.setFont(ctx.dok.font, 'bold'); doc.setFontSize(8.5);
+    U().ordbild(doc, bx + 79.5, by + 16.5);
   }
 
   /**

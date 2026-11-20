@@ -111,6 +111,7 @@ code { font-family: var(--mono); font-size: .9em; background: var(--nav-on); pad
 .logga .ring { stroke: var(--mark); }
 .logga .kors { stroke: var(--brand); }
 .ordbild { font-family: var(--grotesk); font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.ordbild .punkt { color: var(--brand); }
 .logga:hover { color: var(--ink); }
 .logga:hover .ring { stroke: var(--brand); }
 .logga .ring { transition: stroke .15s; }

@@ -1505,5 +1505,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.14.0' };
+  window.Vy3D = { visa, version: '0.14.1' };
 }());

@@ -11,7 +11,8 @@ platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritpr
 [cad-apa](https://cad-apa.danaid.cloud/) ([källkod](https://github.com/agrellarkitektur/cad-apa)). Det man matar in sparas som ett
 projekt i webbläsaren och kan sparas som projektfil (`.hojdkurvor`, se `docs/PROJEKTFIL.md`).
 
-Live: <https://hojdkurvor.danaid.cloud/>. Den gamla adressen
+Live: <https://hojdkurvor.se/>. höjdkurvor.se, www-adresserna och den tidigare
+adressen hojdkurvor.danaid.cloud leder dit (från 0.14.1). Den gamla adressen
 agrellarkitektur.se/terrang/ är avstängd sedan 0.13.1, se `docs/FLYTT.md`.
 Utvecklad av [Agrell Arkitektur](https://agrellarkitektur.se).
 Licens: AGPL-3.0 eller senare från 0.13.2, se avsnittet [Licens](#licens) och `LICENSE`.
@@ -27,7 +28,7 @@ Appen publiceras av GitHub. Vid varje push till `main` kontrollerar
 `.github/workflows/publicera-vps.yml` koden, kör enhetstesterna, stoppar om
 `config.js` innehåller en nyckel eller inloggning och lägger sedan appen på
 VPS:en med rsync över SSH (`/srv/apps/www/hojdkurvor`, sajten
-<https://hojdkurvor.danaid.cloud/>). Efter uppladdningen hämtas varje fil från
+<https://hojdkurvor.se/>). Efter uppladdningen hämtas varje fil från
 webbplatsen och jämförs med repot. Ändringar som bara rör dokumentationen eller
 testerna hoppas över. Nyckeln ligger som secret `APPS_SSH_KEY`, serverns
 nycklar i `.github/known_hosts`. Servern (Caddy med PHP-FPM) är beskriven i
@@ -118,7 +119,7 @@ SMTP med inloggning, så att de inte stoppas av SPF/DMARC när de vidarebefordra
 till Gmail (se `docs/FLYTT.md`, steg 5).
 
 `from` ska vara en adress på domänen och sätts också som kuvertavsändare. Öppna
-<https://hojdkurvor.danaid.cloud/synpunkter.php> i webbläsaren för att se om
+<https://hojdkurvor.se/synpunkter.php> i webbläsaren för att se om
 konfigurationen hittas. Formuläret visar serverns felmeddelande om det inte går
 att skicka, och erbjuder då ett vanligt mejl.
 

@@ -3,6 +3,28 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.14.1 – 2026-11-20
+
+Ny adress och loggan. Inget nytt i kartan.
+
+- **Ny adress: <https://hojdkurvor.se/>.** höjdkurvor.se, www-adresserna och den
+  tidigare adressen hojdkurvor.danaid.cloud leder dit (Caddy i
+  agrellarkitektur/apps). Appen ligger kvar på samma server. Länkar som appen
+  skapar (projektlänken, länken med inloggning, länken till datorn) får den nya
+  adressen av sig själva. Det som är sparat i webbläsaren på den tidigare
+  adressen följer inte med; spara projektet som projektfil och öppna den på den
+  nya.
+- **Loggan skriver höjdkurvor.se** igen, med punkten i accentfärgen, i
+  menyraden på alla fyra sidor och i PDF:erna (ritningen, skuggstudien och
+  platsanalysbladet; `Utskrift.ordbild`). Appen heter fortfarande Höjdkurvor i
+  löpande text.
+- Publiceringen kontrollerar filerna mot den nya adressen (`SIDA` i
+  `publicera-vps.yml`), och releasen länkar dit. README, `CLAUDE.md`,
+  `docs/FLYTT.md` och `docs/UTBYTE-CAD-APA.md` har den nya adressen.
+- **Kvar i cad-apa**: ursprunget `https://hojdkurvor.se` i `HOJDKURVOR_ORIGINS`
+  och adressen i `HOJDKURVOR_URL`. Tills det är gjort tar cad-apa inte emot
+  platsen från den nya adressen.
+
 ## 0.14.0 – 2026-11-19
 
 Byggnadskroppar och planvyn, etapp 1–2 i planen för skiss och situationsplan.

@@ -1,5 +1,17 @@
 # Flytt till hojdkurvor.danaid.cloud
 
+> **Ny adress 20 november 2026 (0.14.1): <https://hojdkurvor.se/>.** Domänerna
+> hojdkurvor.se och höjdkurvor.se ligger hos one.com och pekar på samma VPS.
+> Caddy (`drift/apps.caddy` i agrellarkitektur/apps) svarar på hojdkurvor.se och
+> omdirigerar höjdkurvor.se, www-adresserna och hojdkurvor.danaid.cloud dit, så
+> att appen bara har ett ursprung (en lagring i webbläsaren, ett ursprung mot
+> cad-apa). Webbläsarens lagring från hojdkurvor.danaid.cloud följer inte med;
+> projektfilen är vägen över. Lantmäteriet svarar med det ursprung som skickas
+> och behöver inte godkänna något. cad-apa ska godta `https://hojdkurvor.se` i
+> `HOJDKURVOR_ORIGINS` och ha den som `HOJDKURVOR_URL` (görs i cad-apa).
+> Loggan skriver höjdkurvor.se igen; appen heter Höjdkurvor i löpande text.
+> Resten av filen beskriver flytten till VPS:en som den gjordes 15–19 november.
+
 Beslut 15 november 2026: Höjdkurvor flyttar från
 `https://agrellarkitektur.se/terrang/` till VPS:en på danaid.cloud. Appen heter
 bara **Höjdkurvor**; den tidigare tänkta domänen höjdkurvor.se används inte.

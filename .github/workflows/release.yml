@@ -116,7 +116,7 @@ jobs:
 
           Ladda upp innehållet i mappen hojdkurvor till appens mapp på
           webbservern och ersätt de gamla filerna. Sidan finns sedan på
-          https://hojdkurvor.danaid.cloud/
+          https://hojdkurvor.se/
 
           config.js följer med utan nycklar. Har du ändrat den på servern (till
           exempel lagt in en Esri-nyckel): ladda inte upp config.js, eller för
@@ -140,7 +140,7 @@ jobs:
           awk -v v="$V" '$0 ~ "^## "v"( |$)" {p=1; next} /^## / && p {exit} p' CHANGELOG.md > noter.md
           [ -s noter.md ] || echo "Se CHANGELOG.md." > noter.md
           echo "" >> noter.md
-          echo "Appen: https://hojdkurvor.danaid.cloud/" >> noter.md
+          echo "Appen: https://hojdkurvor.se/" >> noter.md
           gh release create "v$V" "${{ steps.zip.outputs.file }}" --target "$GITHUB_SHA" --title "Höjdkurvor $V" --notes-file noter.md
 
       - name: Lägg zip-filen på releasen
