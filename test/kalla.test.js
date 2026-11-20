@@ -48,8 +48,10 @@ assert.ok(!/donation/i.test(om), 'om.html säger donation');
 const stod = las('js/stod.js');
 assert.ok(/class="swish-qr/.test(stod), 'js/stod.js saknar rutan för Swish-QR:n');
 // Swish-QR:n (0.13.6): bilden finns, platshållaren är borta och mejladressen står en gång
-assert.ok(/src="bilder\/swish-qr\.png"/.test(stod) && fs.existsSync(path.join(rot, 'bilder', 'swish-qr.png')), 'Swish-QR:n saknas');
+assert.ok(/src="bilder\/swish-kort\.png"/.test(stod) && fs.existsSync(path.join(rot, 'bilder', 'swish-kort.png')), 'Swish-QR:n saknas');
 assert.ok(!/platshallare/.test(stod), 'js/stod.js har kvar platshållaren för Swish-QR:n');
+// Mottagaren (0.14.2): Swish visar Agrell Arkitektur AB när man signerar
+assert.ok(/Mottagaren är Agrell Arkitektur AB/.test(stod) && !/Danaid/.test(stod), 'js/stod.js ska ange mottagaren Agrell Arkitektur AB');
 assert.strictEqual((stod.match(/mailto:/g) || []).length, 1, 'mejladressen ska stå en gång i Stöd utvecklingen');
 assert.ok(!/donation/i.test(stod), 'js/stod.js säger donation');
 assert.ok(/data-stod-innehall/.test(om), 'om.html fyller inte avsnittet ur js/stod.js');

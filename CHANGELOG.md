@@ -3,6 +3,20 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.14.2 – 2026-11-20
+
+Nytt Swish-kort i Stöd utvecklingen. Inget nytt i kartan.
+
+- **Swish-kortet** (`bilder/swish-kort.png`, tidigare `swish-qr.png`) är bytt mot ägarens nya kort från
+  Swish: QR-koden, numret 123-718 06 15, höjdkurvor.se och Swish-loggan. Koden
+  och länken på bilden har meddelandet *Stort tack för att du stöttar
+  Höjdkurvor.se! <3*. Kortet har egen vit ruta runt koden och visas utan extra
+  bakgrund, 150 px brett (120 px på smal skärm).
+- **Mottagaren är Agrell Arkitektur AB**, det namn Swish visar när man signerar.
+- cad-apa godtar nu https://hojdkurvor.se (`HOJDKURVOR_ORIGINS`), så Rita i
+  cad-apa fungerar från den nya adressen. Projektlänkar till
+  hojdkurvor.danaid.cloud fungerar så länge Caddy omdirigerar den adressen.
+
 ## 0.14.1 – 2026-11-20
 
 Ny adress och loggan. Inget nytt i kartan.

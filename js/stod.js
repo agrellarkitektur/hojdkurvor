@@ -4,21 +4,22 @@
  * Knappen STÖD i menyraden och avsnittet Stöd utvecklingen (0.13.5), på alla sidor.
  *
  * Texten finns bara här: den visas i en dialog när man väljer STÖD, och fylls i
- * avsnittet på Om-sidan (elementet med data-stod-innehall). Swish-QR:n (0.13.6) är
- * bilder/swish-qr.png, ur Swish egen QR-fil (ramen borttagen, loggan kvar). Koden pekar
- * på SWISH_URL; på mobilen öppnar ett tryck på bilden samma länk.
+ * avsnittet på Om-sidan (elementet med data-stod-innehall). Swish-QR:n är
+ * bilder/swish-kort.png (0.14.2): hela Swish-kortet ur ägarens PDF från Swish, med koden,
+ * numret, höjdkurvor.se och Swish-loggan. Koden pekar på SWISH_URL; på mobilen öppnar ett
+ * tryck på bilden samma länk. Mottagaren i Swish är Agrell Arkitektur AB.
  */
 (function () {
   'use strict';
   const POST = 'kontakt@agrellarkitektur.se';
   const NUMMER = '123-718 06 15';
-  const SWISH_URL = 'https://app.swish.nu/1/p/sw/?sw=1237180615&msg=Stort%20tack%20f%C3%B6r%20ditt%20st%C3%B6d!&src=qr';
+  const SWISH_URL = 'https://app.swish.nu/1/p/sw/?sw=1237180615&msg=Stort%20tack%20f%C3%B6r%20att%20du%20st%C3%B6ttar%20H%C3%B6jdkurvor.se!%20%3C3&src=qr';
   const TEXT = `<p>Höjdkurvor är fritt att använda, också i betalda uppdrag, och ska förbli det. Inga funktioner läggs bakom betalning. Sparar tjänsten tid åt dig eller ditt kontor får du gärna hjälpa till att hålla utvecklingen igång.</p>
     <div class="stod-del">
       <h3>Privatpersoner</h3>
       <div class="stod-privat">
-        <a class="swish-qr" href="${SWISH_URL}" title="Öppna Swish"><img src="bilder/swish-qr.png" alt="QR-kod för Swish till ${NUMMER}" width="132" height="132"></a>
-        <p>Ett frivilligt bidrag, stort eller litet, utan något krav i gengäld. Skanna koden med Swish eller swisha till <strong class="swish-nr">${NUMMER}</strong>. Mottagaren heter Danaid Open Source. På mobilen kan du trycka på koden.</p>
+        <a class="swish-qr" href="${SWISH_URL}" title="Öppna Swish"><img src="bilder/swish-kort.png" alt="QR-kod för Swish till ${NUMMER}" width="150" height="227"></a>
+        <p>Ett frivilligt bidrag, stort eller litet, utan något krav i gengäld. Skanna koden med Swish eller swisha till <strong class="swish-nr">${NUMMER}</strong>. Mottagaren är Agrell Arkitektur AB. På mobilen kan du trycka på koden.</p>
       </div>
     </div>
     <div class="stod-del">

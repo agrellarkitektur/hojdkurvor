@@ -54,10 +54,10 @@ OFL eller AGPL för det.
   inte av AGPL eller av ett kommersiellt undantag. Fältet `epsg` (föreslagen
   SWEREF 99-zon) är sammanställt ur Lantmäteriets uppgifter om vilka zoner
   kommunerna använder.
-- `bilder/swish-qr.png` (0.13.6): QR-koden för Swish till Danaid Open Source,
-  skapad i Swish egen tjänst för QR-koder och nedskalad, utan ramen runt.
-  Swish-loggan i mitten är Getswish AB:s varumärke och ingår i koden som
-  Swish skapade. Bilden omfattas inte av AGPL
+- `bilder/swish-kort.png` (0.14.2, tidigare `swish-qr.png` från 0.13.6): Swish-kortet
+  med QR-koden till Agrell Arkitektur AB, skapat i Swish egen tjänst för QR-koder
+  och omgjort från PDF till PNG. Swish-loggan och kortets utformning är Getswish
+  AB:s varumärke och ingår i det som Swish skapade. Bilden omfattas inte av AGPL
   eller av ett kommersiellt undantag; den ska bytas mot en egen kod om appen
   körs av någon annan.
 - `test/data/`: syntetisk testdata skapad för testerna, utom

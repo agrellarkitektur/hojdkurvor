@@ -8,7 +8,9 @@
 > cad-apa). Webbläsarens lagring från hojdkurvor.danaid.cloud följer inte med;
 > projektfilen är vägen över. Lantmäteriet svarar med det ursprung som skickas
 > och behöver inte godkänna något. cad-apa ska godta `https://hojdkurvor.se` i
-> `HOJDKURVOR_ORIGINS` och ha den som `HOJDKURVOR_URL` (görs i cad-apa).
+> `HOJDKURVOR_ORIGINS` och ha den som `HOJDKURVOR_URL` (gjort i cad-apa 20 november).
+> Platser i redan sparade cad-apa-projekt länkar till hojdkurvor.danaid.cloud; de
+> fungerar så länge Caddy omdirigerar den adressen, så låt omdirigeringen stå kvar.
 > Loggan skriver höjdkurvor.se igen; appen heter Höjdkurvor i löpande text.
 > Resten av filen beskriver flytten till VPS:en som den gjordes 15–19 november.
 

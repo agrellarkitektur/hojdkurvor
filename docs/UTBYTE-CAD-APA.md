@@ -24,7 +24,9 @@ Som reserv kan båda sidor spara och öppna filer.
 
 - höjdkurvor: `https://hojdkurvor.se/` (sedan 20 november 2026, 0.14.1). Den tidigare
   adressen `https://hojdkurvor.danaid.cloud/` (17–20 november) omdirigeras dit.
-  cad-apa ska godta ursprunget `https://hojdkurvor.se` och skicka skissen tillbaka dit.
+  cad-apa godtar ursprunget `https://hojdkurvor.se` och skickar skissen tillbaka dit
+  (gjort i cad-apa 20 november). Den tidigare adressen och agrellarkitektur.se står kvar i
+  `HOJDKURVOR_ORIGINS` tills vidare och kan tas bort i en senare version där.
 - cad-apa: `https://cad-apa.danaid.cloud/` (sedan 19 november 2026)
 
 De gamla adresserna på agrellarkitektur.se (`/terrang/` och `/cad-apa/`) gäller

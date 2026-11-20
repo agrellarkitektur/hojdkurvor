@@ -1,9 +1,25 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 20 november 2026, 0.14.1.
+överlämning; historiken finns i git. Senast: 20 november 2026, 0.14.2.
 
 ## Läget
+
+- **0.14.2** 20 november (grenen `v0.14.2`, sammanslagen och publicerad): **nytt Swish-kort**
+  `bilder/swish-kort.png` (nytt filnamn så att ingen cachad bild av den gamla koden visas;
+  `swish-qr.png` är borttagen). Hela kortet ur ägarens PDF från Swish, 450 × 681 px med
+  genomskinliga hörn, 256 färger, 15 kB; visas 150 px brett (120 px under 480 px) utan egen
+  bakgrund, eftersom kortet har vit ruta runt koden. Avkodat (OpenCV, `QRCodeDetectorAruco`) till
+  `https://app.swish.nu/1/p/sw/?sw=1237180615&msg=Stort%20tack%20f%C3%B6r%20att%20du%20st%C3%B6ttar%20H%C3%B6jdkurvor.se!%20%3C3&src=qr`,
+  som är `SWISH_URL` i `stod.js`. **Mottagaren är Agrell Arkitektur AB** (det Swish visar vid
+  signeringen; ägarens uttryckliga önskan, därför med AB fast texten syns). `kalla.test.js`
+  kontrollerar mottagaren. **cad-apa är klart**: `HOJDKURVOR_ORIGINS` har hojdkurvor.se (och
+  www, xn--hjdkurvor-07a.se); hojdkurvor.danaid.cloud och agrellarkitektur.se står kvar där
+  och kan tas bort i cad-apa senare. Platser i sparade cad-apa-projekt länkar till
+  hojdkurvor.danaid.cloud, så **Caddys omdirigering av den adressen ska stå kvar**. Höjdkurvor
+  bygger sina länkar på `location.origin` och behövde ingen ändring för det. Körda: alla 21
+  enhetstester; Stöd-avsnittet i alla tre teman på dator och mobilbredd. **Inte körda**:
+  gränssnittstesterna (`resultat_test.py` har nya filnamnet).
 
 - **0.14.1** 20 november (grenen `v0.14.1`): **ny adress <https://hojdkurvor.se/>** och loggan
   **höjdkurvor.se** igen. Ägaren registrerade hojdkurvor.se och höjdkurvor.se hos one.com 20
@@ -16,9 +32,7 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   och behövde ingen ändring. `synpunkter.php` jämför Origin med Host och fungerar på vilken
   adress som helst. Loggan: `.ordbild` med `.punkt` på alla fyra sidor, `Utskrift.ordbild` i
   PDF:erna (ritningen, skuggstudien, platsanalysbladet). Appen heter Höjdkurvor i löpande text,
-  i `<title>`, i PDF:ernas `creator` och i `aria-label`. **Kvar i cad-apa** (egen session):
-  `https://hojdkurvor.se` i `HOJDKURVOR_ORIGINS` och `HOJDKURVOR_URL`; till dess fungerar inte
-  utbytet från den nya adressen. **Att testa**: BT–BV i `docs/SYNPUNKTER.md`.
+  i `<title>`, i PDF:ernas `creator` och i `aria-label`. cad-apa godtar den nya adressen sedan 20 november (se 0.14.2). **Att testa**: BT–BV i `docs/SYNPUNKTER.md`.
 
 - **0.14.0** 19 november (grenen `v0.14.0`, sammanslagen och publicerad): byggnadskroppar och planvyn, etapp 1–2 i
   `plan-skiss-situationsplan.md` (claude.ai-projektet), med ägarens ändringar samma dag:

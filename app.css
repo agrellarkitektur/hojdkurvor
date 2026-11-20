@@ -495,11 +495,11 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .stod-kontakt, .artikel p.stod-kontakt { margin: 24px 0 0; }
 .stod-kontakt a { overflow-wrap: anywhere; }
 .swish-nr { white-space: nowrap; }
-/* Swish-QR:n: vit bakgrund och marginal runt koden (krävs för att den ska gå att skanna) i alla teman */
-.swish-qr { flex: none; display: block; width: 132px; height: 132px; padding: 8px; background: #fff; border-radius: 4px; line-height: 0; }
-.swish-qr img { display: block; width: 100%; height: 100%; }
+/* Swish-kortet (0.14.2): koden har egen vit ruta i kortet, så ingen bakgrund behövs i något tema */
+.swish-qr { flex: none; display: block; width: 150px; line-height: 0; }
+.swish-qr img { display: block; width: 100%; height: auto; }
 /* smal skärm: texten flyter in under koden */
-@media (max-width: 480px) { .stod-privat { display: block; } .stod-privat::after { content: ''; display: table; clear: both; } .swish-qr { float: left; width: 104px; height: 104px; padding: 7px; margin: 2px 14px 6px 0; } }
+@media (max-width: 480px) { .stod-privat { display: block; } .stod-privat::after { content: ''; display: table; clear: both; } .swish-qr { float: left; width: 120px; margin: 2px 14px 6px 0; } }
 .artikel dl.par.bred { grid-template-columns: minmax(0, 280px) minmax(0, 1fr); font-size: 16px; }
 .artikel dl.fragor { display: flex; flex-direction: column; gap: 18px; }
 .artikel dl.fragor dd { margin: 4px 0 0; }

@@ -96,7 +96,7 @@ with sync_playwright() as p:
     # --- till Om-sidan, Stöd utvecklingen, och tillbaka med menyn
     pg.click('.huvudmeny a[href="om.html"]'); pg.wait_for_load_state('load'); pg.wait_for_timeout(400)
     pg.click('[data-stod]'); pg.wait_for_timeout(300)
-    assert pg.locator('dialog.stod img[src="bilder/swish-qr.png"]').is_visible()
+    assert pg.locator('dialog.stod img[src="bilder/swish-kort.png"]').is_visible()
     pg.locator('dialog.stod').screenshot(path=f'{UT}/stod_dialog_{TEMA}.png')
     pg.keyboard.press('Escape')
     pg.locator('#stod').screenshot(path=f'{UT}/stod_om_{TEMA}.png')

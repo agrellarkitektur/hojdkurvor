@@ -202,7 +202,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/synpunkter.js` – BETA-knappen och formuläret Skicka synpunkter, på alla sidor
 - `js/stod.js` – knappen STÖD och texten Stöd utvecklingen (dialogen och avsnittet på Om-sidan), på alla sidor
 - `js/resultat.js` (`Resultat`, 0.13.6) – det senaste resultatet sparat i IndexedDB per projekt: omvandlingen av `state.senaste` (typade arrayer, canvas som bild, husens tak) och lagringen med tak för storleken
-- `bilder/swish-qr.png` – Swish-QR:n i Stöd utvecklingen (0.13.6), ur Swish egen QR-fil utan ramen
+- `bilder/swish-kort.png` – Swish-kortet i Stöd utvecklingen (0.14.2): QR-koden, numret och höjdkurvor.se ur Swish egen fil; mottagare Agrell Arkitektur AB
 - `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, projektet, felrapport
 - `data/kommuner.json` – förenklade kommungränser med kommunkod och föreslagen
   SWEREF 99-zon (fältet `epsg`; Kiruna saknar värde eftersom kommunen använder
