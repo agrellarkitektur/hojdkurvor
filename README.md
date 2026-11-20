@@ -170,7 +170,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/ifc.js` (`Ifc`) – befintliga byggnader som IFC4 (extruderade volymer, egenskaper, stabila GlobalId)
 - `js/fastighet.js` – fastighetsgränser, gränspunkter och beteckningar, DXF
 - `js/stompunkt.js` – Stompunkt Direkt: sökning inom utsnittet, DXF och CSV
-- `js/vagar.js` – vägar från OpenStreetMap via Overpass: bilvägar och gångvägar, klassning, utkast till vägytor (bredd ur OSM, schablon eller mätt i ortofotot) och DXF
+- `js/vagar.js` – vägar från OpenStreetMap via Overpass: bilvägar och gångvägar, klassning, utkast till vägytor (sträckor mellan korsningar med en bredd var, ur OSM, schablon eller mätt i ortofotot, och rundade hörn i korsningarna) och DXF
 - `js/objektval.js` (`Objektval`) – egna val för enskilda träd och hus: dölja, rätta trädens art, höjd och krona, skära bort dolda ur ytmodellen
 - `js/topowebb.js` – läser Topografisk webbkarta ur Lantmäteriets GeoPackage
   (172 GB) med HTTP Range, några få sidor åt gången
@@ -201,6 +201,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/bestall.js` – beställningsformuläret
 - `js/synpunkter.js` – BETA-knappen och formuläret Skicka synpunkter, på alla sidor
 - `js/stod.js` – knappen STÖD och texten Stöd utvecklingen (dialogen och avsnittet på Om-sidan), på alla sidor
+- `js/hamtminne.js` (`Hamtminne`, 0.14.3) – det som hämtats under Skapa sparas i minnet per område, så att nästa Skapa för samma område inte hämtar igen (lägger sig framför `fetch` under körningen)
 - `js/resultat.js` (`Resultat`, 0.13.6) – det senaste resultatet sparat i IndexedDB per projekt: omvandlingen av `state.senaste` (typade arrayer, canvas som bild, husens tak) och lagringen med tak för storleken
 - `bilder/swish-kort.png` – Swish-kortet i Stöd utvecklingen (0.14.2): QR-koden, numret och höjdkurvor.se ur Swish egen fil; mottagare Agrell Arkitektur AB
 - `js/app.js` – karta, panel, lager, ritning, mobilflöde, projektlänk, projektet, felrapport

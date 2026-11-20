@@ -1,9 +1,45 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 20 november 2026, 0.14.2.
+överlämning; historiken finns i git. Senast: 20 november 2026, 0.14.3.
 
 ## Läget
+
+- **0.14.3** 20 november (grenen `v0.14.3`): svar på ägarens test av de äldre punkterna AJ–AÅ.
+  AK, AL, AS, AZ, AÅ godkända och strukna; resten ändrat och testas som BW–BZ. Frågan om att
+  skicka med datan (BÅ) ligger i inkorgen med en bedömning.
+  1. **Lås området** (`satLas`, `state.last`, `plats.last` i projektet, `#las-omrade`). Låst:
+     inget `ramGrepp`, inga handtag, inget kryss; `#rita`, `#punkt-radie`, `#radie`, hörnen,
+     `#koord-klistra` och `#zon` avstängda. `rensaUtsnitt` låser upp.
+  2. **Hämtminnet** (`js/hamtminne.js`): `Hamtminne.borja({ r, epsg })` före stegen i Skapa
+     lägger sig framför `window.fetch` (också geotiff:s Range-läsningar), `sluta()` i `finally`.
+     Nyckel: metod, adress, Range och POST-kropp. Bara 200/206, inte `blob:`/`data:`, högst
+     900 MB. Ett annat område tömmer det; `rensaUtsnitt` också. Steget `noteraHamtminne` skriver
+     raden Hämtat i sammanfattningen. Knappen (`sammanfatta`) säger *igen* när minnet gäller
+     området och *Uppdatera analyserna* under 04 Skiss. HEAD-frågan i `kommunfil.js` och felsvar
+     går fortfarande ut. **Inte gjort**: AY:s uppdelning i Hämta (02) och Skapa analys (03) som
+     egna körningar; Skapa kör fortfarande alla steg, bara utan att hämta igen.
+  3. **AT**: `L.canvas` skapades per Skapa för laserpunkter och höjdpunkter och lade sig över
+     standardcanvasen där ramens grepp ritades (`preferCanvas`). Nu `laserRitare` och
+     `hojdpunktRitare` en gång, och ramen i `ramPane` (z 450) med en egen SVG-ritare;
+     `.leaflet-ramPane-pane > svg { pointer-events: none }` så att bara greppet tar musen.
+  4. **AU**: lassots slinga släcks vid nästa `pointerdown`/`wheel` i `#vy3d-yta`.
+  5. **Vägytorna** (`vagar.js`): `stracker` delar linjerna där de delar en punkt med en annan
+     linje av samma slag; `profil` ger en bredd per sträcka (median, 0,5 m) och en
+     sidförskjutning; `utkast` ger sträckor under `KORT` (30 m) gatans längdviktade bredd
+     (`kalla: 'gatan'`); `ytor` rundar hörnen med `avrunda` (stängning med radien `RADIE`
+     6/1 m via exakt avståndsfält, bara inom R + bredd + 3 m från korsningarna, rutnätet utvidgat
+     med R + 2 m så att vägarna når kanten). Kartans ytor har `--vag-yta`/`--vag-yta-gang`.
+     **Inte gjort**: radierna mätta i ortofotot.
+  6. **Bilderna**: `bild.jgw` (SWEREF) + `bild_lokal.jgw`, ingen `_sweref.jgw`.
+     `SA_ANVANDER_DU_BILDERNA.txt` (steget `skrivBildguide`) och
+     `ortofoto/ORTOFOTO_SOM_TEXTUR.txt` (`texturGuide`), med utsnittets mått, lokala hörn och
+     vridning (`bildMatt`). Archicad och vanliga AutoCAD läser inte världsfiler; guiden säger det.
+  Körda: alla 22 enhetstester (nytt: `hamtminne.test.js`, utökat `vagar.test.js`),
+  `ui_test.py`, nya `las_test.py`, `projekt_test.py`, `resultat_test.py`, `mobil_test.py`,
+  `fastighetsnamn_test.py`, `planvy_test.py` (se CHANGELOG). Testdatan byggdes med rasterio och
+  en ersättare för `osgeo` utanför repot. **Inte provat**: riktiga vägar mot riktigt ortofoto,
+  Archicad, iPhone.
 
 - **0.14.2** 20 november (grenen `v0.14.2`, sammanslagen och publicerad): **nytt Swish-kort**
   `bilder/swish-kort.png` (nytt filnamn så att ingen cachad bild av den gamla koden visas;

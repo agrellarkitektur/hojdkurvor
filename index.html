@@ -7,14 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Höjdkurvor – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.14.2"></script>
-  <script src="js/kalla.js?v=0.14.2" defer></script>
-  <script src="js/tema.js?v=0.14.2"></script>
-  <script src="js/synpunkter.js?v=0.14.2" defer></script>
-  <script src="js/stod.js?v=0.14.2" defer></script>
+  <script src="js/version.js?v=0.14.3"></script>
+  <script src="js/kalla.js?v=0.14.3" defer></script>
+  <script src="js/tema.js?v=0.14.3"></script>
+  <script src="js/synpunkter.js?v=0.14.3" defer></script>
+  <script src="js/stod.js?v=0.14.3" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.14.2">
-  <link rel="stylesheet" href="app.css?v=0.14.2">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.14.3">
+  <link rel="stylesheet" href="app.css?v=0.14.3">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -128,6 +128,8 @@
             <p class="hjalp" id="rita-hjalp">Dra upp en rektangel på kartan, eller välj <em>Punkt och radie</em> och klicka på kartan: området blir en kvadrat med punkten i mitten och sidan två gånger radien. Kanterna hamnar på jämna 10 m. Ändra storleken med handtagen mitt på sidorna och flytta området genom att dra i ramen.</p>
             <div id="utsnitt" hidden>
               <p class="storlek"><span id="storlek-text"></span></p>
+              <div class="knapprad las-rad"><button type="button" class="knapp liten" id="las-omrade" aria-pressed="false">Lås området</button></div>
+              <p class="hjalp" id="las-hjalp">Lås området när det ligger rätt, så flyttas det inte av misstag.</p>
               <p class="latlon"><span title="Utsnittets mitt i decimalgrader (WGS 84), latitud och longitud">Mitt</span> <span id="latlon-text"></span> <button type="button" class="lank-knapp" id="kopiera-latlon">Kopiera</button></p>
               <fieldset class="koord">
                 <legend>Hörn i <span id="zon-namn-kort"></span></legend>
@@ -536,37 +538,38 @@
     </aside>
   </div>
 
-  <script src="config.js?v=0.14.2"></script>
-  <script src="vendor/leaflet/leaflet.js?v=0.14.2"></script>
-  <script src="vendor/proj4.js?v=0.14.2"></script>
-  <script src="vendor/geotiff.js?v=0.14.2"></script>
-  <script src="vendor/jszip.min.js?v=0.14.2"></script>
-  <script src="js/karna.js?v=0.14.2"></script>
-  <script src="js/dxf.js?v=0.14.2"></script>
-  <script src="js/sol.js?v=0.14.2"></script>
-  <script src="js/laser.js?v=0.14.2"></script>
-  <script src="js/ortofoto.js?v=0.14.2"></script>
-  <script src="js/kommunfil.js?v=0.14.2"></script>
-  <script src="js/marktacke.js?v=0.14.2"></script>
-  <script src="js/byggnad.js?v=0.14.2"></script>
-  <script src="js/ifc.js?v=0.14.2"></script>
-  <script src="js/fastighet.js?v=0.14.2"></script>
-  <script src="js/stompunkt.js?v=0.14.2"></script>
-  <script src="js/analys.js?v=0.14.2"></script>
-  <script src="js/vagar.js?v=0.14.2"></script>
-  <script src="js/platsanalys.js?v=0.14.2"></script>
-  <script src="js/geodata.js?v=0.14.2"></script>
-  <script src="js/trad3d.js?v=0.14.2"></script>
-  <script src="js/objektval.js?v=0.14.2"></script>
-  <script src="js/volym3d.js?v=0.14.2"></script>
-  <script src="js/kropp.js?v=0.14.2"></script>
-  <script src="js/planvy.js?v=0.14.2"></script>
-  <script src="js/projekt.js?v=0.14.2"></script>
-  <script src="js/resultat.js?v=0.14.2"></script>
-  <script src="js/utbyte.js?v=0.14.2"></script>
-  <script src="js/topowebb.js?v=0.14.2"></script>
-  <script src="js/utskrift.js?v=0.14.2"></script>
-  <script src="js/platsanalysblad.js?v=0.14.2"></script>
-  <script src="js/app.js?v=0.14.2"></script>
+  <script src="config.js?v=0.14.3"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.14.3"></script>
+  <script src="vendor/proj4.js?v=0.14.3"></script>
+  <script src="vendor/geotiff.js?v=0.14.3"></script>
+  <script src="vendor/jszip.min.js?v=0.14.3"></script>
+  <script src="js/karna.js?v=0.14.3"></script>
+  <script src="js/dxf.js?v=0.14.3"></script>
+  <script src="js/sol.js?v=0.14.3"></script>
+  <script src="js/laser.js?v=0.14.3"></script>
+  <script src="js/ortofoto.js?v=0.14.3"></script>
+  <script src="js/kommunfil.js?v=0.14.3"></script>
+  <script src="js/marktacke.js?v=0.14.3"></script>
+  <script src="js/byggnad.js?v=0.14.3"></script>
+  <script src="js/ifc.js?v=0.14.3"></script>
+  <script src="js/fastighet.js?v=0.14.3"></script>
+  <script src="js/stompunkt.js?v=0.14.3"></script>
+  <script src="js/analys.js?v=0.14.3"></script>
+  <script src="js/vagar.js?v=0.14.3"></script>
+  <script src="js/platsanalys.js?v=0.14.3"></script>
+  <script src="js/geodata.js?v=0.14.3"></script>
+  <script src="js/trad3d.js?v=0.14.3"></script>
+  <script src="js/objektval.js?v=0.14.3"></script>
+  <script src="js/volym3d.js?v=0.14.3"></script>
+  <script src="js/kropp.js?v=0.14.3"></script>
+  <script src="js/planvy.js?v=0.14.3"></script>
+  <script src="js/projekt.js?v=0.14.3"></script>
+  <script src="js/resultat.js?v=0.14.3"></script>
+  <script src="js/hamtminne.js?v=0.14.3"></script>
+  <script src="js/utbyte.js?v=0.14.3"></script>
+  <script src="js/topowebb.js?v=0.14.3"></script>
+  <script src="js/utskrift.js?v=0.14.3"></script>
+  <script src="js/platsanalysblad.js?v=0.14.3"></script>
+  <script src="js/app.js?v=0.14.3"></script>
 </body>
 </html>

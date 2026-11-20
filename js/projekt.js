@@ -36,7 +36,7 @@
       projekt: { id: id || nyttId(), namn: '', kommun: '', fastighet: '', uppdrag: '', anteckning: '' },
       plats: {
         crs: 'EPSG:3006', zon: null, zonManuell: false, utsnitt: null, mitt: null, radie: null,
-        nollpunkt: { typ: 'auto' }, vridning: { typ: 'ingen', grader: 0 }, horisontpunkt: null,
+        nollpunkt: { typ: 'auto' }, vridning: { typ: 'ingen', grader: 0 }, horisontpunkt: null, last: false,
       },
       val: {},
       inmatning: {
@@ -100,6 +100,7 @@
     if (u && !(['xmin', 'ymin', 'xmax', 'ymax'].every(k => typeof u[k] === 'number' && isFinite(u[k])) && u.xmax > u.xmin && u.ymax > u.ymin)) ut.plats.utsnitt = null;
     if (ut.plats.mitt && !arPunkt(ut.plats.mitt)) ut.plats.mitt = null;
     if (ut.plats.horisontpunkt && !arPunkt(ut.plats.horisontpunkt)) ut.plats.horisontpunkt = null;
+    if (typeof ut.plats.last !== 'boolean') ut.plats.last = false;
     if (!ut.inmatning.forslag.length) ut.inmatning.forslag = [{ id: nyttId(), namn: 'Basfall', aktivt: true }];
     if (!Array.isArray(ut.historik)) ut.historik = [];
     return ut;

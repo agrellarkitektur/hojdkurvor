@@ -8,6 +8,11 @@
  * vägtyp, för bilvägarna mätt i ortofotot om det finns. Ytorna slås ihop i ett rutnät (så att
  * korsningarna blir en sammanhängande yta) och ritas som slutna polylinjer. Ingen AI: mätningen
  * går ut från mittlinjen åt båda håll och stannar där färgen slutar likna vägbanan.
+ *
+ * Sedan 0.14.3 (AJ, AV) har varje sträcka mellan två korsningar en och samma bredd (medianen av
+ * mätningen, avrundad till halv meter), korta sträckor får bredden från resten av samma gata,
+ * och hörnen i korsningarna rundas av med en radie (bilvägar 6 m), som en stängning av ytan
+ * nära korsningarna.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -253,20 +258,55 @@
   function profil(l, bild, opt = {}) {
     const sch = schablon(l);
     const steg = opt.steg || 2;
-    const rak = () => ({ pts: l.pts.map(p => [p[0], p[1]]), bredd: l.pts.map(() => sch.bredd), median: sch.bredd, kalla: sch.kalla });
+    const rak = () => ({ pts: l.pts.map(p => [p[0], p[1]]), bredd: l.pts.map(() => sch.bredd), median: sch.bredd, kalla: sch.kalla, langd: langd(l.pts) });
     if (sch.kalla === 'osm' || !bild || slag(l.lager) !== 'bil') return rak();
     const m = matLinje(l.pts, bild, sch.bredd, { steg, tol: opt.tol });
     if (m.st.length < 3 || m.andel < 0.35) return rak();
     const lo = Math.max(2.5, sch.bredd * 0.6), hi = sch.bredd * 1.6 + 1;
-    // bredare vägar jämnas ut över en längre sträcka (0.12.0): lokala språng är mindre troliga där
-    const n = Math.round(Math.min(16, 7 * Math.max(1, sch.bredd / 6))), nm = Math.ceil(n / 2);
-    const tot = glid(rullande(m.st.map(p => (p.v != null && p.h != null ? p.v + p.h : null)), n), nm).map(b => Math.min(hi, Math.max(lo, b)));
-    const fors = glid(rullande(m.st.map(p => (p.v != null && p.h != null ? (p.v - p.h) / 2 : null)), n), nm);
-    const pts = m.st.map((p, k) => {
-      const c = Math.max(-Math.min(1.5, tot[k] * 0.25), Math.min(Math.min(1.5, tot[k] * 0.25), fors[k] || 0));
-      return [p.x + p.nx * c, p.y + p.ny * c];
+    // En bredd för hela sträckan (0.14.3, AJ): vägar har jämn bredd mellan korsningarna.
+    // Medianen tål träd, bilar och infarter som stör enskilda mätningar.
+    const bada = m.st.filter(p => p.v != null && p.h != null);
+    const b = Math.min(hi, Math.max(lo, median(bada.map(p => p.v + p.h))));
+    const bredd = Math.round(b * 2) / 2;
+    // sidförskjutningen likaså en för hela sträckan, högst 1,5 m
+    const lim = Math.min(1.5, bredd * 0.25), c = Math.max(-lim, Math.min(lim, median(bada.map(p => (p.v - p.h) / 2)) || 0));
+    const pts = m.st.map(p => [p.x + p.nx * c, p.y + p.ny * c]);
+    return { pts, bredd: pts.map(() => bredd), median: bredd, kalla: 'ortofoto', langd: langd(l.pts), andel: m.andel };
+  }
+  const langd = pts => { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return L; };
+  const nodNyckel = p => Math.round(p[0] * 100) + ',' + Math.round(p[1] * 100);
+  /**
+   * Delar linjerna i sträckor mellan korsningar (0.14.3): en linje bryts där den delar en punkt
+   * med en annan linje av samma slag (i OSM delar korsande vägar en nod). Returnerar
+   * { stracker, noder } där noder är korsningarnas punkter per slag: { bil: [[x, y] …], gang: […] }.
+   */
+  function stracker(linjer) {
+    const antal = new Map();
+    linjer.forEach((l, li) => {
+      const sl = slag(l.lager), sett = new Set();
+      l.pts.forEach(p => {
+        const k = sl + ':' + nodNyckel(p);
+        if (sett.has(k)) return;
+        sett.add(k);
+        antal.set(k, (antal.get(k) || 0) + 1);
+      });
     });
-    return { pts, bredd: tot.map(b => Math.round(b * 10) / 10), median: Math.round(median(tot) * 10) / 10, kalla: 'ortofoto' };
+    const ut = [], noder = { bil: [], gang: [] }, nodSett = new Set();
+    for (const l of linjer) {
+      const sl = slag(l.lager);
+      let del = [l.pts[0]];
+      for (let i = 1; i < l.pts.length; i++) {
+        del.push(l.pts[i]);
+        const k = sl + ':' + nodNyckel(l.pts[i]);
+        if (i < l.pts.length - 1 && antal.get(k) > 1) { ut.push(Object.assign({}, l, { pts: del })); del = [l.pts[i]]; }
+      }
+      if (del.length > 1) ut.push(Object.assign({}, l, { pts: del }));
+      for (const p of [l.pts[0], ...l.pts.slice(1)]) {
+        const k = sl + ':' + nodNyckel(p);
+        if (antal.get(k) > 1 && !nodSett.has(k)) { nodSett.add(k); noder[sl].push([p[0], p[1]]); }
+      }
+    }
+    return { stracker: ut, noder };
   }
 
   // ------------------------------------------------------------------
@@ -292,26 +332,32 @@
    * Vägytorna inom utsnittet r för linjer med profiler (ur `profil`). Returnerar
    * { bil: [polygoner], gang: [polygoner] } i zonens koordinater.
    */
-  function ytor(profiler, r, { cell = 0, maxCeller = 3e6, tol = 0.08 } = {}) {
+  function ytor(profiler, r, { cell = 0, maxCeller = 3e6, tol = 0.08, radie = RADIE, noder = null } = {}) {
     const Wm = r.xmax - r.xmin, Hm = r.ymax - r.ymin;
     const s = cell || Math.max(0.2, Math.sqrt(Wm * Hm / maxCeller));
-    const W = Math.ceil(Wm / s) + 1, H = Math.ceil(Hm / s) + 1;
+    const Wr = Math.ceil(Wm / s) + 1, Hr = Math.ceil(Hm / s) + 1;
+    // rutnätet går en bit utanför utsnittet, så att avrundningen inte äter av vägarna vid kanten
+    const Rmax = Math.max(0, ...Object.values(radie || {}));
+    const P = Rmax ? Math.ceil((Rmax + 2) / s) : 0;
+    const W = Wr + 2 * P, H = Hr + 2 * P, x0 = r.xmin - P * s, y1 = r.ymax + P * s;
     const ut = {};
     for (const sl of ['bil', 'gang']) {
       const lista = profiler.filter(p => p.slag === sl);
       if (!lista.length) { ut[sl] = []; continue; }
-      const z = new Float32Array(W * H).fill(-1);
+      const z = new Float32Array(W * H).fill(-1e3);
+      let maxB = 0;
       for (const p of lista) {
         for (let k = 1; k < p.pts.length; k++) {
           const [ax, ay] = p.pts[k - 1], [bx, by] = p.pts[k];
-          const wa = p.bredd[k - 1] / 2, wb = p.bredd[k] / 2, wm = Math.max(wa, wb) + s;
+          const wa = p.bredd[k - 1] / 2, wb = p.bredd[k] / 2, wm = Math.max(wa, wb) + s + (radie && radie[sl] || 0) + 1;
+          maxB = Math.max(maxB, wa, wb);
           const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
-          const i0 = Math.max(1, Math.floor((Math.min(ax, bx) - wm - r.xmin) / s)), i1 = Math.min(W - 2, Math.ceil((Math.max(ax, bx) + wm - r.xmin) / s));
-          const j0 = Math.max(1, Math.floor((r.ymax - Math.max(ay, by) - wm) / s)), j1 = Math.min(H - 2, Math.ceil((r.ymax - Math.min(ay, by) + wm) / s));
+          const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - wm - x0) / s)), i1 = Math.min(W - 1, Math.ceil((Math.max(ax, bx) + wm - x0) / s));
+          const j0 = Math.max(0, Math.floor((y1 - Math.max(ay, by) - wm) / s)), j1 = Math.min(H - 1, Math.ceil((y1 - Math.min(ay, by) + wm) / s));
           for (let j = j0; j <= j1; j++) {
-            const y = r.ymax - j * s;
+            const y = y1 - j * s;
             for (let i = i0; i <= i1; i++) {
-              const x = r.xmin + i * s;
+              const x = x0 + i * s;
               const t = L2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2)) : 0;
               const v = wa + t * (wb - wa) - Math.hypot(x - ax - t * dx, y - ay - t * dy);
               const c = j * W + i;
@@ -320,11 +366,73 @@
           }
         }
       }
-      const g = { W, H, s, x0: r.xmin, y1: r.ymax, z };
+      const R = radie && radie[sl] || 0, nod = noder && noder[sl] || [];
+      if (R > 0 && nod.length) avrunda(z, W, H, s, x0, y1, R, nod, R + maxB + 3);
+      // utsnittet ur det större rutnätet; kanten är utanför vägen så att ringarna sluts
+      const g = { W: Wr, H: Hr, s, x0: r.xmin, y1: r.ymax, z: new Float32Array(Wr * Hr) };
+      for (let j = 0; j < Hr; j++) for (let i = 0; i < Wr; i++) {
+        const v = z[(j + P) * W + i + P];
+        g.z[j * Wr + i] = i === 0 || j === 0 || i === Wr - 1 || j === Hr - 1 ? Math.min(v, -1) : v;
+      }
       const ringar = T().kurvorForNiva(g, 0).filter(l => l.sluten).map(l => T().forenkla(l.pts.slice(0, -1), tol)).filter(p => p.length >= 3);
       ut[sl] = polygoner(ringar);
     }
     return ut;
+  }
+  /** Radien i korsningarnas hörn, meter (0.14.3, AJ). Ungefär det som är vanligt på lokalgator. */
+  const RADIE = { bil: 6, gang: 1 };
+  /** Sträckor kortare än så här (m) får bredden från resten av gatan. */
+  const KORT = 30;
+  /** Exakt euklidiskt avstånd i en dimension (Felzenszwalb & Huttenlocher), f = kvadrerat avstånd. */
+  function edt1(f, n, d, v, zz) {
+    let k = 0; v[0] = 0; zz[0] = -Infinity; zz[1] = Infinity;
+    for (let q = 1; q < n; q++) {
+      let t = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+      while (t <= zz[k]) { k--; t = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); }
+      k++; v[k] = q; zz[k] = t; zz[k + 1] = Infinity;
+    }
+    k = 0;
+    for (let q = 0; q < n; q++) { while (zz[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; }
+  }
+  /**
+   * Rundar av de inåtgående hörnen nära korsningarna (0.14.3): en morfologisk stängning med
+   * radien R. z är vägens fält (positivt inne på vägen, −avståndet till vägkanten utanför).
+   * Det som ligger närmare vägen än R vidgas ut och dras sedan in R igen; det som inte ryms
+   * fylls, så hörnen får radien R. Bara inom `zon` meter från en korsning, så att vägar som går
+   * tätt bredvid varandra inte växer ihop längs hela sträckan.
+   */
+  function avrunda(z, W, H, s, x0, y1, R, noder, zon) {
+    const N = W * H, f = new Float64Array(N);
+    for (let c = 0; c < N; c++) f[c] = z[c] < -R ? 0 : 1e20;   // 0 = utanför den vidgade vägen
+    const n = Math.max(W, H), tmp = new Float64Array(n), d = new Float64Array(n), v = new Int32Array(n), zz = new Float64Array(n + 1);
+    for (let i = 0; i < W; i++) {
+      for (let j = 0; j < H; j++) tmp[j] = f[j * W + i];
+      edt1(tmp, H, d, v, zz);
+      for (let j = 0; j < H; j++) f[j * W + i] = d[j];
+    }
+    for (let j = 0; j < H; j++) {
+      for (let i = 0; i < W; i++) tmp[i] = f[j * W + i];
+      edt1(tmp, W, d, v, zz);
+      for (let i = 0; i < W; i++) f[j * W + i] = d[i];
+    }
+    // bara nära korsningarna, med en mjuk övergång ut mot zonens kant
+    const z2 = zon * zon;
+    for (const [nx, ny] of noder) {
+      const i0 = Math.max(0, Math.floor((nx - zon - x0) / s)), i1 = Math.min(W - 1, Math.ceil((nx + zon - x0) / s));
+      const j0 = Math.max(0, Math.floor((y1 - ny - zon) / s)), j1 = Math.min(H - 1, Math.ceil((y1 - ny + zon) / s));
+      for (let j = j0; j <= j1; j++) {
+        const dy = y1 - j * s - ny;
+        for (let i = i0; i <= i1; i++) {
+          const dx = x0 + i * s - nx, a2 = dx * dx + dy * dy;
+          if (a2 > z2) continue;
+          const c = j * W + i, stang = Math.sqrt(f[c]) * s - R - s;   // − s: rutnätet gör avståndet upp till en ruta för långt, och max() tar alltid det större
+          // längst ut i zonen räknas fyllningen ned, så att den inte slutar tvärt
+          const vikt = Math.min(1, (zon - Math.sqrt(a2)) / 3);
+          const val = stang - (1 - vikt) * (R + 1);
+          if (val > z[c]) z[c] = val;
+        }
+      }
+    }
   }
 
   /**
@@ -333,13 +441,30 @@
    * Returnerar { bil, gang, profiler: [{ namn, typ, slag, median, kalla }], matta, schabloner }.
    */
   function utkast(res, r, bild, opt = {}) {
-    const linjer = res.alla || res.linjer;
-    const profiler = linjer.map(l => Object.assign({ slag: slag(l.lager), namn: l.namn, typ: l.typ }, profil(l, bild, opt)));
-    const y = ytor(profiler, r, opt);
+    const { stracker: delar, noder } = stracker(res.alla || res.linjer);
+    const profiler = delar.map(l => Object.assign({ slag: slag(l.lager), namn: l.namn, typ: l.typ }, profil(l, bild, opt)));
+    // Korta sträckor (under KORT m) mäts osäkert: de får bredden från resten av samma gata
+    // (samma namn och typ), viktad med längden, om den är mätt (0.14.3, AJ).
+    const gator = new Map();
+    profiler.forEach(p => {
+      if (p.kalla !== 'ortofoto' || !p.namn || p.langd < KORT) return;
+      const k = p.typ + '|' + p.namn;
+      if (!gator.has(k)) gator.set(k, []);
+      gator.get(k).push(p);
+    });
+    profiler.forEach((p, i) => {
+      if (p.slag !== 'bil' || p.kalla === 'osm' || p.kalla === 'korfalt' || p.langd >= KORT || !p.namn) return;
+      const g = gator.get(p.typ + '|' + p.namn);
+      if (!g || !g.length) return;
+      const L = g.reduce((a, q) => a + q.langd, 0), b = Math.round(g.reduce((a, q) => a + q.median * q.langd, 0) / L * 2) / 2;
+      const l = delar[i];
+      profiler[i] = Object.assign(p, { pts: l.pts.map(q => [q[0], q[1]]), bredd: l.pts.map(() => b), median: b, kalla: 'gatan' });
+    });
+    const y = ytor(profiler, r, Object.assign({ noder }, opt));
     const inom = profiler.filter(p => p.pts.some(q => q[0] >= r.xmin && q[0] <= r.xmax && q[1] >= r.ymin && q[1] <= r.ymax));
     return {
       bil: y.bil, gang: y.gang, profiler: inom.map(p => ({ namn: p.namn, typ: p.typ, slag: p.slag, median: p.median, kalla: p.kalla })),
-      matta: inom.filter(p => p.kalla === 'ortofoto').length, medBild: !!bild,
+      matta: inom.filter(p => p.kalla === 'ortofoto' || p.kalla === 'gatan').length, medBild: !!bild,
     };
   }
 
@@ -357,5 +482,5 @@
     return Dxf.skriv(lager, objekt, { dx, dy, ext: r });
   }
 
-  return { hamta, tolka, dxf, klipp, klass, slag, schablon, tolkaBredd, stationer, matLinje, profil, ytor, polygoner, utkast, KLASSER, YTLAGER, SLAGNAMN, SCHABLON, URL_STD };
+  return { hamta, tolka, dxf, klipp, klass, slag, schablon, tolkaBredd, stationer, matLinje, profil, stracker, ytor, RADIE, KORT, polygoner, utkast, KLASSER, YTLAGER, SLAGNAMN, SCHABLON, URL_STD };
 }));

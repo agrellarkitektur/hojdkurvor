@@ -40,7 +40,7 @@
   /* lager på kartan */
   --byggnad: #5b4636; --fastighet: #b0306a;
   --kurva: #8f4f22; --trad: #3f7a3a; --trad-fyll: rgba(63,143,58,.18); --skugga: #222; --skugga-op: .3;
-  --sp: #aa1e1e; --sp-fyll: #fff; --vag: #6b6258; --vag-gang: #8a7f72;
+  --sp: #aa1e1e; --sp-fyll: #fff; --vag: #6b6258; --vag-gang: #8a7f72; --vag-yta: #00a0d8; --vag-yta-gang: #2fb36b;
   --sw-byggnad: #d9c6a5; --sw-fastighet: #ff9ccc; --sw-orto: #8fa77a;
   --sw-kurva: #c98a5e; --sw-trad: #8cc287; --sw-skugga: #8a8f96; --sw-sp: #ff8e8e; --sw-mark: #bfd3b0; --sw-hom: #8db283; --sw-vag: #cfc4b6; --sw-vag-gang: #a99f92;
   --skyfall: #1f6fb2; --natur: #2e7d32; --sw-lutning: #eda25a; --sw-skyfall: #7fb2e0; --sw-natur: #7fbf7f; --sw-lamning: #c3a6e8;
@@ -80,7 +80,7 @@
   --attr-bg: rgba(20,21,24,.85); --attr-ink: #8d9196;
   --byggnad: #d8c7a8; --fastighet: #f07cb4;
   --kurva: #c98a5e; --trad: #7dbb73; --trad-fyll: rgba(125,187,115,.15); --skugga: #000; --skugga-op: .45;
-  --sp: #ff6b6b; --sp-fyll: #1a1c1f; --vag: #b8ad9f; --vag-gang: #8f877d;
+  --sp: #ff6b6b; --sp-fyll: #1a1c1f; --vag: #b8ad9f; --vag-gang: #8f877d; --vag-yta: #4fd0ff; --vag-yta-gang: #5fe39a;
   --sw-byggnad: #c9b48f; --sw-fastighet: #f07cb4; --sw-orto: #6f8560;
   --sw-kurva: #c98a5e; --sw-trad: #7dbb73; --sw-skugga: #6e737a; --sw-sp: #ff6b6b; --sw-mark: #3e4a3a; --sw-hom: #5f8a57; --sw-vag: #b8ad9f; --sw-vag-gang: #8f877d;
   --skyfall: #5aa8f0; --natur: #7dbb73; --sw-lutning: #eda25a; --sw-skyfall: #5aa8f0; --sw-natur: #7dbb73; --sw-lamning: #b48be6;
@@ -808,3 +808,8 @@ body.mobilflode .handtag-wrap { transform-origin: center; }
 .pd-val { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin: 12px 0 4px; }
 .pd-val .knapp.liten { margin-top: 0; text-align: left; }
 body.slapp-fil #karta { outline: 3px dashed var(--brand); outline-offset: -6px; }
+
+/* Ramens egen ruta ligger över resultaten; bara greppet längs ramen tar emot musen (AT). */
+.leaflet-ramPane-pane > svg { pointer-events: none; }
+.las-rad { margin-top: 6px; }
+body.omrade-last .stang-utsnitt { display: none; }

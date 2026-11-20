@@ -191,8 +191,13 @@ with sync_playwright() as p:
     assert 'VAG_GANG_CYKEL' in gt and 'VAG_LOKALGATA' not in gt, 'gångvägarnas fil har bara gångvägar'
     # 0.12.0: lutning och skyfall som JPEG med världsfiler och som PDF, och den samlade DXF:en i roten
     for lag in ('lutning', 'skyfall'):
-        for slut in ('.jpg', '_lokal.jgw', '_sweref.jgw', '.pdf'):
+        for slut in ('.jpg', '_lokal.jgw', '.jgw', '.pdf'):
             assert any(n.endswith(f'_{lag}{slut}') for n in namn_i_zip), f'{lag}{slut} finns i zip:en'
+        assert not any(n.endswith(f'_{lag}_sweref.jgw') for n in namn_i_zip), 'ingen _sweref.jgw (0.14.3)'
+    # 0.14.3: guiden till bilderna i roten
+    assert 'SA_ANVANDER_DU_BILDERNA.txt' in namn_i_zip, 'guiden till bilderna i roten'
+    guide = z.read('SA_ANVANDER_DU_BILDERNA.txt').decode('utf-8')
+    assert 'IMAGEATTACH' in guide and '_lutning.jpg' in guide, 'guiden nämner bilderna och AutoCAD'
     samlad = [n for n in namn_i_zip if '_samlad_' in n]
     print('  samlad:', samlad)
     assert len(samlad) == 2 and all('/' not in n for n in samlad), 'samlad DXF lokal och sweref i roten'

@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.14.2';
+  const FILVERSION = '0.14.3';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -119,6 +119,9 @@
   // testkrok: skärmpunkt för en lat/lng (används av de automatiska testerna)
   window.__punkt = ll => { const p = karta.latLngToContainerPoint(ll), r = karta.getContainer().getBoundingClientRect(); return [r.left + p.x, r.top + p.y]; };
   const kurvRitare = L.canvas({ padding: 0.5 });
+  // Egna canvas för laserpunkter och höjdpunkter skapas en gång. Skapades de vid varje Skapa
+  // lades en ny canvas ovanpå de andra varje gång och tog musen från ramen (AT).
+  const laserRitare = L.canvas({ padding: 0.3 }), hojdpunktRitare = L.canvas({ padding: 0.3 });
 
   const tillLatLng = (epsg) => {
     const f = T.omvandlare(epsg, 4326).forward;
@@ -172,6 +175,10 @@
   const UTSKRIVBARA = new Set(['ortofoto', 'kurvor', 'byggnader', 'fastigheter', 'marktacke', 'hom', 'skugga', 'trad', 'stompunkter', 'vagar', 'gangvagar', 'sektioner', 'hojdpunkter', 'lutning', 'skyfall', 'volymer']);
   const resultat = {};
   karta.createPane('ortofotoPane').style.zIndex = 350;      // under kurvor och andra resultat
+  // Ramen och greppet att dra i ligger över resultaten (AT): kartlager som ritas på en egen
+  // canvas (laserpunkter, skyfall) lade sig annars ovanpå greppet efter några Skapa.
+  karta.createPane('ramPane').style.zIndex = 450;
+  const ramRitare = L.svg({ pane: 'ramPane', padding: 0.5 });
   const dolda = new Set(lager.las('localStorage', 'terrang-dolda-lager') || []);
   const synlig = id => !dolda.has(id);
   function visaResultatLager(id, lagerObj, stil) {
@@ -433,7 +440,7 @@
   /** Flytta hela området genom att dra i ramen. Kanterna stannar på jämna STEG. */
   let ramDrag = null;
   function startaRamDrag(e) {
-    if (ritar || punktlage || !state.utsnitt) return;
+    if (ritar || punktlage || !state.utsnitt || state.last) return;
     if (e.originalEvent && e.originalEvent.button) return;
     L.DomEvent.stop(e);
     const p0 = franLatLng(state.epsg)([e.latlng.lat, e.latlng.lng]);
@@ -472,21 +479,23 @@
     if (!r) { rensaUtsnittsGrafik(); return; }
     const t = tillLatLng(state.epsg);
     const poly = T.kantlinje(r).map(t);
-    if (!utsnittLager) utsnittLager = L.polygon(poly, { color: farg('ram'), weight: 1.2, fill: false, interactive: false });
+    if (!utsnittLager) utsnittLager = L.polygon(poly, { pane: 'ramPane', renderer: ramRitare, color: farg('ram'), weight: 1.2, fill: false, interactive: false });
     else utsnittLager.setLatLngs(poly).setStyle({ color: farg('ram') });
     if (!karta.hasLayer(utsnittLager)) utsnittLager.addTo(karta);
     // en osynlig, bred linje längs ramen som går att gripa och dra i (0.12.0)
     if (!ramGrepp) {
-      ramGrepp = L.polygon(poly, { color: '#000', opacity: 0, weight: 16, fill: false, interactive: true, bubblingMouseEvents: false });
+      ramGrepp = L.polygon(poly, { pane: 'ramPane', renderer: ramRitare, color: '#000', opacity: 0, weight: 16, fill: false, interactive: true, bubblingMouseEvents: false });
       ramGrepp.on('mousedown', startaRamDrag);
     } else ramGrepp.setLatLngs(poly);
-    if (!karta.hasLayer(ramGrepp)) ramGrepp.addTo(karta);
+    if (!karta.hasLayer(ramGrepp) && !state.last) ramGrepp.addTo(karta);
+    if (state.last) ramGrepp.remove();
     const mx = (r.xmin + r.xmax) / 2, my = (r.ymin + r.ymax) / 2;
     const pos = { n: [mx, r.ymax], s: [mx, r.ymin], v: [r.xmin, my], o: [r.xmax, my] };
     for (const k of ['n', 's', 'v', 'o']) {
       if (!handtag[k]) handtag[k] = nyttHandtag(k);
       if (k !== utom) handtag[k].setLatLng(t(pos[k]));
-      if (!karta.hasLayer(handtag[k])) handtag[k].addTo(karta);
+      if (state.last) handtag[k].remove();
+      else if (!karta.hasLayer(handtag[k])) handtag[k].addTo(karta);
     }
     // kryssrutan sitter i ramens övre högra innerhörn
     if (!stangMarkor) {
@@ -497,7 +506,8 @@
       stangMarkor.on('click', rensaUtsnitt);
     }
     stangMarkor.setLatLng(t([r.xmax, r.ymax]));
-    if (!karta.hasLayer(stangMarkor)) stangMarkor.addTo(karta);
+    if (state.last) stangMarkor.remove();
+    else if (!karta.hasLayer(stangMarkor)) stangMarkor.addTo(karta);
     // mått utan decimaler: bredden ovanför ramen, höjden till höger
     const mattIkon = (txt, klass) => L.divIcon({ className: '', html: `<span class="matt ${klass}">${txt}</span>`, iconSize: [0, 0] });
     if (!matt.b) matt.b = L.marker([0, 0], { interactive: false, keyboard: false });
@@ -522,6 +532,8 @@
   }
   function rensaUtsnitt() {
     state.utsnitt = null; state.geo = null;
+    if (state.last) satLas(false);
+    if (typeof Hamtminne !== 'undefined') Hamtminne.tom();
     $('koord-kopiera').hidden = true;
     $('kopiera-projektlank').disabled = true;
     rensaUtsnittsGrafik();
@@ -534,6 +546,27 @@
     visaStatus('Välj ett område för att börja.');
     planeraSpara(); flaggaUtanfor();
   }
+
+  /**
+   * Låst område (AY): ramen går inte att dra, handtagen och krysset är borta och det går inte att
+   * rita om eller skriva in nya hörn förrän man låser upp. Det hämtade underlaget används igen
+   * vid nästa Skapa så länge området är detsamma (Hamtminne nedan).
+   */
+  function satLas(pa) {
+    state.last = !!pa && !!state.utsnitt;
+    if (state.last) { if (ritar) satRitlage(false); if (punktlage) satPunktlage(false); }
+    document.body.classList.toggle('omrade-last', state.last);
+    const k = $('las-omrade');
+    k.setAttribute('aria-pressed', String(state.last));
+    k.textContent = state.last ? 'Lås upp området' : 'Lås området';
+    $('las-hjalp').textContent = state.last
+      ? 'Området är låst och flyttas inte av misstag när du drar i kartan. Det underlag som redan är hämtat används igen när du skapar på nytt.'
+      : 'Lås området när det ligger rätt, så flyttas det inte av misstag.';
+    ['rita', 'punkt-radie', 'radie', 'xmin', 'xmax', 'ymin', 'ymax', 'koord-klistra', 'zon'].forEach(id => { const el = $(id); if (el) el.disabled = state.last; });
+    ritaUtsnittsGrafik();
+    planeraSpara();
+  }
+  $('las-omrade').addEventListener('click', () => satLas(!state.last));
 
   function visaUtsnitt() {
     const r = state.utsnitt;
@@ -558,6 +591,7 @@
     $('storlek-text').textContent = `${fmt(b)} × ${fmt(h)} m` + (area >= 1e6 ? ` (${fmt(area / 1e6, 2)} km²)` : '') + (state.kommun ? `  ·  ${state.kommun.namn}` : '');
     visaLatLon();
     nollstallResultat();
+    if (state.projektKlar) sammanfatta();   // knappen: nytt område = inte "igen"
     if (area > MAX_AREA) {
       visaStatus(`Området är för stort. Högst ${fmt(MAX_AREA / 1e6)} km² går att hämta på en gång.`, true);
       $('skapa').disabled = true;
@@ -954,6 +988,7 @@
     });
     $('panel-rulla').scrollTop = 0;
     lager.spara('sessionStorage', 'terrang-steg', namn);
+    if (state.projektKlar) sammanfatta();
   }
   flikar.forEach((f, i) => {
     f.addEventListener('click', () => visaSteg(f.id.replace('flik-', '')));
@@ -1104,7 +1139,12 @@
     const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'ortofoto', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
     const vol = (state.volymer || []).length;
     $('val-sammanf').innerHTML = `<span>Underlag · ${antal} val</span><span>Platsanalys · ${ev.platsanalys ? `${kn} kapitel` : 'av'}</span><span>Skiss · ${vol ? vol + (vol === 1 ? ' volym' : ' volymer') : '–'}</span>`;
-    $('skapa').textContent = ev.platsanalys ? 'Skapa underlag och platsanalys →' : 'Skapa underlag →';
+    // Är underlaget redan hämtat för området säger knappen det (AY): då hämtas inget igen.
+    const vad = ev.platsanalys ? 'underlag och platsanalys' : 'underlag';
+    const igen = typeof Hamtminne !== 'undefined' && state.utsnitt && Hamtminne.galler({ r: state.utsnitt, epsg: state.epsg });
+    const flik = (document.querySelector('.stegnav [aria-selected=true]') || {}).id;
+    $('skapa').textContent = !igen ? `Skapa ${vad} →` : flik === 'flik-skiss' ? 'Uppdatera analyserna →' : `Skapa ${vad} igen →`;
+    $('skapa').title = igen ? 'Det som redan är hämtat för området används igen.' : '';
   }
   ['change', 'input'].forEach(t => $('steg-underlag').addEventListener(t, sammanfatta));
   ['change'].forEach(t => $('steg-analys').addEventListener(t, sammanfatta));
@@ -1569,7 +1609,7 @@
   }
   /** Laserpunkterna på kartan: urvalet { x, y, k } (högst 25 000). */
   function visaLaserKarta(lk, tt) {
-    const ritare = L.canvas({ padding: 0.3 }), pts = [];
+    const ritare = laserRitare, pts = [];
     for (let i = 0; i < lk.x.length; i++) {
       const c = Laser.klassInfo(lk.k[i]).rgb;
       pts.push(L.circleMarker(tt([lk.x[i], lk.y[i]]), { radius: 1.3, stroke: false, fillOpacity: 0.85, fillColor: `rgb(${c[0]},${c[1]},${c[2]})`, renderer: ritare, interactive: false }));
@@ -1938,11 +1978,12 @@
           if (val.hom) {
             const png = await (await fetch(bild)).arrayBuffer();
             filer[`hojd_over_mark/${namn}_hojd_over_mark.png`] = png;
-            filer[`hojd_over_mark/${namn}_hojd_over_mark_sweref.pgw`] = Analys.varldsfil(y.x0, y.y1, y.s);
+            // världsfilen med bildens namn (SWEREF) läses av sig själv; _lokal är ett alternativ (AW)
+            filer[`hojd_over_mark/${namn}_hojd_over_mark.pgw`] = Analys.varldsfil(y.x0, y.y1, y.s);
             filer[`hojd_over_mark/${namn}_hojd_over_mark_lokal.pgw`] = Analys.varldsfil(y.x0, y.y1, y.s, X0, Y0);
             extraInfo.push('', 'HÖJD ÖVER MARK',
               '  Bild med 1 m pixlar. Färg efter höjd över mark: under 1,5 m genomskinlig, 1,5–4, 4–8, 8–15, 15–25 och över 25 m.',
-              '  Byt namn på en av .pgw-filerna så att den heter som bilden för att få den på rätt plats (lokalt eller SWEREF).');
+              '  Världsfilen .pgw med samma namn som bilden är i SWEREF. _lokal.pgw är i de lokala koordinaterna: byt namn på den om du vill ha det. Se SA_ANVANDER_DU_BILDERNA.txt.');
             // på kartan bara inom utsnittet, som i utskriften
             const i0 = Math.max(0, Math.round((r.xmin - y.x0) / y.s)), i1 = Math.min(y.W, Math.round((r.xmax - y.x0) / y.s) + 1);
             const j0 = Math.max(0, Math.round((y.y1 - r.ymax) / y.s)), j1 = Math.min(y.H, Math.round((y.y1 - r.ymin) / y.s) + 1);
@@ -2028,7 +2069,7 @@
     const lagerBild = async (b, bas) => {
       const url = b.canvas.toDataURL('image/jpeg', 0.9);
       filer[`${bas}.jpg`] = await (await fetch(url)).arrayBuffer();
-      filer[`${bas}_sweref.jgw`] = Analys.varldsfil(b.x0, b.y1, b.s);
+      filer[`${bas}.jgw`] = Analys.varldsfil(b.x0, b.y1, b.s);
       filer[`${bas}_lokal.jgw`] = Analys.varldsfil(b.x0, b.y1, b.s, X0, Y0);
       return `${b.W} × ${b.H} pixlar, ${String(b.s).replace('.', ',')} m per pixel`;
     };
@@ -2265,6 +2306,96 @@
   }
   function delFramstegFor(kor, text) { if (kor.delFramsteg) kor.delFramsteg('skydd', 0.95, text); }
 
+  // ------------------------------------------------------------------
+  // Guider till bilderna i zip-filen (0.14.3, AR och AW)
+  // ------------------------------------------------------------------
+  const tal2 = (v, d = 2) => fmt(v, Math.abs(v % 1) > 1e-9 ? d : 0);
+  /** Utsnittets mått och hörn, lokalt och i SWEREF, för guiderna. */
+  function bildMatt(kor) {
+    const { r, X0, Y0, epsg } = kor;
+    const b = r.xmax - r.xmin, h = r.ymax - r.ymin;
+    const [lx, ly] = T.tillLokal(X0, Y0)(r.xmin, r.ymin);
+    return { b, h, lx, ly, sx: r.xmin, sy: r.ymin, zon: T.zon(epsg).namn, vrid: kor.vrid || 0, standard: Math.abs(lx) < 0.001 && Math.abs(ly) < 0.001 };
+  }
+  /** Ortofotot som textur på terrängen i Archicad (AR): ägarens arbetsflöde, med utsnittets mått. */
+  function texturGuide(kor, bild) {
+    const m = bildMatt(kor);
+    return [
+      'ORTOFOTOT SOM TEXTUR PÅ TERRÄNGEN',
+      '',
+      `Bilden ${bild} täcker exakt utsnittet: ${tal2(m.b)} m i öst–väst och ${tal2(m.h)} m i nord–syd.`,
+      'Den behöver ingen världsfil för det här, bara rätt storlek.',
+      '',
+      'ARCHICAD',
+      '1. Läs in terrängen som vanligt (mesh ur DXF:en eller IFC:en i lokala koordinater).',
+      '2. Skapa en ny yta (Ytor/Surfaces, i äldre versioner Material) och kalla den Ortofoto.',
+      `3. Under Textur: välj ${bild}. Ange bredden ${tal2(m.b)} m och höjden ${tal2(m.h)} m.`,
+      '   Lås inte proportionerna till bildens pixlar; skriv in måtten.',
+      '4. Markera terrängen (meshen) och välj ytan Ortofoto för översidan',
+      '   (Inställningar för mesh > Modell > ersätt ytor > Översida).',
+      '5. Öppna 3D-fönstret. Bilden ska ligga rätt mot husen och vägarna.',
+      '',
+      m.standard && !m.vrid
+        ? 'Nollpunkten är utsnittets sydvästra hörn och ritningen är inte vriden, så texturen börjar rätt utan justering.'
+        : [
+          'Nollpunkten är inte utsnittets sydvästra hörn' + (m.vrid ? ', och ritningen är vriden' : '') + '. Texturen börjar då i projektets nollpunkt',
+          'och hamnar fel. Justera den med Justera 3D-textur (Align 3D Texture): sätt texturens',
+          `origo i utsnittets sydvästra hörn, lokalt X = ${tal2(m.lx, 3)}, Y = ${tal2(m.ly, 3)}` + (m.vrid ? `, och riktningen ${tal2(-m.vrid, 4)}° från X-axeln.` : '.'),
+        ].join('\r\n'),
+      '',
+      'REVIT OCH ANDRA PROGRAM',
+      'Samma sak: ett material med bilden som textur, storleken som ovan och början i utsnittets sydvästra hörn.',
+      '',
+      'Se också SA_ANVANDER_DU_BILDERNA.txt i zip-filens rot.',
+      '',
+    ].join('\r\n');
+  }
+  /** Steg för steg för bilderna med världsfiler (AR): i roten när zip-filen har bilder. */
+  async function skrivBildguide(kor) {
+    const { filer } = kor;
+    const bilder = Object.keys(filer).filter(f => /\.(jpg|png)$/i.test(f) && filer[f.replace(/\.(jpg|png)$/i, m => (m.toLowerCase() === '.jpg' ? '.jgw' : '.pgw'))]);
+    if (!bilder.length) return;
+    const m = bildMatt(kor);
+    filer['SA_ANVANDER_DU_BILDERNA.txt'] = [
+      'BILDERNA OCH VÄRLDSFILERNA',
+      '',
+      'Bilderna i zip-filen (ortofoto, lutning, skyfall, höjd över mark) täcker exakt utsnittet:',
+      `${tal2(m.b)} m i öst–väst och ${tal2(m.h)} m i nord–syd, med norr uppåt.`,
+      '',
+      'Bilder i zip-filen:',
+      ...bilder.map(b => '  ' + b),
+      '',
+      'VAD ÄR EN VÄRLDSFIL?',
+      'En världsfil (.jgw till .jpg, .pgw till .png) är en liten textfil med sex rader: pixelns storlek,',
+      'vridning och koordinaten för mitten av bildens övre vänstra pixel. Program som kan läsa',
+      'världsfiler lägger då bilden på rätt plats och i rätt skala av sig själva.',
+      '',
+      'Varje bild har två:',
+      `  bild.jgw        i ${m.zon} (SWEREF). Heter som bilden och läses av sig själv.`,
+      '  bild_lokal.jgw  i de lokala koordinaterna (nollpunkt' + (m.vrid ? ' och vridning' : '') + ' som DXF-filerna med _lokal).',
+      'Vill du ha den lokala: ta bort bild.jgw (eller flytta den) och döp om bild_lokal.jgw till bild.jgw.',
+      'Bilden och världsfilen måste ligga i samma mapp och heta likadant, bara med olika filändelse.',
+      '',
+      'PROGRAM SOM LÄSER VÄRLDSFILER',
+      '  QGIS och andra GIS-program: öppna bilden, klart.',
+      '  AutoCAD Map 3D och Civil 3D: MAPIINSERT läser världsfilen.',
+      '',
+      'PROGRAM SOM INTE LÄSER VÄRLDSFILER (placera för hand)',
+      '  AutoCAD (vanliga): IMAGEATTACH, välj bilden och ange',
+      `    insättningspunkt (nedre vänstra hörnet): lokalt ${tal2(m.lx, 3)}, ${tal2(m.ly, 3)}  eller SWEREF ${tal2(m.sx, 3)}, ${tal2(m.sy, 3)}`,
+      `    skala: ${tal2(m.b)} (bildens bredd i meter, ritningen i meter)` + (m.vrid ? `\r\n    vridning: ${tal2(-m.vrid, 4)}° i den lokala ritningen, 0 i SWEREF` : '\r\n    vridning: 0'),
+      '  Archicad, i plan: lägg in bilden som figur, ställ in storleken till',
+      `    ${tal2(m.b)} × ${tal2(m.h)} m och placera nedre vänstra hörnet i lokalt ${tal2(m.lx, 3)}, ${tal2(m.ly, 3)}` + (m.vrid ? `, vridning ${tal2(-m.vrid, 4)}°.` : '.'),
+      '  Archicad, i 3D: ortofotot som textur på terrängen, se ortofoto/ORTOFOTO_SOM_TEXTUR.txt.',
+      '',
+      'KONTROLL',
+      'Lägg en DXF ur samma zip-fil (till exempel höjdkurvorna) ovanpå. Vägar, hus och kurvor ska',
+      'stämma med bilden. Gör de inte det är det oftast fel världsfil (lokal i stället för SWEREF',
+      'eller tvärtom), eller en bild som skalats om i ett annat program.',
+      '',
+    ].join('\r\n');
+  }
+
   /** Ortofoto. */
   async function skapaOrtofoto(kor) {
     const { X0, Y0, auth, delFramsteg, epsg, extraInfo, filer, namn, r, sammanExtra, senaste, val, varningar } = kor;
@@ -2289,8 +2420,9 @@
         const bild = jc.toDataURL('image/jpeg', 0.88);
         const x0c = mal.x0 + s / 2, y1c = mal.y1 - s / 2;     // mitten av övre vänstra pixeln
         filer[`ortofoto/${namn}_ortofoto.jpg`] = await (await fetch(bild)).arrayBuffer();
-        filer[`ortofoto/${namn}_ortofoto_sweref.jgw`] = Analys.varldsfil(x0c, y1c, s);
+        filer[`ortofoto/${namn}_ortofoto.jgw`] = Analys.varldsfil(x0c, y1c, s);
         filer[`ortofoto/${namn}_ortofoto_lokal.jgw`] = Analys.varldsfil(x0c, y1c, s, X0, Y0);
+        filer[`ortofoto/ORTOFOTO_SOM_TEXTUR.txt`] = texturGuide(kor, `${namn}_ortofoto.jpg`);
         senaste.ortofoto = { bild, x0: x0c, y1: y1c, W: b.W, H: b.H, s, canvas: jc, ar: v.ar };
         const sTxt = String(s).replace('.', ',');
         extraInfo.push('', 'ORTOFOTO',
@@ -2298,7 +2430,7 @@
           '  Licens: CC BY 4.0.',
           `  Rutor: ${b.rutor.join(', ')}`,
           `  Bild: ${b.W} × ${b.H} pixlar, ${sTxt} m per pixel, i ${T.zon(epsg).namn}. JPEG utan genomskinlighet; delar utan bild är vita.`,
-          '  Byt namn på en av .jgw-filerna så att den heter som bilden för att få den på rätt plats (lokalt eller SWEREF).');
+          '  Världsfilen _ortofoto.jgw är i SWEREF och läses av sig själv där programmet kan läsa världsfiler. _lokal.jgw är i de lokala koordinaterna. Se SA_ANVANDER_DU_BILDERNA.txt och ortofoto/ORTOFOTO_SOM_TEXTUR.txt.');
         if (b.tackt < 0.995) varningar.push(`Ortofoto: bara ${fmt(b.tackt * 100)} % av utsnittet har bild från ${v.ar}.`);
         sammanExtra.push(['Ortofoto', `flygår ${v.ar}, ${sTxt} m per pixel`]);
         // på kartan i lägre upplösning (stora bilder blir tunga som överlägg)
@@ -2359,7 +2491,7 @@
         const per = {};
         v.linjer.forEach(l => { per[l.lager] = (per[l.lager] || 0) + 1; });
         const antalSlag = sl => v.linjer.filter(l => l.slag === sl).length;
-        const y = v.ytor, kallText = { osm: 'bredd i OSM', korfalt: 'antal körfält i OSM', ortofoto: 'mätt i ortofotot', schablon: 'schablon för vägtypen' };
+        const y = v.ytor, kallText = { osm: 'bredd i OSM', korfalt: 'antal körfält i OSM', ortofoto: 'mätt i ortofotot', gatan: 'samma bredd som resten av gatan', schablon: 'schablon för vägtypen' };
         const perKalla = {};
         if (y) y.profiler.forEach(p => { perKalla[p.kalla] = (perKalla[p.kalla] || 0) + 1; });
         extraInfo.push('', 'VÄGAR',
@@ -2372,7 +2504,8 @@
             '  VÄGYTOR (utkast, beräknade): slutna polylinjer i lagren VAG_YTA_BIL_BERAKNAD och VAG_YTA_GANG_BERAKNAD, ihopslagna i korsningarna. Kanterna är beräknade ur ortofotot (bilvägar), OSM:s bredd eller en schablon, inte inmätta.',
             '    Bredden kommer från OSM:s bredd eller antal körfält när de finns, annars en schablon för vägtypen.'
               + (y.medBild ? ' Bilvägarnas bredd och läge är mätta i ortofotot där vägbanan syns (färgen mitt på vägen följs ut till kanterna).' : ' Kryssa i Ortofoto för att mäta bilvägarnas bredd i bilden.'),
-            `    ${Object.keys(perKalla).map(k => `${perKalla[k]} ${perKalla[k] === 1 ? 'väg' : 'vägar'}: ${kallText[k]}`).join(', ')}.`,
+            `    Vägarna är delade i sträckor mellan korsningarna, och varje sträcka har en och samma bredd (medianen av mätningen, avrundad till 0,5 m). Sträckor under ${Vagar.KORT} m får bredden från resten av gatan. Hörnen i korsningarna är rundade med radien ${fmt(Vagar.RADIE.bil)} m (gångvägar ${fmt(Vagar.RADIE.gang)} m), en schablon.`,
+            `    ${Object.keys(perKalla).map(k => `${perKalla[k]} ${perKalla[k] === 1 ? 'sträcka' : 'sträckor'}: ${kallText[k]}`).join(', ')}.`,
             '    Träd över vägen, skuggor, parkeringar och infarter gör mätningen osäker. Ett utkast att rätta, inte en inmätning.',
           ] : []));
         sammanExtra.push(['Vägar', `${antalSlag('bil')} bilvägar, ${antalSlag('gang')} gångvägar (OSM)` + (y ? `, ytor ${y.matta ? `(${y.matta} mätta i ortofotot)` : '(schablon)'}` : '')]);
@@ -2602,12 +2735,19 @@
     if (window.innerWidth >= 760) lagerpanel.classList.remove('ihop');
   }
 
+  /** En rad i sammanfattningen om hur mycket som togs ur hämtminnet (AY). */
+  async function noteraHamtminne(kor) {
+    if (typeof Hamtminne === 'undefined' || !kor.sammanExtra) return;
+    const st = Hamtminne.stat();
+    if (st.traffar) kor.sammanExtra.push(['Hämtat', st.hamtade ? `${fmt(st.traffar)} delar fanns redan, ${fmt(st.hamtade)} hämtades nu` : 'inget nytt, allt fanns redan sedan förra gången']);
+  }
+
   /**
    * Stegen efter förberedelserna, i den ordning de körs. Ordningen spelar roll: laserdatan
    * räknas in i markmodellen från skapaTerrang, byggnaderna behövs för träden och skuggorna,
    * ortofotot för vägarnas bredd, och bladet, den samlade DXF:en och zip-filen kommer sist.
    */
-  const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaStrandskydd, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaLagerPdf, skapaBlad, skapaProjektfilen, skapaSamladDxf, forberedZip, visaKlart];
+  const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaStrandskydd, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaLagerPdf, skapaBlad, skrivBildguide, skapaProjektfilen, skapaSamladDxf, forberedZip, noteraHamtminne, visaKlart];
 
   $('skapa').addEventListener('click', async () => {
     const kor = {};
@@ -2622,13 +2762,17 @@
       // De lokala filernas vridning läses av Terrang.tillLokal under hela körningen och
       // nollställs i finally. Den är fortfarande en inställning i Terrang, inte ett argument.
       T.lokal.vrid = kor.vrid;
+      // det som redan är hämtat för samma område används igen (AY)
+      if (typeof Hamtminne !== 'undefined') Hamtminne.borja({ r: kor.r, epsg: kor.epsg });
       for (const steg of SKAPA_STEG) await steg(kor);
     } catch (err) {
       matare(null);
       if (err instanceof T.InloggningsFel) { visaStatus(err.message, true); $('anv').focus(); }
       else { console.error(err); visaStatus((err && err.message) || 'Något gick fel när underlaget skapades.', true); }
     } finally {
+      if (typeof Hamtminne !== 'undefined') Hamtminne.sluta();
       knapp.disabled = false;
+      sammanfatta();
       T.lokal.vrid = 0;
       lasProjektbyte(false);
     }
@@ -2909,7 +3053,7 @@
     img.src = b.url;
   }
   function visaHojdpunkter(hp, epsg) {
-    const t = tillLatLng(epsg), Z = (state.senaste && state.senaste.Z0) || 0, ritare = L.canvas({ padding: 0.3 });
+    const t = tillLatLng(epsg), Z = (state.senaste && state.senaste.Z0) || 0, ritare = hojdpunktRitare;
     const etiketter = hp.length <= 400;
     const grp = L.featureGroup(hp.map(p => {
       const m = L.circleMarker(t([p.x, p.y]), { radius: 2.2, stroke: false, fillColor: farg('annot'), fillOpacity: 1, renderer: ritare });
@@ -3112,7 +3256,8 @@
   function visaVagar(v, tt) {
     const gang = l => l.slag === 'gang';
     const vStil = l => ({ color: farg(gang(l) ? 'vag-gang' : 'vag'), weight: l.lager === 'VAG_HUVUDVAG' ? 3 : gang(l) ? 1.2 : 2, dashArray: gang(l) ? '4 3' : null, opacity: 0.85 });
-    const yStil = sl => ({ color: farg(sl === 'gang' ? 'vag-gang' : 'vag'), weight: 0.8, dashArray: '3 2', fillColor: farg(sl === 'gang' ? 'vag-gang' : 'vag'), fillOpacity: 0.18, opacity: 0.7 });
+    // ytorna i en klar färg som syns mot ortofotot (AJ: grått mot asfalt syntes dåligt)
+    const yStil = sl => ({ color: farg(sl === 'gang' ? 'vag-yta-gang' : 'vag-yta'), weight: 1.6, fillColor: farg(sl === 'gang' ? 'vag-yta-gang' : 'vag-yta'), fillOpacity: 0.22, opacity: 0.95 });
     for (const [id, sl] of [['vagar', 'bil'], ['gangvagar', 'gang']]) {
       const linjer = v.linjer.filter(l => l.slag === sl), ytor = v.ytor ? v.ytor[sl] : [];
       if (!linjer.length && !ytor.length) { visaResultatLager(id, null); continue; }
@@ -3384,6 +3529,7 @@
       nollpunkt: egen ? { typ: 'egen', x: talEllerNull($('np-x').value), y: talEllerNull($('np-y').value), z: talEllerNull($('np-z').value) } : { typ: 'auto' },
       vridning: { typ: $('vrid').value, grader: talEllerNull($('vrid-grader').value) || 0 },
       horisontpunkt: state.horPunkt ? runda3(franLatLng(3006)(state.horPunkt)) : null,
+      last: !!state.last,
     };
   }
   /** Rättelserna som hör till projektet: hus och tak som projektet känner till, träd inom utsnittet. */
@@ -3492,7 +3638,9 @@
   /** Sant, med ett besked, om ett projektbyte försöks medan underlaget skapas (fil som släpps på kartan, skiss från cad-apa). */
   function bytetLast() {
     if (!state.skapar) return false;
-    visaProjektbesked('Vänta tills underlaget är skapat. Det går inte att byta projekt eller läsa in en skiss under tiden.');
+    const besked = 'Vänta tills underlaget är skapat. Det går inte att byta projekt eller läsa in en skiss under tiden.';
+    visaProjektbesked(besked);
+    visaStatus(besked, true);   // också på statusraden, så att det syns var man än är i panelen (AZ)
     return true;
   }
   /** Ett besked på projektets statusrad som står kvar några sekunder, också om projektet sparas under tiden. */
@@ -3548,6 +3696,7 @@
         karta.whenReady(() => setTimeout(passaKartan, 50));
       } else if (state.utsnitt) rensaUtsnitt();
       state.mitt = Array.isArray(pl.mitt) && pl.utsnitt ? pl.mitt.slice() : null;
+      satLas(pl.last === true && !!pl.utsnitt);
       ritaVolymer(); ritaSektioner(); ritaHorPunkt();
       sammanfatta();
     } finally { state.proj.laser = false; }
@@ -4342,8 +4491,17 @@
       $('lasso-info').textContent = n ? `${n} ${n === 1 ? 'träd' : 'träd'} inom slingan.` : 'Inga träd inom slingan. Rita om.';
       $('lasso-dolj').disabled = !n;
       $('lasso-dolj').textContent = n ? `Dölj ${n} träd` : 'Dölj träden';
-      // lassot släpper vyn igen, så att man kan snurra och se vilka som är markerade
+      // lassot släpper vyn igen, så att man kan snurra och se vilka som är markerade.
+      // Slingan är ritad på skärmen och följer inte med vyn: den släcks så fort vyn rörs (AU).
       svg.style.pointerEvents = 'none';
+      const slack = () => {
+        vag.setAttribute('d', '');
+        yta.removeEventListener('pointerdown', slack, true);
+        yta.removeEventListener('wheel', slack, true);
+      };
+      const yta = $('vy3d-yta');
+      yta.addEventListener('pointerdown', slack, true);
+      yta.addEventListener('wheel', slack, true);
     });
   }
   $('vy3d-lasso').addEventListener('click', () => { if (lassoYta) stangLasso(); else startaLasso(); });

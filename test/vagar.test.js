@@ -99,4 +99,30 @@ const bilDxf = V.dxf(res, r, 0, 0, { slag: 'bil' }), gangDxf = V.dxf(res, r, 0, 
 assert.ok(bilDxf.includes('VAG_YTA_BIL') && bilDxf.includes('VAG_LOKALGATA') && !bilDxf.includes('VAG_GANG_CYKEL'));
 assert.ok(gangDxf.includes('VAG_YTA_GANG') && gangDxf.includes('VAG_GANG_CYKEL') && !gangDxf.includes('VAG_LOKALGATA'));
 
+// Sträckor mellan korsningar (0.14.3, AJ): en T-korsning där linjerna delar en punkt
+const tLinjer = [
+  { lager: 'VAG_LOKALGATA', typ: 'residential', namn: 'Storgatan', pts: [[0, 50], [50, 50], [100, 50]] },
+  { lager: 'VAG_LOKALGATA', typ: 'residential', namn: 'Tvärgatan', pts: [[50, 50], [50, 0]] },
+  { lager: 'VAG_GANG_CYKEL', typ: 'footway', namn: '', pts: [[50, 50], [50, 100]] },
+];
+const sk = V.stracker(tLinjer);
+assert.strictEqual(sk.stracker.length, 4, 'Storgatan delas i korsningen');
+assert.deepStrictEqual(sk.noder.bil, [[50, 50]]);
+assert.deepStrictEqual(sk.noder.gang, [], 'gångvägen räknas inte som korsning för bilvägarna');
+// en bredd för hela sträckan, också där bilden stör
+const pk = V.profil(gata, bild);
+assert.ok(pk.bredd.every(b => b === pk.median), 'samma bredd längs sträckan');
+assert.strictEqual(pk.median % 0.5, 0, 'avrundad till halv meter');
+// hörnen i korsningen rundas av: ytan växer med två hörn à R²(1 − π/4)
+const tProf = sk.stracker.filter(l => V.slag(l.lager) === 'bil').map(l => ({ slag: 'bil', pts: l.pts, bredd: l.pts.map(() => 6) }));
+const utan = V.ytor(tProf, r, { cell: 0.25, radie: { bil: 0 } }), med = V.ytor(tProf, r, { cell: 0.25, noder: sk.noder });
+assert.strictEqual(med.bil.length, 1);
+const R = V.RADIE.bil;
+nara(med.bil[0].yta - utan.bil[0].yta, 2 * R * R * (1 - Math.PI / 4), 4, 'avrundade hörn');
+// vägen når fortfarande utsnittets kant (ingen avrundning av vägänden vid kanten)
+assert.ok(med.bil[0].ringar[0].some(q => q[0] < 0.5), 'vägen går ut till kanten');
+// två parallella gator 9 m isär växer inte ihop långt från korsningar
+const par = [{ slag: 'bil', pts: [[0, 40], [100, 40]], bredd: [5, 5] }, { slag: 'bil', pts: [[0, 49], [100, 49]], bredd: [5, 5] }];
+assert.strictEqual(V.ytor(par, r, { cell: 0.25, noder: { bil: [[50, 10]], gang: [] } }).bil.length, 2, 'parallella gator hålls isär');
+
 console.log('vagar: ok');

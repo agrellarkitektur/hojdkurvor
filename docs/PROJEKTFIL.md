@@ -60,7 +60,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
     "radie": 50,
     "nollpunkt": { "typ": "auto" },     // eller { "typ": "egen", "x", "y", "z" } i zonen och RH 2000
     "vridning": { "typ": "ingen", "grader": 0 },   // ingen | sann | egen (grader medurs)
-    "horisontpunkt": null               // [x, y] i SWEREF 99 TM, eller null = utsnittets mitt
+    "horisontpunkt": null,              // [x, y] i SWEREF 99 TM, eller null = utsnittets mitt
+    "last": false                       // området är låst (0.14.3); saknas = false
   },
 
   "val": {

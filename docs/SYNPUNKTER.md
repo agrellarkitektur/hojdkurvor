@@ -7,17 +7,27 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **BM**.
+Senast använda nummer: **BÅ**.
 
 ## Inkorg
 
-- **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0.*
+- **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0. 0.14.3: med hämtminnet hämtas inget igen för samma område (AY); själva beräkningarna görs fortfarande om.*
 - **BL** Stöd-knappen blir ett hjärta när gränssnittet går över till ikoner.
+- **BÅ** Skicka med datan: kan zip-filen och projektfilen räcka för att någon annan ska kunna öppna platsen och snurra i 3D, utan egen inloggning hos Lantmäteriet? *Bedömning: går, eftersom Lantmäteriets öppna data får spridas med källangivelse (CC BY 4.0). Det sparade resultatet (0.13.6) är redan det som behövs; det skulle läggas i projektfilen som bilaga (etapp 4) eller läsas ur zip-filen. Hänger ihop med AP. Inte gjort.*
 - **BS** Mobilen: välj utsnittets format (förhållandet mellan sidorna) själv, inte bara storleken; nu är proportionerna fasta. Mobilen behöver bara det grundläggande: markera ett område och skicka det till datorn eller beställa underlaget. Annat mobilstöd behöver vi inte lägga tid på.
 
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.14.3
+
+Rättelser efter testet 20 november av AJ–AÅ.
+
+- **BW** Vägytor (efter AJ och AV): kryssa i Vägar, Utkast till vägytor och Ortofoto på en plats med riktiga gator. Har varje gata samma bredd mellan korsningarna, och är hörnen i korsningarna rundade? Syns de blå ytorna mot ortofotot? Vad säger info-filen om hur många sträckor som är mätta? Öppna `_vagar_lokal.dxf` i AutoCAD.
+- **BX** Bilderna (efter AR och AW): läs `SA_ANVANDER_DU_BILDERNA.txt` i zip:ens rot och `ortofoto/ORTOFOTO_SOM_TEXTUR.txt`. Är de begripliga, och stämmer måtten och arbetsflödet i Archicad? Prova också med egen nollpunkt eller vridning, där texturen behöver justeras. Räcker två världsfiler per bild (`.jgw` i SWEREF och `_lokal.jgw`)?
+- **BY** Ramen (efter AT) och lassot (efter AU): skapa några utsnitt efter varandra i samma fönster, med Punktmoln ikryssat. Går det fortfarande att dra i ramen? Ringa in träd med lassot i 3D-vyn och flytta vyn: släcks slingan, och är träden fortfarande markerade?
+- **BZ** Lås och hämta inte igen (AY): välj *Lås området*. Försvinner handtagen och krysset, och flyttas området inte när du drar i kartan? Skapa, skissa en byggnad under 04 Skiss och välj *Uppdatera analyserna*: går det fort, och säger sammanfattningen att allt fanns? Ladda om sidan: är området fortfarande låst (underlaget i minnet är borta efter omladdning, så nästa Skapa hämtar igen)? Lås upp med samma knapp. Räcker det här, eller ska Skapa delas i Hämta underlag och Skapa analys på var sin flik som i AY?
 
 ### 0.14.1
 
@@ -65,32 +75,10 @@ Naturvårdsverket härifrån, men appen är inte körd mot dem i en webbläsare.
 - **AÄ** cad-apa på nya adressen: på <https://hojdkurvor.danaid.cloud/>, välj *Rita i cad-apa*. Öppnas <https://cad-apa.danaid.cloud/> med platsen? Skicka tillbaka en skiss från cad-apa: dyker volymerna upp i 04 Skiss? Prova också *Fortsätt rita i cad-apa* under resultatet.
 - **AÖ** Hämta från kartan (AX): välj *Hämta från kartan* vid Projekt eller fastighet och klicka på en fastighet, (1) efter Skapa med Fastigheter ikryssat, (2) på ett annat ställe i samma kommun, (3) i en kommun där fastighetsindelningen inte är hämtad. Blir beteckningen rätt, och är beskeden begripliga?
 
-### 0.13.0
-
-- **AZ** Projekt: rita ett område, lägg till en volym och en sektion, ladda om sidan. Finns allt kvar? *Spara projektfil*, *Nytt projekt*, och öppna det första igen under *Senaste projekt*. Öppna projektfilen på den andra datorn (eller dra den till kartan) och välj Skapa: blir underlaget detsamma? Ändra något och öppna filen igen: är frågan om vilken version som gäller begriplig? Ligger `.hojdkurvor` i zip:ens rot?
-- **AÅ** Skissen i DXF:en (rättelse efter AG): modellera några volymer i 3D-vyn (också prisma med tak), stäng vyn och välj Skapa. Öppna `skiss/_volymer_lokal.dxf` och `_samlad_lokal.dxf` i Archicad: syns volymerna med väggar och tak (lagret `SKISS_VOLYM`), på rätt höjd? Vilken fil var det som saknade skissen vid testet?
-
-### 0.12.2
-
-- **AY** Skuggstudien i platsanalysen: kryssa i Soldiagram och Skuggstudie med Byggnader, Skapa. Har skuggbladet i `_platsanalys.pdf` samma ram och ritningshuvud som de andra bladen? Syns husens fotavtryck (svart) och skissade volymer (orange) i rutorna, och går det att se vilka hus skuggorna kommer från? Samma konturer finns i `skuggor/_skuggstudie.pdf`.
-
-### 0.12.1
-
-- **AW** Leveransen: ligger `_platsanalys.pdf` i zip:ens rot, har solbladet samma ram och ritningshuvud som de andra bladen, och är DXF:erna för skuggor, lutning och skyfall borta?
-
-### 0.12.0
-
-- **AR** Lutning och skyfall: kryssa i Lutning och Skyfall, Skapa. Lägg in `_lutning.jpg` och `_skyfall.jpg` i Archicad med världsfilen (byt namn på `_lokal.jgw`) och se att de hamnar rätt mot `_lutning_lokal.dxf`. Öppna `_lutning.pdf` och `_skyfall.pdf`: är skalan och teckenförklaringen begripliga?
-- **AS** Samlad DXF: öppna `_samlad_lokal.dxf` i Archicad. Kommer alla lager med, och blir filen för tung med kurvorna?
-- **AT** Punkt och radie: välj Punkt och radie, klicka på kartan, byt radie. Dra i ramen (inte i handtagen) och se att området flyttas i steg om 10 m. På iPhone: går det att dra i ramen med fingret?
-- **AU** Lasso: i 3D-vyn, välj Lasso, ringa in några träd, Dölj. Visa dolda tar tillbaka dem.
-- **AV** Vägytor: är de streckade ytorna på kartan och de nya lagernamnen tydliga nog, och är utjämningen lagom på breda vägar?
-
-### 0.11.0
-
-- **AJ** Vägar: kryssa i Vägar, Utkast till vägytor och Ortofoto på en plats med riktiga gator. Ligger ytorna rätt mot ortofotot (lagren Vägar och Gång- och cykelvägar på kartan), och hur ofta säger info-filen att bredden är mätt i bilden? Öppna `_vagar_lokal.dxf` och `_gangvagar_lokal.dxf` i Archicad.
-- **AK** Träd och hus: klicka på ett träd i 3D-vyn, byt art och höjd, dölj ett träd och ett hus, Visa dolda. Välj Skapa igen: är de dolda borta ur DXF:en och skuggstudien?
-- **AL** Till cad-apa: ortofotot i full upplösning (blir cad-apa seg?). Träden har nu art och modell i paketet, men cad-apa ritar dem inte förrän cad-apa läser `tradmodeller` (planerat i cad-apa 0.12.1).
+Klart vid testet 20 november (strukna, se CHANGELOG.md under 0.14.3): AK, AL, AS, AZ och AÅ
+godkända. AJ, AR, AT, AU, AV, AW och AY ledde till ändringar, testas som BW–BZ. AZ: projektfilen
+lästes inte när ett nytt utsnitt höll på att skapas; det går inte under Skapa, och beskedet syns
+nu också på statusraden.
 
 Klart vid testet 19 november (strukna, se CHANGELOG.md under 0.13.4): BA (synpunktsformuläret
 efter de nya spärrarna) och BC (låset under Skapa) godkända.
@@ -102,6 +90,14 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 20 november 2026 → 0.14.3 (svar på de äldre testpunkterna)
+
+- **AJ/AV** Vägarnas mitt ligger rätt men bredden är vild. Jämn bredd mellan korsningar, raka vägar och mjuka radier; ortofotot som stöd för radierna i korsningarna. Låg kontrast mot ortofotot på kartan. Lagernamnen är bra. *En bredd per sträcka, korta sträckor som resten av gatan, 6 m radie i korsningarna (schablon, inte mätt i ortofotot), blå ytor.*
+- **AR/AW** Hur används en jgw? Guide i roten. Ortofotot som textur på topon i Archicad: nytt material, ortofoto-jpg som textur, storlek som utsnittet, översida på meshen. Behövs alla jgw:er? *Två guider i zip:en, `_sweref.jgw` borttagen (den med bildens namn är SWEREF).*
+- **AT** Dra i ramen slutade fungera efter några utsnitt i samma fönster. *Rättat.*
+- **AU** Lassoytan stannar kvar och följer med när vyn flyttas. *Släcks när vyn rörs.*
+- **AY** Lås markeringen och hämta inte om samma data; flerstegsraket med flikarna och en *Uppdatera analyser*-knapp. *Lås och hämtminne gjort; knappen byter text efter flik. Flikarna har inte fått egna knappar för Hämta och Skapa analys.*
 
 ### 19 november 2026 → 0.13.6
 

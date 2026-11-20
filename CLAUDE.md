@@ -142,6 +142,10 @@ node test/sol.test.js
 ```
 
 ```
+node test/hamtminne.test.js
+```
+
+```
 node test/geodata.test.js
 ```
 
@@ -179,6 +183,10 @@ python3 test/resultat_test.py test/ut ritning
 
 ```
 python3 test/planvy_test.py test/ut ritning
+```
+
+```
+python3 test/las_test.py test/ut ritning
 ```
 
 Kör enhetstestet efter ändringar i beräkningarna och gränssnittstesterna efter

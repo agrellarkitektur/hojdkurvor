@@ -99,6 +99,14 @@ något IndexedDB kan spara och tillbaka: typade arrayer, delade objekt, husens t
 uppräkningsbart), Map, Set och fel följer med, funktioner tas bort och canvas blir Blob och
 tillbaka (med en låtsad canvas). Själva lagringen prövas i `resultat_test.py`.
 
+```
+node test/hamtminne.test.js
+```
+
+`hamtminne.test.js` (0.14.3) prövar hämtminnet (`js/hamtminne.js`): samma anrop hämtas en
+gång, Range och POST-kropp hålls isär, felsvar och `blob:` sparas inte, ett annat område tömmer
+minnet och `fetch` återställs.
+
 `sol.test.js` (0.13.3) prövar solens läge mot referensvärden (NREL:s SPA) för fyra orter,
 dagjämningar och solstånd 2026, svensk tid kring sommartidens gränser, upp- och nedgång, och
 skuggornas längd från en mur där svaret går att räkna för hand, också med vridet rutnät.
@@ -145,6 +153,16 @@ två från långsidan och ett från kortsidan till samma hörn, också vridet), 
 och huset (ägarens exempel med 0,3 m), yttermåttens sidor, FG-texten (*FG lika bef*), status i
 analyserna och BYA, takform och nock (prisma och rätblock byter typ, nocken tvärs), att entrén följer
 med när kroppen ändras, kroppen ur ett befintligt hus och länkade kroppar.
+
+```
+python3 test/las_test.py test/ut ritning
+```
+
+`las_test.py` (0.14.3) skapar underlag tre gånger för samma område: andra gången hämtas nästan
+inget från testservern, knappen säger *igen* och sammanfattningen har raden Hämtat. Ramen går att
+dra efter flera Skapa (AT). *Lås området* stänger av Rita, hörnen och zonen, tar bort handtagen
+och krysset, ramen går inte att dra och låset finns kvar efter omladdning. Lassot i 3D-vyn
+släcks när vyn rörs (AU).
 
 `planvy_test.py` (0.14.0, gränssnitt) skapar underlaget med byggnader och fastighetsgränser för
 testtomten och prövar planvyn: befintligt hus med kryss, en tillbyggnad med snäpp och `4x5,6`,

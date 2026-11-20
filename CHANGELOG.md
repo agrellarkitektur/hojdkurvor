@@ -3,6 +3,37 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.14.3 – 2026-11-20
+
+Rättelser och förbättringar efter ägarens test av de äldre punkterna (AJ–AÅ i
+`docs/SYNPUNKTER.md`).
+
+- **Lås området** (AY) under 01 Plats: ramen går inte att dra, handtagen och
+  krysset försvinner och Rita, hörnen och koordinatsystemet är avstängda tills
+  man låser upp. Låset sparas i projektet (`plats.last`).
+- **Underlaget hämtas inte igen** (AY) för samma område: det som hämtats under
+  Skapa sparas i minnet (`js/hamtminne.js`, högst 900 MB, bara i fliken) och
+  används vid nästa Skapa. Knappen säger *Skapa … igen* och under 04 Skiss
+  *Uppdatera analyserna*; sammanfattningen säger hur mycket som fanns. Byts
+  området töms minnet. Uppdelningen av Skapa i Hämta och Skapa analys är inte
+  gjord.
+- **Dra i ramen** fungerar efter flera Skapa (AT). Laserpunkterna och
+  höjdpunkterna fick en ny canvas vid varje Skapa, som lade sig över ramens
+  grepp. Nu återanvänds de, och ramen ligger i en egen ruta över resultaten.
+- **Lassot** i 3D-vyn släcks när vyn rörs (AU); träden förblir markerade.
+- **Vägytorna** (AJ, AV): vägarna delas i sträckor mellan korsningarna och
+  varje sträcka får en bredd (medianen av mätningen i ortofotot, avrundad till
+  0,5 m). Sträckor under 30 m får bredden från resten av gatan. Hörnen i
+  korsningarna rundas med 6 m radie (gångvägar 1 m), bara nära korsningarna.
+  Ytorna är blå (gångvägar gröna) på kartan i stället för grå.
+- **Bilderna** (AR, AW): världsfilen med bildens namn (`_ortofoto.jgw`) är i
+  SWEREF och läses av sig själv; `_lokal.jgw` finns kvar, `_sweref.jgw` är
+  borttagen. Nytt: `SA_ANVANDER_DU_BILDERNA.txt` i roten (världsfiler steg för
+  steg, insättningspunkt och skala för AutoCAD och Archicad) och
+  `ortofoto/ORTOFOTO_SOM_TEXTUR.txt` (ortofotot som textur på terrängen i
+  Archicad, med utsnittets mått).
+- Projektbyte under Skapa säger till på statusraden också (AZ).
+
 ## 0.14.2 – 2026-11-20
 
 Nytt Swish-kort i Stöd utvecklingen. Inget nytt i kartan.
