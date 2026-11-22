@@ -298,7 +298,7 @@ formatet ska båda sidor och `test/cad-apa-mock.html` följa med.
 
 | Planerat | Behöver från cad-apa |
 |---|---|
-| Situationsplanen (0.16.0) | per volym `status` (`ny`, `tillbyggnad`, `befintlig`, `rivs`), `huvudbyggnad`, `entre` ({ sida, t }), vilken byggnad volymen hör till (för mått mellan kroppar), och `kalla` när volymen ersätter ett befintligt hus (Lantmäteriets objektidentitet). Samma fält som `js/kropp.js` |
+| Situationsplanen (byggd i 0.16.0 utan ändrat utbyte) | per volym `status` (`ny`, `tillbyggnad`, `befintlig`, `rivs`), `huvudbyggnad`, `entre` ({ sida, t }) och `kalla` när volymen ersätter ett befintligt hus (Lantmäteriets objektidentitet), och gärna `matt` (dolda och flyttade mått). Samma fält som `js/kropp.js` och `js/situationsplan.js`. Vilken byggnad volymen hör till behövs inte: volymer med samma status som går in i varandra eller ligger an blir en byggnad (yttre skal) av sig själva. I dag behåller Höjdkurvor fälten för volymer med samma `id` när skissen kommer tillbaka |
 | Sol på fasaderna, senare | fasaderna ur fotavtryck och höjder räcker för klar himmel (byggt i 0.15.0). Senare: våningar med utkragning per våning, och fönster per fasad om instrålningen ska räknas per fönster |
 | Förslag (projektfilens etapp 3) | `forslag` med samma id som i projektfilen, och förslagets namn (Basfall, Förslag A …) |
 | Geologi och bergschakt | per volym schaktbotten (eller grundläggningsnivå) så att sprängning kan räknas per bergart; egna bergpunkter (x, y, berg-z) åt båda håll |

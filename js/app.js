@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.15.0';
+  const FILVERSION = '0.16.0';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -3287,12 +3287,15 @@
     volymerIZon();
     volymLager.clearLayers();
     const t = tillLatLng(state.epsg);
-    state.volymer.forEach(v => {
-      // status (0.14.0): befintliga tunnare, de som rivs streckade och utan fyllning
-      const st = Kropp.status(v);
-      L.polygon(v.fotavtryck.map(t), { color: farg('annot'), weight: st === 'ny' || st === 'tillbyggnad' ? 2 : 1.2, dashArray: st === 'rivs' ? '6 4' : null,
+    // byggnaderna som yttre skal (0.16.0): kroppar med samma status som går in i varandra blir en kontur.
+    // Status (0.14.0): befintliga tunnare, de som rivs streckade och utan fyllning.
+    const per = new Map(state.volymer.map(v => [v.id, v]));
+    Kropp.skal(state.volymer).forEach(sk => {
+      const st = sk.status, vs = sk.kroppar.map(id => per.get(id));
+      const namn = vs.map(v => esc(v.namn)).join(', '), bya = Kropp.unionArea(sk.ringar.filter(r => Kropp.area(r) > 0));
+      L.polygon(sk.ringar.map(r => r.map(t)), { color: farg('annot'), weight: st === 'ny' || st === 'tillbyggnad' ? 2 : 1.2, dashArray: st === 'rivs' ? '6 4' : null,
         fillColor: farg('annot'), fillOpacity: st === 'rivs' ? 0 : st === 'befintlig' ? 0.05 : 0.12 })
-        .bindTooltip(`${esc(v.namn)}: ${fmt(Platsanalys.area(v.fotavtryck))} m², ${TAKFORMER[v.takform] || ''} tak${st !== 'ny' ? ', ' + Kropp.STATUS[st].toLowerCase() : ''}`, { sticky: true }).addTo(volymLager);
+        .bindTooltip(`${namn}: ${fmt(Math.abs(bya))} m²${vs.length === 1 ? `, ${TAKFORMER[vs[0].takform] || ''} tak` : ''}${st !== 'ny' ? ', ' + Kropp.STATUS[st].toLowerCase() : ''}`, { sticky: true }).addTo(volymLager);
     });
     const ul = $('volymlista');
     ul.innerHTML = '';
@@ -3349,11 +3352,12 @@
       }
     }
     state.volymEpsg = state.epsg;
-    // status, huvudbyggnad, källa och entré (0.14.0) följer inte med cad-apa; de behålls för kroppar med samma id
+    // status, huvudbyggnad, källa och entré (0.14.0) och dolda och flyttade mått (0.16.0) följer inte med
+    // cad-apa; de behålls för kroppar med samma id
     const forra = new Map(state.volymer.map(v => [v.id, v]));
     state.volymer = sk.volymer.map(v => {
       const n = Object.assign({}, v, { id: v.id || Utbyte.nyttId() }), f = forra.get(n.id);
-      if (f) ['status', 'huvudbyggnad', 'kalla'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
+      if (f) ['status', 'huvudbyggnad', 'kalla', 'matt'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
       if (f && f.entre && n.entre == null && f.fotavtryck.length === n.fotavtryck.length) n.entre = f.entre;
       return n;
     });
@@ -3515,6 +3519,41 @@
     }
     sparaVolymer(); ritaVolymer();
   }
+  /**
+   * Situationsplanen som PDF eller DXF (0.16.0). Anropas direkt vid klicket i planvyn, så att PDF-fliken
+   * hinner öppnas innan något väntas in.
+   */
+  async function skapaSituationsplan(typ, d, und) {
+    const ram = d.ram, p = state.proj ? state.proj.d.projekt : {};
+    const namn = (p.fastighet || $('projekt').value.trim() || 'situationsplan').replace(/[\\/:*?"<>|]+/g, '_');
+    const ersatta = Kropp.ersatta(d.volymer);
+    const data = {
+      volymer: d.volymer, granser: und.granser, ytor: und.ytor, visa: d.visa,
+      hus: und.hus.filter(b => !ersatta.has(String(b.id))),
+      zonNamn: T.zon(state.epsg).namn, centrum: ram.centrum, format: ram.format, liggande: ram.liggande, skala: ram.skala,
+      uppgifter: { fastighet: p.fastighet || $('projekt').value.trim(), kommun: state.kommun ? state.kommun.namn : p.kommun, uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer, datum: idag() },
+    };
+    if (typ === 'dxf') {
+      const filnamn = `${namn}_situationsplan.dxf`;
+      const mal = await valjFil(filnamn, 'application/dxf', 'DXF');
+      if (mal === AVBRUTET) return;
+      await skrivFil(mal, new Blob([Situationsplan.dxf(data)], { type: 'application/dxf' }), filnamn);
+      return;
+    }
+    const filnamn = `${namn}_situationsplan_1-${ram.skala}_${ram.format.toUpperCase()}.pdf`;
+    const flik = oppnaPdfFlik(filnamn);
+    const mal = flik ? null : await valjFil(filnamn, 'application/pdf', 'PDF');
+    if (mal === AVBRUTET) return;
+    try {
+      await laddaPdf();
+      const blob = new Blob([Situationsplan.pdf(Object.assign({ fonter }, data))], { type: 'application/pdf' });
+      if (flik) visaPdfIFlik(flik, blob, filnamn); else await skrivFil(mal, blob, filnamn);
+    } catch (e) {
+      console.error(e);
+      if (flik && !flik.closed) flik.close();
+      visaStatus('Situationsplanen kunde inte skapas: ' + e.message);
+    }
+  }
   function oppnaPlanvy() {
     if (planvy) return;
     if (!state.utsnitt) { visaStatus('Rita ett utsnitt under 01 Plats först.'); return; }
@@ -3530,6 +3569,11 @@
       hus: hus.map(b => ({ id: b.id, fotavtryck: b.fotavtryck, mark: b.mark, hojd: b.hojd, huvudbyggnad: !!b.huvud, namn: Byggnad.beteckning(b) || 'Befintlig byggnad' })),
       utsnitt: state.utsnitt, zonNamn: T.zon(state.epsg).namn,
       markhojd: markhojdVid, nyttId: () => Utbyte.nyttId(), andrad: skissFranPlan,
+      ram: lager.las('localStorage', 'terrang-situationsplan') || null,
+      ramAndrad: r => lager.spara('localStorage', 'terrang-situationsplan', r),
+      uppgifter: () => { const p = state.proj ? state.proj.d.projekt : {}; return { fastighet: p.fastighet || $('projekt').value.trim(), uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer }; },
+      satUppgifter: delar => { if (!state.proj) return; Object.assign(state.proj.d.projekt, delar); planeraSpara(); },
+      situationsplan: (typ, d) => skapaSituationsplan(typ, d, { granser, hus, ytor: s && s.fastigheter ? s.fastigheter.ytor : [] }),
       till3d: s && s.rutnat ? () => $('visa-3d').click() : null,
       saknas: saknas.length ? `Underlaget saknar ${saknas.join(' och ')}. Välj ${saknas.length > 1 ? 'dem' : 'det'} under 02 Underlag och välj Skapa för att rita mot ${saknas.length > 1 ? 'dem' : 'det'}.` : null,
       stangd: () => {
@@ -3731,6 +3775,7 @@
       projekt: {
         id: g.projekt.id, namn: $('projekt').value.trim(), kommun: state.kommun ? state.kommun.namn : (g.projekt.kommun || ''),
         fastighet: g.projekt.fastighet || '', uppdrag: g.projekt.uppdrag || '', anteckning: g.projekt.anteckning || '',
+        ritadAv: g.projekt.ritadAv || '', ritningsnummer: g.projekt.ritningsnummer || '',
       },
       plats: lasPlats(), val: lasVal(), inmatning: lasInmatning(g), underlag: g.underlag, historik: g.historik,
     };

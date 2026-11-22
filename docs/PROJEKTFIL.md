@@ -49,7 +49,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
   "sparad": "2026-11-18T09:12:00.000Z", // när filen sparades (null i webbläsaren)
 
   "projekt": { "id": "uuid", "namn": "Staren 2", "kommun": "Kinda",
-               "fastighet": "", "uppdrag": "", "anteckning": "" },
+               "fastighet": "", "uppdrag": "", "anteckning": "",
+               "ritadAv": "", "ritningsnummer": "" },   // ritningshuvudet (0.16.0)
 
   "plats": {
     "crs": "EPSG:3006",                 // geometrin i inmatning och horisontpunkt
@@ -78,7 +79,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
     "volymer": [ { "id": "uuid", "forslag": "uuid", "namn": "Hus A", "fotavtryck": [[x, y], …],
                    "golv": 112.5, "takfot": 6, "takform": "sadel", "taklutning": 27,
                    "nockriktning": null, "primitiv": { … },
-                   "status": "ny", "huvudbyggnad": false, "kalla": null, "entre": { "sida": 0, "t": 0.5 } } ],
+                   "status": "ny", "huvudbyggnad": false, "kalla": null, "entre": { "sida": 0, "t": 0.5 },
+                   "matt": { "<enhet>|y|90|0": { "dold": true } } } ],   // valfritt (0.16.0)
     "sektioner": [ { "id": "uuid", "namn": "A", "a": [x, y], "b": [x, y], "vand": false } ],
     "rattelser": { "tak": { "objektidentitet": { … } }, "trad": { "x,y": { … } }, "hus": { "objektidentitet": { … } } },
     "punkter": [], "overlagringar": [], "anteckningar": [], "vyer": []
@@ -123,6 +125,16 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
   `entre` (`{ sida, t }`: sidan i fotavtrycket och läget längs den, 0–1).
   `golv` är färdigt golv (FG). Fälten följer inte med till cad-apa (utbytet är
   oförändrat), men behålls för kroppar med samma `id` när skissen kommer tillbaka.
+  Från 0.16.0 finns också `matt` (valfritt): dolda och flyttade mått i
+  situationsplanen, `{ "<enhet>|<mått>": { "dold": true } | { "off": meter } }`.
+  Enheten är kropparnas id i bokstavsordning med `+` (kroppar med samma status
+  som går in i varandra är en byggnad); måttet `g0`–`g2` (till tomtgräns),
+  `y|<normalens riktning i hela grader>|<ordning>` (yttermått) eller
+  `r|<den andra enheten>|<ordning>` (mellan byggnader). Fältet ligger på enhetens
+  första kropp och följer inte med till cad-apa (behålls som de andra).
+- `projekt.fastighet`, `uppdrag`, `ritadAv`, `ritningsnummer`: ritningshuvudet i
+  situationsplanen (0.16.0; `ritadAv` och `ritningsnummer` är nya, `version` är
+  oförändrad). Fylls i under *Situationsplan* i planvyn.
 - `sektioner[]`: `a` → `b` är linjen, `vand` vänder blickriktningen.
 - `rattelser`: egna takformer (`terrang-takval`), dolda och rättade träd
   (`terrang-tradval`) och dolda hus (`terrang-husval`) som rör projektet: hus som

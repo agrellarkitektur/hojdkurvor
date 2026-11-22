@@ -183,4 +183,46 @@ prov('flytta och vrida följer länkade kroppar (kedjan i 3D-vyn)', () => {
   nara(a.primitiv.vrid, 90, 1e-9);
 });
 
+prov('union: vinkel, fog, innergård, kors och stora koordinater (0.16.0)', () => {
+  const r = (x, y, b, d) => [[x, y], [x + b, y], [x + b, y + d], [x, y + d]];
+  let u = K.union([r(0, 0, 10, 4), r(6, 0, 4, 10)]);
+  assert.strictEqual(u.length, 1); assert.strictEqual(u[0].length, 6, 'L-formen har sex hörn'); nara(K.area(u[0]), 64, 1e-9);
+  u = K.union([r(0, 0, 10, 4), r(10, 0, 4, 4)]);
+  assert.strictEqual(u[0].length, 4, 'fogen försvinner'); nara(K.area(u[0]), 56, 1e-9);
+  u = K.union([r(0, 0, 10, 4), r(10, 1, 4, 2)]);
+  assert.strictEqual(u[0].length, 8); nara(K.area(u[0]), 48, 1e-9);
+  nara(K.area(K.union([r(0, 0, 10, 4), r(0, 0, 10, 4)])[0]), 40, 1e-9, 'två lika');
+  nara(K.area(K.union([r(0, 0, 10, 10), r(2, 2, 3, 3)])[0]), 100, 1e-9, 'en inuti en annan');
+  assert.strictEqual(K.union([r(0, 0, 1, 1), r(5, 5, 1, 1)]).length, 2, 'skilda');
+  u = K.union([r(0, 0, 10, 2), r(0, 8, 10, 2), r(0, 0, 2, 10), r(8, 0, 2, 10)]);
+  assert.deepStrictEqual(u.map(q => Math.round(K.area(q))).sort((a, b) => a - b), [-36, 100], 'innergården är ett hål (medurs)');
+  u = K.union([r(0, 4, 12, 4), r(4, 0, 4, 12)]);
+  assert.strictEqual(u[0].length, 12); nara(K.area(u[0]), 80, 1e-9);
+  const vr = p => p.map(([x, y]) => [x * Math.cos(0.3) - y * Math.sin(0.3) + 153456.7, x * Math.sin(0.3) + y * Math.cos(0.3) + 6543210.3]);
+  u = K.union([vr(r(0, 0, 10, 4)), vr(r(6, 0, 4, 10))]);
+  assert.strictEqual(u[0].length, 6); nara(K.area(u[0]), 64, 1e-6);
+});
+
+prov('yttre skal: samma status går ihop, olika status hålls isär; BYA räknar överlapp en gång', () => {
+  const a = rekt('a', 0, 0, 10, 4), b = rekt('b', 6, 0, 4, 10), c = rekt('c', 30, 0, 5, 5);
+  let s = K.skal([a, b, c]);
+  assert.strictEqual(s.length, 2);
+  assert.deepStrictEqual(s[0].kroppar, ['a', 'b']); assert.strictEqual(s[0].id, 'a+b'); assert.strictEqual(s[0].yttre.length, 6);
+  assert.deepStrictEqual(s[1].kroppar, ['c']);
+  // tillbyggnad mot befintligt: två skal, fogen syns
+  const h = rekt('h', 0, 0, 12, 9, { status: 'befintlig' }), t = rekt('t', 12, 1, 4, 5, { status: 'tillbyggnad' });
+  assert.strictEqual(K.skal([h, t]).length, 2);
+  // samma status som ligger an: ett skal
+  const g = rekt('g', 12, 1, 4, 5, { status: 'befintlig' });
+  assert.strictEqual(K.skal([h, g]).length, 1);
+  // bara ett hörn gemensamt: två
+  assert.strictEqual(K.skal([rekt('p', 0, 0, 4, 4), rekt('q', 4, 4, 4, 4)]).length, 2);
+  const by = K.bya([a, b, c]);
+  nara(by.tillkommande, 64 + 25, 1e-6); nara(by.totalt, 89, 1e-6);
+  // en tillbyggnad som går in i det befintliga räknar bara det nya
+  const t2 = rekt('t2', 10, 0, 4, 4, { status: 'tillbyggnad' });
+  const by2 = K.bya([h, t2]);
+  nara(by2.befintlig, 108, 1e-6); nara(by2.tillkommande, 8, 1e-6); nara(by2.totalt, 116, 1e-6);
+});
+
 console.log(`${antal} prov gick igenom`);

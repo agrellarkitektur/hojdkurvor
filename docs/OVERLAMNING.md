@@ -1,9 +1,19 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 22 november 2026, 0.15.0.
+överlämning; historiken finns i git. Senast: 22 november 2026, 0.16.0.
 
 ## Läget
+
+- **0.16.0** 22 november (grenen `v0.16.0`): **situationsplanen**, etapp 3 i
+  `plan-skiss-situationsplan.md` (claude.ai-projektet), och ägarens synpunkt samma dag: kroppar i
+  vinkel ska redovisas som en union, ett yttre skal, och visas var för sig först när de markeras.
+  Se avsnittet *Situationsplanen (0.16.0)* nedan. Testpunkter CÖ–DC. Sessionen hade **ingen
+  skrivrätt** till repot (push nekades); grenen lämnades som git-bundle till ägaren. Körda: alla 24
+  enhetstester (nytt: `situationsplan.test.js`; union, skal och BYA i `kropp.test.js`), nya
+  `situationsplan_test.py` och `planvy_test.py` i alla tre teman. Testdatan byggdes med GDAL
+  (python3.12) enligt *Testmiljön*. **Inte provat**: riktiga tomter med sneda gränser, utskrift i
+  100 % på papper, DXF:en i Archicad, iPhone.
 
 - **0.15.0** 22 november (grenen `v0.15.0`): **sol på fasaderna** efter `overlamning-solanalys.md`
   (claude.ai-projektet; versionsnumret och adressen där är rättade), på byggnadskropparna från 0.14.0
@@ -325,6 +335,49 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## Situationsplanen (0.16.0)
+
+- **Union och skal** (`js/kropp.js`): `union(polys, tol = 2 mm)` delar varje sida där den möter en
+  annan polygons sidor (också hörn som ligger på sidan), tar bort delar inuti en annan polygon och
+  fogar (motriktade sidor som sammanfaller), behåller en av två lika riktade sidor som sammanfaller
+  och fogar resten till ringar (moturs yttre, medurs hål; vid ett hörn med flera vägar den som
+  svänger mest åt höger). `horIhop(A, B)`: sidor som korsar varandra, ett hörn, en sidmitt eller
+  mitten inuti den andra, eller en fog. `skal(volymer)`: union–find över kroppar med **samma
+  status** som hör ihop; ett hörn gemensamt räcker inte. `bya` räknar unionens area
+  (tillkommande = alla utom rivs minus befintliga).
+- **Enheterna** (`js/situationsplan.js`, `Situationsplan.enheter(volymer, { oppen })`): ett skal per
+  byggnad, eller kropparna var för sig i skalet där `oppen` (den markerade kroppen) ingår. Planvyn
+  ritar enheterna som `path` med `fill-rule="evenodd"`; de öppna har klassen `pv-oppen`
+  (halvgenomskinlig fyllning, de omarkerade streckade). Kartans lager ritar `Kropp.skal`.
+- **Måtten** (`Situationsplan.matt`) räknas med `Kropp.gransmatt`, `yttermattSidor` och
+  `relativaMatt` på enheternas yttre ring (låtsaskroppar `{ id, fotavtryck, e }`), så att fogarna
+  inom en byggnad försvinner av sig själva. Varje mått har `nyckel`, `agare` (enhetens första kropp
+  i bokstavsordning), `off` och `dold` ur ägarens fält `matt[<enhet>|<nyckel>]`, och `andra`:
+  `{ flytta, kroppar }` (gränsmått och mått mellan byggnader: kropparna och deras länkade flyttas)
+  eller `{ kropp, i, l }` (yttermått: kroppens sida, bara om skalets sida slutar i kroppssidans
+  slut, `sidaIKropp`) eller null. Planvyn: klick på en måttext öppnar rutan med *Dölj*; drag
+  (yttermått och mått mellan byggnader) sätter `off` i meter. `satAnnot`, `visaDolda`.
+- **Ritningen** (`Situationsplan.ritning(data, { skala })`): linjer, ytor, texter och pilar i zonens
+  koordinater med papperets mm för bredder och texthöjder; `pdf` och `dxf` ritar den. Etiketter
+  (`etiketter`): namn och FG längs längsta sidan; skilda golv i samma byggnad ger FG per kropp i den
+  del som inte täcks av de andra (`friDel`, 16 × 16 prov). Namnet bara om det ryms, FG och RIVS
+  alltid (med vit kant om de inte ryms). Skrafferingen 45° med 1,2 mm på papperet.
+- **PDF** (`pdf`): A3/A4, liggande/stående, 1:400/1:500. Fältet är papperet minus 20 mm till
+  vänster och 10 mm runt om; byggnadernas mitt (`mitt`) hamnar lite ovanför fältets mitt (`ram`).
+  Ritningshuvudet nere till höger, teckenförklaringen ovanför (bara det som finns), upplysningen
+  och skalstocken nere till vänster, norrpil (rutnätets nord) uppe till höger. Typsnitten som i de
+  andra PDF:erna (`Utskrift.nyttDokument`, `ordbild`, `marke`).
+- **DXF** (`dxf`): R12 i zonen, lager `SITPLAN_*`. `Dxf.skriv` har fått `vinkel` (grupp 50) och
+  `centrerad` (72 = 4 med 11/21/31) för texter.
+- **app.js**: `skapaSituationsplan(typ, d, und)` (PDF i ny flik som *Skriv ut i skala*, DXF med
+  `valjFil`/`skrivFil`); planvyn får `ram` (localStorage `terrang-situationsplan`), `uppgifter`
+  och `satUppgifter` (projektets `fastighet`, `uppdrag`, `ritadAv`, `ritningsnummer`; fastigheten
+  föreslås ur `#projekt`) och husen utan de ersatta. `laddaSkiss` behåller `matt` som de andra
+  fälten som inte följer med cad-apa.
+- **Inte gjort**: flytta gränsmått (bara dölja), flytta texter, välja ramens läge själv (den följer
+  byggnadernas mitt), symboler (infart, parkering, sopkärl, VA, LOD), nybyggnadskartan som låst
+  underlag (etapp 5), skattade tak för befintliga hus, förslagen.
 
 ## Sol på fasaderna (0.15.0)
 
@@ -944,7 +997,8 @@ som 0.15.0–0.18.0 i planen 19 november är flyttat två steg):
 |---|---|
 | 0.15.0 | Sol på fasaderna (byggd 22 november; testas som CG–CK) |
 | 0.15.x | Rättelser efter ägarens test av 0.14.x och 0.15.0 |
-| 0.16.0 | Situationsplanen: annotering, ritningshuvud, teckenförklaring, PDF och DXF (etapp 3 i `plan-skiss-situationsplan.md`) |
+| 0.16.0 | Situationsplanen: yttre skal, annotering, ritningshuvud, teckenförklaring, PDF och DXF (byggd 22 november; testas som CÖ–DC) |
+| 0.16.x | Rättelser efter ägarens test av 0.15.0 och 0.16.0 |
 | 0.17.0 | Användarskapad omgivning, etapp 1: intuitiv modellering och val per projekt och byggnad (CL–CV, `utredning-anvandarskapad-omgivning.md`) |
 | 0.18.0 | Förslag och sparade vyer (projektfilen, etapp 3) |
 | 0.19.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
@@ -952,10 +1006,10 @@ som 0.15.0–0.18.0 i planen 19 november är flyttat två steg):
 | 0.21.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
 | ej bestämd | Omgivningen etapp 2–4 (CZ–CÄ), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY), räkna om skissen utan att räkna allt (BK) |
 
-1. För in ägarens testresultat (CG–CK för 0.15.0 och de öppna punkterna under *Att testa* för
-   0.14.x). Rättelser blir 0.15.x.
-2. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i panelen; de behövs för
-   situationsplanens ritningshuvud (0.16.0).
+1. För in ägarens testresultat (CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna punkterna under
+   *Att testa* för 0.14.x). Rättelser blir 0.16.x.
+2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
+   inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid
    Skapa, föreslå den fastighet som har störst del av utsnittet
    (`fi.fastigheter[0]`).

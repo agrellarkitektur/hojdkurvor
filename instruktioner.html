@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.15.0"></script>
-  <script src="js/kalla.js?v=0.15.0" defer></script>
-  <script src="js/tema.js?v=0.15.0"></script>
-  <script src="js/synpunkter.js?v=0.15.0" defer></script>
-  <script src="js/stod.js?v=0.15.0" defer></script>
+  <script src="js/version.js?v=0.16.0"></script>
+  <script src="js/kalla.js?v=0.16.0" defer></script>
+  <script src="js/tema.js?v=0.16.0"></script>
+  <script src="js/synpunkter.js?v=0.16.0" defer></script>
+  <script src="js/stod.js?v=0.16.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.15.0">
+  <link rel="stylesheet" href="app.css?v=0.16.0">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -171,9 +171,12 @@
         <p>I planen ritas nya byggnader med tjock linje och fyllning, tillbyggnader skrafferade, befintliga med tunn linje och de som ska rivas streckade. Huvudbyggnaden får ett kryss. Taket ritas inte, som på en situationsplan. Måtten:</p>
         <ul>
           <li><strong>Till tomtgräns</strong>: tre mått vinkelrätt mot två gränser, två från långsidan och ett från kortsidan, så att två av dem går till samma hörn. Klicka på ett mått och skriv ett nytt, så flyttas byggnaden.</li>
-          <li><strong>Yttermått</strong>: en lång och en kort sida. Klicka och skriv för att ändra längden.</li>
+          <li><strong>Yttermått</strong>: en lång och en kort sida på en rektangel, alla sidor på andra former. Klicka och skriv för att ändra längden.</li>
           <li><strong>Mellan byggnader</strong>: ligger en tillbyggnad an mot huset måttsätts hur långt dess hörn ligger från husets, längs fogen. Har tillbyggnaden samma golv som det befintliga står det <em>FG lika bef</em>.</li>
         </ul>
+        <p><strong>Byggnader av flera kroppar.</strong> Ritar du två kroppar som går in i varandra, till exempel en vinkelbyggnad av två rektanglar, och de har samma status, visas de som en byggnad: en kontur runt hela, utan linjen mellan dem, och måtten runt byggnadens utsida. Klicka på byggnaden för att markera den kropp du klickar i; då syns kropparna var för sig och går att ändra. En tillbyggnad mot ett befintligt hus har olika status och ritas för sig, så att fogen syns. BYA räknar arean där kropparna går in i varandra en gång.</p>
+        <p><strong>Mått.</strong> Klicka på ett mått för att skriva ett nytt eller välja <em>Dölj</em>. <em>Visa dolda mått</em> i panelen tar tillbaka dem. Dra ett yttermått eller ett mått mellan byggnader för att flytta måttlinjen längre ut eller in.</p>
+        <p><strong>Situationsplan.</strong> Med ingen byggnad markerad finns <em>Situationsplan</em> längst ner i panelen. Välj format (A3 eller A4, liggande eller stående) och skala (1:400 eller 1:500); den streckade ramen visar vad som kommer med. Fyll i fastighet, åtgärd, ritad av och ritningsnummer till ritningshuvudet; kommunen och datumet hämtas själv, och fälten sparas i projektet. <em>PDF</em> öppnar planen i en ny flik, <em>DXF</em> sparar den med ett lager per innehåll (gränser, byggnader efter status, mått, texter) i samma koordinatsystem som utsnittet. Det som syns under <em>Visa</em> följer med, också dolda och flyttade mått. Kontrollera med kommunen om situationsplanen får ritas på Lantmäteriets fastighetsindelning, eller om det krävs en nybyggnadskarta.</p>
         <p>Fastighetsgränserna är Lantmäteriets och inte juridiskt säkerställda, så måtten till gränsen är ungefärliga. Hörnkoordinaterna (under <em>Visa</em>) är det säkra måttet. Ctrl+Z ångrar och Ctrl+Y gör om. Allt sparas i projektet. Välj <em>Skapa</em> igen för att räkna om skuggor, horisont och filer med byggnaderna; de som ska rivas räknas inte med.</p>
         <p>Stoppar webbläsaren den nya fliken: tillåt popup-fönster för sidan, eller välj <em>Spara platsfil för cad-apa</em> och öppna filen i cad-apa.</p>
         <p><em>Förhandsvisa i 3D</em> under resultatet visar terrängen med det du har skapat: höjdkurvor, träd, byggnader, fastighetsgränser, vägar och volymerna. Byggnader utan höjd ur laserdatan visas som fotavtryck på marken. Har du valt ortofoto ligger det på terrängen. Knapparna överst slår av och på varje lager, och <em>Kurvfärg</em> byter färg på höjdkurvorna. Dra för att snurra. Välj <em>Flytta</em> om du hellre vill att dragningen flyttar vyn; högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Dubbelklicka eller välj <em>Återställ vy</em> för att komma tillbaka till början. Vägar och gångvägar är egna lager.</p>

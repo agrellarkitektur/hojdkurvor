@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **CÄ**.
+Senast använda nummer: **DC**.
 
 ## Inkorg
 
@@ -23,6 +23,15 @@ Senast använda nummer: **CÄ**.
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.16.0
+
+Situationsplanen (etapp 3 i `plan-skiss-situationsplan.md`) och byggnader av flera kroppar som ett yttre skal.
+
+- **CÖ** Yttre skal: rita två kroppar i vinkel (till exempel 12 × 8 och 4 × 14 som går in i varandra) med samma status. Syns de som en byggnad, utan linjen mellan dem och utan överlappet, i planvyn, på kartan och i 3D-vyn? Klicka i byggnaden: syns kropparna var för sig och går de att ändra? Avmarkera: blir det en byggnad igen? Prova också en tillbyggnad mot ett befintligt hus (ska ritas för sig, med fogen). Stämmer BYA?
+- **DA** Måtten på en sammansatt byggnad: hamnar yttermåtten runt hela byggnaden och gränsmåtten på rätt hörn? Ändra ett yttermått och ett gränsmått. Dölj ett mått (klicka, *Dölj*) och ta tillbaka det (*Visa dolda mått*). Dra ett yttermått längre ut. Ligger det kvar efter omladdning?
+- **DB** Situationsplanen som PDF: fyll i åtgärd, ritad av och ritningsnummer under *Situationsplan*, välj A3 1:400 och A4 1:500. Visar ramen rätt utsnitt? Är PDF:en användbar som situationsplan till bygglov: linjer, texter, FG, entré, kryss, mått, teckenförklaring, upplysningstexten och ritningshuvudet? Saknas något jämfört med SKR:s checklista? Skriv ut i 100 % och mät skalstocken.
+- **DC** Situationsplanen som DXF i Archicad (eller AutoCAD): hamnar den rätt i arbetszonen, och är lagren och texthöjderna användbara?
 
 ### 0.15.0
 
@@ -94,6 +103,10 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 22 november 2026 → 0.16.0 (situationsplanen)
+
+- En kommentar på den förra situationsplanen: satte man ihop två volymer i vinkel eller liknande för att skapa en sammansatt volym syntes de två volymerna överlappa varandra. Volymerna ska redovisas som en automatisk union, ett yttre skal. Först när man markerar dem ska det synas att man kan modifiera volymerna var för sig. *Byggt så: kroppar med samma status som går in i varandra eller ligger an är en byggnad i planvyn, på kartan, i PDF:en och DXF:en, med måtten runt skalet och BYA för unionen; den markerade byggnaden visar sina kroppar. 3D-vyn ritade redan konturerna som en union (0.10.0). Testas som CÖ–DA.*
 
 ### 22 november 2026 → 0.15.0 (planen i `overlamning-solanalys.md`)
 

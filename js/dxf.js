@@ -38,7 +38,7 @@
    * objekt: [{ typ: 'pl', lager, pts: [[x,y],...], sluten, z }
    *          { typ: 'punkt', lager, x, y, z }
    *          { typ: 'cirkel', lager, x, y, z, r }
-   *          { typ: 'text', lager, x, y, z, h, text }
+   *          { typ: 'text', lager, x, y, z, h, text, vinkel (grader moturs), centrerad (mitten i x, y) }
    *          { typ: 'yta', lager, pts: [[x,y,z] × 3 eller 4] } (3DFACE)]
    * dx, dy, dz dras av från koordinaterna.
    */
@@ -93,6 +93,9 @@
       } else if (e.typ === 'text') {
         g(0, 'TEXT'); g(8, L(e.lager)); g(10, f(X(e.x, e.y))); g(20, f(Y(e.x, e.y))); g(30, f((e.z || 0) - (e.z != null ? dz : 0)));
         g(40, e.h || 1); g(1, textKod(e.text));
+        // vinkel (grader moturs, 0.16.0) och mitten som insättningspunkt (72 = 4, Middle)
+        if (e.vinkel) g(50, f(e.vinkel - (TR && TR.lokal && (dx || dy) ? TR.lokal.vrid || 0 : 0)));
+        if (e.centrerad) { g(72, 4); g(11, f(X(e.x, e.y))); g(21, f(Y(e.x, e.y))); g(31, f((e.z || 0) - (e.z != null ? dz : 0))); }
       }
     }
     g(0, 'ENDSEC'); g(0, 'EOF');

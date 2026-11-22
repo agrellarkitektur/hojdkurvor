@@ -122,6 +122,10 @@ node test/fasadsol.test.js
 ```
 
 ```
+node test/situationsplan.test.js
+```
+
+```
 node test/dxf.test.js
 ```
 
@@ -191,6 +195,10 @@ python3 test/planvy_test.py test/ut ritning
 
 ```
 python3 test/fasadsol_test.py test/ut ritning
+```
+
+```
+python3 test/situationsplan_test.py test/ut ritning
 ```
 
 ```

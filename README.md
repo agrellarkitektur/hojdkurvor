@@ -192,8 +192,9 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   ur laserdatan, ögonhöjd och bilder
 - `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter), också till cad-apa; laddas med sidan
 - `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer; laddas med sidan (takytorna används också i skissens DXF)
-- `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA (ren geometri, testas i Node)
-- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan
+- `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA; från 0.16.0 union och yttre skal (ren geometri, testas i Node)
+- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan; från 0.16.0 byggnaderna som yttre skal, dolda och flyttade mått, ramen och panelen *Situationsplan*
+- `js/situationsplan.js` (`Situationsplan`, 0.16.0) – situationsplanen: byggnaderna som yttre skal (enheter), måtten på skalet och hur de ändras, etiketter, skraffering, och planen som vektor-PDF (A3/A4, 1:400/1:500, ritningshuvud, teckenförklaring) och DXF med ett lager per innehåll (ren, testas i Node)
 - `js/fasadsol.js` (`Fasadsol`, 0.15.0) – sol på fasaderna: fasadpunkter på byggnadskropparna, horisonten framför varje punkt (egen kropp, andra kroppar, omgivningen), klar himmel (ESRA) och Hay–Davies, summa, lokal och samtidig topp, timme × dag och värsta dygnet (ren beräkning, testas i Node, tänkt att kunna tas till cad-apa)
 - `js/fasadsolblad.js` (`Fasadsolblad`, 0.15.0) – sol på fasaderna som A3-PDF (staplar och tabell, timme × dag, värsta dygnet) och CSV
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
@@ -256,8 +257,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
-- Planerat (se `docs/SYNPUNKTER.md` och planen för skiss och situationsplan): situationsplanen med
-  ritningshuvud, PDF och DXF (0.16.0), användarskapad omgivning med *Ersätt* på ett hus och val
+- Planerat (se `docs/SYNPUNKTER.md` och planen för skiss och situationsplan): användarskapad omgivning med *Ersätt* på ett hus och val
   mellan standardhus och egna (0.17.0), förslag och sparade vyer i projektet, utkragning per våning
   och verkligt väder (SMHI STRÅNG) i sol på fasaderna, eget bildunderlag som överlagring (projektfilens bilagor), skissvolymer ur
   inskannat underlag, en html-visare i nedladdningsmappen och DXF med inlänkade filer (xref)
@@ -273,7 +273,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
   för de tre senaste projekten och högst cirka 600 MB; läses in när projektet öppnas och tas bort
   när något som resultatet bygger på ändras. Under 02 Underlag, "Sparat i
   webbläsaren", kan man ta bort enstaka filer och projekt (med resultatet) eller tömma filerna.
-- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`), dolda och rättade träd (`terrang-tradval`) och dolda hus (`terrang-husval`),
+- localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, situationsplanens format och skala (`terrang-situationsplan`), 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`), dolda och rättade träd (`terrang-tradval`) och dolda hus (`terrang-husval`),
   formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
   om användaren väljer det, inloggningen.
 - sessionStorage: aktivt steg, vilket projekt fliken har öppet (`terrang-projekt-aktivt`),

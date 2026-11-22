@@ -3,6 +3,49 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.16.0 – 2026-11-22
+
+Situationsplanen, etapp 3 i `plan-skiss-situationsplan.md` (claude.ai-projektet), och ägarens
+synpunkt på den förra planen: byggnader som sattes ihop av två kroppar i vinkel visade båda
+kropparna, med överlappet synligt.
+
+- **Yttre skal**: kroppar med samma status som går in i varandra eller ligger an redovisas som en
+  byggnad, med unionen av fotavtrycken som kontur (`Kropp.union`, `Kropp.skal`), i planvyn, på
+  kartan, i PDF:en och i DXF:en. Först när en av kropparna markeras i planvyn ritas de var för
+  sig (halvgenomskinligt, de andra streckade), så att de går att ändra. Kroppar med olika status
+  (en tillbyggnad mot det befintliga huset) hålls isär, så att fogen syns. En innergård blir ett
+  hål.
+- **Måtten på skalet** (`js/situationsplan.js`, `Situationsplan.matt`): mått till tomtgräns och
+  yttermått räknas på byggnadens yttre kontur, inte på varje kropp; mått mellan byggnader som
+  ligger an som förut. Ett gränsmått flyttar hela byggnaden. Ett yttermått som hör till en kropps
+  sida ändrar den kroppen; en sida som skapas av två kroppar ber om att byggnaden markeras.
+- **Annotering**: klicka på ett mått för att ändra det eller **dölja** det (*Dölj*); *Visa dolda
+  mått* tar tillbaka dem. **Dra** ett yttermått eller ett mått mellan byggnader för att flytta
+  måttlinjen. Det sparas på kroppen i fältet `matt` (se `docs/PROJEKTFIL.md`), också i projektet.
+- **BYA** räknar överlapp en gång: arean av unionen; det tillkommande är det som läggs till utöver
+  det befintliga.
+- **Situationsplanen som PDF** (vektor, A3 eller A4, liggande eller stående, 1:400 eller 1:500)
+  under *Situationsplan* i planvyns panel: fastighetsgränser och Lantmäteriets hus, byggnaderna
+  efter status (ny fylld, tillbyggnad skrafferad, befintlig tunn, rivs streckad), kryss för
+  huvudbyggnad, entrépil, namn och FG, mått, valfria hörnkoordinater, norrpil, skalstock,
+  teckenförklaring (bara det som finns på planen), upplysningstext om gränserna och källan, och
+  ritningshuvud med fastighet, kommun, åtgärd, skala, datum, ritad av, ritningsnummer,
+  koordinatsystem och BYA. PDF:en öppnas i en ny flik som de andra.
+- **Situationsplanen som DXF** i arbetszonen, ett lager per innehåll (`SITPLAN_NY`,
+  `SITPLAN_TILLBYGGNAD`, `SITPLAN_SKRAFFERING`, `SITPLAN_BEFINTLIG`, `SITPLAN_RIVS`,
+  `SITPLAN_FASTIGHETSGRANS`, `SITPLAN_BYGGNAD_LM`, `SITPLAN_MATT`, `SITPLAN_MATTEXT`,
+  `SITPLAN_TEXT`, `SITPLAN_HUVUDBYGGNAD`, `SITPLAN_ENTRE`, `SITPLAN_KOORDINATER`,
+  `SITPLAN_FASTIGHETSBETECKNING`), med texthöjder efter skalan. `Dxf.skriv` har fått vinkel och
+  centrerade texter.
+- **Ritningens ram** i planvyn visar vad som kommer med på papperet; den slås på när formatet eller
+  skalan ändras. Formatet och skalan sparas i webbläsaren.
+- **Projektuppgifterna** till ritningshuvudet (fastighet, åtgärd, ritad av, ritningsnummer) fylls i
+  under *Situationsplan* och sparas i projektet (`projekt.fastighet`, `uppdrag`, nya `ritadAv`
+  och `ritningsnummer`). Fastigheten föreslås ur fältet *Projekt eller fastighet*.
+- Skilda golv i samma byggnad: FG skrivs per kropp, i den del som inte täcks av de andra.
+- Nya tester: `test/situationsplan.test.js`, `test/situationsplan_test.py`; union, skal och BYA i
+  `test/kropp.test.js`.
+
 ## 0.15.0 – 2026-11-22
 
 Sol på fasaderna, efter planen i `overlamning-solanalys.md` (claude.ai-projektet), på

@@ -659,6 +659,9 @@ body.vy3d-oppen { overflow: hidden; }
 .planvy-status { color: var(--muted); white-space: nowrap; }
 .planvy-mattin { position: absolute; z-index: 2; width: 80px; height: 28px; padding: 0 6px; border: 2px solid var(--pv-vald); background: var(--pv-papper); color: var(--pv-ink); font: 13px var(--mono); }
 .planvy-mattin[hidden] { display: none; }
+.planvy-mattdolj { position: absolute; z-index: 2; height: 28px; }
+.planvy-yta .planvy-mattdolj.knapp.liten { margin: 0; }
+.planvy-mattdolj[hidden] { display: none; }
 .planvy-besked { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); max-width: 80%; padding: 7px 12px; background: var(--pv-ink); color: var(--pv-papper); font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; }
 .planvy-besked.syns { opacity: 1; }
 /* ritningen */
@@ -673,6 +676,11 @@ body.vy3d-oppen { overflow: hidden; }
 .pv-befintlig { fill: var(--pv-papper); stroke-width: 1.2; }
 .pv-rivs { fill: none; stroke-width: 1.2; stroke-dasharray: 6 4; }
 .pv-vald { stroke: var(--pv-vald); }
+/* den markerade byggnaden visar sina kroppar var för sig (0.16.0); fyllningen släpper igenom konturerna */
+.pv-oppen { fill-opacity: .55; }
+.pv-oppen:not(.pv-vald) { stroke-dasharray: 8 3; }
+.pv-ram { fill: none; stroke: var(--pv-hjalp); stroke-width: 1.2; stroke-dasharray: 10 5; pointer-events: none; }
+.pv-drar { fill: var(--pv-hjalp); }
 .pv-skraff-bg { fill: var(--pv-papper); }
 .pv-skraff-linje { stroke: var(--pv-ink); stroke-width: 1; }
 .pv-huvudkryss { stroke: var(--pv-ink); stroke-width: 1; }

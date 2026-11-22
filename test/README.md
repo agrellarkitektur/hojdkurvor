@@ -63,6 +63,10 @@ node test/fasadsol.test.js
 ```
 
 ```
+node test/situationsplan.test.js
+```
+
+```
 node test/vagar.test.js
 ```
 
@@ -186,6 +190,24 @@ sammanfattningen, att den låga byggnadens södervägg skuggas av den höga, PDF
 zip-filen (sidorna som `fasadsol_sida-N.png`), 3D-vyns färger (summa och timtopp, skärmbilder
 `fasadsol_3d_*_<tema>.png`), att färgerna försvinner när skissen ändras, fältet `fasadsol` i
 platsen till cad-apa och att perioden finns kvar efter omladdning.
+
+```
+python3 test/situationsplan_test.py test/ut ritning
+```
+
+`situationsplan_test.py` (0.16.0, gränssnitt) skapar underlaget, ritar två nya kroppar i vinkel i
+planvyn och prövar att de är en byggnad med ett yttre skal (sex hörn, ett mått per yttersida,
+BYA med överlappet en gång), att kropparna syns var för sig när en markeras, att ett yttermått
+ändrar kroppen, att ett mått döljs och kommer tillbaka och att ett dras ut, ramen och
+ritningshuvudets fält, PDF:en i en ny flik (`situationsplan.pdf`) och DXF:en
+(`situationsplan.dxf`) med lagren, 3D-vyn, och att fälten, formatet och måtten ligger kvar efter
+omladdning. Skärmbilder `situationsplan_1_skal_<tema>.png`, `_2_markerad`, `_3_ram`, `_4_3d`.
+
+Enhetstestet för situationsplanen (`node test/situationsplan.test.js`, 0.16.0) prövar enheterna
+(skalet, och kropparna var för sig när en är markerad), måtten på skalet och vilka som går att
+ändra, dolda och flyttade mått, etiketterna (FG per kropp när golven skiljer), skrafferingen,
+ramen, DXF:ens lager och texter och PDF:en i A3 och A4. Union, skal och BYA prövas i
+`test/kropp.test.js`.
 
 Enhetstestet för sol på fasaderna (`node test/fasadsol.test.js`, 0.15.0) prövar klar himmel mot
 överslaget 2 april i Hudiksvall, väderstreck och himlens andel, fasadpunkterna (area, gavlar,

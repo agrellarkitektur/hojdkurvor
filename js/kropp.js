@@ -470,21 +470,159 @@
   function anliggande(v, volymer) {
     return (volymer || []).filter(B => B !== v && B.fotavtryck && fogsidor(v, [B]).size);
   }
-  /** Byggnadsarea: { tillkommande (ny och tillbyggnad), befintlig (som står kvar), rivs, totalt (efter åtgärden) } i m². */
+  /**
+   * Byggnadsarea: { tillkommande (ny och tillbyggnad), befintlig (som står kvar), rivs, totalt (efter åtgärden) } i m².
+   * Kroppar som går in i varandra räknas en gång (0.16.0): arean är unionens, och det tillkommande är det
+   * som läggs till utöver det befintliga.
+   */
   function bya(volymer) {
-    const s = { tillkommande: 0, befintlig: 0, rivs: 0 };
-    for (const v of volymer || []) {
-      const a = Math.abs(area(v.fotavtryck || []));
-      const st = status(v);
-      if (st === 'befintlig') s.befintlig += a; else if (st === 'rivs') s.rivs += a; else s.tillkommande += a;
+    const ytor = f => (volymer || []).filter(v => v.fotavtryck && v.fotavtryck.length >= 3 && f(status(v))).map(v => v.fotavtryck);
+    const a = p => unionArea(p);
+    const befintlig = a(ytor(st => st === 'befintlig')), totalt = a(ytor(st => st !== 'rivs'));
+    return { tillkommande: Math.max(0, totalt - befintlig), befintlig, rivs: a(ytor(st => st === 'rivs')), totalt };
+  }
+
+  // ------------------------------------------------------------------
+  // Union och yttre skal (0.16.0)
+  // ------------------------------------------------------------------
+  /** Om punkten (x, y) ligger inuti polygonen (jämn–udda). */
+  function inuti(poly, x, y) {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
     }
-    s.totalt = s.tillkommande + s.befintlig;
-    return s;
+    return c;
+  }
+  /** Avståndet från punkten c till sträckan a–b. */
+  function avstand(c, a, b) { const r = fot(c, a, b), t = Math.max(0, Math.min(1, r.t)); return len(sub(c, add(a, mul(sub(b, a), t)))); }
+  /** Skärningen mellan sträckorna a–b och c–d som läget längs a–b (0–1), eller null. Parallella ger null. */
+  function skarning(a, b, c, d) {
+    const r = sub(b, a), s = sub(d, c), q = r[0] * s[1] - r[1] * s[0];
+    if (Math.abs(q) < 1e-12) return null;
+    const w = sub(c, a), t = (w[0] * s[1] - w[1] * s[0]) / q, u = (w[0] * r[1] - w[1] * r[0]) / q;
+    return t >= -1e-9 && t <= 1 + 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 ? t : null;
+  }
+  /**
+   * Unionen av polygoner (fotavtryck i vilken riktning som helst). Varje sida delas där den möter en annan
+   * polygons sidor; delarna som ligger inuti en annan polygon tas bort, liksom fogar där två polygoner
+   * ligger an mot varandra (motriktade sidor), och av sidor som sammanfaller behålls en. Delarna fogas
+   * till ringar: moturs för yttre konturer, medurs för hål (en innergård). tol i meter.
+   */
+  function union(polys, tol = 0.002) {
+    const P = (polys || []).map(p => moturs(rensa(p, tol / 2))).filter(p => p.length >= 3 && Math.abs(area(p)) > 1e-6);
+    if (P.length <= 1) return P.map(p => p.map(q => q.slice()));
+    const kant = P.map(p => p.map((a, i) => [a, p[(i + 1) % p.length]]));
+    const lada = P.map(p => { const xs = p.map(q => q[0]), ys = p.map(q => q[1]); return [Math.min(...xs) - tol, Math.min(...ys) - tol, Math.max(...xs) + tol, Math.max(...ys) + tol]; });
+    const nara = (i, j) => !(lada[i][2] < lada[j][0] || lada[j][2] < lada[i][0] || lada[i][3] < lada[j][1] || lada[j][3] < lada[i][1]);
+    const delar = [];
+    for (let i = 0; i < P.length; i++) {
+      for (const [a, b] of kant[i]) {
+        const l = len(sub(b, a));
+        if (l < tol) continue;
+        const ts = [0, 1];
+        for (let j = 0; j < P.length; j++) {
+          if (j === i || !nara(i, j)) continue;
+          for (const [c, d] of kant[j]) {
+            const t = skarning(a, b, c, d);
+            if (t != null) ts.push(t);
+            // hörn i den andra polygonen som ligger på sidan (T-korsningar och sidor som delvis sammanfaller)
+            for (const q of [c, d]) { const r = fot(q, a, b); if (r.t > 0 && r.t < 1 && len(sub(r.f, q)) < tol) ts.push(r.t); }
+          }
+        }
+        ts.sort((x, y) => x - y);
+        for (let k = 0; k + 1 < ts.length; k++) {
+          if ((ts[k + 1] - ts[k]) * l < tol) continue;
+          const p0 = add(a, mul(sub(b, a), ts[k])), p1 = add(a, mul(sub(b, a), ts[k + 1])), m = mul(add(p0, p1), 0.5), u = norm(sub(b, a));
+          let behall = true;
+          for (let j = 0; j < P.length && behall; j++) {
+            if (j === i || !nara(i, j)) continue;
+            const pa = kant[j].find(([c, d]) => avstand(m, c, d) < tol && Math.abs(Math.abs(dot(norm(sub(d, c)), u)) - 1) < 1e-4);
+            if (pa) { if (dot(norm(sub(pa[1], pa[0])), u) < 0 || j < i) behall = false; }   // fog, eller samma sida i en tidigare polygon
+            else if (inuti(P[j], m[0], m[1])) behall = false;
+          }
+          if (behall) delar.push([p0, p1]);
+        }
+      }
+    }
+    // hörnen: punkter inom tol blir samma
+    const punkter = [];
+    const index = p => { for (let k = 0; k < punkter.length; k++) if (Math.abs(punkter[k][0] - p[0]) < tol && Math.abs(punkter[k][1] - p[1]) < tol) return k; punkter.push(p); return punkter.length - 1; };
+    const ut = new Map();
+    const sid = delar.map(([p0, p1]) => ({ a: index(p0), b: index(p1), anvand: false })).filter(s => s.a !== s.b);
+    sid.forEach(s => { if (!ut.has(s.a)) ut.set(s.a, []); ut.get(s.a).push(s); });
+    const ringar = [];
+    for (const s0 of sid) {
+      if (s0.anvand) continue;
+      const ring = [];
+      let s = s0;
+      while (s && !s.anvand) {
+        s.anvand = true; ring.push(punkter[s.a]);
+        const kand = (ut.get(s.b) || []).filter(x => !x.anvand);
+        if (kand.length <= 1) { s = kand[0]; continue; }
+        // flera vägar ur samma hörn: den som svänger mest åt höger håller ringarna isär
+        const inn = norm(sub(punkter[s.b], punkter[s.a]));
+        const sving = x => { const v = norm(sub(punkter[x.b], punkter[x.a])); return Math.atan2(inn[0] * v[1] - inn[1] * v[0], dot(inn, v)); };
+        s = kand.sort((x, y) => sving(x) - sving(y))[0];
+      }
+      const r = rensa(ring, tol / 2);
+      if (r.length >= 3 && Math.abs(area(r)) > 1e-6) ringar.push(r);
+    }
+    return ringar;
+  }
+  /** Arean av unionen (hål dras av). */
+  const unionArea = polys => union(polys).reduce((s, r) => s + area(r), 0);
+  /** Om två fotavtryck går in i varandra eller ligger an mot varandra längs en sida (inte bara i ett hörn). */
+  function horIhop(A, B, tol = 0.03) {
+    const a = moturs(A), b = moturs(B);
+    const xs = p => p.map(q => q[0]), ys = p => p.map(q => q[1]);
+    if (Math.max(...xs(a)) < Math.min(...xs(b)) - tol || Math.max(...xs(b)) < Math.min(...xs(a)) - tol
+      || Math.max(...ys(a)) < Math.min(...ys(b)) - tol || Math.max(...ys(b)) < Math.min(...ys(a)) - tol) return false;
+    // sidor som korsar varandra (inte bara rör vid varandra i ändarna)
+    for (let i = 0; i < a.length; i++) for (let j = 0; j < b.length; j++) {
+      const p = a[i], q = a[(i + 1) % a.length], c = b[j], d = b[(j + 1) % b.length], t = skarning(p, q, c, d);
+      if (t == null || t < 1e-6 || t > 1 - 1e-6) continue;
+      const u = skarning(c, d, p, q);
+      if (u != null && u > 1e-6 && u < 1 - 1e-6) return true;
+    }
+    // ett hörn eller en sidmitt inuti den andra
+    const iA = p => inuti(a, p[0], p[1]) && a.every((x, i) => avstand(p, x, a[(i + 1) % a.length]) > 1e-6);
+    const iB = p => inuti(b, p[0], p[1]) && b.every((x, i) => avstand(p, x, b[(i + 1) % b.length]) > 1e-6);
+    const mitt = p => p.map((x, i) => mul(add(x, p[(i + 1) % p.length]), 0.5));
+    if (a.some(iB) || b.some(iA) || mitt(a).some(iB) || mitt(b).some(iA)) return true;
+    const ca = mul(a.reduce((s, q) => add(s, q), [0, 0]), 1 / a.length), cb = mul(b.reduce((s, q) => add(s, q), [0, 0]), 1 / b.length);
+    if (iB(ca) || iA(cb)) return true;
+    // fog: motriktade sidor som ligger an
+    return fogsidor({ fotavtryck: a }, [{ fotavtryck: b }], tol).size > 0;
+  }
+  /**
+   * Byggnadernas yttre skal (0.16.0): kroppar med samma status som går in i varandra eller ligger an mot
+   * varandra redovisas som en byggnad, med unionen som kontur. Kroppar med olika status (en tillbyggnad mot
+   * det befintliga huset) hålls isär, så att fogen syns.
+   * Ger [{ id (kropparnas id med +), status, kroppar: [id], ringar (moturs yttre, medurs hål), yttre (den
+   *        största yttre ringen) }] i samma ordning som kropparna.
+   */
+  function skal(volymer) {
+    const lista = (volymer || []).filter(v => v.fotavtryck && v.fotavtryck.length >= 3);
+    const far = lista.map((v, i) => i);
+    const rot = i => { while (far[i] !== i) { far[i] = far[far[i]]; i = far[i]; } return i; };
+    for (let i = 0; i < lista.length; i++) for (let j = i + 1; j < lista.length; j++) {
+      if (status(lista[i]) !== status(lista[j]) || rot(i) === rot(j)) continue;
+      if (horIhop(lista[i].fotavtryck, lista[j].fotavtryck)) far[rot(j)] = rot(i);
+    }
+    const grupper = new Map();
+    lista.forEach((v, i) => { const r = rot(i); if (!grupper.has(r)) grupper.set(r, []); grupper.get(r).push(v); });
+    return [...grupper.values()].map(g => {
+      const ringar = g.length === 1 ? [moturs(g[0].fotavtryck).map(q => q.slice())] : union(g.map(v => v.fotavtryck));
+      const yttre = ringar.filter(r => area(r) > 0).sort((x, y) => area(y) - area(x))[0] || moturs(g[0].fotavtryck);
+      return { id: g.map(v => v.id).join('+'), status: status(g[0]), kroppar: g.map(v => v.id), ringar, yttre };
+    });
   }
 
   return {
     STATUS, status, normalisera, forAnalys, ersatta, area, moturs, rensa, sidor, arRektangel, vinkel,
     entrePunkt, flyttaEntre, andra, nyRektangel, nyPolygon, franHus, satFotavtryck, satHorn, satTakform, nockVal, satNock, flytta, vrid,
     tal, tolka, strackor, gransmatt, relativaMatt, fogsidor, anliggande, yttermattSidor, hojdText, fgText, bya,
+    inuti, union, unionArea, horIhop, skal,
   };
 }));
