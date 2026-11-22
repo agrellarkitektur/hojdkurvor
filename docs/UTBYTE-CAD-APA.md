@@ -148,6 +148,13 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
   "ortofoto": {           // ortofotot (Ortofoto Nedladdning), från 0.10.1
     "bild": "data:image/jpeg;base64,…", "x0": 189620.25, "y1": 6430369.75, "s": 0.5, "W": 640, "H": 400, "ar": 2023
   },
+  "fasadsol": {           // sol på fasaderna, från 0.15.0
+    "modell": "klar himmel (ESRA, Linke 3), Hay–Davies, albedo 0,2",
+    "ar": 2026, "period": "21 mars–21 september", "tid": "kl. 8–17",
+    "fasader": [ { "volym": "uuid", "sida": 0, "a": [x, y], "b": [x, y], "azimut": 180.6, "streck": "S",
+                   "area": 891.2, "summa": 957, "lokalTopp": 850, "samtidigTopp": 850 } ],
+    "horisont": [ 1.2, 1.3, … ]   // 720 höjdvinklar, sant azimut 0, 0,5 … 359,5, eller null
+  },
   "lankar": { "projekt": "https://hojdkurvor.se/#p=…" },
   "licens": "Höjddata och laserdata © Lantmäteriet (CC BY 4.0). Vägar © OpenStreetMap-bidragsgivare (ODbL)."
 }
@@ -252,6 +259,20 @@ fliken. Om den stoppas: visa ett meddelande och erbjud filvägen.
 - Fler takformer, våningar och öppningar kan läggas till i en senare version.
   Höjdkurvor visar ett felmeddelande om skissens `version` är högre än den klarar.
 
+- `fasadsol` (från höjdkurvor 0.15.0, version 1 gäller fortfarande; finns när
+  användaren valde *Sol på fasaderna* och skissen inte har ändrats sedan Skapa):
+  instrålningen mot volymernas fasader med klar himmel. En post per fasad:
+  `volym` är volymens `id`, `sida` hörnets index i fotavtrycket (moturs, sidan går
+  från `a` till `b`), `azimut` fasadnormalens sanna azimut i grader, `streck`
+  väderstrecket (`N`, `Ö`, `S`, `V`), `area` väggens area i m² (punkter under marken
+  och inne i andra volymer räknas inte). `summa` är kWh/m² under perioden och tiden,
+  `lokalTopp` det högsta timmedlet i någon punkt på fasaden (W/m², för rummen) och
+  `samtidigTopp` det högsta areaviktade timmedlet för hela fasaden (W/m², för
+  kylningen). Med `lokalTopp` i stället för fasta 800 W/m² blir solvärmelasten per
+  rum `glasarea × g_syst × lokalTopp / golvarea`. `horisont` är terrängens horisont
+  bortom 150 m sedd från volymernas mitt (samma form som horisonten i
+  soldiagrammet). Beräkningen finns i `js/fasadsol.js` och kan tas till cad-apa.
+
 ## Analyserna och vad skissen behöver
 
 Svar på AÄ (21 november 2026): vilka analyser Höjdkurvor gör och vad cad-apa därför
@@ -259,12 +280,13 @@ bör skicka tillbaka. Version 1 av skissen räcker för allt som finns i dag. De
 behövs för det planerade står under *Önskat i version 2* och är inte bestämt; ändras
 formatet ska båda sidor och `test/cad-apa-mock.html` följa med.
 
-### Analyser i dag (0.14.4) och vad de läser ur skissen
+### Analyser i dag (0.15.0) och vad de läser ur skissen
 
 | Analys | Läser ur skissen |
 |---|---|
 | Skuggstudie (valda datum och klockslag, PDF och karta) | fotavtryck, golv, takfot, takform, taklutning, nockriktning |
 | Soldiagram med horisont | volymerna höjer horisonten från ögonpunkten |
+| Sol på fasaderna (0.15.0) | fotavtryck, golv, takfot, takform, taklutning, nockriktning: fasaderna och gavlarna, och skuggorna mellan volymerna |
 | Skyfall (lågpunkter, rinnvägar, volym i svackorna) | fotavtryck och tak: volymerna bränns in i markmodellen som hinder |
 | Lutning | inget (bara marken) |
 | Terrängsektioner | inget i dag: mark, träd och befintliga hus ur laserdatan. Skissen i sektionen vore ett tillägg |
@@ -277,7 +299,7 @@ formatet ska båda sidor och `test/cad-apa-mock.html` följa med.
 | Planerat | Behöver från cad-apa |
 |---|---|
 | Situationsplanen (0.16.0) | per volym `status` (`ny`, `tillbyggnad`, `befintlig`, `rivs`), `huvudbyggnad`, `entre` ({ sida, t }), vilken byggnad volymen hör till (för mått mellan kroppar), och `kalla` när volymen ersätter ett befintligt hus (Lantmäteriets objektidentitet). Samma fält som `js/kropp.js` |
-| Sol på fasaderna (0.15.0) | fasaderna ur fotavtryck och höjder räcker för klar himmel. Senare: våningar med utkragning per våning, och fönster per fasad om instrålningen ska räknas per fönster |
+| Sol på fasaderna, senare | fasaderna ur fotavtryck och höjder räcker för klar himmel (byggt i 0.15.0). Senare: våningar med utkragning per våning, och fönster per fasad om instrålningen ska räknas per fönster |
 | Förslag (projektfilens etapp 3) | `forslag` med samma id som i projektfilen, och förslagets namn (Basfall, Förslag A …) |
 | Geologi och bergschakt | per volym schaktbotten (eller grundläggningsnivå) så att sprängning kan räknas per bergart; egna bergpunkter (x, y, berg-z) åt båda håll |
 | Skyfall och lutning med ny mark | planerad markyta (höjdsättning) som rutnät eller brytlinjer; först när markplaneringen kommer |

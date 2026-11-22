@@ -4,7 +4,7 @@ Gör Lantmäteriets öppna geodata till underlag för Archicad, Revit och AutoCA
 direkt i webbläsaren: höjdkurvor och höjdpunkter (DXF), markmodell (XYZ och CSV),
 punktmoln ur Laserdata skog (LAS och XYZ), ortofoto (JPEG med världsfil),
 befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
-(DXF, bilvägar och gångvägar för sig, med utkast till vägytorna), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), terrängsektioner och en platsanalys i
+(DXF, bilvägar och gångvägar för sig, med utkast till vägytorna), befintliga byggnader som 3D-modell (IFC), soldiagram och skuggstudie (PDF), sol på fasaderna (PDF, CSV och färgat i 3D), terrängsektioner och en platsanalys i
 PDF med lutning, skyfall och skydd och risker (lutning och skyfall också som JPEG med
 världsfil och PDF i vektor), och en samlad DXF med alla DXF-underlag. Skissade volymer kan prövas på
 platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
@@ -194,6 +194,8 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer; laddas med sidan (takytorna används också i skissens DXF)
 - `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA (ren geometri, testas i Node)
 - `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan
+- `js/fasadsol.js` (`Fasadsol`, 0.15.0) – sol på fasaderna: fasadpunkter på byggnadskropparna, horisonten framför varje punkt (egen kropp, andra kroppar, omgivningen), klar himmel (ESRA) och Hay–Davies, summa, lokal och samtidig topp, timme × dag och värsta dygnet (ren beräkning, testas i Node, tänkt att kunna tas till cad-apa)
+- `js/fasadsolblad.js` (`Fasadsolblad`, 0.15.0) – sol på fasaderna som A3-PDF (staplar och tabell, timme × dag, värsta dygnet) och CSV
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
@@ -254,9 +256,10 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
-- Planerat (se `docs/SYNPUNKTER.md` och planen för skiss och situationsplan): sol på fasaderna (0.15.0),
-  situationsplanen med ritningshuvud, PDF och DXF (0.16.0), förslag och sparade vyer i
-  projektet, eget bildunderlag som överlagring (projektfilens bilagor), skissvolymer ur
+- Planerat (se `docs/SYNPUNKTER.md` och planen för skiss och situationsplan): situationsplanen med
+  ritningshuvud, PDF och DXF (0.16.0), användarskapad omgivning med *Ersätt* på ett hus och val
+  mellan standardhus och egna (0.17.0), förslag och sparade vyer i projektet, utkragning per våning
+  och verkligt väder (SMHI STRÅNG) i sol på fasaderna, eget bildunderlag som överlagring (projektfilens bilagor), skissvolymer ur
   inskannat underlag, en html-visare i nedladdningsmappen och DXF med inlänkade filer (xref)
   och ortofoto.
 

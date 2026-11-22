@@ -452,6 +452,42 @@
     ritaSkiss();
 
     // ------------------------------------------------------------------
+    // Sol på fasaderna (0.15.0): en ruta per fasadpunkt, 5 cm utanför väggen, färgad efter summan
+    // (kWh/m²) eller timtoppen (W/m²) med skalan i Fasadsol.SKALA. Försvinner när skissen ändras,
+    // eftersom värdena då inte längre gäller.
+    // ------------------------------------------------------------------
+    const fasadLager = nyttLager('fasadsol');
+    let fasadData = data.fasadsol && data.fasadsol.punkter && window.Fasadsol ? data.fasadsol : null, fasadLage = null;
+    const fasadMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    // medan fasaderna är färgade är skissen ljusgrå, så att färgerna går att läsa (taken syns)
+    let skissFargEgen = null;
+    const ritaFasadsol = () => {
+      for (const o of fasadLager.children.slice()) { fasadLager.remove(o); kastaBort(o); }
+      const pa = !!(fasadData && fasadLage);
+      if (pa && !skissFargEgen) { skissFargEgen = '#' + skissMat.color.getHexString(); satSkissfarg('#d9d6cf'); }
+      else if (!pa && skissFargEgen) { satSkissfarg(skissFargEgen); skissFargEgen = null; }
+      if (!pa) return;
+      const p = fasadData.punkter, n = p.x.length, varden = p[fasadLage], [a, b] = (fasadData.skala || window.Fasadsol.SKALA)[fasadLage];
+      const pos = new Float32Array(n * 18), col = new Float32Array(n * 18), c = new THREE.Color();
+      for (let k = 0; k < n; k++) {
+        const x = p.x[k] + p.nx[k] * 0.05, y = p.y[k] + p.ny[k] * 0.05, z = p.z[k];
+        const tx = -p.ny[k] * p.w[k] / 2, ty = p.nx[k] * p.w[k] / 2, hz = p.h[k] / 2;
+        const horn = [[x - tx, y - ty, z - hz], [x + tx, y + ty, z - hz], [x + tx, y + ty, z + hz], [x - tx, y - ty, z + hz]];
+        const rgb = window.Fasadsol.farg((varden[k] - a) / (b - a));
+        c.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace);
+        [0, 1, 2, 0, 2, 3].forEach((h, i) => {
+          const q = horn[h], o = (k * 6 + i) * 3;
+          pos[o] = q[0] - cx; pos[o + 1] = q[2] - zmin; pos[o + 2] = -(q[1] - cy);
+          col[o] = c.r; col[o + 1] = c.g; col[o + 2] = c.b;
+        });
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      fasadLager.add(new THREE.Mesh(geo, fasadMat));
+    };
+
+    // ------------------------------------------------------------------
     // Ljus och skuggor
     // ------------------------------------------------------------------
     const storlek = Math.max(r.xmax - r.xmin, r.ymax - r.ymin);
@@ -759,6 +795,7 @@
       return Math.round(((a[0] - sn.linje.p[0]) * sn.linje.n[0] + (a[1] - sn.linje.p[1]) * sn.linje.n[1]) * 1000) / 1000;
     };
     const meddelaSkiss = typ => {
+      if (typ === 'andrad' && fasadData) { fasadData = null; fasadLage = null; ritaFasadsol(); }
       const v = valdId && perId(valdId);
       const ut = { typ, redigera, toppvy, volymer: volymer.map(kopia), vald: v ? kopia(v) : null, placerar: !!placering,
         grupp: v ? V3.komponent(volymer, v.id).size : 0, under: v && v.primitiv && v.primitiv.pa ? (perId(v.primitiv.pa) || {}).namn || null : null,
@@ -1316,7 +1353,10 @@
       /** Färgen på befintliga byggnader (0.9.0); null om det inte finns några med höjd. */
       byggnadsfarg(c) { if (!harBefintliga) return null; if (c) { befMat.color.set(c); takMat.color.set(c); } return '#' + befMat.color.getHexString(); },
       /** Skissens färg (0.9.0); null om det inte finns någon skiss. */
-      skissfarg(c) { if (c) { satSkissfarg(c); } return '#' + skissMat.color.getHexString(); },
+      skissfarg(c) {
+        if (c) { if (skissFargEgen) skissFargEgen = c; else satSkissfarg(c); }
+        return skissFargEgen || '#' + skissMat.color.getHexString();
+      },
       /** Svarta konturer på byggnaderna och skissen (0.9.0); null om det inte finns några. */
       /** Färgen på husens konturer och fotavtrycken utan höjd (0.9.1); null om det inte finns några. */
       konturfarg(c) {
@@ -1331,6 +1371,11 @@
       /** Hur många hus som har en takform, för testerna. */
       takformantal() { return formade.size; },
       konturer(pa) { if (!konturer.length) return null; if (pa != null) { visaKonturer = !!pa; konturer.forEach(l => { l.visible = visaKonturer; }); } return visaKonturer; },
+      /**
+       * Sol på fasaderna (0.15.0): 'summa', 'topp' eller '' (av). null om det inte finns något att visa
+       * (inte räknat, eller skissen är ändrad sedan dess).
+       */
+      fasadsol(lage) { if (!fasadData) return null; if (lage !== undefined) { fasadLage = lage || null; ritaFasadsol(); } return fasadLage || ''; },
       /** Skuggor efter solens läge (0.9.0); null om platsen saknas. */
       skuggor(pa) { if (!kanSkugga) return null; if (pa != null) { skuggorPa = !!pa; uppdateraSol(); } return skuggorPa; },
       /** Tidpunkten för solen (ms, UTC). Returnerar solens läge { az, h } i grader, eller null. */
@@ -1512,5 +1557,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.14.4' };
+  window.Vy3D = { visa, version: '0.15.0' };
 }());

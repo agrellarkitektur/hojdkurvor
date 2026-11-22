@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.14.4"></script>
-  <script src="js/kalla.js?v=0.14.4" defer></script>
-  <script src="js/tema.js?v=0.14.4"></script>
-  <script src="js/synpunkter.js?v=0.14.4" defer></script>
-  <script src="js/stod.js?v=0.14.4" defer></script>
+  <script src="js/version.js?v=0.15.0"></script>
+  <script src="js/kalla.js?v=0.15.0" defer></script>
+  <script src="js/tema.js?v=0.15.0"></script>
+  <script src="js/synpunkter.js?v=0.15.0" defer></script>
+  <script src="js/stod.js?v=0.15.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.14.4">
+  <link rel="stylesheet" href="app.css?v=0.15.0">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -137,6 +137,7 @@
         <p>Platsanalysbladet är ett A3-häfte i PDF för tidiga skeden. Välj vilka kapitel det ska ha i steg 03 Analys. Kartorna visas också som lager på kartan och följer med som DXF i zip-filen.</p>
         <dl class="par">
           <dt>Sol</dt><dd>Soldiagram med horisont från terräng, träd och byggnader, och en skuggstudie vid dagjämning och solstånd. Under Anpassa sol väljer du betraktelsepunkt, ögonhöjd och tider. Horisonten räknas från utsnittets mitt, eller från en punkt du väljer på kartan. Står punkten i ett hus eller under ett träd räknas det objektet bort. Träd och byggnader kräver Laserdata skog.</dd>
+          <dt>Sol på fasaderna</dt><dd>Hur mycket sol som når fasaderna på byggnaderna du har ritat under 04 Skiss, timme för timme vid klar himmel. Välj period (21 mars–21 september, april eller september) och tid (kl. 8–17 eller hela dygnet) under Anpassa sol. Resultatet är summan i kWh/m², den högsta timmen i någon punkt på fasaden (<em>lokal topp</em>, för det värsta rummet) och den högsta timmen för hela fasaden på en gång (<em>samtidig topp</em>, för kylningen). De andra byggnaderna, terrängen, befintliga hus och träd skuggar. Ett befintligt hus räknas om du tar in det som byggnad i planvyn; byggnader som rivs räknas inte. Följer med som PDF (staplar, timme × dag och värsta dygnet) och CSV i mappen <code>fasadsol</code>, och i 3D-vyn kan fasaderna färgas efter summa eller timtopp. Himlen är klar varje dag, så summorna blir högre än med verkligt väder; topparna är de som dimensionerar.</dd>
           <dt>Terräng</dt><dd>Markens lutning i fyra klasser: flackare än 1:50, 1:50–1:20, 1:20–1:12 och brantare än 1:12. Gränserna följer tillgänglighetskraven för gångvägar och ramper.</dd>
           <dt>Vatten</dt><dd>Var vatten blir stående och vilka vägar det tar vid ett skyfall. Räknas ur markmodellen utan hänsyn till ledningar, kulvertar eller hur mycket marken suger upp. Skissade volymer räknas med.</dd>
           <dt>Skydd</dt><dd>Fornlämningar och andra kulturhistoriska lämningar från Riksantikvarieämbetet, naturreservat, Natura 2000 och andra skyddade områden från Naturvårdsverket, avstånd till sjöar och vattendrag som indikation på strandskydd (efter reglerna från 1 juli 2025: inte vid insjöar under 1 ha, vattendrag högst 2 m breda eller anlagt vatten; linjerna 100 och 300 m från vattnet visas på kartan och följer med som DXF, och med Marktäcke ikryssat används också Lantmäteriets vatten), och översvämningskarteringar från Myndigheten för civilt försvar. Kräver ingen inloggning.</dd>
@@ -147,7 +148,7 @@
 
       <section id="skiss">
         <h2><span class="nr">06</span>Skiss och cad-apa</h2>
-        <p>I steg 04 Skiss ritar du byggnader på platsen. De räknas med i skuggstudien, horisonten och skyfallet nästa gång du väljer Skapa, och syns i 3D-vyn.</p>
+        <p>I steg 04 Skiss ritar du byggnader på platsen. De räknas med i skuggstudien, horisonten, skyfallet och sol på fasaderna nästa gång du väljer Skapa, och syns i 3D-vyn.</p>
         <ul>
           <li><strong>Rita i plan.</strong> Byggnaderna i plan mot fastighetsgränserna, med mått som på en situationsplan. Se <a href="#plan">Rita i plan</a> nedan.</li>
           <li><strong>Rita i cad-apa.</strong> Öppnar ritprogrammet <a href="https://cad-apa.danaid.cloud/">cad-apa</a> i en ny flik med platsen, terrängen och kurvorna. När huset är skissat skickar du det tillbaka från cad-apa, och volymerna dyker upp i steg 04. Samma sak gör <em>Fortsätt rita i cad-apa</em> under resultatet.</li>
@@ -211,7 +212,7 @@
           <dt>Befintliga byggnader i 3D</dt><dd><code>_byggnader_lokal.ifc</code> och <code>_byggnader_sweref.ifc</code> har husen som volymer med platta tak, till höjden ur laserdatan. I Archicad: File › Interoperability › Merge, eller öppna filen och kopiera in husen. Varje hus är ett eget objekt med husnummer, ändamål och höjd i egenskaperna. Hus utan höjd kommer inte med, så kryssa i både <em>Befintliga byggnader</em> och <em>Höjd ur laserdatan</em>. Gör en ny export, så får samma hus samma id.</dd>
           <dt>Vägar</dt><dd><code>_vagar_lokal.dxf</code> har bilvägarna och <code>_gangvagar_lokal.dxf</code> gång- och cykelvägarna, båda som mittlinjer från OpenStreetMap. Med <em>Utkast till vägytor</em> har de också vägytorna som slutna linjer (lagren VAG_YTA_BIL_BERAKNAD och VAG_YTA_GANG_BERAKNAD), ihopslagna i korsningarna. Kanterna är beräknade, inte inmätta; på kartan är de blå (gångvägar gröna). Varje sträcka mellan två korsningar har en och samma bredd, och hörnen i korsningarna är rundade med 6 m radie (en schablon). Bredden kommer från OpenStreetMap när den finns där, annars en vanlig bredd för vägtypen. Har du valt ortofoto mäts bilvägarnas bredd och läge i bilden: appen följer vägbanans färg från mitten ut till kanterna. Träd över vägen, skuggor och infarter gör mätningen osäker, så se ytorna som ett utkast att rätta. Korta sträckor får samma bredd som resten av gatan. Info-filen säger hur varje sträcka fick sin bredd. För exakta vägkanter behövs kommunens grundkarta.</dd>
           <dt>Träd</dt><dd><code>_trad.csv</code> har position, höjd och kronbredd per träd, för att placera trädobjekt med till exempel Dynamo eller Grasshopper.</dd>
-          <dt>Platsanalys</dt><dd>Den samlade platsanalysen (<code>_platsanalys.pdf</code>, A3) ligger i zip-filens rot. Lutning och skyfall ligger i mappen <code>platsanalys</code> som bild (<code>_lutning.jpg</code> och <code>_skyfall.jpg</code> med världsfiler som för ortofotot) och som PDF i vektor. Skuggstudien finns som PDF. Höjdpunkterna ligger i <code>terrang</code> och skissens volymer i <code>skiss</code>, som DXF.</dd>
+          <dt>Platsanalys</dt><dd>Den samlade platsanalysen (<code>_platsanalys.pdf</code>, A3) ligger i zip-filens rot. Lutning och skyfall ligger i mappen <code>platsanalys</code> som bild (<code>_lutning.jpg</code> och <code>_skyfall.jpg</code> med världsfiler som för ortofotot) och som PDF i vektor. Skuggstudien finns som PDF. Sol på fasaderna ligger i <code>fasadsol</code> (PDF och CSV med en rad per fasad). Höjdpunkterna ligger i <code>terrang</code> och skissens volymer i <code>skiss</code>, som DXF.</dd>
           <dt>Samlad DXF</dt><dd><code>_samlad_lokal.dxf</code> och <code>_samlad_sweref.dxf</code> i zip-filens rot har alla DXF-underlag i en fil, med samma lager som i de enskilda filerna. Ortofotot och bilderna lägger du in för sig med världsfilerna.</dd>
           <dt>Sann nord</dt><dd>Höjdkurvornas DXF har lagren NORR_RUTNAT och NORR_SANN. Vinkeln mellan dem står i info-filen. Under Nollpunkt och vridning i steg 01 kan de lokala filerna vridas mot sann nord eller en egen vinkel.</dd>
         </dl>

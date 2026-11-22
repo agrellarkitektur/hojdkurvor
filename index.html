@@ -7,14 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Höjdkurvor – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.14.4"></script>
-  <script src="js/kalla.js?v=0.14.4" defer></script>
-  <script src="js/tema.js?v=0.14.4"></script>
-  <script src="js/synpunkter.js?v=0.14.4" defer></script>
-  <script src="js/stod.js?v=0.14.4" defer></script>
+  <script src="js/version.js?v=0.15.0"></script>
+  <script src="js/kalla.js?v=0.15.0" defer></script>
+  <script src="js/tema.js?v=0.15.0"></script>
+  <script src="js/synpunkter.js?v=0.15.0" defer></script>
+  <script src="js/stod.js?v=0.15.0" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.14.4">
-  <link rel="stylesheet" href="app.css?v=0.14.4">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.15.0">
+  <link rel="stylesheet" href="app.css?v=0.15.0">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -360,7 +360,7 @@
 
           <div class="kapitel" id="kapitel">
             <div class="kapitel-rubrik"><span class="etikett">INNEHÅLL</span><span class="sammanf" id="sf-kapitel"></span></div>
-            <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="sol" checked><span class="kod">SOL</span><span>Soldiagram med horisont och skuggstudie</span></label>
+            <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="sol" checked><span class="kod">SOL</span><span>Soldiagram med horisont, skuggstudie och sol på fasaderna</span></label>
             <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="terrang" checked><span class="kod">TERRÄNG</span><span>Lutning i klasser för tillgänglighet</span></label>
             <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="vatten" checked><span class="kod">VATTEN</span><span>Skyfall: lågpunkter och flödesvägar</span></label>
             <label class="kapitel-rad"><input type="checkbox" name="kapitel" value="skydd" checked><span class="kod">SKYDD</span><span>Fornlämningar, skyddad natur, strandskydd och översvämning</span></label>
@@ -402,6 +402,20 @@
                 <p class="hjalp">Svensk tid, med sommartid när den gäller. Hela timmar eller till exempel 13.30.</p>
               </div>
             </div>
+            <div class="tillval">
+              <label class="kryss"><input type="checkbox" name="tillval" value="fasadsol" checked> Sol på fasaderna</label>
+              <p class="hjalp">Instrålning mot byggnadernas fasader vid klar himmel: summa, högsta timme per punkt (rummen) och per fasad (kylningen), timme för timme. Kräver minst en byggnad under 04 Skiss. Fasaderna färgas i 3D-vyn och följer med som PDF och CSV.</p>
+              <div class="underval">
+                <div class="falt-rad">
+                  <label for="fasadsol-period">Period</label>
+                  <select id="fasadsol-period"><option value="sommar">21/3–21/9</option><option value="april">April</option><option value="september">September</option></select>
+                </div>
+                <div class="falt-rad">
+                  <label for="fasadsol-tid">Tid</label>
+                  <select id="fasadsol-tid"><option value="kontor">Kl. 8–17</option><option value="dygn">Hela dygnet</option></select>
+                </div>
+              </div>
+            </div>
             <button type="button" class="knapp liten" id="ladda-sol" disabled>Ladda ner bara soldiagrammet</button>
             <p class="hjalp">Utan inloggning och utan horisont.</p>
           </details>
@@ -410,7 +424,7 @@
 
         <!-- 04 SKISS -->
         <section class="steg-panel" id="steg-skiss" role="tabpanel" aria-labelledby="flik-skiss" hidden>
-          <p class="ingress">Rita byggnader på tomten i plan, med mått mot fastighetsgränserna, eller skissa i cad-apa och skicka tillbaka. Byggnaderna räknas med i skuggstudien, skyfallet och horisonten.</p>
+          <p class="ingress">Rita byggnader på tomten i plan, med mått mot fastighetsgränserna, eller skissa i cad-apa och skicka tillbaka. Byggnaderna räknas med i skuggstudien, skyfallet och horisonten, och fasaderna får sol på fasaderna.</p>
           <div class="knapprad">
             <button type="button" class="knapp" id="skiss-plan">Rita i plan</button>
             <button type="button" class="knapp" id="skiss-cadapa">Rita i cad-apa</button>
@@ -490,7 +504,7 @@
   <div class="planvy" id="planvy" hidden role="dialog" aria-modal="true" aria-labelledby="planvy-rubrik"></div>
   <div class="vy3d" id="vy3d" hidden role="dialog" aria-modal="true" aria-labelledby="vy3d-rubrik">
     <div class="vy3d-huvud" id="vy3d-huvud" data-lage="oversikt"><h2 id="vy3d-rubrik">3D-förhandsvisning</h2><span class="hjalp" id="vy3d-hjalp">Dra för att snurra, eller välj Flytta och dra för att flytta vyn. Högerdra, skift-dra och två fingrar flyttar också. Scrolla eller nyp för att zooma. Höjderna är överdrivna ×<span id="vy3d-faktor">1</span>.</span><button type="button" class="knapp liten" id="vy3d-modellera" aria-pressed="false" title="Rita och ändra volymer i skissen">Modellera</button><button type="button" class="knapp liten" id="vy3d-plan" title="Rita och ändra byggnaderna i plan">Plan</button><button type="button" class="knapp liten" id="vy3d-toppvy" aria-pressed="false" title="Rakt uppifrån med norr uppåt">Toppvy</button><button type="button" class="knapp liten" id="vy3d-flytta" aria-pressed="false">Flytta</button><button type="button" class="knapp liten" id="vy3d-ogon" aria-pressed="false">Ögonhöjd</button><button type="button" class="knapp liten" id="vy3d-overdriv">Överdriv höjder</button><button type="button" class="knapp liten" id="vy3d-aterstall">Återställ vy</button><span class="vy3d-bild" role="group" aria-label="Spara bild"><button type="button" class="knapp liten" id="vy3d-bild">Spara bild</button><button type="button" class="knapp liten" id="vy3d-ai">Bild för AI</button><label class="vy3d-farg">Storlek <select id="vy3d-skala"><option value="2">2 ×</option><option value="3" selected>3 ×</option><option value="4">4 ×</option></select></label></span><button type="button" class="knapp liten" id="vy3d-val" aria-expanded="false" aria-controls="vy3d-lager vy3d-sol">Val</button><button type="button" class="knapp liten" id="vy3d-stang">Stäng</button>
-      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-konturer" aria-pressed="false" hidden>Konturer</button><button type="button" class="knapp liten" id="vy3d-takformer" aria-pressed="false" hidden title="Taken ur laserdatan i stället för platta tak. Ungefärliga, inte inmätta.">Takformer</button><label class="vy3d-farg" id="vy3d-tradniva-rad" hidden>Träd <select id="vy3d-tradniva"><option value="enkel">Enkla</option><option value="detaljerad">Detaljerade</option></select></label><button type="button" class="knapp liten" id="vy3d-skuggor" aria-pressed="false" hidden>Skuggor</button><button type="button" class="knapp liten" id="vy3d-lasso" aria-pressed="false" hidden title="Ringa in flera träd, eller Shift-klicka på dem, och dölj dem samtidigt">Lasso</button><button type="button" class="knapp liten" id="vy3d-dolda" hidden title="Visa igen alla träd och hus som du har dolt här">Visa dolda</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-husfarg-rad" hidden>Husfärg <input type="color" id="vy3d-husfarg" value="#b9b3aa"></label><label class="vy3d-farg" id="vy3d-konturfarg-rad" hidden>Konturfärg <input type="color" id="vy3d-konturfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-gransfarg-rad" hidden>Gränsfärg <input type="color" id="vy3d-gransfarg" value="#b0306a"></label><label class="vy3d-farg" id="vy3d-skissfarg-rad" hidden>Skissfärg <input type="color" id="vy3d-skissfarg" value="#e85528"></label></div>
+      <div class="vy3d-lager" id="vy3d-lager" role="group" aria-label="Visa i 3D"><button type="button" class="knapp liten" id="vy3d-orto" aria-pressed="true" hidden>Ortofoto</button><button type="button" class="knapp liten" id="vy3d-konturer" aria-pressed="false" hidden>Konturer</button><button type="button" class="knapp liten" id="vy3d-takformer" aria-pressed="false" hidden title="Taken ur laserdatan i stället för platta tak. Ungefärliga, inte inmätta.">Takformer</button><label class="vy3d-farg" id="vy3d-tradniva-rad" hidden>Träd <select id="vy3d-tradniva"><option value="enkel">Enkla</option><option value="detaljerad">Detaljerade</option></select></label><button type="button" class="knapp liten" id="vy3d-skuggor" aria-pressed="false" hidden>Skuggor</button><label class="vy3d-farg" id="vy3d-fasadsol-rad" hidden title="Instrålningen mot fasaderna vid klar himmel, som den räknades vid Skapa">Sol på fasader <select id="vy3d-fasadsol"><option value="">Av</option><option value="summa">Summa, kWh/m²</option><option value="topp">Timtopp, W/m²</option></select><span class="vy3d-fasadskala" id="vy3d-fasadskala" hidden><span id="vy3d-fasadskala-a">0</span><i aria-hidden="true"></i><span id="vy3d-fasadskala-b">700</span></span></label><button type="button" class="knapp liten" id="vy3d-lasso" aria-pressed="false" hidden title="Ringa in flera träd, eller Shift-klicka på dem, och dölj dem samtidigt">Lasso</button><button type="button" class="knapp liten" id="vy3d-dolda" hidden title="Visa igen alla träd och hus som du har dolt här">Visa dolda</button><label class="vy3d-farg" id="vy3d-kurvfarg-rad" hidden>Kurvfärg <input type="color" id="vy3d-kurvfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-husfarg-rad" hidden>Husfärg <input type="color" id="vy3d-husfarg" value="#b9b3aa"></label><label class="vy3d-farg" id="vy3d-konturfarg-rad" hidden>Konturfärg <input type="color" id="vy3d-konturfarg" value="#000000"></label><label class="vy3d-farg" id="vy3d-gransfarg-rad" hidden>Gränsfärg <input type="color" id="vy3d-gransfarg" value="#b0306a"></label><label class="vy3d-farg" id="vy3d-skissfarg-rad" hidden>Skissfärg <input type="color" id="vy3d-skissfarg" value="#e85528"></label></div>
       <div class="vy3d-sol" id="vy3d-sol" role="group" aria-label="Solen" hidden><label class="vy3d-farg">Datum <input type="date" id="vy3d-datum"></label><label class="vy3d-farg vy3d-tid">Tid <input type="range" id="vy3d-tid" min="0" max="1435" step="5" value="720"><output id="vy3d-tidtext" for="vy3d-tid">12:00</output></label><button type="button" class="knapp liten" id="vy3d-spela" aria-pressed="false">Spela dagen</button><button type="button" class="knapp liten" data-solhandelse="mars">Vårdagjämning</button><button type="button" class="knapp liten" data-solhandelse="juni">Midsommar</button><button type="button" class="knapp liten" data-solhandelse="dec">Vintersolstånd</button><button type="button" class="knapp liten" id="vy3d-tradskuggor" aria-pressed="true" hidden>Trädskuggor</button><span class="vy3d-solinfo" id="vy3d-solinfo" aria-live="polite"></span></div></div>
     <div class="vy3d-yta" id="vy3d-yta"></div>
     <aside class="vy3d-panel" id="vy3d-modell" hidden aria-label="Modellera">
@@ -537,38 +551,40 @@
     </aside>
   </div>
 
-  <script src="config.js?v=0.14.4"></script>
-  <script src="vendor/leaflet/leaflet.js?v=0.14.4"></script>
-  <script src="vendor/proj4.js?v=0.14.4"></script>
-  <script src="vendor/geotiff.js?v=0.14.4"></script>
-  <script src="vendor/jszip.min.js?v=0.14.4"></script>
-  <script src="js/karna.js?v=0.14.4"></script>
-  <script src="js/dxf.js?v=0.14.4"></script>
-  <script src="js/sol.js?v=0.14.4"></script>
-  <script src="js/laser.js?v=0.14.4"></script>
-  <script src="js/ortofoto.js?v=0.14.4"></script>
-  <script src="js/kommunfil.js?v=0.14.4"></script>
-  <script src="js/marktacke.js?v=0.14.4"></script>
-  <script src="js/byggnad.js?v=0.14.4"></script>
-  <script src="js/ifc.js?v=0.14.4"></script>
-  <script src="js/fastighet.js?v=0.14.4"></script>
-  <script src="js/stompunkt.js?v=0.14.4"></script>
-  <script src="js/analys.js?v=0.14.4"></script>
-  <script src="js/vagar.js?v=0.14.4"></script>
-  <script src="js/platsanalys.js?v=0.14.4"></script>
-  <script src="js/geodata.js?v=0.14.4"></script>
-  <script src="js/trad3d.js?v=0.14.4"></script>
-  <script src="js/objektval.js?v=0.14.4"></script>
-  <script src="js/volym3d.js?v=0.14.4"></script>
-  <script src="js/kropp.js?v=0.14.4"></script>
-  <script src="js/planvy.js?v=0.14.4"></script>
-  <script src="js/projekt.js?v=0.14.4"></script>
-  <script src="js/resultat.js?v=0.14.4"></script>
-  <script src="js/hamtminne.js?v=0.14.4"></script>
-  <script src="js/utbyte.js?v=0.14.4"></script>
-  <script src="js/topowebb.js?v=0.14.4"></script>
-  <script src="js/utskrift.js?v=0.14.4"></script>
-  <script src="js/platsanalysblad.js?v=0.14.4"></script>
-  <script src="js/app.js?v=0.14.4"></script>
+  <script src="config.js?v=0.15.0"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.15.0"></script>
+  <script src="vendor/proj4.js?v=0.15.0"></script>
+  <script src="vendor/geotiff.js?v=0.15.0"></script>
+  <script src="vendor/jszip.min.js?v=0.15.0"></script>
+  <script src="js/karna.js?v=0.15.0"></script>
+  <script src="js/dxf.js?v=0.15.0"></script>
+  <script src="js/sol.js?v=0.15.0"></script>
+  <script src="js/laser.js?v=0.15.0"></script>
+  <script src="js/ortofoto.js?v=0.15.0"></script>
+  <script src="js/kommunfil.js?v=0.15.0"></script>
+  <script src="js/marktacke.js?v=0.15.0"></script>
+  <script src="js/byggnad.js?v=0.15.0"></script>
+  <script src="js/ifc.js?v=0.15.0"></script>
+  <script src="js/fastighet.js?v=0.15.0"></script>
+  <script src="js/stompunkt.js?v=0.15.0"></script>
+  <script src="js/analys.js?v=0.15.0"></script>
+  <script src="js/vagar.js?v=0.15.0"></script>
+  <script src="js/platsanalys.js?v=0.15.0"></script>
+  <script src="js/geodata.js?v=0.15.0"></script>
+  <script src="js/trad3d.js?v=0.15.0"></script>
+  <script src="js/objektval.js?v=0.15.0"></script>
+  <script src="js/volym3d.js?v=0.15.0"></script>
+  <script src="js/kropp.js?v=0.15.0"></script>
+  <script src="js/fasadsol.js?v=0.15.0"></script>
+  <script src="js/planvy.js?v=0.15.0"></script>
+  <script src="js/projekt.js?v=0.15.0"></script>
+  <script src="js/resultat.js?v=0.15.0"></script>
+  <script src="js/hamtminne.js?v=0.15.0"></script>
+  <script src="js/utbyte.js?v=0.15.0"></script>
+  <script src="js/topowebb.js?v=0.15.0"></script>
+  <script src="js/utskrift.js?v=0.15.0"></script>
+  <script src="js/platsanalysblad.js?v=0.15.0"></script>
+  <script src="js/fasadsolblad.js?v=0.15.0"></script>
+  <script src="js/app.js?v=0.15.0"></script>
 </body>
 </html>

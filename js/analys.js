@@ -372,12 +372,13 @@
    * nara: ytmodell 1 m (med träd och byggnader), fjarr: grov höjdmodell.
    * konvTM: TM-rutnätets nord i förhållande till geografisk nord (grader, öster +).
    * Returnerar Float32Array med 720 höjdvinklar (grader) för sant azimut 0, 0,5 … 359,5.
+   * minAvst: varifrån det söks (sol på fasaderna, 0.15.0, tar bara det som ligger bortom ytmodellen).
    */
-  function horisont(E, N, z0, nara, fjarr, konvTM, { naraRadie = 400, maxAvst = 5000 } = {}) {
+  function horisont(E, N, z0, nara, fjarr, konvTM, { naraRadie = 400, maxAvst = 5000, minAvst = 2 } = {}) {
     const ut = new Float32Array(720), R = 6371000, k = 0.13;
     for (let a = 0; a < 720; a++) {
       const g = (a * 0.5 - konvTM) * RAD, dx = Math.sin(g), dy = Math.cos(g);
-      let bast = -90, d = 2;
+      let bast = -90, d = minAvst;
       while (d <= maxAvst) {
         const z = d <= naraRadie && nara ? pix(nara, E + dx * d, N + dy * d) : (fjarr ? pix(fjarr, E + dx * d, N + dy * d) : NaN);
         if (z === z) {

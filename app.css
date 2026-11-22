@@ -552,6 +552,10 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .vy3d-farg input { width: 34px; height: 26px; padding: 0 2px; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); cursor: pointer; }
 .vy3d-bild { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .vy3d-farg select { height: 26px; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); color: var(--ink); font: inherit; }
+/* Sol på fasaderna (0.15.0): skalan bredvid valet. Färgerna är data och desamma i alla teman (Fasadsol.farg). */
+.vy3d-fasadskala { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.vy3d-fasadskala[hidden] { display: none; }
+.vy3d-fasadskala i { display: inline-block; width: 90px; height: 8px; border: 1px solid var(--rule); background: linear-gradient(to right, #2d3291, #2878c8, #3cafa0, #8cc850, #f5d23c, #f08228, #c82828); }
 .vy3d-sol { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .vy3d-sol[hidden] { display: none; }
 .vy3d-sol input[type=date] { width: auto; height: 26px; padding: 0 4px; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); color: var(--ink); font: inherit; }

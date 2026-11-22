@@ -3,6 +3,39 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.15.0 – 2026-11-22
+
+Sol på fasaderna, efter planen i `overlamning-solanalys.md` (claude.ai-projektet), på
+byggnadskropparna från 0.14.0 i stället för skissvolymerna.
+
+- **Sol på fasaderna** under 03 Analys (kapitlet SOL, *Anpassa sol*): instrålningen mot
+  fasaderna på alla byggnader under 04 Skiss utom de som rivs, timme för timme med klar
+  himmel. Period 21 mars–21 september (förval), april eller september; tid kl. 8–17
+  (förval) eller hela dygnet. Valen sparas i projektet (`val.analys.fasadsolPeriod`,
+  `fasadsolTid`).
+- **Beräkningen** (`js/fasadsol.js`, ren och testad i Node): fasadpunkter i ett rutnät på
+  cirka 1 m, gavlarna upp till taket; punkter under marken eller inne i en annan byggnad
+  räknas inte. Horisonten framför varje punkt i tre steg: den egna byggnaden, alla
+  byggnader och omgivningen (terräng, hus och träd ur laserdatan inom 150 m, terrängen
+  inom 5 km bortom det). Klar himmel efter ESRA (Linkes grumlighetsfaktor 3), diffus
+  strålning efter Hay–Davies med den del av himlen fasaden ser, reflex från marken med
+  albedo 0,2.
+- **Resultat**: summa (kWh/m²), lokal topp (högsta timmedel i en punkt, för rummen) och
+  samtidig topp (högsta areaviktade timmedel för fasaden, för kylningen), per fasad och
+  per byggnad och väderstreck, och hur mycket mindre direkt sol de andra byggnaderna och
+  omgivningen ger. `fasadsol/…_sol_pa_fasader.pdf` (A3: staplar och tabell, timme × dag,
+  värsta dygnet) och `fasadsol/…_fasader.csv` i zip-filen, ett avsnitt i info-filen.
+- **3D-vyn**: *Sol på fasader* färgar fasaderna efter summa eller timtopp, med skala
+  (0–900 W/m², 0–700 kWh/m² för hela säsongen och mer om värdena är högre). Skissen blir
+  grå så länge, och färgerna försvinner när skissen ändras.
+- **Platsen till cad-apa** har fältet `fasadsol`: topparna och summan per fasad och den
+  fjärran horisonten (`docs/UTBYTE-CAD-APA.md`). cad-apa läser det inte än.
+- Kontroll mot underlaget från Hudiksvall: ett block på 60 × 20 × 22 m ger samtidiga
+  toppar på 816 (öster), 850 (söder) och 780 (väster) W/m², mot 806, 831 och 850 i
+  underlaget (`test/fasadsol.test.js`).
+- `Analys.horisont` har fått `minAvst`. Nya testkrokar `TERRANG_TEST.satVolymHojd`,
+  `platspaket` och `byggProjekt`; nytt gränssnittstest `test/fasadsol_test.py`.
+
 ## 0.14.4 – 2026-11-21
 
 Rättelser och förbättringar efter ägarens test 20 november (AÄ–BM i

@@ -67,7 +67,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
   "val": {
     "tillval": ["laser", "byggnader"], "kapitel": ["sol"], "format": ["dxf", "xyz"],
     "intervall": "0.5", "mesh": "2", "hojdpunktSteg": "10", "utjamning": 1, "ritprogram": "archicad",
-    "analys": { "skuggdatum": [], "skuggtider": "9, 12, 15", "ogonhojd": "1,6", "horisontTom": false },
+    "analys": { "skuggdatum": [], "skuggtider": "9, 12, 15", "ogonhojd": "1,6", "horisontTom": false,
+                "fasadsolPeriod": "sommar", "fasadsolTid": "kontor" },   // sol på fasaderna (0.15.0): sommar | april | september, kontor | dygn
     "utskrift": { "pr-format": "a3", "…": "…" },
     "dolda3d": []                       // lager som är dolda i 3D-vyn
   },

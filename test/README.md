@@ -59,6 +59,10 @@ node test/kropp.test.js
 ```
 
 ```
+node test/fasadsol.test.js
+```
+
+```
 node test/vagar.test.js
 ```
 
@@ -171,6 +175,23 @@ gränsmått, dra med snäpp mot husets hörn, dra i ett grepp, ångra, polygon u
 entrépilen, Rivs, listan under 04 Skiss, 3D-vyn utan den som rivs, *Plan* i 3D-vyn, att allt finns
 kvar efter omladdning och att huset ersätts av kroppen när underlaget skapas igen. Skärmbilder
 `planvy_1_<tema>.png`, `planvy_2_<tema>.png`, `planvy_3d_<tema>.png`.
+
+```
+python3 test/fasadsol_test.py test/ut ritning
+```
+
+`fasadsol_test.py` (0.15.0, gränssnitt) skapar underlaget, ritar två byggnader i plan (30 m hög
+och 9 m hög norr om den), väljer bara *Sol på fasaderna* med perioden April och skapar igen:
+sammanfattningen, att den låga byggnadens södervägg skuggas av den höga, PDF:en och CSV-filen i
+zip-filen (sidorna som `fasadsol_sida-N.png`), 3D-vyns färger (summa och timtopp, skärmbilder
+`fasadsol_3d_*_<tema>.png`), att färgerna försvinner när skissen ändras, fältet `fasadsol` i
+platsen till cad-apa och att perioden finns kvar efter omladdning.
+
+Enhetstestet för sol på fasaderna (`node test/fasadsol.test.js`, 0.15.0) prövar klar himmel mot
+överslaget 2 april i Hudiksvall, väderstreck och himlens andel, fasadpunkterna (area, gavlar,
+under marken, fogen mellan två byggnader), skuggning från en annan byggnad, från den egna
+(inbuktad) och från ytmodellen, att det som står på byggnaden inte räknas, och kontrollen mot
+underlaget från Hudiksvall.
 
 Volymtestet (0.10.0) prövar volymerna att modellera: fotavtrycken för rätblock,
 cylinder och prisma, att takets höjd är densamma som `Platsanalys.takhojd`, de

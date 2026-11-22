@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **CF**.
+Senast använda nummer: **CÄ**.
 
 ## Inkorg
 
@@ -23,6 +23,16 @@ Senast använda nummer: **CF**.
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.15.0
+
+Sol på fasaderna, efter `overlamning-solanalys.md` i claude.ai-projektet, på byggnadskropparna från 0.14.0.
+
+- **CG** Grundflödet: rita en eller flera byggnader under 04 Skiss (eller *Befintlig* ur ett hus), kryssa i *Skapa platsanalysblad* med kapitlet SOL och *Sol på fasaderna*, och skapa. Står *Sol på fasaderna* i sammanfattningen, och finns `fasadsol/…_sol_pa_fasader.pdf` och `…_fasader.csv` i zip-filen? Är bladen begripliga (staplar och tabell, timme × dag, värsta dygnet)? Stämmer väderstrecken med kartan?
+- **CH** Kontroll mot Hudiksvall: rita ungefär de två kontorsblocken från underlaget på rätt plats, med omgivningen, och skapa med 21/3–21/9 och kl. 8–17. Hamnar det stora blockets samtidiga toppar nära underlagets 806 (öster), 831 (söder) och 850 (väster) W/m²? Summorna blir högre än i underlaget, eftersom himlen är klar varje dag. Stämmer skuggningen mellan blocken ungefär (det mindre blockets södersida)?
+- **CI** Period och tid: välj April, September och Hela dygnet. Ändras bladen och 3D-färgerna, och ligger valen kvar efter omladdning och i projektfilen?
+- **CJ** 3D-vyn: *Sol på fasader* bland valen (Summa och Timtopp, med skala). Är färgerna lätta att läsa mot den grå skissen, i alla tre teman? Ändra en byggnad i 3D-vyn eller planvyn: försvinner färgerna tills du skapar igen?
+- **CK** Platsen till cad-apa har fältet `fasadsol` (topparna per fasad och horisonten). cad-apa läser det inte än; prova bara att *Rita i cad-apa* fungerar som förut.
 
 ### 0.14.4
 
@@ -85,6 +95,10 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
 
+### 22 november 2026 → 0.15.0 (planen i `overlamning-solanalys.md`)
+
+- Sol på fasaderna på byggnadskropparna: klar himmel, fasadpunkter på cirka 1 m, skuggning från de andra kropparna, terräng, hus och träd, fjärran horisont. Period 21 mars–21 september (förval), april eller september; kontorstid kl. 8–17 (förval) eller hela dygnet. 3D-vyn färgad efter summa eller timtopp, PDF-blad med staplar, timme × dag, värsta dygnet och skuggningens uppdelning, lokal och samtidig topp hållna isär, topparna i platsen till cad-apa. *Byggt så; testas som CG–CK. Pagoda, STRÅNG och reflexer väntar (CW–CY).*
+
 ### 21 november 2026 → 0.14.4 (övriga synpunkter vid testet 20 november, utan nummer)
 
 - Kravet *Rita minst en sektionslinje på kartan eller bocka ur Terrängsektioner* är jobbigt. Har man ritat en sektion exporteras den, annars inte, men allt annat exporteras. *Kryssrutan är borta.*
@@ -114,6 +128,37 @@ Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas u
 
 Grupperat efter den version där de är planerade.
 
+### 0.17.0 – användarskapad omgivning, etapp 1 (`utredning-anvandarskapad-omgivning.md` i claude.ai-projektet)
+
+Från utredningen 22 november 2026. Det viktigaste är att det känns intuitivt och inte omständligt att
+modellera omgivningen och egna byggnader; det väger tyngre än funktionsbredd. Ingen server krävs i den
+här etappen. Lantmäteriets fotavtryck används inte för att modellera omgivningen (beslut 22 november):
+de syns bara som tonad referens, utan snäpp eller mätning, och kan döljas.
+
+- **CL** Prototypa interaktionen först (som planvyns artifact) och testa på Stadshuset och ett vanligt flerbostadshus innan datamodellen låses.
+- **CM** *Ersätt* på ett hus: klicka på huset, välj *Ersätt*. En enkel kropp läggs på platsen med höjden ur laserdatan, och huset tonas ned som referens. Målet: ett hus på någon minut, utan manual.
+- **CN** Dra direkt i 3D: handtag för höjd, sidor och hörn, med måttet synligt medan man drar. Siffror kan skrivas in (samma inmatningsrad som i planvyn) men behövs inte.
+- **CO** Stapla genom att klicka på en yta: ny kropp på ovansidan av en annan (torn, indragna våningar).
+- **CP** Få, tydliga former i en palett med bilder i stället för en lång lista med parametrar.
+- **CQ** Snäpp mot egna kroppar, ortogonalt och mot laserdatans ytmodell (takkanter och höjder), inte mot Lantmäteriets fotavtryck. Prova om ytmodellens kanter är för brusiga.
+- **CR** Ångra och gör om överallt, kopiera och spegla (flyglar, tvillinghus). Samma verktyg för omgivningen och för egna byggnader.
+- **CS** Markeringen `omgivning: true` på kroppen: räknas i analyserna och visas i 3D, men måttsätts inte, räknas inte i BYA och ritas i situationsplanen som befintligt hus (tunn linje).
+- **CT** Val per projekt (*Omgivning: Standard / Användarskapade där de finns*) och per byggnad (*Standard (laserdata)*, bibliotekets modeller, *Egen ritad*); valet för byggnaden överstyr projektets. Diskret markering i 3D av hus som har alternativ.
+- **CU** Valet sparas i projektfilen (`omgivning: { lage, val }`) med en kopia av den valda modellens geometri, så att projektet öppnas likadant även om modellen ändras; *Ny version finns* när det finns en nyare.
+- **CV** Analyserna (skugga, sol på fasader, horisont, skyfall) och exporterna (DXF, mesh, skissfilen till cad-apa) följer valet.
+
+Öppna frågor ur utredningen: standardhusen eller användarskapade som förval i nya projekt (förslag:
+standardhusen), hur användarskapade modeller anges i utskrifter (förslag: en källrad med modellnamn,
+bidragsgivare och licens).
+
+### Sol på fasaderna, senare
+
+Det som väntar enligt `overlamning-solanalys.md`.
+
+- **CW** Utkragning per våning (pagoda): enkel version i Höjdkurvor, detaljerad i cad-apa. Ska planeras mer först.
+- **CX** SMHI STRÅNG (timvärden för global, direkt och diffus strålning, 2,5 km rutnät) för summorna i kWh med verkligt väder. CORS och format är inte kontrollerade.
+- **CY** Reflexer mellan byggnaderna (i dag bara reflex från marken).
+
 ### 0.10.x – modellera vidare
 
 - **AB** Bästa hade varit om man kunde sänka linjer individuellt runt takfoten för att skapa sin egen takform. (Egna takfotslinjer.)
@@ -140,6 +185,10 @@ AO (punkt och radie sparas i projektet) är klar och struken. Kvar, i planens or
 - **AM** Möjlighet att lägga in eget bildunderlag som överlagring. Hör till projektfilens etapp 4 (bilagor): bilden i `bilagor/`, inpassad med två eller tre passpunkter.
 
 ### Version inte bestämd
+
+- **CZ** Användarskapad omgivning, etapp 2: fler byggformer (staplade kroppar, cylinder och månghörningar, kupol och klot, kon, pyramid och torn). Ska finnas innan biblioteket öppnas.
+- **CÅ** Användarskapad omgivning, etapp 3: biblioteket går att läsa (litet API på VPS:en, SQLite), ägaren lägger in de första landmärkena och valet i appen visar biblioteksmodeller.
+- **CÄ** Användarskapad omgivning, etapp 4: öppet inskick utan konto (formulär, villkor under CC BY 4.0 med upplåtelse till Agrell Arkitektur AB, hantera-länk, rapportering och granskningsvy). Först efter juristgranskning av villkoren.
 
 - **AN** Generera skissvolymer efter eget inskannat underlag. Bygger på överlagringen (AM): rita fotavtryck ovanpå bilden (halvautomatiskt, med snäpp mot linjer i bilden) snarare än att tolka planen helt automatiskt.
 - **AP** En html-fil i nedladdningsmappen som visar allt underlag som på webben, 2D och 3D, utan att kunna ändra utsnittet. Läser projektfilens `projekt.json` och filerna i zip:en. Kräver att visaren fungerar från en lokal fil (`file://`), där webbläsaren stoppar `fetch` – underlaget måste därför bäddas in eller läsas med en filväljare. Villkoren för Lantmäteriets data i en fil som sprids ska kontrolleras först.

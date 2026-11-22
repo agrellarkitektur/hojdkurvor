@@ -118,6 +118,10 @@ node test/kropp.test.js
 ```
 
 ```
+node test/fasadsol.test.js
+```
+
+```
 node test/dxf.test.js
 ```
 
@@ -183,6 +187,10 @@ python3 test/resultat_test.py test/ut ritning
 
 ```
 python3 test/planvy_test.py test/ut ritning
+```
+
+```
+python3 test/fasadsol_test.py test/ut ritning
 ```
 
 ```

@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.14.4';
+  const FILVERSION = '0.15.0';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -62,6 +62,11 @@
   const KONF = window.TERRANG_KONFIG || {};
   const karta = L.map('karta', { zoomSnap: 0.5, preferCanvas: true, maxZoom: 19 }).fitBounds([[55.2, 10.9], [69.1, 24.2]]);
   if (window.TERRANG_TEST) { window.TERRANG_TEST.karta = karta; window.TERRANG_TEST.senaste = () => state.senaste; }   // testkrokar: kartan och det senaste underlaget i gränssnittstesterna
+  if (window.TERRANG_TEST) {   // testkrokar för sol på fasaderna (0.15.0): höjden på en byggnad, platsen till cad-apa, projektet
+    window.TERRANG_TEST.satVolymHojd = (i, h) => { state.volymer[i].takfot = h; sparaVolymer(); ritaVolymer(); nollstallResultat(); };
+    window.TERRANG_TEST.platspaket = () => platspaket();
+    window.TERRANG_TEST.byggProjekt = () => byggProjekt();
+  }
   const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsgivare';
   const inloggning = () => { const a = $('anv').value.trim(), l = $('losen').value; return a && l ? T.basicAuth(a, l) : null; };
   const BAKGRUNDER = [
@@ -1095,6 +1100,8 @@
     const t = tillval(), k = kapitel(), pa = !!t.platsanalys;
     return Object.assign({}, t, {
       sol: pa && k.sol && t.sol, horisont: pa && k.sol && t.sol && t.horisont, skugga: pa && k.sol && t.skugga,
+      // sol på fasaderna (0.15.0) räknas bara när det finns byggnadskroppar
+      fasadsol: !!(pa && k.sol && t.fasadsol && typeof Fasadsol !== 'undefined' && Kropp.forAnalys(state.volymer || []).length),
       lutning: pa && k.terrang, skyfall: pa && k.vatten, skydd: pa && k.skydd,
       byggnadshojd: !!(t.byggnader && t.byggnadshojd), vagytor: !!(t.vagar && t.vagytor),
       // Ritade sektioner kommer alltid med, utan kryssruta (0.14.4)
@@ -1138,7 +1145,7 @@
     const k = kapitel(), kn = ['sol', 'terrang', 'vatten', 'skydd'].filter(x => k[x]).length;
     $('sf-kapitel').textContent = `${kn} av 4`;
     $('kapitel').classList.toggle('av', !kryssad('tillval', 'platsanalys'));
-    $('sf-sol').textContent = [kryssad('tillval', 'sol') && 'soldiagram', kryssad('tillval', 'sol') && kryssad('tillval', 'horisont') && 'horisont', kryssad('tillval', 'skugga') && 'skuggor'].filter(Boolean).join(', ') || 'inget valt';
+    $('sf-sol').textContent = [kryssad('tillval', 'sol') && 'soldiagram', kryssad('tillval', 'sol') && kryssad('tillval', 'horisont') && 'horisont', kryssad('tillval', 'skugga') && 'skuggor', kryssad('tillval', 'fasadsol') && 'fasader'].filter(Boolean).join(', ') || 'inget valt';
     const ev = effektivaVal(), f = formatVal();
     const antal = ['dxf', 'xyz', 'csv'].filter(x => f[x]).length + ['hojdpunkter', 'laser', 'trad', 'hom', 'ortofoto', 'byggnader', 'fastigheter', 'marktacke', 'stompunkter', 'vagar', 'sektion'].filter(x => ev[x]).length;
     const vol = (state.volymer || []).length;
@@ -1583,15 +1590,18 @@
   if (extraInst.skuggdatum) document.querySelectorAll('input[name=skuggdatum]').forEach(c => { c.checked = extraInst.skuggdatum.includes(c.value); });
   if (extraInst.skuggtider) $('skuggtider').value = extraInst.skuggtider;
   if (extraInst.ogonhojd) $('ogonhojd').value = extraInst.ogonhojd;
+  const satValj = (id, v) => { if (v && [...$(id).options].some(o => o.value === v)) $(id).value = v; };
+  satValj('fasadsol-period', extraInst.fasadsolPeriod); satValj('fasadsol-tid', extraInst.fasadsolTid);
   const sparaExtra = () => {
     lager.spara('localStorage', 'terrang-analys', {
       skuggdatum: [...document.querySelectorAll('input[name=skuggdatum]:checked')].map(c => c.value),
       skuggtider: $('skuggtider').value, ogonhojd: $('ogonhojd').value,
+      fasadsolPeriod: $('fasadsol-period').value, fasadsolTid: $('fasadsol-tid').value,
     });
     nollstallResultat();
   };
   document.querySelectorAll('input[name=skuggdatum]').forEach(c => c.addEventListener('change', sparaExtra));
-  ['skuggtider', 'ogonhojd'].forEach(id => $(id).addEventListener('change', sparaExtra));
+  ['skuggtider', 'ogonhojd', 'fasadsol-period', 'fasadsol-tid'].forEach(id => $(id).addEventListener('change', sparaExtra));
   $('hor-tomt').addEventListener('change', nollstallResultat);
 
   /** Klockslag "9, 12, 13.30" → [[9,0],[12,0],[13,30]] */
@@ -1744,14 +1754,14 @@
     const tt = tillLatLng(epsg), franLL = franLatLng(epsg); kor.tt = tt; kor.franLL = franLL;
     const mitt = mittV; kor.mitt = mitt;
     const horLL = val.sol && val.horisont && state.horPunkt ? { lat: state.horPunkt[0], lon: state.horPunkt[1] } : { lat: mitt.lat, lon: mitt.lon }; kor.horLL = horLL;
-    const behoverYta = val.trad || val.hom || val.skugga; kor.behoverYta = behoverYta;
+    const behoverYta = val.trad || val.hom || val.skugga || val.fasadsol; kor.behoverYta = behoverYta;
     const behoverLaser = val.laser || behoverYta || val.sektion || (val.sol && val.horisont) || val.byggnadshojd; kor.behoverLaser = behoverLaser;
     const behoverDtm = behoverYta || val.sektion || val.hojdpunkter || val.lutning || val.skyfall || volymer.length || val.byggnader; kor.behoverDtm = behoverDtm;
 
     // områden: utsnittet, marginal för skuggor, sektionslinjer, horisontens närområde
     const MARG_SKUGGA = 150; kor.MARG_SKUGGA = MARG_SKUGGA;
     kor.rm = { ...r };
-    if (val.skugga) kor.rm = { xmin: r.xmin - MARG_SKUGGA, ymin: r.ymin - MARG_SKUGGA, xmax: r.xmax + MARG_SKUGGA, ymax: r.ymax + MARG_SKUGGA };
+    if (val.skugga || val.fasadsol) kor.rm = { xmin: r.xmin - MARG_SKUGGA, ymin: r.ymin - MARG_SKUGGA, xmax: r.xmax + MARG_SKUGGA, ymax: r.ymax + MARG_SKUGGA };
     else if (val.trad || val.hom) kor.rm = { xmin: r.xmin - 10, ymin: r.ymin - 10, xmax: r.xmax + 10, ymax: r.ymax + 10 };
     const sektioner = val.sektion ? state.sektioner.map(s => ({ namn: s.namn, a: franLL(s.a), b: franLL(s.b), vand: !!s.vand })) : []; kor.sektioner = sektioner;
     sektioner.forEach(s => {
@@ -1771,8 +1781,8 @@
       return false;
     }
 
-    const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.fastigheter && 'fastigheter', val.marktacke && 'marktacke', val.ortofoto && 'ortofoto', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.platsanalys && 'blad'].filter(Boolean);
-    const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, fastigheter: 1, marktacke: 2, ortofoto: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, blad: 1 };
+    const plan = ['hojd', 'terrang', behoverLaser && 'laser', val.byggnader && 'byggnader', behoverYta && 'analys', (val.lutning || val.skyfall) && 'platsanalys', val.skydd && 'skydd', val.fastigheter && 'fastigheter', val.marktacke && 'marktacke', val.ortofoto && 'ortofoto', val.stompunkter && 'stompunkter', val.vagar && 'vagar', val.sol && 'sol', val.fasadsol && 'fasadsol', val.platsanalys && 'blad'].filter(Boolean);
+    const vikt = { hojd: 2, terrang: 2, laser: 3, byggnader: 1, analys: 2, platsanalys: 2, skydd: 1, fastigheter: 1, marktacke: 2, ortofoto: 2, stompunkter: 1, vagar: 1, sol: val.horisont ? 2 : 1, fasadsol: 3, blad: 1 };
     const totalVikt = plan.reduce((a, k) => a + vikt[k], 0);
     const delStart = k => 100 * plan.slice(0, plan.indexOf(k)).reduce((a, x) => a + vikt[x], 0) / totalVikt;
     const delFramsteg = (k, f, txt) => { matare(delStart(k) + 100 * vikt[k] / totalVikt * Math.min(1, f)); if (txt) visaStatus(txt + ' …'); }; kor.delFramsteg = delFramsteg;
@@ -1976,11 +1986,11 @@
   async function skapaAnalyser(kor) {
     const { MARG_SKUGGA, X0, Y0, Z0, behoverYta, delFramsteg, epsg, extraInfo, filer, mitt, namn, projekt, r, res, sammanExtra, senaste, skuggDatum, skuggTider, tt, val, varningar } = kor;
     // --- Analyser: träd, höjd över mark, skuggor
-    if (behoverYta && (kor.laserYta || val.skugga)) {
+    if (behoverYta && (kor.laserYta || val.skugga || val.fasadsol)) {
       try {
         delFramsteg('analys', 0, 'Bygger ytmodell');
         const y = kor.laserYta || ({ W: kor.dtmZ.W, H: kor.dtmZ.H, s: kor.dtmZ.s, x0: kor.dtmZ.x0, y1: kor.dtmZ.y1, dtm: kor.dtmZ.z, ndsm: new Float32Array(kor.dtmZ.z.length), dsm: Float32Array.from(kor.dtmZ.z) });
-        if (!kor.laserYta) varningar.push(`Skuggstudien räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
+        if (!kor.laserYta) varningar.push(`${val.skugga ? 'Skuggstudien' : 'Sol på fasaderna'} räknades utan laserdata, så bara terrängen${senaste.volymer.length ? ' och skissen' : ''} kastar skugga.`);
         senaste.yta = y;
         const iUtsnitt = t => t.x >= r.xmin && t.x <= r.xmax && t.y >= r.ymin && t.y <= r.ymax;
         let tradDolda = [];
@@ -2035,6 +2045,8 @@
         // dolda hus och hus som ersatts av en byggnadskropp skärs bort; kropparna (utom de som rivs) bränns in nedan
         if (kor.laserYta) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: (senaste.byggnaderDolda || []).concat(senaste.byggnaderErsatta || []) });
         const volA = Kropp.forAnalys(senaste.volymer);
+        // sol på fasaderna (0.15.0): omgivningen utan kropparna, och utan det som står där de står
+        if (val.fasadsol && volA.length) kor.ytaFasad = { W: y.W, H: y.H, s: y.s, x0: y.x0, y1: y.y1, dtm: y.dtm, dsm: Fasadsol.rensaUnderKroppar(y, volA) };
         if (volA.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, volA);
         if (val.skugga) {
           delFramsteg('analys', 0.3, 'Räknar skuggor');
@@ -2627,6 +2639,79 @@
     }
   }
 
+  /**
+   * Sol på fasaderna (0.15.0): byggnadskropparnas fasader (utom de som rivs) med klar himmel.
+   * js/fasadsol.js räknar, js/fasadsolblad.js ritar PDF:en. Omgivningen är ytmodellen utan kropparna
+   * (kor.ytaFasad, se skapaAnalyser) och terrängen bortom den (Markhöjdmodell inom 5 km).
+   */
+  async function skapaFasadsol(kor) {
+    const { auth, delFramsteg, epsg, extraInfo, filer, mitt, namn, projekt, sammanExtra, senaste, val, varningar, MARG_SKUGGA } = kor;
+    if (!val.fasadsol) return;
+    const volA = Kropp.forAnalys(senaste.volymer);
+    if (!volA.length) return;
+    try {
+      delFramsteg('fasadsol', 0, 'Räknar sol på fasaderna');
+      const yta = kor.ytaFasad || null, konv = mitt.konvergens;
+      const { punkter, fasader } = Fasadsol.punkter(volA, { steg: 1, konv, mark: yta ? (x, y) => Analys.nod(yta, yta.dtm, x, y) : null });
+      if (!punkter.length) { varningar.push('Sol på fasaderna: byggnaderna har inga fasader ovan mark.'); return; }
+      const miljo = { yta, vol: Fasadsol.hinderraster(volA) }, DEL = 150;
+      for (let k = 0; k < punkter.length; k += DEL) {
+        Fasadsol.horisonter(punkter, miljo, { fran: k, till: Math.min(punkter.length, k + DEL), maxAvst: MARG_SKUGGA });
+        delFramsteg('fasadsol', 0.7 * Math.min(1, (k + DEL) / punkter.length));
+        await new Promise(ok => setTimeout(ok, 0));
+      }
+      // terrängen bortom ytmodellen, sedd från kropparnas mitt på fasadernas medelhöjd
+      let fjarr = null, fjarrText = '';
+      const aSum = punkter.reduce((t, p) => t + p.a, 0);
+      const cx = punkter.reduce((t, p) => t + p.x * p.a, 0) / aSum, cy = punkter.reduce((t, p) => t + p.y * p.a, 0) / aSum, zMedel = punkter.reduce((t, p) => t + p.z * p.a, 0) / aSum;
+      try {
+        delFramsteg('fasadsol', 0.72, 'Räknar horisonten för fasaderna');
+        const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
+        const [E, N] = tm([cx, cy]);
+        const fj = await T.lasHojderGrov({ xmin: E - 5000, xmax: E + 5000, ymin: N - 5000, ymax: N + 5000 }, 8, auth);
+        const ll = T.omvandlare(3006, 4326).forward([E, N]);
+        fjarr = Analys.horisont(E, N, zMedel, null, fj, konvergens(3006, ll[1], ll[0]), { minAvst: MARG_SKUGGA });
+        if (fj.fel.length) fjarrText = ` ${fj.fel.length} av Markhöjdmodellens rutor runt platsen gick inte att läsa; horisonten saknar terrängen där.`;
+      } catch (e) {
+        console.error(e);
+        fjarrText = ` Terrängen längre bort än ${MARG_SKUGGA} m kunde inte läsas (${e.message}) och skuggar inte.`;
+      }
+      if (fjarrText) varningar.push('Sol på fasaderna:' + fjarrText);
+      delFramsteg('fasadsol', 0.8, 'Summerar sol på fasaderna');
+      await new Promise(ok => setTimeout(ok, 0));
+      const period = $('fasadsol-period').value, tid = $('fasadsol-tid').value;
+      const res = Fasadsol.berakna(punkter, fasader, { lat: mitt.lat, lon: mitt.lon, konv, ar: SOL_AR, period, tid, fjarr });
+      // det som 3D-vyn och det sparade resultatet behöver; x och y i Float64 (zonens koordinater är stora)
+      const n = punkter.length, f32 = k => Float32Array.from(punkter, p => p[k]);
+      senaste.fasadsol = {
+        period, tid, ar: SOL_AR, skala: Fasadsol.skala(res),
+        punkter: { x: Float64Array.from(punkter, p => p.x), y: Float64Array.from(punkter, p => p.y), z: f32('z'), nx: f32('nx'), ny: f32('ny'), w: f32('w'), h: f32('h'), summa: res.punkt.summa, topp: res.punkt.topp },
+        grupper: res.grupper.map(g => ({ id: g.id, namn: g.namn, streck: g.streck, area: g.area, summa: g.summa, lokal: g.lokal, samtidig: g.samtidig, skuggning: g.skuggning })),
+        paket: Fasadsol.tillPaket(res, { horisont: fjarr }),
+      };
+      await laddaPdf();
+      const PN = Fasadsol.PERIODER[period].namn, TN = Fasadsol.TIDER[tid].namn;
+      filer[`fasadsol/${namn}_sol_pa_fasader.pdf`] = Fasadsolblad.blad({
+        res, fonter, titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
+        notis: [`Omgivningen: ${kor.laserYta ? `terräng, hus och träd ur laserdata ${kor.laserDatum}` : 'bara terrängen (ingen laserdata)'} inom ${MARG_SKUGGA} m, terrängen inom 5 km bortom det. Byggnader som rivs räknas inte.`],
+      });
+      filer[`fasadsol/${namn}_fasader.csv`] = Fasadsolblad.csv(res);
+      const max = (l, k) => l.reduce((m, g) => Math.max(m, g[k]), 0);
+      extraInfo.push('', 'SOL PÅ FASADERNA',
+        `  ${fmt(volA.length)} ${volA.length === 1 ? 'byggnad' : 'byggnader'}, ${fmt(fasader.length)} fasader, ${fmt(n)} punkter i ett rutnät på cirka 1 m. ${PN} ${SOL_AR}, ${TN}, svensk tid.`,
+        '  Klar himmel varje dag (ESRA, Linkes grumlighetsfaktor 3), diffus strålning efter Hay–Davies, reflex från marken med albedo 0,2.',
+        `  Skuggor från de andra byggnaderna och omgivningen: ${kor.laserYta ? `terräng, hus och träd (laserdata ${kor.laserDatum})` : 'terrängen'} inom ${MARG_SKUGGA} m och terrängen inom 5 km.` + fjarrText,
+        '  Summa (kWh/m²), lokal topp (högsta timmedel i en punkt, för rummen) och samtidig topp (högsta timmedel för hela fasaden, för kylningen):',
+        ...res.grupper.map(g => `    ${g.namn}, ${Fasadsol.STRECK_NAMN[g.streck]}: ${fmt(g.summa)} kWh/m², lokal ${fmt(g.lokal)} W/m², samtidig ${fmt(g.samtidig)} W/m²` +
+          (g.skuggning.volymer > 0.005 || g.skuggning.omgivning > 0.005 ? `, ${fmt(g.skuggning.volymer * 100)} % mindre direkt sol av andra byggnader och ${fmt(g.skuggning.omgivning * 100)} % av omgivningen` : '')),
+        '  Filer: _sol_pa_fasader.pdf (staplar, timme × dag, värsta dygnet) och _fasader.csv (en rad per fasad, SWEREF).');
+      sammanExtra.push(['Sol på fasaderna', `${fasader.length} fasader, samtidig topp högst ${fmt(max(res.grupper, 'samtidig'))} W/m²`]);
+    } catch (e) {
+      console.error(e);
+      varningar.push('Sol på fasaderna: ' + e.message);
+    }
+  }
+
   /** Lutning och skyfall som egna PDF:er (vektor), med hus och gränser för orientering. */
   async function skapaLagerPdf(kor) {
     const { epsg, filer, namn, projekt, r, senaste, varningar } = kor;
@@ -2792,7 +2877,7 @@
    * räknas in i markmodellen från skapaTerrang, byggnaderna behövs för träden och skuggorna,
    * ortofotot för vägarnas bredd, och bladet, den samlade DXF:en och zip-filen kommer sist.
    */
-  const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaStrandskydd, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaLagerPdf, skapaBlad, skrivBildguide, skapaProjektfilen, skapaSamladDxf, forberedZip, noteraHamtminne, visaKlart];
+  const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaStrandskydd, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaFasadsol, skapaLagerPdf, skapaBlad, skrivBildguide, skapaProjektfilen, skapaSamladDxf, forberedZip, noteraHamtminne, visaKlart];
 
   $('skapa').addEventListener('click', async () => {
     const kor = {};
@@ -3380,7 +3465,7 @@
       sannNord: m.konvergens,
       rutnat: s && s.rutnat, kurvor: s && s.kurvor, trad: s && s.trad, vagar: s && s.vagar, stompunkter: s && s.stompunkter,
       volymer: state.volymer, byggnader: s && s.byggnader, fastigheter: s && s.fastigheter, fastighetVarning: Fastighet.VARNING,
-      ortofoto: ortofotoTillCadApa(s), projektlank: projektlank(), kalla: `Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
+      ortofoto: ortofotoTillCadApa(s), fasadsol: s && s.fasadsol && !s.fasadsol.inaktuell ? s.fasadsol.paket : null, projektlank: projektlank(), kalla: `Höjdkurvor ${window.HOJDKURVOR ? window.HOJDKURVOR.version : ''}`.trim(),
     });
   }
   /**
@@ -3424,6 +3509,7 @@
     planAndrad = true;
     const s = state.senaste;
     if (s) {
+      if (s.fasadsol) s.fasadsol.inaktuell = true;   // sol på fasaderna gäller den gamla skissen
       s.volymer = vol.filter(v => v.golv === v.golv && v.golv != null).map(v => Object.assign({}, v));
       if (s.byggnaderAlla) objektAndrat(); else planeraResultatSpara();
     }
@@ -3559,6 +3645,7 @@
       analys: {
         skuggdatum: [...document.querySelectorAll('input[name=skuggdatum]:checked')].map(c => c.value),
         skuggtider: $('skuggtider').value, ogonhojd: $('ogonhojd').value, horisontTom: $('hor-tomt').checked,
+        fasadsolPeriod: $('fasadsol-period').value, fasadsolTid: $('fasadsol-tid').value,
       },
       utskrift: lager.las('localStorage', 'terrang-utskrift') || {},
       dolda3d: lager.las('sessionStorage', 'terrang-3d-dolda') || [],
@@ -3586,6 +3673,7 @@
       if (a.skuggtider != null) $('skuggtider').value = a.skuggtider;
       if (a.ogonhojd != null) $('ogonhojd').value = a.ogonhojd;
       if (a.horisontTom != null) $('hor-tomt').checked = !!a.horisontTom;
+      satValj('fasadsol-period', a.fasadsolPeriod); satValj('fasadsol-tid', a.fasadsolTid);
       sparaExtra();
     }
     if (v.utskrift && Object.keys(v.utskrift).length) {
@@ -4198,6 +4286,7 @@
         befintlig: sparadFarg('terrang-3d-husfarg', '#b9b3aa'), skissfarg: sparadFarg('terrang-3d-skissfarg', farg('annot')),
         konturfarg: sparadFarg('terrang-3d-konturfarg', '#000000'), gransfarg: sparadFarg('terrang-3d-gransfarg', farg('fastighet')),
         takmodeller: takm,
+        fasadsol: s.fasadsol && !s.fasadsol.inaktuell ? s.fasadsol : null,
         tradniva: ['detaljerad', 'realistisk'].includes(lager.las('localStorage', 'terrang-3d-trad')) ? 'detaljerad' : 'enkel',
         konturer: lager.las('localStorage', 'terrang-3d-konturer') === true, sol,
         bakgrund: farg('karta-bg'), mark: farg('kurva'), ram: farg('ram'), volym: farg('annot'),
@@ -4236,6 +4325,8 @@
       const kan = vy3d.skuggor() != null;
       $('vy3d-skuggor').hidden = !kan;
       satSkuggor3d(kan && lager.las('sessionStorage', 'terrang-3d-skuggor') === true);
+      if (vy3d.fasadsol() != null) { const fl = lager.las('sessionStorage', 'terrang-3d-fasadsol'); satFasadsol3d(typeof fl === 'string' ? fl : 'summa'); }
+      else satFasadsol3d(null);
     } catch (e) {
       console.error(e);
       $('vy3d-yta').textContent = '3D-vyn kunde inte öppnas: ' + e.message;
@@ -4646,8 +4737,22 @@
   /** Visar fält som gäller formen (data-for="block prisma …"), döljer de andra. */
   const visaFor = (rot, typ) => rot.querySelectorAll('[data-for]').forEach(el => { el.hidden = !el.dataset.for.split(' ').includes(typ); });
   let vantarPlacering = false;
+  /** Sol på fasaderna i 3D-vyn (0.15.0): '' (av), 'summa' eller 'topp'; null döljer valet. */
+  function satFasadsol3d(lage) {
+    const kan = lage != null && vy3d && vy3d.fasadsol() != null;
+    $('vy3d-fasadsol-rad').hidden = !kan;
+    $('vy3d-fasadskala').hidden = !kan || !lage;
+    if (!kan) return;
+    vy3d.fasadsol(lage);
+    $('vy3d-fasadsol').value = lage;
+    if (lage) { const sk = (state.senaste && state.senaste.fasadsol && state.senaste.fasadsol.skala) || Fasadsol.SKALA, [a, b] = sk[lage]; $('vy3d-fasadskala-a').textContent = fmt(a); $('vy3d-fasadskala-b').textContent = `${fmt(b)} ${lage === 'summa' ? 'kWh/m²' : 'W/m²'}`; }
+  }
+  $('vy3d-fasadsol').addEventListener('change', () => { lager.spara('sessionStorage', 'terrang-3d-fasadsol', $('vy3d-fasadsol').value); satFasadsol3d($('vy3d-fasadsol').value); });
   function skissFran3d(ut) {
     if (ut.typ === 'andrad') {
+      // värdena på fasaderna gäller inte längre (vy3d tar bort dem själv)
+      if (state.senaste && state.senaste.fasadsol) state.senaste.fasadsol.inaktuell = true;
+      satFasadsol3d(null);
       const fran3d = new Set(ut.volymer.map(v => v.id));
       state.volymer = ut.volymer.map(v => Object.assign({}, v)).concat(utanfor3d.filter(v => !fran3d.has(v.id)));
       if (state.senaste) { state.senaste.volymer = state.volymer.filter(v => v.golv === v.golv && v.golv != null).map(v => Object.assign({}, v)); planeraResultatSpara(); }

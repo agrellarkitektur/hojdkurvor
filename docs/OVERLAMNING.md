@@ -1,9 +1,21 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 21 november 2026, 0.14.4.
+överlämning; historiken finns i git. Senast: 22 november 2026, 0.15.0.
 
 ## Läget
+
+- **0.15.0** 22 november (grenen `v0.15.0`): **sol på fasaderna** efter `overlamning-solanalys.md`
+  (claude.ai-projektet; versionsnumret och adressen där är rättade), på byggnadskropparna från 0.14.0
+  i stället för skissvolymerna. Se avsnittet *Sol på fasaderna* nedan. Utredningen om
+  användarskapad omgivning (`utredning-anvandarskapad-omgivning.md`) är införd i
+  `docs/SYNPUNKTER.md` som önskemål: etapp 1 som 0.17.0 (CL–CV), etapp 2–4 utan version (CZ–CÄ).
+  Testpunkter CG–CK; väntar: pagoda, STRÅNG, reflexer (CW–CY). Körda: alla 23 enhetstester (nytt:
+  `fasadsol.test.js`), nya `fasadsol_test.py` i alla tre teman, och `ui_test.py`, `projekt_test.py`,
+  `resultat_test.py`, `planvy_test.py`, `mobil_test.py`, `las_test.py`, `fastighetsnamn_test.py`
+  (ritning). Testdatan byggdes med GDAL (python3.12) enligt *Testmiljön*. **Inte provat**: riktiga
+  tomter med många byggnader (tiden: cirka 1,5 s per 3 500 punkter utan omgivning, mer med
+  ytmodellen), iPhone, och jämförelsen med Hudiksvall på den riktiga platsen (CH).
 
 - **0.14.4** 21 november (grenen `v0.14.4`): svar på ägarens test 20 november (AÄ–BM). AÖ, BD, BF,
   BH, BI, BJ, BM godkända och strukna; ändrat och testas som BÄ, BÖ, CA, CB; nytt i inkorgen CC–CF
@@ -313,6 +325,56 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## Sol på fasaderna (0.15.0)
+
+- **Beräkningen** (`js/fasadsol.js`, `Fasadsol`, ren, UMD med `Volym3D` och `Sol`; testas i
+  `test/fasadsol.test.js`, tänkt att kunna tas rakt av till cad-apa):
+  1. `punkter(volymer, { steg: 1, mark, konv })`: per sida i fotavtrycket (moturs, normalen utåt)
+     kolumner på cirka 1 m och rader upp till väggens topp (takfoten, gavlarna upp till taket via
+     `Volym3D.hojdVid` strax innanför väggen). Punkter under marken och punkter inne i en annan
+     kropp (0,1 m utanför väggen, `Volym3D.inutiVolym`) räknas inte; fogen mellan två kroppar blir
+     alltså ingen fasad. Varje punkt har sin area (`w × h`). Fasaderna har sant azimut och
+     väderstreck (N 315–45°, Ö, S, V).
+  2. `hinderraster(volymer)`: kropparna som höjdraster med 0,5 m rutor och vilken kropp som är
+     högst i rutan. `rensaUnderKroppar(yta, volymer)`: ytmodellen med marken i stället för det som
+     står på kropparna (plus 1 m), så att gamla tak och buskar inte skuggar kroppen.
+  3. `horisonter(pts, { yta, vol }, { azSteg: 2, maxAvst: 150, start: 0,75 })`: horisonten framför
+     varje punkt (90 vinklar i halvplanet framför fasaden), i tre steg på samma gång: `egen` (bara
+     kroppens egna rutor, för inbuktade fotavtryck), `vol` (alla kroppar) och `alla` (kropparna och
+     ytmodellen, bilinjärt). Steget börjar 0,75 m ut, så att väggens egna rutor (0,5 m) aldrig
+     träffas. Ger också `sedd`, himlens andel (0,5 fri), ur `alla`.
+  4. `berakna(pts, fasader, { lat, lon, konv, ar, period, tid, fjarr })`: varje dag i perioden och
+     varje timme (svensk tid, mitt i timmen, `Sol.lokalTillMs`) med solen över horisonten:
+     `klarHimmel` (ESRA, Linke 3) och `motFasad` (direkt, Hay–Davies, mark albedo 0,2). Summa och
+     lokal topp per punkt räknas bara under tiden (kl. 8–17 = timmarna 8–16), samtidig topp per
+     fasad och per grupp (kropp och väderstreck) likaså. `matris` (dagar × 24, areaviktat W/m²)
+     har alla timmar, för timme × dag-diagrammet. Värsta dygnet = dagen med den samtidiga toppen.
+     Skuggningen: direkt sol med bara `egen` mot `vol` mot `alla` (och den fjärran horisonten).
+  5. `tillPaket(res, { horisont })`: platspaketets `fasadsol`. `skala(res)`: summans skala följer
+     periodens längd (700 för 185 dagar) och växer om någon punkt får mer.
+- **Kontroll mot Hudiksvall**: ett fristående block 60 × 20 × 22 m, kl. 8–17, 21/3–21/9 ger
+  samtidiga toppar 816 / 850 / 780 W/m² (Ö / S / V) mot underlagets 806 / 831 / 850. Väster blir
+  lägre; med timmarna 8–17 som ögonblick (inte mitt i timmen) blir det 821 / 858 / 810, så
+  underlaget har troligen räknat till kl. 17:00 och blocket står inte exakt i nord–syd. Summorna
+  blir högre än i underlaget (söder 957 mot 634), eftersom himlen är klar varje dag.
+- **app.js**: valet `tillval=fasadsol` (`effektivaVal().fasadsol` bara när det finns kroppar,
+  `Kropp.forAnalys`), `#fasadsol-period` och `#fasadsol-tid` i `val.analys` och i localStorage
+  (`terrang-analys`). Med fasadsol behövs ytmodellen (`behoverYta`) och marginalen 150 m
+  (`MARG_SKUGGA`). `skapaAnalyser` sparar `kor.ytaFasad` (ytmodellen efter dolda/ersatta hus,
+  före inbränningen av kropparna). Steget `skapaFasadsol` (efter `skapaSol`) räknar i delar om 150
+  punkter med `await`, läser terrängen inom 5 km (`T.lasHojderGrov`, 8 m) och räknar
+  `Analys.horisont(…, { minAvst: 150 })` från kropparnas mitt på fasadernas medelhöjd, och
+  skriver `fasadsol/<namn>_sol_pa_fasader.pdf` (`js/fasadsolblad.js`) och `_fasader.csv`.
+  `senaste.fasadsol` = { period, tid, ar, skala, punkter (x och y Float64, resten Float32),
+  grupper, paket }; `inaktuell: true` när skissen ändras i planvyn eller 3D-vyn.
+- **3D-vyn**: lagret `fasadsol` (en ruta per punkt 5 cm utanför väggen, `MeshBasicMaterial` med
+  hörnfärger i sRGB), `vy3d.fasadsol('summa' | 'topp' | '')`, null utan data. Skissen är ljusgrå
+  medan fasaderna är färgade (`skissfarg()` ger fortfarande den egna färgen). `meddelaSkiss('andrad')`
+  tar bort datan. I app.js `satFasadsol3d`, valet `#vy3d-fasadsol` och skalan `#vy3d-fasadskala`
+  (sessionStorage `terrang-3d-fasadsol`, förval summa).
+- **Inte gjort**: pagoda (utkragning per våning), STRÅNG, reflexer mellan byggnaderna, tak (bara
+  fasader), sol på fasaderna i platsanalysbladet (egen PDF). cad-apa läser inte `fasadsol` än.
 
 ## Byggnadskroppar och planvyn (0.14.0)
 
@@ -875,24 +937,29 @@ Flytten är klar (se `docs/FLYTT.md`). Kvar utanför repot: `url` i
 `apps/hojdkurvor/app.json` i agrellarkitektur/apps, och att ta bort
 FTP-secrets och `stang-webbhotellet.yml` när avstängningen är gjord.
 
-Versionsplanen (19 november, kan ändras av ägaren):
+Versionsplanen (22 november, kan ändras av ägaren; omgivningen är ny som 0.17.0, och det som låg
+som 0.15.0–0.18.0 i planen 19 november är flyttat två steg):
 
 | Version | Innehåll |
 |---|---|
-| 0.13.x | Rättelser efter testet (BB, BD–BI, AW, AY, AZ, AÅ, AR–AV, AÄ, AÖ) |
-| före/efter 0.14.0 | Räkna om skissen med hämtad data (BK, ägaren har sagt ja; ordningen öppen) |
-| 0.14.0 | Sol på fasaderna (`overlamning-solanalys.md` i claude.ai-projektet) |
-| 0.15.0 | Förslag och sparade vyer (projektfilen, etapp 3). Planen säger helst före solanalysen; fråga ägaren om ordningen |
-| 0.16.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
-| 0.17.0 | Bergytemodell och geologiblock i platspaketet (geologi etapp 3–4) |
-| 0.18.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
+| 0.15.0 | Sol på fasaderna (byggd 22 november; testas som CG–CK) |
+| 0.15.x | Rättelser efter ägarens test av 0.14.x och 0.15.0 |
+| 0.16.0 | Situationsplanen: annotering, ritningshuvud, teckenförklaring, PDF och DXF (etapp 3 i `plan-skiss-situationsplan.md`) |
+| 0.17.0 | Användarskapad omgivning, etapp 1: intuitiv modellering och val per projekt och byggnad (CL–CV, `utredning-anvandarskapad-omgivning.md`) |
+| 0.18.0 | Förslag och sparade vyer (projektfilen, etapp 3) |
+| 0.19.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
+| 0.20.0 | Bergytemodell och geologiblock i platspaketet (geologi etapp 3–4) |
+| 0.21.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
+| ej bestämd | Omgivningen etapp 2–4 (CZ–CÄ), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY), räkna om skissen utan att räkna allt (BK) |
 
-1. För in testresultaten (BI, BJ, BM och de äldre under *Att testa*). Rättelser blir 0.13.x.
-2. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i
-   panelen.
+1. För in ägarens testresultat (CG–CK för 0.15.0 och de öppna punkterna under *Att testa* för
+   0.14.x). Rättelser blir 0.15.x.
+2. Projektuppgifter (uppdrag, anteckning) har fält i formatet men inte i panelen; de behövs för
+   situationsplanens ritningshuvud (0.16.0).
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid
    Skapa, föreslå den fastighet som har störst del av utsnittet
    (`fi.fastigheter[0]`).
+4. Omgivningen (0.17.0) börjar med en prototyp av interaktionen (CL) innan datamodellen låses.
 
 ### Fastighetsnamn ur kartan (AX, byggt i 0.13.1)
 
@@ -946,7 +1013,7 @@ går inte att läsa.
 - Licensvillkoren för Riksantikvarieämbetets och MCF:s data och
   kommungränserna (`data/kommuner.json`) är inte kontrollerade.
 - Myndigheternas tjänster i kapitlet Skydd är bara testade mot låtsassvar.
-- Flytten till hojdkurvor.danaid.cloud är klar (0.13.1). Lantmäteriet behöver
+- Flytten till hojdkurvor.danaid.cloud är klar (0.13.1); från 0.14.1 är adressen hojdkurvor.se. Lantmäteriet behöver
   inte godkänna adressen (kontrollerat 17 november). Se `docs/FLYTT.md`.
 
 ## Testmiljön

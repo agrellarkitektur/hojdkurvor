@@ -36,7 +36,7 @@
    * Bygger ett platspaket. o: { projekt, kommun, projektId, epsg, systemNamn, utsnitt, nollpunkt {x,y,z},
    *   vridning, sannNord, rutnat {W,H,s,x0,y1,z}, kurvor, trad, vagar, stompunkter, volymer, byggnader,
    *   fastigheter { granser, punkter, ytor }, fastighetVarning, ortofoto { bild, x0, y1, s, W, H, ar },
-   *   projektlank, kalla }
+   *   projektlank, kalla, fasadsol (Fasadsol.tillPaket) }
    */
   function platspaket(o) {
     const p = {
@@ -106,6 +106,8 @@
       if (o2.ar) p.ortofoto.ar = o2.ar;
       p.licens = p.licens.replace(/^(Höjddata[^©]*?) ©/, (m, a) => a.replace(/ och ([^,]+)$/, ', $1') + ' och ortofoto ©');
     }
+    // Sol på fasaderna (0.15.0): topparna per fasad och horisonten, se Fasadsol.tillPaket
+    if (o.fasadsol && Array.isArray(o.fasadsol.fasader) && o.fasadsol.fasader.length) p.fasadsol = o.fasadsol;
     return p;
   }
   /**
