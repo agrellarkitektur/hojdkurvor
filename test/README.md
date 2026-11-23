@@ -207,7 +207,21 @@ Enhetstestet för situationsplanen (`node test/situationsplan.test.js`, 0.16.0) 
 (skalet, och kropparna var för sig när en är markerad), måtten på skalet och vilka som går att
 ändra, dolda och flyttade mått, etiketterna (FG per kropp när golven skiljer), skrafferingen,
 ramen, DXF:ens lager och texter och PDF:en i A3 och A4. Union, skal och BYA prövas i
-`test/kropp.test.js`.
+`test/kropp.test.js`. Från 0.16.1 också underlaget, gränserna ovanpå, *Mått* av, koordinatlistan,
+ledaren och skrafferingen runt texterna; markeringen i plan med indrag och takanslutningen prövas i
+`test/kropp.test.js`, egna träd i `test/objektval.test.js`, reservservern och klippt geometri i
+`test/geodata.test.js` och fasadsolbladets översikt i `test/fasadsol.test.js`.
+
+```
+python3 test/planverktyg_test.py test/ut ritning
+```
+
+`planverktyg_test.py` (0.16.1, gränssnitt) skapar underlaget med byggnader, fastighetsgränser,
+ortofoto och träd och prövar i planvyn: ortofotot och höjdkurvorna under ritningen, *Redovisas i
+plan* (kryss och nock), knappen *Mått*, numrerade hörn med koordinatlista, en ledare, *Vrid mot*,
+ett eget träd som läggs till och tas bort, *Fastighet* ur kartan, *Anslut taket*, situationsplanen
+som PDF (`planverktyg.pdf`, med koordinatlistan, ledaren och höjdkurvorna) och att ledaren och valen
+ligger kvar efter omladdning. Skärmbild `planverktyg_1_<tema>.png`.
 
 Enhetstestet för sol på fasaderna (`node test/fasadsol.test.js`, 0.15.0) prövar klar himmel mot
 överslaget 2 april i Hudiksvall, väderstreck och himlens andel, fasadpunkterna (area, gavlar,

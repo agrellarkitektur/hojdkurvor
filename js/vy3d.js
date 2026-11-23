@@ -358,16 +358,30 @@
     const byggVolym = (v, mat, takMat2) => {
       const g = new THREE.Group();
       g.userData.volym = v.id;
-      const fp = V3 ? V3.franVolym(v).fotavtryck : v.fotavtryck;
+      // takanslutningen (0.16.1): taket och väggarna under det dras ut i 3D, inte i plan
+      const fp0 = V3 ? V3.franVolym(v).fotavtryck : v.fotavtryck;
+      const vu = V3 && V3.utdragen ? V3.utdragen(Object.assign({}, v, { fotavtryck: fp0 })) : v;
+      const fp = vu.fotavtryck;
       const shape = new THREE.Shape(fp.map(p => new THREE.Vector2(p[0] - cx, p[1] - cy)));
-      const vagg = new THREE.ExtrudeGeometry(shape, { depth: Math.max(0.05, v.takfot), bevelEnabled: false });
+      // skärmtak (0.16.1): ett tunt tak på stolpar i hörnen i stället för väggar
+      const skarm = v.slag === 'skarmtak', TJ = Math.min(0.25, Math.max(0.05, v.takfot) / 2);
+      const vagg = new THREE.ExtrudeGeometry(shape, { depth: skarm ? TJ : Math.max(0.05, v.takfot), bevelEnabled: false });
       vagg.rotateX(-Math.PI / 2);
       const mesh = new THREE.Mesh(vagg, mat);
-      mesh.position.y = v.golv - zmin;
+      mesh.position.y = v.golv - zmin + (skarm ? Math.max(0.05, v.takfot) - TJ : 0);
       g.add(mesh);
+      if (skarm) {
+        const c = fp.reduce((s2, p) => [s2[0] + p[0] / fp.length, s2[1] + p[1] / fp.length], [0, 0]);
+        for (const p of fp) {
+          const dx = c[0] - p[0], dy = c[1] - p[1], l = Math.hypot(dx, dy) || 1, q = [p[0] + dx / l * 0.2, p[1] + dy / l * 0.2];
+          const st = new THREE.Mesh(new THREE.BoxGeometry(0.15, Math.max(0.05, v.takfot - TJ), 0.15), mat);
+          st.position.set(q[0] - cx, v.golv - zmin + (v.takfot - TJ) / 2, -(q[1] - cy));
+          g.add(st);
+        }
+      }
       // sockel ner till marken där den sluttar under volymen
       const lagst = Math.min(...fp.map(p => markZ(p[0], p[1])));
-      if (v.golv - lagst > 0.05 && !(v.primitiv && v.primitiv.pa)) {
+      if (!skarm && v.golv - lagst > 0.05 && !(v.primitiv && v.primitiv.pa)) {
         const sg = new THREE.ExtrudeGeometry(shape, { depth: v.golv - lagst, bevelEnabled: false });
         sg.rotateX(-Math.PI / 2);
         const sockel = new THREE.Mesh(sg, mat);
@@ -375,7 +389,7 @@
         g.add(sockel);
       }
       if (v.takform && v.takform !== 'platt' && v.taklutning > 0) {
-        const t = V3 ? V3.takytor(v) : null;
+        const t = V3 ? V3.takytor(vu) : null;
         let tg = null;
         if (t) {
           const tp = new Float32Array(t.pos.length);
@@ -391,7 +405,7 @@
           for (let j = 0; j < my; j++) for (let i = 0; i < mx; i++) {
             const x = Math.min(x1, x0 + i * st), y = Math.min(y1, y0 + j * st), n = j * mx + i;
             inne[n] = Platsanalys.inuti(fp, x, y) ? 1 : 0;
-            tp[n * 3] = x - cx; tp[n * 3 + 1] = Platsanalys.takhojd(v, x, y) - zmin; tp[n * 3 + 2] = -(y - cy);
+            tp[n * 3] = x - cx; tp[n * 3 + 1] = Platsanalys.takhojd(vu, x, y) - zmin; tp[n * 3 + 2] = -(y - cy);
           }
           for (let j = 0; j < my - 1; j++) for (let i = 0; i < mx - 1; i++) {
             const a = j * mx + i, b = a + 1, c = a + mx, d = c + 1;
@@ -437,7 +451,8 @@
       }
       if (alla.length) {
         let strackor = alla;
-        if (V3 && kanter && volymer.length > 1) strackor = V3.synligaKanter(alla.concat(V3.skarningar(volymer)), volymer);
+        const vu = V3 && V3.utdragen ? volymer.map(v => V3.utdragen(v)) : volymer;
+        if (V3 && kanter && volymer.length > 1) strackor = V3.synligaKanter(alla.concat(V3.skarningar(vu)), vu);
         const p = [];
         for (const [a, b] of strackor) p.push(a[0] - cx, a[2] - zmin, -(a[1] - cy), b[0] - cx, b[2] - zmin, -(b[1] - cy));
         const geo = new THREE.BufferGeometry();
@@ -462,7 +477,7 @@
     // medan fasaderna är färgade är skissen ljusgrå, så att färgerna går att läsa (taken syns)
     let skissFargEgen = null;
     const ritaFasadsol = () => {
-      for (const o of fasadLager.children.slice()) { fasadLager.remove(o); kastaBort(o); }
+      for (const o of fasadLager.children.slice()) { fasadLager.remove(o); if (!o.isSprite) kastaBort(o); }
       const pa = !!(fasadData && fasadLage);
       if (pa && !skissFargEgen) { skissFargEgen = '#' + skissMat.color.getHexString(); satSkissfarg('#d9d6cf'); }
       else if (!pa && skissFargEgen) { satSkissfarg(skissFargEgen); skissFargEgen = null; }
@@ -485,7 +500,39 @@
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
       fasadLager.add(new THREE.Mesh(geo, fasadMat));
+      // fasadernas nummer som på bladet (0.16.1): mitt på varje vägg, en meter ut
+      if (p.f && fasadData.fasadNr) {
+        const sum = new Map();
+        for (let k = 0; k < n; k++) {
+          const f = p.f[k], a2 = p.w[k] * p.h[k], o = sum.get(f) || { a: 0, x: 0, y: 0, z: 0, nx: p.nx[k], ny: p.ny[k] };
+          o.a += a2; o.x += p.x[k] * a2; o.y += p.y[k] * a2; o.z += p.z[k] * a2;
+          sum.set(f, o);
+        }
+        for (const [f, o] of sum) {
+          const nr = fasadData.fasadNr[f];
+          if (!nr) continue;
+          const sp = new THREE.Sprite(nummerMaterial(nr));
+          sp.position.set(o.x / o.a + o.nx * 1.0 - cx, o.z / o.a - zmin, -(o.y / o.a + o.ny * 1.0 - cy));
+          sp.scale.set(0.03, 0.03, 1);
+          sp.renderOrder = 5;
+          fasadLager.add(sp);
+        }
+      }
     };
+    const nummerCache = new Map();
+    /** En rund orange bricka med fasadens nummer, som på bladet (0.16.1). Samma storlek på skärmen oavsett avstånd. */
+    function nummerMaterial(nr) {
+      if (nummerCache.has(nr)) return nummerCache.get(nr);
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const g = c.getContext('2d');
+      g.fillStyle = '#e85528'; g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fill();
+      g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+      g.fillStyle = '#ffffff'; g.font = 'bold 30px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(nr), 32, 34);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      const m = new THREE.SpriteMaterial({ map: t, sizeAttenuation: false, depthTest: true, transparent: true });
+      nummerCache.set(nr, m);
+      return m;
+    }
 
     // ------------------------------------------------------------------
     // Ljus och skuggor
@@ -1557,5 +1604,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.16.0' };
+  window.Vy3D = { visa, version: '0.16.1' };
 }());

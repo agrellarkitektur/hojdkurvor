@@ -134,4 +134,19 @@ prov('perioder och färgskala', () => {
   assert.deepStrictEqual(F.farg(1), [200, 40, 40]);
 });
 
+prov('0.16.1: bladet med översikten (3D, nyckelplan, numrerade kort) och utan punkter som förut', () => {
+  globalThis.window = globalThis;
+  globalThis.jspdf = require('../vendor/jspdf.umd.min.js');
+  const B = require('../js/fasadsolblad.js');
+  const vol = [block('a', 0, 0, 20, 10, 6), block('b', 30, 0, 8, 8, 4)];
+  const o = Object.assign({ steg: 2 }, HUD);
+  const { punkter, fasader } = F.punkter(vol, o);
+  F.horisonter(punkter, { yta: null, vol: F.hinderraster(vol) }, o);
+  const res = F.berakna(punkter, fasader, Object.assign({ period: 'april', tid: 'kontor' }, o));
+  const titel = { projekt: 'Prov', kommun: 'Hudiksvall', system: 'SWEREF 99 TM' };
+  const med = B.blad({ res, punkter, volymer: vol, titel, dok: true }), utan = B.blad({ res, titel, dok: true });
+  assert.strictEqual(med.getNumberOfPages(), utan.getNumberOfPages() + 1, 'en översiktssida till');
+  assert(B.blad({ res, punkter, volymer: vol, titel }).byteLength > 20000);
+});
+
 console.log(`${antal} prov godkända`);

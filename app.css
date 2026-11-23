@@ -618,9 +618,9 @@ body.vy3d-oppen { overflow: hidden; }
 .planvy[hidden] { display: none; }
 .planvy-huvud { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; border-bottom: 1px solid var(--rule); }
 .planvy-huvud h2 { margin: 0 8px 0 0; font-family: var(--mono); font-size: 13px; letter-spacing: .14em; font-weight: 500; text-transform: uppercase; }
-.planvy-verktyg { display: flex; flex-wrap: wrap; gap: 6px; }
+.planvy-verktyg { display: flex; flex-wrap: wrap; gap: 4px; }
 .planvy-verktyg:last-child { margin-left: auto; }
-.planvy-huvud .knapp.liten { margin: 0; }
+.planvy-huvud .knapp.liten { margin: 0; min-height: 30px; padding: 4px 8px; font-size: 12px; }
 .planvy-kropp { flex: 1; min-height: 0; display: flex; }
 .planvy-yta { position: relative; flex: 1; min-width: 0; background: var(--pv-papper); overflow: hidden; }
 .planvy-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; cursor: default; font-family: var(--mono); }
@@ -659,6 +659,35 @@ body.vy3d-oppen { overflow: hidden; }
 .planvy-status { color: var(--muted); white-space: nowrap; }
 .planvy-mattin { position: absolute; z-index: 2; width: 80px; height: 28px; padding: 0 6px; border: 2px solid var(--pv-vald); background: var(--pv-papper); color: var(--pv-ink); font: 13px var(--mono); }
 .planvy-mattin[hidden] { display: none; }
+/* 0.16.1: ledarens text, underlaget, takanslutning och koordinatlistan */
+.planvy-textin { position: absolute; z-index: 2; width: 220px; height: 28px; padding: 0 6px; border: 2px solid var(--pv-vald); background: var(--pv-papper); color: var(--pv-ink); font: 13px var(--ui); }
+.planvy-textin[hidden] { display: none; }
+.pv-u-orto { opacity: .8; image-rendering: auto; }
+[data-tema="mork"] .pv-u-orto { opacity: .6; }
+.pv-u-kurva { fill: none; stroke: var(--kurva); stroke-width: .8; opacity: .85; pointer-events: none; }
+.pv-u-hojdkurva_10m { stroke-width: 1.8; }
+.pv-u-hojdkurva_5m { stroke-width: 1.3; }
+.pv-u-hojdkurva_0_5m, .pv-u-hojdkurva_0_25m { stroke-width: .5; opacity: .6; }
+.pv-u-vag { fill: none; stroke: var(--vag); stroke-width: 2; opacity: .8; pointer-events: none; }
+.pv-u-vagyta { fill: color-mix(in srgb, var(--vag-yta) 14%, transparent); stroke: var(--vag-yta); stroke-width: 1; pointer-events: none; }
+.pv-u-strand { fill: none; stroke: var(--strand); stroke-width: 1.6; pointer-events: none; }
+.pv-u-strand300 { stroke-dasharray: 8 5; }
+.pv-u-natur { fill: color-mix(in srgb, var(--natur) 8%, transparent); stroke: var(--natur); stroke-width: 1.6; stroke-dasharray: 8 3 2 3; pointer-events: none; }
+.pv-u-lamning { fill: none; stroke: var(--sw-lamning); stroke-width: 2; }
+.pv-u-trad { fill: var(--trad-fyll); stroke: var(--trad); stroke-width: 1; pointer-events: none; }
+.pv-u-egen { stroke-width: 1.8; }
+.pv-u-dolt { fill: none; stroke-dasharray: 3 3; opacity: .6; }
+.pv-textbak { fill: var(--pv-papper); stroke: none; opacity: .92; pointer-events: none; }
+.pv-koordnr { fill: var(--pv-vald); font-weight: 700; pointer-events: none; paint-order: stroke; stroke: var(--pv-papper); stroke-width: 3px; stroke-linejoin: round; }
+.pv-ledare { stroke: var(--pv-ink); stroke-width: 1; }
+.pv-ledarpil { fill: var(--pv-ink); cursor: move; }
+.pv-ledartext { fill: var(--pv-ink); cursor: pointer; paint-order: stroke; stroke: var(--pv-papper); stroke-width: 3px; stroke-linejoin: round; }
+.pv-ledartext:hover { fill: var(--pv-hjalp); }
+.pv-anslut { margin: 4px 0 0; padding: 6px 8px 8px; border: 1px solid var(--rule); display: flex; flex-direction: column; gap: 6px; }
+.pv-anslut legend { padding: 0 4px; font-family: var(--mono); font-size: 11px; color: var(--panel-muted); }
+.pv-indrag { padding-left: 18px; }
+.pv-under-rubrik { margin: 8px 0 2px; font-size: 12px; font-weight: 600; color: var(--panel-muted); }
+.planvy-yta[data-verktyg="trad"] .planvy-svg, .planvy-yta[data-verktyg="ledare"] .planvy-svg, .planvy-yta[data-verktyg="fast"] .planvy-svg, .planvy-yta[data-verktyg="vridmot"] .planvy-svg { cursor: crosshair; }
 .planvy-mattdolj { position: absolute; z-index: 2; height: 28px; }
 .planvy-yta .planvy-mattdolj.knapp.liten { margin: 0; }
 .planvy-mattdolj[hidden] { display: none; }

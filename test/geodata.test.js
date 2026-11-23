@@ -147,5 +147,28 @@ const somDen = p => p;
   await assert.rejects(G.hamta('https://x/wfs'), /^Error: svarade 503 \(3 försök\) via servern$/);
   globalThis.TERRANG_KONFIG = { geodataProxy: '' };
 
+  // 0.16.1 (BG): geometri klippt mot rutan (null utanför) delas, och bara hela ringar är slutna
+  const d = G.osmDelar([{ lat: 1, lon: 1 }, { lat: 1, lon: 2 }, null, null, { lat: 2, lon: 2 }, { lat: 2, lon: 3 }, { lat: 3, lon: 3 }]);
+  assert.deepStrictEqual(d.map(x => [x.pts.length, x.sluten]), [[2, false], [3, false]]);
+  assert.deepStrictEqual(G.osmDelar([{ lat: 1, lon: 1 }, { lat: 1, lon: 2 }, { lat: 2, lon: 2 }, { lat: 1, lon: 1 }]).map(x => x.sluten), [true]);
+  globalThis.fetch = async url => (url.includes('overpass-api.de') ? svar(200, JSON.stringify({ elements: [{ type: 'relation', id: 5, tags: { natural: 'water', name: 'Vättern' },
+    members: [{ type: 'way', role: 'outer', geometry: [null, { lat: 58, lon: 15 }, { lat: 58, lon: 15.01 }, null] }] }] })) : svar(500, ''));
+  let vt = await G.vatten(ll, somDen);
+  assert.deepStrictEqual(vt.map(x => [x.namn, x.yta, x.sluten, x.pts.length]), [['Vättern', true, false, 2]]);
+  // huvudservern 502 tre gånger: reserven svarar
+  anrop = [];
+  globalThis.fetch = async url => { anrop.push(url); return url.includes('overpass-api.de') ? svar(502, '') : svar(200, JSON.stringify({ elements: [] })); };
+  vt = await G.vatten(ll, somDen);
+  assert.deepStrictEqual(vt, []);
+  assert.deepStrictEqual(anrop.map(u => u.includes('kumi')), [false, false, false, true]);
+  // båda faller: huvudserverns fel med reservens
+  globalThis.fetch = async () => svar(502, '');
+  await assert.rejects(G.vatten(ll, somDen), /svarade 502 \(3 försök\); reservservern svarade 502 \(3 försök\)/);
+  // ett fel i frågan (400) prövas inte mot reserven
+  anrop = [];
+  globalThis.fetch = async url => { anrop.push(url); return svar(400, ''); };
+  await assert.rejects(G.vatten(ll, somDen), /svarade 400/);
+  assert.strictEqual(anrop.length, 1);
+
   console.log('geodata.test.js: allt godkänt');
 })().catch(e => { console.error(e); process.exit(1); });

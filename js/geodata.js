@@ -25,6 +25,8 @@
     lamningarWms: 'https://pub.raa.se/visning/lamningar_v1/wms',
     oversvamningWms: 'https://gis-tjanster.mcf.se/arcgis/services/Oversvamningskarteringar/karteringar/MapServer/WmsServer',
     overpass: 'https://overpass-api.de/api/interpreter',
+    // Reserv när huvudservern inte svarar efter tre försök (0.16.1, BG)
+    overpassReserv: 'https://overpass.kumi.systems/api/interpreter',
   };
   /** Lager i Kulturmiljöregistret som räknas, från mest till minst skyddat. */
   const LAMNINGAR = [
@@ -101,6 +103,37 @@
         throw e2;
       }
     }
+  }
+  /**
+   * Overpass-fråga (POST) mot huvudservern och, om den fortfarande svarar med ett tillfälligt fel
+   * eller inte svarar alls efter tre försök, mot reservservern (0.16.1, BG). Felet från huvudservern
+   * står kvar om också reserven faller.
+   */
+  async function overpass(q, tid = 40000) {
+    const kropp = 'data=' + encodeURIComponent(q);
+    try { return await hamta(adress('overpass'), 'json', { metod: 'POST', kropp, tid }); } catch (e) {
+      const reserv = adress('overpassReserv');
+      if (!reserv || reserv === adress('overpass') || !(TILLFALLIGT.includes(e.status) || e.tidsgrans || e instanceof TypeError)) throw e;
+      try { return await hamta(reserv, 'json', { metod: 'POST', kropp, tid }); } catch (e2) {
+        e.message += `; reservservern ${e2 && e2.message ? e2.message : 'svarade inte'}`;
+        throw e;
+      }
+    }
+  }
+  /**
+   * Linjerna i en geometri ur `out geom(ruta)`: noder utanför rutan kommer som null, så linjen
+   * delas där (0.16.1). En linje räknas som sluten bara när hela ringen kom med.
+   */
+  function osmDelar(g) {
+    if (!g) return [];
+    const delar = []; let del = [];
+    for (const p of g) {
+      if (p && p.lat != null) del.push(p);
+      else { if (del.length >= 2) delar.push(del); del = []; }
+    }
+    if (del.length >= 2) delar.push(del);
+    const hel = delar.length === 1 && delar[0].length === g.length;
+    return delar.map(d => ({ pts: d, sluten: hel && d[0].lat === d[d.length - 1].lat && d[0].lon === d[d.length - 1].lon }));
   }
   const bboxText = b => [b.xmin, b.ymin, b.xmax, b.ymax].map(v => Math.round(v)).join(',');
   /** Rutan med nordvärdet först, som WFS 2.0 vill ha den för EPSG:3006 (axelordning N, E). */
@@ -237,7 +270,7 @@
   async function skyddadNaturOsm(llRuta, tillZon) {
     const bb = `${llRuta.syd},${llRuta.vast},${llRuta.nord},${llRuta.ost}`;
     const q = `[out:json][timeout:35];(nwr["leisure"="nature_reserve"](${bb});nwr["boundary"~"^(protected_area|national_park)$"](${bb}););out geom;`;
-    const svar = await hamta(adress('overpass'), 'json', { metod: 'POST', kropp: 'data=' + encodeURIComponent(q), tid: 40000 });
+    const svar = await overpass(q);
     const ut = [];
     for (const e of (svar.elements || [])) {
       const t = e.tags || {};
@@ -324,8 +357,10 @@
    */
   async function vatten(llRuta, tillZon) {
     const bb = `${llRuta.syd},${llRuta.vast},${llRuta.nord},${llRuta.ost}`;
-    const q = `[out:json][timeout:35];(way["natural"="water"](${bb});relation["natural"="water"](${bb});way["waterway"~"^(river|stream|canal)$"](${bb});way["natural"="coastline"](${bb}););out geom;`;
-    const svar = await hamta(adress('overpass'), 'json', { metod: 'POST', kropp: 'data=' + encodeURIComponent(q), tid: 40000 });
+    // Geometrin klipps mot rutan (out geom(ruta), 0.16.1): stora sjöar som Vättern gav annars så
+    // stora svar att Overpass svarade 502/504 (BG).
+    const q = `[out:json][timeout:35];(way["natural"="water"](${bb});relation["natural"="water"](${bb});way["waterway"~"^(river|stream|canal)$"](${bb});way["natural"="coastline"](${bb}););out geom(${bb});`;
+    const svar = await overpass(q);
     const ut = [];
     for (const e of (svar.elements || [])) {
       const t = e.tags || {};
@@ -333,9 +368,9 @@
         : t.water === 'river' ? 'vattendrag' : ANLAGT.test(t.water || '') ? 'anlagt' : 'sjö';
       const linjer = e.type === 'way' ? [e.geometry] : (e.members || []).filter(m => m.geometry).map(m => m.geometry);
       for (const g of linjer) {
-        if (!g || g.length < 2) continue;
-        const sluten = g[0].lat === g[g.length - 1].lat && g[0].lon === g[g.length - 1].lon;
-        ut.push({ typ, namn: t.name || '', yta: e.type !== 'way' || (t.natural === 'water' && sluten), sluten, pts: g.map(p => tillZon([p.lon, p.lat])) });
+        for (const d of osmDelar(g)) {
+          ut.push({ typ, namn: t.name || '', yta: e.type !== 'way' || (t.natural === 'water' && d.sluten), sluten: d.sluten, pts: d.pts.map(p => tillZon([p.lon, p.lat])) });
+        }
       }
     }
     return ut;
@@ -349,5 +384,5 @@
     naturOsm: 'Skyddad natur (reserv): © OpenStreetMap-bidragsgivare (ODbL).',
   };
 
-  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, TILLFALLIGT, hamta, medOmforsok, wfsUrl, natura2000Typ, ringar, skyddadNatur, skyddadNaturOsm, fogaRingar, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
+  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, TILLFALLIGT, hamta, medOmforsok, overpass, osmDelar, wfsUrl, natura2000Typ, ringar, skyddadNatur, skyddadNaturOsm, fogaRingar, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
 }));

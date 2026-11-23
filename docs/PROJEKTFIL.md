@@ -80,10 +80,12 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
                    "golv": 112.5, "takfot": 6, "takform": "sadel", "taklutning": 27,
                    "nockriktning": null, "primitiv": { … },
                    "status": "ny", "huvudbyggnad": false, "kalla": null, "entre": { "sida": 0, "t": 0.5 },
-                   "matt": { "<enhet>|y|90|0": { "dold": true } } } ],   // valfritt (0.16.0)
+                   "matt": { "<enhet>|y|90|0": { "dold": true } },   // valfritt (0.16.0)
+                   "slag": "huvud", "takutdrag": [0, 1.2] } ],       // valfria (0.16.1)
     "sektioner": [ { "id": "uuid", "namn": "A", "a": [x, y], "b": [x, y], "vand": false } ],
     "rattelser": { "tak": { "objektidentitet": { … } }, "trad": { "x,y": { … } }, "hus": { "objektidentitet": { … } } },
-    "punkter": [], "overlagringar": [], "anteckningar": [], "vyer": []
+    "punkter": [], "overlagringar": [], "anteckningar": [], "vyer": [],
+    "ledare": [ { "id": "uuid", "text": "Plank 1,8 m", "pts": [[x, y], [x, y]] } ]   // 0.16.1
   },
 
   "underlag": {
@@ -132,6 +134,16 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
   `y|<normalens riktning i hela grader>|<ordning>` (yttermått) eller
   `r|<den andra enheten>|<ordning>` (mellan byggnader). Fältet ligger på enhetens
   första kropp och följer inte med till cad-apa (behålls som de andra).
+  Från 0.16.1 finns `slag` (valfritt): hur kroppen redovisas i plan, `huvud`
+  (kryss), `komplement` (nocklinje mellan gavlarna) eller `skarmtak` (en
+  diagonal, och tak på stolpar i 3D); `huvudbyggnad` sätts efter det, så att äldre
+  versioner och cad-apa ser krysset. Och `takutdrag` (valfritt): `[bak, fram]` i
+  meter, hur långt taket dras ut längs nocken i 3D (bak = mot nockriktningens
+  början), för takanslutningar. Det ändrar inte fotavtrycket. Ny nockriktning tar
+  bort det. Båda behålls när skissen kommer tillbaka från cad-apa.
+- `ledare[]` (0.16.1): situationsplanens ledare med fritext, `pts` = [pilen,
+  textens punkt] i SWEREF 99 TM. Högst 200 tecken. `version` är oförändrad; äldre
+  filer får en tom lista.
 - `projekt.fastighet`, `uppdrag`, `ritadAv`, `ritningsnummer`: ritningshuvudet i
   situationsplanen (0.16.0; `ritadAv` och `ritningsnummer` är nya, `version` är
   oförändrad). Fylls i under *Situationsplan* i planvyn.
@@ -140,7 +152,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
   (`terrang-tradval`) och dolda hus (`terrang-husval`) som rör projektet: hus som
   fanns i utsnittet senast underlaget skapades, och träd inom utsnittet + 20 m.
   När projektet öppnas förs de in bland webbläsarens egna rättelser, som gäller
-  alla projekt.
+  alla projekt. Från 0.16.1 kan ett trädval ha `ny: true`: ett eget träd som
+  lagts till i planvyn (läget är nyckeln, med `hojd`, `krona` och `art`).
 - `forslag`, `punkter`, `overlagringar`, `anteckningar`, `vyer`: förberedda för
   förslag, egna berg- och jorddjupspunkter, eget bildunderlag, anteckningar och
   sparade 3D-vyer. 0.13.0 skriver bara Basfall och tomma listor, men bevarar det

@@ -15,6 +15,8 @@
   'use strict';
   const NARA = 0.6;
   const ARTER = ['gran', 'tall', 'lov', 'bjork'];
+  /** Ett eget träd utan egna värden (0.16.1). */
+  const NY = { hojd: 8, krona: 5, art: 'lov' };
   const dm = v => Math.round(v * 10) / 10;
   /** Nyckeln för ett träd: läget i dm, "x,y". */
   const tradNyckel = t => `${dm(t.x)},${dm(t.y)}`;
@@ -34,6 +36,7 @@
     const ut = {};
     if (!e) return ut;
     if (e.dolt) ut.dolt = true;
+    if (e.ny) ut.ny = true;
     if (e.hojd > 0.5 && e.hojd < 80) ut.hojd = Math.round(e.hojd * 10) / 10;
     if (e.krona > 0.3 && e.krona < 40) ut.krona = Math.round(e.krona * 10) / 10;
     if (ARTER.includes(e.art)) ut.art = e.art;
@@ -46,9 +49,10 @@
    * Ändrade träd är kopior med andrat: true och ra = { hojd, krona } ur laserdatan.
    */
   function tillampaTrad(alla, val, { medDolda = false } = {}) {
-    const p = poster(val), trad = [], dolda = [];
+    const p = poster(val), trad = [], dolda = [], anvanda = new Set();
     for (const t of alla || []) {
       const h = p.length ? hittaVal(t, val, p) : null;
+      if (h) anvanda.add(h[0]);
       const e = h && rensaTrad(h[1]);
       if (!e || !Object.keys(e).length) { trad.push(t); continue; }
       const n = Object.assign({}, t, { andrat: true, ra: { hojd: t.hojd, krona: t.krona } });
@@ -58,16 +62,35 @@
       if (e.dolt) { n.dolt = true; dolda.push(n); if (medDolda) trad.push(n); }
       else trad.push(n);
     }
+    // egna träd (0.16.1): val med ny som inte rättar något träd ur laserdatan läggs till sist
+    for (const q of p) {
+      if (anvanda.has(q.k)) continue;
+      const e = rensaTrad(q.v);
+      if (!e.ny) continue;
+      const n = { x: q.x, y: q.y, hojd: e.hojd || NY.hojd, krona: e.krona || NY.krona, art: e.art || NY.art, ny: true, andrat: true };
+      n.ra = { hojd: n.hojd, krona: n.krona };
+      if (e.dolt) { n.dolt = true; dolda.push(n); if (medDolda) trad.push(n); } else trad.push(n);
+    }
     return { trad, dolda };
   }
   /** Det sparade valet för trädet t (rensat), eller {}. */
   function valFor(t, val) { const h = hittaVal(t, val || {}, poster(val)); return h ? rensaTrad(h[1]) : {}; }
-  /** Sparar valet för trädet t i val (ändrar val och returnerar det). Ett tomt val tar bort posten. */
-  function sattTrad(val, t, e) {
+  /**
+   * Sparar valet för trädet t i val (ändrar val och returnerar det). Ett tomt val tar bort posten.
+   * Ett eget träd (t.ny) förblir eget tills det tas bort med taBort.
+   */
+  function sattTrad(val, t, e, { taBort = false } = {}) {
     const p = poster(val), h = hittaVal(t, val, p);
     if (h) delete val[h[0]];
-    const r = rensaTrad(e);
+    if (taBort) return val;
+    const r = rensaTrad(t && t.ny ? Object.assign({}, e, { ny: true }) : e);
     if (Object.keys(r).length) val[tradNyckel(t)] = r;
+    return val;
+  }
+
+  /** Lägger till ett eget träd i (x, y) (0.16.1). Ändrar val och returnerar det. */
+  function nyttTrad(val, x, y, e = {}) {
+    val[tradNyckel({ x, y })] = rensaTrad(Object.assign({}, NY, e, { ny: true }));
     return val;
   }
 
@@ -120,5 +143,5 @@
     return ut;
   }
 
-  return { tradNyckel, tillampaTrad, valFor, sattTrad, rensaTrad, tillampaHus, skarBort, ARTER, NARA };
+  return { tradNyckel, tillampaTrad, valFor, sattTrad, nyttTrad, NY, rensaTrad, tillampaHus, skarBort, ARTER, NARA };
 }));

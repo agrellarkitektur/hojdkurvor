@@ -1,9 +1,20 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 22 november 2026, 0.16.0.
+överlämning; historiken finns i git. Senast: 23 november 2026, 0.16.1.
 
 ## Läget
+
+- **0.16.1** 23 november (grenen `v0.16.1`): svar på ägarens test samma dag av situationsplanen
+  (0.16.0), sol på fasaderna (0.15.0) och BG. Se avsnittet *Planvyn och situationsplanen (0.16.1)*
+  nedan. Testpunkter DD–DQ; synpunkterna står ordagrant under *Inarbetat ur inkorgen* i
+  `docs/SYNPUNKTER.md`. CÖ–DC och CG–CK fick inget besked och står kvar. Körda: alla 24
+  enhetstester (utökade: `kropp`, `situationsplan`, `objektval`, `geodata`, `fasadsol`), nya
+  `planverktyg_test.py`, `planvy_test.py`, `situationsplan_test.py`, `fasadsol_test.py`,
+  `projekt_test.py` och `ui_test.py` (ritning). Testdatan byggdes med GDAL (python3.12) enligt
+  *Testmiljön*. **Inte provat**: riktiga Overpass och reservservern (testmiljön når dem inte),
+  riktiga tomter med många träd (testdatans utsnitt har inga träd), stora utsnitt med ortofoto i
+  planvyn (bilden ritas en gång, men den är en data-URL på några MB), DXF:en i Archicad, iPhone.
 
 - **0.16.0** 22 november (grenen `v0.16.0`): **situationsplanen**, etapp 3 i
   `plan-skiss-situationsplan.md` (claude.ai-projektet), och ägarens synpunkt samma dag: kroppar i
@@ -335,6 +346,52 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## Planvyn och situationsplanen (0.16.1)
+
+- **Underlaget i planvyn** (`opt.underlag` = { ortofoto: { url, x0, y1, s, W, H }, kurvor, trad,
+  vagar, skydd }): `byggUnderlag()` ritar `g.pv-under` en gång, i zonens koordinater minus
+  utsnittets hörn (`O`), och `satUnderTransform()` sätter en `matrix(z 0 0 −z …)` vid varje
+  `rita()`. Linjerna har `vector-effect="non-scaling-stroke"`. Det dynamiska ligger i `g.pv-dyn`
+  (förut `svg.innerHTML`). Valen ligger i `S.visa` (orto, kurvor, trad, vagar, skydd, matt,
+  koordlista …) och sparas av appen i localStorage `terrang-planvy-visa`.
+- **Situationsplanen** (`Situationsplan.ritning`): `data.underlag` och `visa` ger lagren KURVA (med
+  KURVTEXT på hela meter, en per kurva längre än 40 mm), VAG (ytor om de finns, annars linjer), STRAND,
+  NATUR, LAMNING och TRAD (`R.cirklar`). PDF:en ritar lagren i `UNDER` före byggnaderna.
+  Gränserna kommer efter byggnaderna. `visa.matt === false` hoppar över måtten. Markeringen i plan
+  (`Kropp.planmarke`, indrag 1,5 mm på papperet, 8 px i planvyn) och skrafferingen klipps runt
+  texternas rutor (`utanforRutor`); planvyn lägger `pv-textbak` bakom texterna i stället.
+  `numreradeHorn` ger koordinatlistan (`R.koordlista`, KOORDNR), som PDF:en ritar ovanför
+  teckenförklaringen (`koordinatlista`, spalter om 56 mm, högst 12 rader per spalt) och DXF:en som
+  text till höger om planen. `ledarGeometri` ger ledarens linje med hylla, pil och textpunkt; DXF-texter
+  kan vara vänster- eller högerställda (`just`). Teckenförklaringen får två spalter över nio rader.
+- **Verktygen** (`planvy.js`): `vridmot` (två klick; `S.vm` = sidan och punkten; vridningen är den
+  minsta som gör sidorna parallella), `ledare` (två klick och `.planvy-textin`, som öppnas efter
+  mousedown med `setTimeout`, annars tar mousedown fokus), `trad` (`opt.tradAndrat` →
+  `tradIPlan` i `app.js`: `Objektval.nyttTrad`/`sattTrad` i `terrang-tradval`, sedan
+  `objektAndrat`), `fast` (`opt.fastighetVid`: det senaste underlaget, annars `fastigheterVid`).
+  Ledarna är med i ångra (`ogonblick` = { v, l }) och går till appen med `opt.ledareAndrad`, som
+  sparar dem i `state.ledareTM` (SWEREF 99 TM) och projektet (`inmatning.ledare`).
+- **Kroppen**: `slag` (`Kropp.SLAG`, `slag`, `satSlag`; `normalisera` håller `huvudbyggnad` i
+  takt) och `takutdrag` = [bak, fram]. `Volym3D.utdragen(v)` flyttar gavlarnas hörn längs nocken
+  (`nockAxel`); `Kropp.for3d` = forAnalys + utdragen och används i skuggorna, skyfallet,
+  horisonten och sol på fasaderna (inte i platsanalysbladets plan). 3D-vyn drar ut i `byggVolym` och
+  i konturernas `synligaKanter`. `Kropp.anslutTak` provar 0,05 m i taget till 40 m tills spetsen,
+  takfoten och mitt på takfallen strax innanför gaveln är inne i en annan kropp (+ 0,05 m), bara vid
+  gavlar som ligger an. Skärmtak: tunn platta och stolpar i `byggVolym`; inga fasadpunkter, men
+  skuggar som en kropp.
+- **Egna träd**: trädval med `ny: true` som inte rättar ett laserträd läggs sist i
+  `Objektval.tillampaTrad`. I 3D-vyn ligger de efter laserträden i `trad3d`; `sparaTrad` och
+  lassot tar trädet självt när index saknas i `tradAlla`.
+- **Sol på fasaderna** (`fasadsolblad.js`): översikten kräver `opt.punkter` och `opt.volymer`
+  (appen skickar `punkter` och `volA`). `axonometri(ruta, mot)` ritar väggar (panel + punkternas
+  rutor + nummer) och takytor (utan gavlar, ton efter ljus från nordväst) som enheter sorterade
+  bakifrån. Över åtta fasader blir vyerna lägre och korten två rader; fler än 16 går till nya sidor.
+  `senaste.fasadsol` har `punkter.f` och `fasadNr`, och 3D-vyn sätter nummer (sprites) på väggarna.
+- **BG**: `Geodata.overpass(q)` (huvudservern, sedan `overpassReserv`), `osmDelar` för `out geom(ruta)`.
+- **Inte gjort**: flytta gränsmått och texter, symboler, ortofotot på PDF:en, ändra trädens storlek
+  i planvyn (görs i 3D-vyn), takanslutning för valmade tak mot valm (fungerar men inte provat),
+  pulpettak.
 
 ## Situationsplanen (0.16.0)
 
@@ -998,7 +1055,8 @@ som 0.15.0–0.18.0 i planen 19 november är flyttat två steg):
 | 0.15.0 | Sol på fasaderna (byggd 22 november; testas som CG–CK) |
 | 0.15.x | Rättelser efter ägarens test av 0.14.x och 0.15.0 |
 | 0.16.0 | Situationsplanen: yttre skal, annotering, ritningshuvud, teckenförklaring, PDF och DXF (byggd 22 november; testas som CÖ–DC) |
-| 0.16.x | Rättelser efter ägarens test av 0.15.0 och 0.16.0 |
+| 0.16.1 | Svar på testet 23 november (byggd 23 november; testas som DD–DQ) |
+| 0.16.x | Rättelser efter ägarens test av 0.16.1 |
 | 0.17.0 | Användarskapad omgivning, etapp 1: intuitiv modellering och val per projekt och byggnad (CL–CV, `utredning-anvandarskapad-omgivning.md`) |
 | 0.18.0 | Förslag och sparade vyer (projektfilen, etapp 3) |
 | 0.19.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
@@ -1006,8 +1064,8 @@ som 0.15.0–0.18.0 i planen 19 november är flyttat två steg):
 | 0.21.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
 | ej bestämd | Omgivningen etapp 2–4 (CZ–CÄ), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY), räkna om skissen utan att räkna allt (BK) |
 
-1. För in ägarens testresultat (CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna punkterna under
-   *Att testa* för 0.14.x). Rättelser blir 0.16.x.
+1. För in ägarens testresultat (DD–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna
+   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.x.
 2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
    inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid

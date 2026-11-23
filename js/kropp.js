@@ -96,7 +96,99 @@
     if (v.kalla == null || v.kalla === '') v.kalla = null; else v.kalla = String(v.kalla);
     const e = v.entre;
     v.entre = e && Number.isInteger(e.sida) && e.sida >= 0 && e.sida < (v.fotavtryck || []).length && e.t >= 0 && e.t <= 1 ? { sida: e.sida, t: e.t } : null;
+    // takanslutningen (0.16.1): [bak, fram] i meter, bara när något är utdraget
+    const d = v.takutdrag;
+    if (Array.isArray(d) && d.length === 2 && d.every(x => typeof x === 'number' && x >= 0 && x <= 100) && (d[0] > 0 || d[1] > 0)) v.takutdrag = d.map(x => avrunda(x, 3));
+    else delete v.takutdrag;
+    if (!SLAG[v.slag]) delete v.slag;
+    if (v.slag === 'huvud') v.huvudbyggnad = true;
+    else if (v.slag) v.huvudbyggnad = false;
     return v;
+  }
+  /**
+   * Hur kroppen redovisas i plan (0.16.1): 'huvud' (kryss), 'komplement' (nocklinje), 'skarmtak' (en diagonal)
+   * eller '' (inget). huvudbyggnad följer med för äldre filer och cad-apa.
+   */
+  const SLAG = { huvud: 'Huvudbyggnad (kryss)', komplement: 'Komplementbyggnad (nock)', skarmtak: 'Skärmtak (diagonal)' };
+  const slag = v => (v && SLAG[v.slag] ? v.slag : v && v.huvudbyggnad ? 'huvud' : '');
+  function satSlag(v, s) {
+    if (SLAG[s]) v.slag = s; else delete v.slag;
+    v.huvudbyggnad = s === 'huvud';
+    return v;
+  }
+  /**
+   * Markeringen i plan (0.16.1), med indrag från hörnen: kryss för huvudbyggnad, en linje mellan gavlarnas
+   * mitt för komplementbyggnad (längs nocken, eller längsta sidan) och en diagonal för skärmtak. Bara för
+   * fyrhörningar. indrag i meter. Ger [[a, b], …].
+   */
+  function planmarke(v, indrag = 0.5) {
+    const s = slag(v), f = moturs(v.fotavtryck || []);
+    if (!s || f.length !== 4) return [];
+    const kort = (a, b) => {
+      const d = sub(b, a), l = len(d);
+      if (l < 3 * indrag) return [a, b];
+      const e = mul(d, indrag / l);
+      return [add(a, e), sub(b, e)];
+    };
+    if (s === 'huvud') return [kort(f[0], f[2]), kort(f[1], f[3])];
+    if (s === 'skarmtak') { const l0 = len(sub(f[2], f[0])), l1 = len(sub(f[3], f[1])); return [l0 >= l1 ? kort(f[0], f[2]) : kort(f[1], f[3])]; }
+    // komplement: gavlarnas mitt, längs nocken om taket har fall, annars längs längsta sidan
+    const ri = v.nockriktning != null && v.takform && v.takform !== 'platt' ? v.nockriktning * RAD : null;
+    const sd = sidor(f);
+    const langs = ri != null ? [Math.cos(ri), Math.sin(ri)] : sd.slice().sort((a, b) => b.l - a.l)[0].u;
+    const gavlar = sd.slice().sort((a, b) => Math.abs(dot(a.u, langs)) - Math.abs(dot(b.u, langs))).slice(0, 2);
+    const m = gavlar.map(x => mul(add(x.a, x.b), 0.5));
+    return [kort(m[0], m[1])];
+  }
+  /** Volymerna som 3D-vyn och analyserna räknar med: allt utom det som rivs, med taken utdragna (0.16.1). */
+  const for3d = volymer => forAnalys(volymer).map(v => V3.utdragen(v));
+  /**
+   * Gavlarna där taket kan dras ut: [{ ande: 0 (bak) | 1 (fram), sida (index), text }] för kroppar med takfall.
+   */
+  function gavlar(v) {
+    if (!V3.harTakfall(v)) return [];
+    const ax = V3.nockAxel(v), f = v.fotavtryck, ut = [];
+    for (const [ande, l] of [[0, ax.lmin], [1, ax.lmax]]) {
+      let bast = -1, bl = 0;
+      for (let i = 0; i < f.length; i++) {
+        const j = (i + 1) % f.length;
+        if (Math.abs(ax.lg[i] - l) < 0.01 && Math.abs(ax.lg[j] - l) < 0.01) { const sl = len(sub(f[j], f[i])); if (sl > bl) { bl = sl; bast = i; } }
+      }
+      ut.push({ ande, sida: bast, text: bast >= 0 ? `Gavel vid sida ${bast + 1}–${(bast + 1) % f.length + 1}` : ande ? 'Gavel fram' : 'Gavel bak' });
+    }
+    return ut;
+  }
+  /**
+   * Drar ut taket vid de gavlar som ligger an mot en annan kropp, precis så långt att gavelns spets och
+   * takfotens hörn hamnar inne i den andra kroppen (0.16.1). Ändrar v. Ger [bak, fram] (0 där inget behövs
+   * eller går) och om något ändrades.
+   */
+  function anslutTak(v, volymer, { max = 40, steg = 0.05 } = {}) {
+    if (!V3.harTakfall(v)) { delete v.takutdrag; return { utdrag: [0, 0], andrat: false }; }
+    const andra = forAnalys(volymer).filter(o => o.id !== v.id && o.fotavtryck && o.fotavtryck.length >= 3);
+    const ax = V3.nockAxel(v), u = ax.u, bas = v.golv + v.takfot, w = [-u[1], u[0]];
+    const tm = (ax.tmin + ax.tmax) / 2, pl = V3.plan(v);
+    const iAnnan = (x, y, z) => andra.some(o => V3.inutiVolym(o, x, y, z, 0.005));
+    const utdrag = [0, 0];
+    for (const ande of [0, 1]) {
+      const l = ande ? ax.lmax : ax.lmin, s = ande ? 1 : -1;
+      // punkterna på gaveln: spetsen (nockens ände), takfotens hörn och mitt på takfallen, strax innanför
+      const t0 = ax.tmin + 0.03, t1 = ax.tmax - 0.03;
+      const pa = (t, lp) => [u[0] * lp + w[0] * t, u[1] * lp + w[1] * t];
+      const prov = [t0, (t0 + tm) / 2, tm, (tm + t1) / 2, t1].map(t => {
+        const q = pa(t, l - s * 0.03);
+        return { t, z: V3.hojdVid(v, q[0], q[1], pl) - 0.03 };
+      }).map(o => ({ t: o.t, z: Math.max(bas + 0.02, o.z) }));
+      // ligger gaveln an mot en annan kropp? (punkten strax utanför gavelns mitt i takfotens höjd)
+      const ut0 = pa(tm, l + s * 0.1);
+      if (!iAnnan(ut0[0], ut0[1], bas - 0.2)) continue;
+      for (let d = 0; d <= max + 1e-9; d += steg) {
+        if (prov.every(o => { const q = pa(o.t, l + s * d); return iAnnan(q[0], q[1], o.z); })) { utdrag[ande] = avrunda(d + 0.05, 2); break; }
+      }
+    }
+    const fore = JSON.stringify(v.takutdrag || [0, 0]);
+    if (utdrag[0] > 0 || utdrag[1] > 0) v.takutdrag = utdrag; else delete v.takutdrag;
+    return { utdrag, andrat: fore !== JSON.stringify(v.takutdrag || [0, 0]) };
   }
   /** Volymerna som analyserna räknar med: allt utom det som ska rivas. */
   const forAnalys = volymer => (volymer || []).filter(v => status(v) !== 'rivs');
@@ -233,6 +325,7 @@
   /** Sätter nockens riktning (grader). Ett prisma vrids om så att bredden går längs nocken. */
   function satNock(v, grader) {
     V3.franVolym(v);
+    delete v.takutdrag;   // utdraget gäller nockens riktning (0.16.1)
     const p = v.primitiv;
     return andra(v, () => {
       if (p.typ === 'prisma') {
@@ -620,7 +713,7 @@
   }
 
   return {
-    STATUS, status, normalisera, forAnalys, ersatta, area, moturs, rensa, sidor, arRektangel, vinkel,
+    STATUS, SLAG, slag, satSlag, planmarke, for3d, gavlar, anslutTak, status, normalisera, forAnalys, ersatta, area, moturs, rensa, sidor, arRektangel, vinkel,
     entrePunkt, flyttaEntre, andra, nyRektangel, nyPolygon, franHus, satFotavtryck, satHorn, satTakform, nockVal, satNock, flytta, vrid,
     tal, tolka, strackor, gransmatt, relativaMatt, fogsidor, anliggande, yttermattSidor, hojdText, fgText, bya,
     inuti, union, unionArea, horIhop, skal,

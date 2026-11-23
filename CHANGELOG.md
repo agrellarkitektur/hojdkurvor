@@ -3,6 +3,51 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.16.1 – 2026-11-23
+
+Ägarens test 23 november av situationsplanen (0.16.0), sol på fasaderna (0.15.0) och strandskyddet
+(BG). Testpunkter DD–DQ i `docs/SYNPUNKTER.md`.
+
+- **Strandskyddet (BG)**: OpenStreetMap svarade 502 efter tre försök. Vattnet hämtas nu med
+  geometrin klippt mot rutan (`out geom(ruta)`), så att stora sjöar inte ger ett enormt svar, och
+  `Geodata.overpass` frågar reservservern `overpass.kumi.systems` när huvudservern fortfarande
+  svarar 429/502/503/504 eller inte svarar. Klippta linjer kommer med `null` för noderna utanför
+  och delas där (`Geodata.osmDelar`); bara hela ringar räknas som slutna. Vägarna (`Vagar.hamta`)
+  och skyddad natur ur OSM använder samma reserv.
+- **Planvyn: underlaget** (`opt.underlag`): ortofoto, höjdkurvor, träd, vägar och skydd
+  (strandskydd, skyddad natur, lämningar) ritas en gång i ett eget lager i zonens koordinater med
+  en transform, under ritningen. Valen under *Visa* sparas i webbläsaren (`terrang-planvy-visa`).
+  Det som är ikryssat (utom ortofotot) följer med på situationsplanen.
+- **Fastighetsgränserna ovanpå** byggnaderna, i planvyn, PDF:en och DXF:en.
+- **Mått av och på**: knappen *Mått* (och kryssrutan) döljer alla mått, också på ritningen.
+- **Text på skraffering**: en bakgrund bakom texterna i planvyn, och i ritningen klipps
+  skrafferingen, krysset och nocken runt texterna (`Situationsplan.utanforRutor`).
+- **Koordinatlista**: numrerade hörn (nya byggnader först, varje ring medurs från nordväst,
+  `Situationsplan.numreradeHorn`) med listan i panelen, på PDF:en ovanför teckenförklaringen och i
+  DXF:en till höger om planen (`SITPLAN_KOORDINATLISTA`).
+- **Redovisning i plan** (`slag` på kroppen: `huvud`, `komplement`, `skarmtak`; `huvudbyggnad`
+  följer med för äldre filer och cad-apa): kryss, nocklinje mellan gavlarnas mitt eller en
+  diagonal, med indrag från hörnen (`Kropp.planmarke`). Skärmtak ritas i 3D som ett tak på
+  stolpar och har inga fasader i sol på fasaderna.
+- **Nya verktyg i planvyn**: *Vrid mot* (A) vrider en byggnad så att en sida blir parallell med en
+  annan linje; *Ledare* (T) med fritext, som går att flytta och ändra och sparas i projektet
+  (`inmatning.ledare` i SWEREF 99 TM); *Träd* (G) lägger till egna träd (`ny` i trädvalen,
+  `Objektval.nyttTrad`), döljer och visar; *Fastighet* (F) hämtar beteckningen till
+  ritningshuvudet ur kartan.
+- **Situationsplanen** har fått lager för höjdkurvor med siffror, träd, vägar, skydd och ledare,
+  i PDF:en (under byggnaderna) och DXF:en (`SITPLAN_HOJDKURVA`, `SITPLAN_TRAD`, `SITPLAN_VAG`,
+  `SITPLAN_STRANDSKYDD`, `SITPLAN_SKYDDAD_NATUR`, `SITPLAN_LAMNING`, `SITPLAN_LEDARE`,
+  `SITPLAN_KOMPLEMENT`, `SITPLAN_SKARMTAK`), och teckenförklaringen i två spalter när den blir lång.
+- **Takanslutning** (`takutdrag` = [bak, fram] i meter på kroppen): taket och väggarna under det
+  dras ut längs nocken i 3D (`Volym3D.utdragen`), inte i plan. *Anslut taket* räknar hur långt
+  gaveln behöver gå in i kroppen bredvid (`Kropp.anslutTak`). Analyserna räknar med de utdragna
+  kropparna (`Kropp.for3d`).
+- **Sol på fasaderna, översikten** (`js/fasadsolblad.js`): en första sida med byggnaderna i
+  parallellprojektion från sydväst och nordost, fasaderna färgade efter summan punkt för punkt,
+  en nyckelplan och ett kort per fasad (summa, lokal och samtidig topp, skuggning, timme × dag och
+  värsta dygnet). Fasaderna (kropp och väderstreck) är numrerade, och numren står på staplarna, i
+  tabellen och i diagrammen, och i 3D-vyn när fasaderna är färgade.
+
 ## 0.16.0 – 2026-11-22
 
 Situationsplanen, etapp 3 i `plan-skiss-situationsplan.md` (claude.ai-projektet), och ägarens

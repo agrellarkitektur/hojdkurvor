@@ -225,4 +225,42 @@ prov('yttre skal: samma status går ihop, olika status hålls isär; BYA räknar
   nara(by2.befintlig, 108, 1e-6); nara(by2.tillkommande, 8, 1e-6); nara(by2.totalt, 116, 1e-6);
 });
 
+prov('0.16.1: markering i plan med indrag, takanslutning och utdraget tak i 3D', () => {
+  const h = rekt('h', 0, 0, 10, 8);
+  K.satSlag(h, 'huvud');
+  assert.strictEqual(h.huvudbyggnad, true);
+  let m = K.planmarke(h, 0.5);
+  assert.strictEqual(m.length, 2);
+  nara(Math.hypot(m[0][0][0], m[0][0][1]), 0.5, 1e-9, 'krysset börjar 0,5 m in från hörnet');
+  K.satSlag(h, 'komplement');
+  assert.strictEqual(h.huvudbyggnad, false);
+  m = K.planmarke(h, 0.5);
+  assert.strictEqual(m.length, 1);
+  assert.deepStrictEqual(m[0].map(p => p.map(x => Math.round(x * 1000) / 1000)).sort((a, b) => a[0] - b[0]), [[0.5, 4], [9.5, 4]], 'nocken mellan gavlarnas mitt');
+  K.satSlag(h, 'skarmtak');
+  assert.strictEqual(K.planmarke(h, 0.5).length, 1);
+  K.satSlag(h, '');
+  assert.deepStrictEqual(K.planmarke(h), []);
+  // äldre filer: huvudbyggnad utan slag
+  assert.strictEqual(K.slag({ huvudbyggnad: true }), 'huvud');
+  // en flygel som går in mot huvudhuset: taket dras ut vid gaveln mot huset, inte vid den fria
+  const w = rekt('w', 10, 2, 6, 4);
+  const r = K.anslutTak(w, [h, w]);
+  assert(r.andrat && w.takutdrag[0] > 0 && w.takutdrag[0] < 2 && w.takutdrag[1] === 0, JSON.stringify(w.takutdrag));
+  const u = V.utdragen(w);
+  assert.notStrictEqual(u, w);
+  nara(Math.min(...u.fotavtryck.map(p => p[0])), 10 - w.takutdrag[0], 1e-9);
+  assert.deepStrictEqual(w.fotavtryck.map(p => p[0]).sort((a, b) => a - b)[0], 10, 'fotavtrycket i plan är detsamma');
+  assert.strictEqual(K.for3d([w, rekt('r', 30, 30, 3, 3, { status: 'rivs' })]).length, 1);
+  assert.deepStrictEqual(K.gavlar(w).map(g => g.ande), [0, 1]);
+  // fristående: inget att ansluta mot
+  const f = rekt('f', 50, 50, 6, 4);
+  assert.deepStrictEqual(K.anslutTak(f, [h, f]).utdrag, [0, 0]);
+  assert.strictEqual(V.utdragen(f), f);
+  // normalisera tar bort ogiltiga utdrag och ny nockriktning nollställer
+  assert.strictEqual(K.normalisera(Object.assign({}, w, { takutdrag: [-1, 2] })).takutdrag, undefined);
+  K.satNock(w, 90);
+  assert.strictEqual(w.takutdrag, undefined);
+});
+
 console.log(`${antal} prov gick igenom`);

@@ -96,6 +96,7 @@
         // vinkel (grader moturs, 0.16.0) och mitten som insättningspunkt (72 = 4, Middle)
         if (e.vinkel) g(50, f(e.vinkel - (TR && TR.lokal && (dx || dy) ? TR.lokal.vrid || 0 : 0)));
         if (e.centrerad) { g(72, 4); g(11, f(X(e.x, e.y))); g(21, f(Y(e.x, e.y))); g(31, f((e.z || 0) - (e.z != null ? dz : 0))); }
+        else if (e.just === 'right') { g(72, 2); g(11, f(X(e.x, e.y))); g(21, f(Y(e.x, e.y))); g(31, f((e.z || 0) - (e.z != null ? dz : 0))); }
       }
     }
     g(0, 'ENDSEC'); g(0, 'EOF');

@@ -41,7 +41,7 @@
       val: {},
       inmatning: {
         forslag: [], volymer: [], sektioner: [], rattelser: { tak: {}, trad: {}, hus: {} },
-        punkter: [], overlagringar: [], anteckningar: [], vyer: [],
+        punkter: [], overlagringar: [], anteckningar: [], vyer: [], ledare: [],
       },
       underlag: { senastSkapat: null, kallor: [] },
       historik: [],
@@ -89,13 +89,16 @@
     }
     fyll(ut, standard(arObjekt(ut.projekt) ? ut.projekt.id : undefined));
     if (typeof ut.projekt.id !== 'string' || !ut.projekt.id) ut.projekt.id = typeof ut.projekt.id === 'number' ? String(ut.projekt.id) : nyttId();
-    for (const k of ['forslag', 'volymer', 'sektioner', 'punkter', 'overlagringar', 'anteckningar', 'vyer']) {
+    for (const k of ['forslag', 'volymer', 'sektioner', 'punkter', 'overlagringar', 'anteckningar', 'vyer', 'ledare']) {
       if (!Array.isArray(ut.inmatning[k])) ut.inmatning[k] = [];
     }
     // det appen ritar måste gå att rita: volymer med fotavtryck och sektioner med två punkter
     ut.inmatning.forslag = ut.inmatning.forslag.filter(arObjekt);
     ut.inmatning.volymer = ut.inmatning.volymer.filter(v => arObjekt(v) && Array.isArray(v.fotavtryck) && v.fotavtryck.length >= 3 && v.fotavtryck.every(arPunkt));
     ut.inmatning.sektioner = ut.inmatning.sektioner.filter(s => arObjekt(s) && arPunkt(s.a) && arPunkt(s.b));
+    // situationsplanens ledare (0.16.1): text och två punkter
+    ut.inmatning.ledare = ut.inmatning.ledare.filter(l => arObjekt(l) && typeof l.text === 'string' && l.text && Array.isArray(l.pts) && l.pts.length >= 2 && l.pts.every(arPunkt))
+      .map(l => Object.assign({}, l, { text: l.text.slice(0, 200), pts: l.pts.slice(0, 2) }));
     const u = ut.plats.utsnitt;
     if (u && !(['xmin', 'ymin', 'xmax', 'ymax'].every(k => typeof u[k] === 'number' && isFinite(u[k])) && u.xmax > u.xmin && u.ymax > u.ymin)) ut.plats.utsnitt = null;
     if (ut.plats.mitt && !arPunkt(ut.plats.mitt)) ut.plats.mitt = null;

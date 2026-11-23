@@ -241,34 +241,34 @@
   }
   /**
    * Planen som primitiver. data: { volymer, granser, hus, ytor (fastigheternas beteckningar { etikett, ankare }),
-   * visa: { grans, ytter, relativa, koord, entre } }. skala: 400 eller 500 (för texthöjder och avstånd).
-   * Ger { linjer: [{ lager, pts, sluten, b (mm), streck }], ytor: [{ lager, ringar, fyll }],
-   *       texter: [{ lager, p, text, h (mm), vinkel (rad), ha, va, fet, mono, halo }], pilar: [{ lager, pts }] }.
+   * ledare: [{ id, pts: [pil, text], text }] (0.16.1), underlag: { kurvor, trad, vagar, skydd } (0.16.1),
+   * visa: { matt, grans, ytter, relativa, koord, koordlista, entre, kurvor, trad, vagar, skydd } }.
+   * skala: 400 eller 500 (för texthöjder och avstånd).
+   * Ger { linjer: [{ lager, pts, sluten, b (mm), streck, farg }], ytor: [{ lager, ringar, fyll }],
+   *       texter: [{ lager, p, text, h (mm), vinkel (rad), ha, va, fet, mono, halo }], pilar: [{ lager, pts }],
+   *       cirklar: [{ lager, p, r (m), b }], koordlista: [{ nr, x, y }] }.
    */
   function ritning(data, { skala = 400 } = {}) {
-    const Kr = K(), mm = skala / 1000, visa = Object.assign({ grans: true, ytter: true, relativa: true, koord: false, entre: true }, data.visa || {});
+    const Kr = K(), mm = skala / 1000;
+    const visa = Object.assign({ matt: true, grans: true, ytter: true, relativa: true, koord: false, koordlista: false, entre: true }, data.visa || {});
     const vol = (data.volymer || []).filter(v => v.fotavtryck && v.fotavtryck.length >= 3);
     const enh = enheter(vol).sort((a, b) => ORDNING[a.status] - ORDNING[b.status]);
-    const R = { linjer: [], ytor: [], texter: [], pilar: [] };
+    const R = { linjer: [], ytor: [], texter: [], pilar: [], cirklar: [], koordlista: [] };
     const linje = (lager, pts, b, o = {}) => R.linjer.push(Object.assign({ lager, pts, b }, o));
     const text = (lager, p, s, h, o = {}) => R.texter.push(Object.assign({ lager, p, text: String(s), h, vinkel: 0, ha: 'center', va: 'middle' }, o));
+    // underlaget (0.16.1): höjdkurvor, vägar, skydd och träd under byggnaderna
+    underlag(R, data.underlag || {}, visa, mm, linje, text);
     // befintliga hus från Lantmäteriet
     for (const h of data.hus || []) if (h.fotavtryck && h.fotavtryck.length >= 3) R.ytor.push({ lager: 'LMHUS', ringar: [h.fotavtryck], fyll: 'lmhus', kant: 0.18 });
-    // fastighetsgränser och beteckningar
-    for (const gr of data.granser || []) { const pts = gr.pts || gr; if (pts.length >= 2) linje('GRANS', pts, 0.35, { streck: 'grans' }); }
-    for (const y of data.ytor || []) if (y.ankare && y.etikett) text('FASTIGHET', y.ankare, y.etikett, 3.2, { halo: true });
     // byggnaderna
     for (const e of enh) {
       const lager = e.status.toUpperCase();
-      R.ytor.push({ lager, ringar: e.ringar, fyll: e.status, kant: e.status === 'ny' || e.status === 'tillbyggnad' ? 0.5 : 0.25, streck: e.status === 'rivs' ? 'rivs' : null });
-      if (e.status === 'tillbyggnad') {
-        const sk = skraffering(e.ringar, 1.2 * mm);
-        R.ytor[R.ytor.length - 1].skraff = sk;
-        sk.forEach(s => linje('SKRAFF', s, 0.13));
-      }
+      const yta = { lager, ringar: e.ringar, fyll: e.status, kant: e.status === 'ny' || e.status === 'tillbyggnad' ? 0.5 : 0.25, streck: e.status === 'rivs' ? 'rivs' : null };
+      R.ytor.push(yta);
+      const marken = [];
       for (const v of e.volymer) {
-        const f = Kr.moturs(v.fotavtryck);
-        if (v.huvudbyggnad && f.length === 4 && e.status !== 'rivs') { linje('KRYSS', [f[0], f[2]], 0.18); linje('KRYSS', [f[1], f[3]], 0.18); }
+        // kryss, nock och skärmtak med indrag från hörnen (0.16.1); ritas efter texterna, som de lämnar plats för
+        if (e.status !== 'rivs') for (const l of Kr.planmarke(v, 1.5 * mm)) marken.push([Kr.slag(v) === 'huvud' ? 'KRYSS' : Kr.slag(v) === 'komplement' ? 'NOCK' : 'SKARMTAK', l]);
         if (visa.entre && v.entre && e.status !== 'rivs') {
           const p = Kr.entrePunkt(v);
           if (p) {
@@ -277,6 +277,7 @@
           }
         }
       }
+      const rutor = [];
       for (const et of etiketter(e, vol)) {
         const nn = [-Math.sin(et.vinkel), Math.cos(et.vinkel)], rad = et.rader.filter(r => r.text);
         // namnet bara om det får plats i byggnaden (ungefär 0,55 × höjden per tecken); FG och RIVS alltid,
@@ -285,19 +286,43 @@
         const ryms = et.djup >= (rad.length > 1 ? 6 : 3.2) * mm;
         const synliga = rad.filter(r => r.fet || (passar(r) && ryms && rad.filter(x => x.fet).every(passar)));
         const rh = 3.2 * mm, y0 = (synliga.length - 1) / 2 * rh;
-        synliga.forEach((r, i) => text('ETIKETT', add(et.p, mul(nn, y0 - i * rh)), r.text, r.fet ? 2.6 : 2.0, { vinkel: et.vinkel, fet: r.fet, halo: !passar(r) || et.djup < 3.2 * mm }));
+        // en nock genom etikettens mitt: texten flyttas till sidan av den (0.16.1)
+        const skift = sidanOmNock(et.p, nn, marken.filter(m => m[0] === 'NOCK').map(m => m[1]), (synliga.length * rh) / 2 + 0.6 * mm);
+        synliga.forEach((r, i) => {
+          const p = add(add(et.p, skift), mul(nn, y0 - i * rh)), hh = r.fet ? 2.6 : 2.0;
+          text('ETIKETT', p, r.text, hh, { vinkel: et.vinkel, fet: r.fet, halo: !passar(r) || et.djup < 3.2 * mm });
+          rutor.push({ p, vinkel: et.vinkel, b: r.text.length * hh * 0.6 * mm + 1.6 * mm, h: hh * 1.5 * mm });
+        });
       }
-      if (visa.koord && (e.status === 'ny' || e.status === 'tillbyggnad')) {
+      for (const [lager, l] of marken) for (const del of utanforRutor([l], rutor)) linje(lager, del, 0.18);
+      // skrafferingen lämnar plats för texterna, så att de går att läsa (0.16.1)
+      if (e.status === 'tillbyggnad') {
+        const sk = utanforRutor(skraffering(e.ringar, 1.2 * mm), rutor);
+        yta.skraff = sk;
+        sk.forEach(s => linje('SKRAFF', s, 0.13));
+      }
+      if (visa.koord && !visa.koordlista && (e.status === 'ny' || e.status === 'tillbyggnad')) {
         const c = tyngd(e.yttre);
-        for (const r of e.ringar) for (const q of r) {
-          const d = norm(sub(q, c)), t = add(q, mul(d, 7 * mm));
-          text('KOORD', add(t, [0, 1.1 * mm]), 'N ' + fmt(q[1], 2), 1.7, { mono: true, halo: true });
-          text('KOORD', sub(t, [0, 1.1 * mm]), 'E ' + fmt(q[0], 2), 1.7, { mono: true, halo: true });
+        for (const r of e.ringar) for (const q of hornOrdning(r)) {
+          const d = norm(sub(q, c));
+          {
+            const t = add(q, mul(d, 7 * mm));
+            text('KOORD', add(t, [0, 1.1 * mm]), 'N ' + fmt(q[1], 2), 1.7, { mono: true, halo: true });
+            text('KOORD', sub(t, [0, 1.1 * mm]), 'E ' + fmt(q[0], 2), 1.7, { mono: true, halo: true });
+          }
         }
       }
     }
+    // numrerade hörn och en koordinatlista (0.16.1): nya byggnader först, sedan tillbyggnader
+    if (visa.koordlista) for (const h of numreradeHorn(enh)) {
+      R.koordlista.push({ nr: h.nr, x: h.p[0], y: h.p[1] });
+      text('KOORDNR', add(h.p, mul(h.ut, 2.6 * mm)), String(h.nr), 2.0, { fet: true, halo: true });
+    }
+    // fastighetsgränser och beteckningar ovanpå byggnaderna, så att ingen byggnad skymmer en gräns (0.16.1)
+    for (const gr of data.granser || []) { const pts = gr.pts || gr; if (pts.length >= 2) linje('GRANS', pts, 0.35, { streck: 'grans' }); }
+    for (const y of data.ytor || []) if (y.ankare && y.etikett) text('FASTIGHET', y.ankare, y.etikett, 3.2, { halo: true });
     // måtten
-    for (const m of matt(vol, data.granser, { visa })) {
+    if (visa.matt !== false) for (const m of matt(vol, data.granser, { visa })) {
       if (m.dold) continue;
       if (m.typ === 'grans') {
         const d = norm(sub(m.till, m.fran)), n = perp(d), tk = mul(norm(add(d, n)), 0.9 * mm);
@@ -314,7 +339,142 @@
         text('MATTEXT', add(mul(add(a2, b2), 0.5), mul(n, 1.4 * mm)), m.text, 2.2, { vinkel: lasbar(Math.atan2(u[1], u[0])) });
       }
     }
+    // ledare med fritext (0.16.1)
+    for (const l of data.ledare || []) {
+      const g = ledarGeometri(l, mm);
+      if (!g) continue;
+      linje('LEDARE', g.linje, 0.18);
+      R.pilar.push({ lager: 'LEDARE', pts: g.pil });
+      text('LEDARTEXT', g.textP, l.text, 2.2, { ha: g.ha, halo: true });
+    }
     return R;
+  }
+  /**
+   * Hur långt en etikett i p (tvärs riktningen nn) ska flyttas för att inte ligga på en nock (0.16.1):
+   * [0, 0] om ingen nock går nära p, annars nn × halv (åt det håll som är närmast).
+   */
+  function sidanOmNock(p, nn, nockar, halv) {
+    for (const [a, b] of nockar) {
+      const e = sub(b, a), l2 = dot(e, e);
+      if (!l2) continue;
+      const t = dot(sub(p, a), e) / l2;
+      if (t < 0 || t > 1) continue;
+      const d = dot(sub(p, add(a, mul(e, t))), nn);
+      if (Math.abs(d) < halv) return mul(nn, (d >= 0 ? 1 : -1) * halv - d);
+    }
+    return [0, 0];
+  }
+  /**
+   * Ledarens linje, pil och textens läge (0.16.1). l = { pts: [pil, text], text }. mm = meter per mm på papperet.
+   * Linjen går från pilen till textpunkten och sedan en kort vågrät bit åt det håll texten står.
+   */
+  function ledarGeometri(l, mm) {
+    if (!l || !l.text || !Array.isArray(l.pts) || l.pts.length < 2) return null;
+    const [a, b] = l.pts, d = sub(b, a), L = len(d);
+    if (L < 1e-6) return null;
+    const hoger = d[0] >= 0, hylla = add(b, [(hoger ? 1 : -1) * 2 * mm, 0]), u = mul(d, 1 / L), w = perp(u);
+    const s = Math.min(1.6 * mm, L / 3), tip = a, bas = add(a, mul(u, 2.4 * mm > L / 2 ? L / 2 : 2.4 * mm));
+    return {
+      linje: [a, b, hylla],
+      pil: [tip, add(bas, mul(w, s / 2.4)), sub(bas, mul(w, s / 2.4))],
+      textP: add(hylla, [(hoger ? 1 : -1) * 0.8 * mm, 0]), ha: hoger ? 'left' : 'right',
+    };
+  }
+  /**
+   * Hörnen att numrera i koordinatlistan (0.16.1): nya byggnader först, sedan tillbyggnader, varje ring medurs
+   * från det nordvästligaste hörnet. enh = enheter(…) eller volymerna. Ger [{ nr, p, ut (riktning från mitten) }].
+   */
+  function numreradeHorn(enh) {
+    if (enh.length && enh[0].fotavtryck) enh = enheter(enh);
+    const ut = [];
+    for (const st of ['ny', 'tillbyggnad']) for (const e of enh.filter(x => x.status === st)) {
+      const c = tyngd(e.yttre);
+      for (const r of e.ringar) for (const q of hornOrdning(r)) ut.push({ nr: ut.length + 1, p: q, ut: norm(sub(q, c)) });
+    }
+    return ut;
+  }
+  /** Hörnen medurs från det nordvästligaste, som en koordinatlista brukar vara (0.16.1). */
+  function hornOrdning(r) {
+    const p = K().area(r) > 0 ? r.slice().reverse() : r.slice();
+    let i0 = 0;
+    p.forEach((q, i) => { if (q[1] - q[0] > p[i0][1] - p[i0][0] + 1e-9) i0 = i; });
+    return p.slice(i0).concat(p.slice(0, i0));
+  }
+  /** Delarna av sträckorna som ligger utanför rutorna { p, vinkel, b, h } (0.16.1). */
+  function utanforRutor(strackor, rutor) {
+    if (!rutor.length) return strackor;
+    let ut = strackor;
+    for (const r of rutor) {
+      const u = [Math.cos(r.vinkel), Math.sin(r.vinkel)], n = perp(u), hb = r.b / 2, hh = r.h / 2, nya = [];
+      for (const [a, b] of ut) {
+        // rutans koordinater: s längs texten, t tvärs
+        const sa = dot(sub(a, r.p), u), ta = dot(sub(a, r.p), n), sb = dot(sub(b, r.p), u), tb = dot(sub(b, r.p), n);
+        let t0 = 0, t1 = 1;
+        for (const [p0, dp, lo, hi] of [[sa, sb - sa, -hb, hb], [ta, tb - ta, -hh, hh]]) {
+          if (Math.abs(dp) < 1e-12) { if (p0 < lo || p0 > hi) { t0 = 1; t1 = 0; } continue; }
+          let x0 = (lo - p0) / dp, x1 = (hi - p0) / dp;
+          if (x0 > x1) [x0, x1] = [x1, x0];
+          t0 = Math.max(t0, x0); t1 = Math.min(t1, x1);
+        }
+        if (t0 >= t1) { nya.push([a, b]); continue; }
+        const P = t => add(a, mul(sub(b, a), t));
+        if (t0 > 1e-6) nya.push([a, P(t0)]);
+        if (t1 < 1 - 1e-6) nya.push([P(t1), b]);
+      }
+      ut = nya;
+    }
+    return ut;
+  }
+  /** Underlaget på ritningen (0.16.1): det som är ikryssat och finns. */
+  function underlag(R, u, visa, mm, linje, text) {
+    if (visa.kurvor && u.kurvor && u.kurvor.length) {
+      const B = { HOJDKURVA_10M: 0.3, HOJDKURVA_5M: 0.22, HOJDKURVA_1M: 0.13, HOJDKURVA_0_5M: 0.09, HOJDKURVA_0_25M: 0.07 };
+      const harHel = u.kurvor.some(k => k.lager === 'HOJDKURVA_1M' || k.lager === 'HOJDKURVA_5M' || k.lager === 'HOJDKURVA_10M');
+      for (const k of u.kurvor) {
+        if (!k.pts || k.pts.length < 2) continue;
+        linje('KURVA', k.pts, B[k.lager] || 0.1, { sluten: !!k.sluten, farg: 'kurva' });
+        // en siffra per hel meter-kurva, där kurvan är tillräckligt lång
+        if (k.h == null || (harHel && k.lager !== 'HOJDKURVA_1M' && k.lager !== 'HOJDKURVA_5M' && k.lager !== 'HOJDKURVA_10M')) continue;
+        let tot = 0;
+        for (let i = 1; i < k.pts.length; i++) tot += len(sub(k.pts[i], k.pts[i - 1]));
+        if (tot < 40 * mm) continue;
+        let acc = 0;
+        for (let i = 1; i < k.pts.length; i++) {
+          const a = k.pts[i - 1], b = k.pts[i], l = len(sub(b, a));
+          if (acc + l >= tot / 2) {
+            const p = add(a, mul(sub(b, a), l ? (tot / 2 - acc) / l : 0));
+            text('KURVTEXT', p, fmt(k.h, k.h % 1 ? 1 : 0), 1.8, { vinkel: lasbar(Math.atan2(b[1] - a[1], b[0] - a[0])), halo: true, farg: 'kurva' });
+            break;
+          }
+          acc += l;
+        }
+      }
+    }
+    if (visa.vagar && u.vagar) {
+      const ytor = u.vagar.ytor ? (u.vagar.ytor.bil || []).concat(u.vagar.ytor.gang || []) : [];
+      if (ytor.length) for (const p of ytor) R.ytor.push({ lager: 'VAG', ringar: p.ringar, fyll: 'vag', kant: 0.18 });
+      else for (const l of u.vagar.linjer || []) if (l.pts && l.pts.length >= 2) linje('VAG', l.pts, l.slag === 'gang' ? 0.13 : 0.25, { streck: l.slag === 'gang' ? 'gang' : null, farg: 'vag' });
+    }
+    if (visa.skydd && u.skydd) {
+      const s = u.skydd;
+      if (s.strand && s.strand.zoner) {
+        for (const p of s.strand.zoner.m100 || []) linje('STRAND', p, 0.3, { farg: 'strand' });
+        for (const p of s.strand.zoner.m300 || []) linje('STRAND', p, 0.25, { streck: 'strand', farg: 'strand' });
+      }
+      for (const o of Array.isArray(s.natur) ? s.natur : []) for (const r of o.ringar || []) {
+        linje('NATUR', r.concat([r[0]]), 0.3, { streck: 'natur', farg: 'natur' });
+      }
+      for (const l of Array.isArray(s.lamningar) ? s.lamningar : []) if (l.x != null) {
+        R.cirklar.push({ lager: 'LAMNING', p: [l.x, l.y], r: 1.1 * mm, b: 0.25, farg: 'lamning' });
+        text('LAMNING', [l.x + 1.6 * mm, l.y], l.klass || 'Lämning', 1.7, { ha: 'left', halo: true, farg: 'lamning' });
+      }
+    }
+    if (visa.trad && u.trad) for (const t of u.trad) {
+      if (t.dolt || !(t.krona > 0)) continue;
+      R.cirklar.push({ lager: 'TRAD', p: [t.x, t.y], r: t.krona / 2, b: 0.18, farg: 'trad' });
+      linje('TRAD', [[t.x - 0.5 * mm, t.y], [t.x + 0.5 * mm, t.y]], 0.13, { farg: 'trad' });
+      linje('TRAD', [[t.x, t.y - 0.5 * mm], [t.x, t.y + 0.5 * mm]], 0.13, { farg: 'trad' });
+    }
   }
   function lasbar(a) {
     while (a > Math.PI / 2 + 1e-9) a -= Math.PI;
@@ -344,12 +504,19 @@
     return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
   }
 
-  const FARG = { blck: [23, 25, 27], gra: [94, 98, 102], grans: [23, 25, 27], lmhus: [222, 220, 216], ny: [205, 205, 205], befintlig: [255, 255, 255], annot: [232, 85, 40] };
-  const STRECK = { grans: [4, 0.8, 0.6, 0.8], rivs: [1.6, 1] };
+  const FARG = { blck: [23, 25, 27], gra: [94, 98, 102], grans: [23, 25, 27], lmhus: [222, 220, 216], ny: [205, 205, 205], befintlig: [255, 255, 255], annot: [232, 85, 40],
+    // underlaget (0.16.1)
+    kurva: [160, 120, 80], vag: [120, 122, 125], vagyta: [236, 234, 229], strand: [40, 105, 170], natur: [40, 125, 70], lamning: [140, 60, 130], trad: [70, 125, 65] };
+  const STRECK = { grans: [4, 0.8, 0.6, 0.8], rivs: [1.6, 1], gang: [1, 0.8], strand: [3, 1.5], natur: [3, 1, 0.6, 1] };
   const TECKEN = [
     ['ny', 'Ny byggnad'], ['tillbyggnad', 'Tillbyggnad'], ['befintlig', 'Befintlig byggnad'], ['rivs', 'Byggnad som rivs'],
-    ['lmhus', 'Befintlig byggnad (Lantmäteriet)'], ['grans', 'Fastighetsgräns'], ['kryss', 'Huvudbyggnad'], ['entre', 'Entré'], ['matt', 'Mått i meter'],
+    ['lmhus', 'Befintlig byggnad (Lantmäteriet)'], ['grans', 'Fastighetsgräns'], ['kryss', 'Huvudbyggnad'], ['nock', 'Komplementbyggnad'], ['skarmtak', 'Skärmtak'],
+    ['entre', 'Entré'], ['matt', 'Mått i meter'],
+    ['kurva', 'Höjdkurva (RH 2000)'], ['vag', 'Väg (OpenStreetMap)'], ['trad', 'Träd (laserdata)'], ['strand', 'Strandskydd 100 och 300 m (indikation)'],
+    ['natur', 'Skyddad natur'], ['lamning', 'Lämning (Kulturmiljöregistret)'], ['ledare', 'Anteckning'],
   ];
+  /** Lagren som ligger under byggnaderna (0.16.1). */
+  const UNDER = new Set(['KURVA', 'KURVTEXT', 'VAG', 'STRAND', 'NATUR', 'TRAD', 'LAMNING']);
 
   /**
    * Situationsplanen som PDF. opt: { format, liggande, skala, centrum, volymer, granser, hus, ytor, visa,
@@ -378,10 +545,29 @@
       doc.text(String(s), x, y, Object.assign({ renderingMode: 'fill' }, arg));
     };
     const R = ritning(opt, { skala });
+    const fargAv = n => (n && FARG[n]) || FARG.blck;
+    const ritaLinje = l => {
+      doc.setDrawColor(...fargAv(l.farg)); doc.setLineWidth(l.b); doc.setLineDashPattern(l.streck ? STRECK[l.streck] : [], 0);
+      L(l.pts, l.sluten); doc.stroke();
+    };
+    const ritaText = t => { const [x, y] = P(t.p); skrift(t.text, x, y, t.h, { ha: t.ha, va: t.va, vinkel: t.vinkel / RAD, fet: t.fet, mono: t.mono, halo: t.halo, farg: t.farg ? fargAv(t.farg) : null }); };
 
     doc.saveGraphicsState(); doc.rect(f.x, f.y, f.w, f.h, null); doc.clip(); doc.discardPath();
+    // underlaget först (0.16.1): vägytor, linjer, träd och deras texter, under byggnaderna
+    for (const y of R.ytor) if (y.fyll === 'vag') {
+      doc.setLineWidth(y.kant); doc.setDrawColor(...FARG.vag); doc.setFillColor(...FARG.vagyta); doc.setLineDashPattern([], 0);
+      y.ringar.forEach(r => L(r, true)); doc.fillStrokeEvenOdd();
+    }
+    for (const l of R.linjer) if (UNDER.has(l.lager)) ritaLinje(l);
+    doc.setLineDashPattern([], 0);
+    for (const c of R.cirklar) {
+      const [x, y] = P(c.p);
+      doc.setDrawColor(...fargAv(c.farg)); doc.setLineWidth(c.b); doc.circle(x, y, c.r * k, 'S');
+    }
+    for (const t of R.texter) if (UNDER.has(t.lager)) ritaText(t);
     // ytorna: hus och byggnader
     for (const y of R.ytor) {
+      if (y.fyll === 'vag') continue;
       const fyll = y.fyll === 'lmhus' ? FARG.lmhus : y.fyll === 'ny' ? FARG.ny : y.fyll === 'tillbyggnad' || y.fyll === 'befintlig' ? FARG.befintlig : null;
       doc.setLineWidth(y.kant); doc.setDrawColor(...(y.fyll === 'lmhus' ? FARG.gra : FARG.blck));
       doc.setLineDashPattern(y.streck ? STRECK[y.streck] : [], 0);
@@ -395,18 +581,11 @@
       }
     }
     doc.setLineDashPattern([], 0);
-    for (const l of R.linjer) {
-      if (l.lager === 'SKRAFF') continue;
-      doc.setDrawColor(...FARG.blck); doc.setLineWidth(l.b); doc.setLineDashPattern(l.streck ? STRECK[l.streck] : [], 0);
-      L(l.pts, l.sluten); doc.stroke();
-    }
+    for (const l of R.linjer) if (l.lager !== 'SKRAFF' && !UNDER.has(l.lager)) ritaLinje(l);
     doc.setLineDashPattern([], 0);
     doc.setFillColor(...FARG.blck);
     for (const a of R.pilar) { const [p, q, r] = a.pts.map(P); doc.triangle(p[0], p[1], q[0], q[1], r[0], r[1], 'F'); }
-    for (const t of R.texter) {
-      const [x, y] = P(t.p);
-      skrift(t.text, x, y, t.h, { ha: t.ha, va: t.va, vinkel: t.vinkel / RAD, fet: t.fet, mono: t.mono, halo: t.halo });
-    }
+    for (const t of R.texter) if (!UNDER.has(t.lager)) ritaText(t);
     doc.restoreGraphicsState();
     doc.setDrawColor(...FARG.blck); doc.setLineWidth(0.35); doc.rect(f.x, f.y, f.w, f.h, 'S');
 
@@ -418,7 +597,8 @@
 
     // ritningshuvudet nere till höger, teckenförklaringen ovanför
     const bw = Math.min(118, f.w * 0.45), bx = f.x + f.w - bw;
-    tecken(doc, skrift, R, bx, bw, ritningshuvud(doc, skrift, font, opt, bx, bw, f, skala, format));
+    const tOvre = tecken(doc, skrift, R, bx, bw, ritningshuvud(doc, skrift, font, opt, bx, bw, f, skala, format));
+    koordinatlista(doc, skrift, R.koordlista, bx, bw, tOvre, f, opt.zonNamn);
     // upplysningen och skalstocken nere till vänster
     const upp = [
       'Fastighetsgränser och byggnader ur Lantmäteriets fastighetsindelning och byggnadsskikt (© Lantmäteriet, CC BY 4.0).',
@@ -473,16 +653,23 @@
     const finns = new Set();
     R.ytor.forEach(y => finns.add(y.fyll));
     if (R.linjer.some(l => l.lager === 'GRANS')) finns.add('grans');
-    if (R.linjer.some(l => l.lager === 'KRYSS')) finns.add('kryss');
-    if (R.pilar.length) finns.add('entre');
-    if (R.linjer.some(l => l.lager === 'MATT')) finns.add('matt');
+    for (const [lager, id] of [['KRYSS', 'kryss'], ['NOCK', 'nock'], ['SKARMTAK', 'skarmtak'], ['MATT', 'matt'], ['KURVA', 'kurva'], ['VAG', 'vag'], ['STRAND', 'strand'], ['NATUR', 'natur'], ['LEDARE', 'ledare']]) {
+      if (R.linjer.some(l => l.lager === lager)) finns.add(id);
+    }
+    if (R.ytor.some(y => y.fyll === 'vag')) finns.add('vag');
+    if (R.cirklar.some(c => c.lager === 'TRAD')) finns.add('trad');
+    if (R.cirklar.some(c => c.lager === 'LAMNING')) finns.add('lamning');
+    if (R.pilar.some(p => p.lager === 'ENTRE')) finns.add('entre');
     const rader = TECKEN.filter(([id]) => finns.has(id));
     if (!rader.length) return botten;
-    const h = 5 + rader.length * 4, y0 = botten - h;
+    // två spalter när det blir många rader (0.16.1)
+    const tva = rader.length > 9, per = tva ? Math.ceil(rader.length / 2) : rader.length;
+    const h = 5 + per * 4, y0 = botten - h;
     doc.setFillColor(255, 255, 255); doc.setDrawColor(23, 25, 27); doc.setLineWidth(0.25); doc.rect(bx, y0, bw, h, 'FD');
     let y = y0 + 4.2;
-    for (const [id, t] of rader) {
-      const x = bx + 3;
+    for (const [k, [id, t]] of rader.entries()) {
+      const x = bx + 3 + (tva && k >= per ? bw / 2 : 0);
+      if (tva && k === per) y = y0 + 4.2;
       doc.setLineDashPattern([], 0); doc.setDrawColor(23, 25, 27);
       if (['ny', 'tillbyggnad', 'befintlig', 'rivs', 'lmhus'].includes(id)) {
         doc.setLineWidth(id === 'ny' || id === 'tillbyggnad' ? 0.5 : id === 'lmhus' ? 0.18 : 0.25);
@@ -493,11 +680,47 @@
         if (id === 'tillbyggnad') { doc.setLineWidth(0.13); for (let s = -2; s < 8; s += 1.2) { const a = Math.max(0, -s), b = Math.min(2.6, 8 - s); if (b > a) doc.line(x + s + a, y + 1.3 - a, x + s + b, y + 1.3 - b); } }
         doc.setLineDashPattern([], 0);
       } else if (id === 'grans') { doc.setLineWidth(0.35); doc.setLineDashPattern(STRECK.grans, 0); doc.line(x, y, x + 8, y); doc.setLineDashPattern([], 0); }
-      else if (id === 'kryss') { doc.setLineWidth(0.5); doc.rect(x, y - 1.3, 8, 2.6, 'S'); doc.setLineWidth(0.18); doc.line(x, y - 1.3, x + 8, y + 1.3); doc.line(x, y + 1.3, x + 8, y - 1.3); }
+      else if (id === 'kryss') { doc.setLineWidth(0.5); doc.rect(x, y - 1.3, 8, 2.6, 'S'); doc.setLineWidth(0.18); doc.line(x + 0.8, y - 1.0, x + 7.2, y + 1.0); doc.line(x + 0.8, y + 1.0, x + 7.2, y - 1.0); }
+      else if (id === 'nock') { doc.setLineWidth(0.5); doc.rect(x, y - 1.3, 8, 2.6, 'S'); doc.setLineWidth(0.18); doc.line(x + 1, y, x + 7, y); }
+      else if (id === 'skarmtak') { doc.setLineWidth(0.5); doc.rect(x, y - 1.3, 8, 2.6, 'S'); doc.setLineWidth(0.18); doc.line(x + 0.8, y + 1.0, x + 7.2, y - 1.0); }
+      else if (id === 'kurva') { doc.setDrawColor(...FARG.kurva); doc.setLineWidth(0.2); doc.lines([[2, -1], [2, 1], [2, -0.6], [2, 0.4]], x, y); }
+      else if (id === 'vag') { doc.setDrawColor(...FARG.vag); doc.setFillColor(...FARG.vagyta); doc.setLineWidth(0.18); doc.rect(x, y - 1.1, 8, 2.2, 'FD'); }
+      else if (id === 'trad') { doc.setDrawColor(...FARG.trad); doc.setLineWidth(0.18); doc.circle(x + 4, y, 1.3, 'S'); doc.line(x + 3.6, y, x + 4.4, y); doc.line(x + 4, y - 0.4, x + 4, y + 0.4); }
+      else if (id === 'strand') { doc.setDrawColor(...FARG.strand); doc.setLineWidth(0.3); doc.line(x, y - 0.6, x + 8, y - 0.6); doc.setLineDashPattern(STRECK.strand, 0); doc.line(x, y + 0.7, x + 8, y + 0.7); doc.setLineDashPattern([], 0); }
+      else if (id === 'natur') { doc.setDrawColor(...FARG.natur); doc.setLineWidth(0.3); doc.setLineDashPattern(STRECK.natur, 0); doc.line(x, y, x + 8, y); doc.setLineDashPattern([], 0); }
+      else if (id === 'lamning') { doc.setDrawColor(...FARG.lamning); doc.setLineWidth(0.25); doc.circle(x + 4, y, 0.8, 'S'); }
+      else if (id === 'ledare') { doc.setLineWidth(0.18); doc.line(x, y + 1, x + 5, y - 0.6); doc.line(x + 5, y - 0.6, x + 8, y - 0.6); doc.setFillColor(23, 25, 27); doc.triangle(x, y + 1, x + 1.5, y + 0.1, x + 1.0, y + 0.95, 'F'); }
       else if (id === 'entre') { doc.setFillColor(23, 25, 27); doc.triangle(x + 4, y - 1.2, x + 2.4, y + 1.6, x + 5.6, y + 1.6, 'F'); }
       else if (id === 'matt') { doc.setLineWidth(0.13); doc.line(x, y, x + 8, y); doc.setLineWidth(0.25); doc.line(x - 0.6, y + 0.6, x + 0.6, y - 0.6); doc.line(x + 7.4, y + 0.6, x + 8.6, y - 0.6); }
       skrift(t, x + 11, y, 0, { pt: 6.5 });
       y += 4;
+    }
+    return y0;
+  }
+
+  /**
+   * Koordinatlistan (0.16.1): numrerade hörn med N och E, ovanför teckenförklaringen; i flera spalter om den
+   * blir hög. Ger överkanten.
+   */
+  function koordinatlista(doc, skrift, lista, bx, bw, botten, f, zonNamn) {
+    if (!lista || !lista.length) return botten;
+    // spalter om 56 mm (nr, N, E); så många som behövs för att listan inte ska bli högre än 12 rader
+    const radH = 3.0, SW = 56, maxSp = Math.max(1, Math.floor(bw / SW));
+    const sp = Math.min(maxSp, Math.max(1, Math.ceil(lista.length / 12))), per = Math.ceil(lista.length / sp);
+    const h = 9 + per * radH, y0 = botten - h;
+    doc.setFillColor(255, 255, 255); doc.setDrawColor(23, 25, 27); doc.setLineWidth(0.25); doc.rect(bx, y0, bw, h, 'FD');
+    skrift(`KOORDINATER, ${zonNamn || 'zonen'}`, bx + 3, y0 + 3.4, 0, { pt: 6.5, fet: true });
+    for (let c = 0; c < sp; c++) {
+      const x = bx + 3 + c * SW;
+      skrift('Nr', x, y0 + 7, 0, { pt: 5.8, farg: FARG.gra });
+      skrift('N', x + 28, y0 + 7, 0, { pt: 5.8, farg: FARG.gra, ha: 'right' });
+      skrift('E', x + 50, y0 + 7, 0, { pt: 5.8, farg: FARG.gra, ha: 'right' });
+      lista.slice(c * per, (c + 1) * per).forEach((p, i) => {
+        const y = y0 + 10 + i * radH;
+        skrift(String(p.nr), x, y, 0, { pt: 6.2, fet: true });
+        skrift(fmt(p.y, 2), x + 28, y, 0, { pt: 6.2, mono: true, ha: 'right' });
+        skrift(fmt(p.x, 2), x + 50, y, 0, { pt: 6.2, mono: true, ha: 'right' });
+      });
     }
     return y0;
   }
@@ -514,19 +737,33 @@
       SITPLAN_FASTIGHETSGRANS: 7, SITPLAN_FASTIGHETSBETECKNING: 7, SITPLAN_BYGGNAD_LM: 8,
       SITPLAN_NY: 7, SITPLAN_TILLBYGGNAD: 7, SITPLAN_SKRAFFERING: 8, SITPLAN_BEFINTLIG: 7, SITPLAN_RIVS: 1,
       SITPLAN_HUVUDBYGGNAD: 7, SITPLAN_ENTRE: 7, SITPLAN_MATT: 3, SITPLAN_MATTEXT: 3, SITPLAN_TEXT: 7, SITPLAN_KOORDINATER: 5,
+      // 0.16.1
+      SITPLAN_KOMPLEMENT: 7, SITPLAN_SKARMTAK: 7, SITPLAN_KOORDINATLISTA: 5, SITPLAN_LEDARE: 7, SITPLAN_HOJDKURVA: 34, SITPLAN_HOJDKURVA_TEXT: 34,
+      SITPLAN_VAG: 8, SITPLAN_TRAD: 3, SITPLAN_STRANDSKYDD: 5, SITPLAN_SKYDDAD_NATUR: 3, SITPLAN_LAMNING: 6,
     };
     const NAMN = { GRANS: 'SITPLAN_FASTIGHETSGRANS', FASTIGHET: 'SITPLAN_FASTIGHETSBETECKNING', LMHUS: 'SITPLAN_BYGGNAD_LM', NY: 'SITPLAN_NY', TILLBYGGNAD: 'SITPLAN_TILLBYGGNAD',
       SKRAFF: 'SITPLAN_SKRAFFERING', BEFINTLIG: 'SITPLAN_BEFINTLIG', RIVS: 'SITPLAN_RIVS', KRYSS: 'SITPLAN_HUVUDBYGGNAD', ENTRE: 'SITPLAN_ENTRE', MATT: 'SITPLAN_MATT',
-      MATTEXT: 'SITPLAN_MATTEXT', ETIKETT: 'SITPLAN_TEXT', KOORD: 'SITPLAN_KOORDINATER' };
+      MATTEXT: 'SITPLAN_MATTEXT', ETIKETT: 'SITPLAN_TEXT', KOORD: 'SITPLAN_KOORDINATER',
+      NOCK: 'SITPLAN_KOMPLEMENT', SKARMTAK: 'SITPLAN_SKARMTAK', KOORDNR: 'SITPLAN_KOORDINATLISTA', LEDARE: 'SITPLAN_LEDARE', LEDARTEXT: 'SITPLAN_LEDARE',
+      KURVA: 'SITPLAN_HOJDKURVA', KURVTEXT: 'SITPLAN_HOJDKURVA_TEXT', VAG: 'SITPLAN_VAG', TRAD: 'SITPLAN_TRAD', STRAND: 'SITPLAN_STRANDSKYDD', NATUR: 'SITPLAN_SKYDDAD_NATUR', LAMNING: 'SITPLAN_LAMNING' };
     const obj = [];
     R.ytor.forEach(y => y.ringar.forEach(r => obj.push({ typ: 'pl', lager: NAMN[y.lager], pts: r, sluten: true })));
     R.linjer.forEach(l => obj.push({ typ: 'pl', lager: NAMN[l.lager], pts: l.pts, sluten: !!l.sluten }));
     R.pilar.forEach(a => obj.push({ typ: 'pl', lager: NAMN[a.lager], pts: a.pts, sluten: true }));
-    R.texter.forEach(t => obj.push({ typ: 'text', lager: NAMN[t.lager], x: t.p[0], y: t.p[1], h: t.h * mm * 0.75, text: t.text, vinkel: t.vinkel / RAD, centrerad: true }));
+    R.cirklar.forEach(c => obj.push({ typ: 'cirkel', lager: NAMN[c.lager], x: c.p[0], y: c.p[1], r: c.r }));
+    R.texter.forEach(t => obj.push({ typ: 'text', lager: NAMN[t.lager], x: t.p[0], y: t.p[1], h: t.h * mm * 0.75, text: t.text, vinkel: t.vinkel / RAD, centrerad: !t.ha || t.ha === 'center', just: t.ha }));
     const pts = obj.flatMap(o => o.pts || [[o.x, o.y]]);
     const ext = pts.length ? { xmin: Math.min(...pts.map(p => p[0])), ymin: Math.min(...pts.map(p => p[1])), xmax: Math.max(...pts.map(p => p[0])), ymax: Math.max(...pts.map(p => p[1])) } : null;
+    // koordinatlistan som text till höger om planen (0.16.1)
+    if (R.koordlista.length && ext) {
+      const h = 2.0 * mm, x = ext.xmax + 10 * mm;
+      let y = ext.ymax;
+      const rad = s => { obj.push({ typ: 'text', lager: 'SITPLAN_KOORDINATLISTA', x, y, h, text: s }); y -= h * 1.6; };
+      rad(`KOORDINATER (${opt.zonNamn || 'zonen'})   NR   N   E`);
+      R.koordlista.forEach(p => rad(`${p.nr}   N ${fmt(p.y, 3)}   E ${fmt(p.x, 3)}`));
+    }
     return D.skriv(LAGER, obj, { ext });
   }
 
-  return { enheter, enhetFor, matt, satAnnot, visaDolda, sidaIKropp, etiketter, skraffering, klippLinje, ritning, ram, mitt, pdf, dxf, mattText, FORMAT };
+  return { enheter, enhetFor, matt, satAnnot, visaDolda, sidaIKropp, etiketter, skraffering, klippLinje, utanforRutor, hornOrdning, numreradeHorn, ledarGeometri, sidanOmNock, ritning, ram, mitt, pdf, dxf, mattText, FORMAT };
 }));

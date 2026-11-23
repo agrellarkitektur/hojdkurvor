@@ -119,4 +119,57 @@ prov('PDF: A3 och A4 med ritningshuvud', () => {
   }
 });
 
+prov('0.16.1: underlag, gränser ovanpå, mått av, koordinatlista, ledare, skraffering runt texten', () => {
+  const v = [rekt('hus', 6, 8, 12, 8, { huvudbyggnad: true }), rekt('till', 18, 8, 6, 6, { status: 'tillbyggnad' })];
+  const underlag = {
+    kurvor: [{ h: 33, lager: 'HOJDKURVA_1M', pts: [[0, 2], [40, 2]] }, { h: 33.5, lager: 'HOJDKURVA_0_5M', pts: [[0, 3], [40, 3]] }],
+    trad: [{ x: 35, y: 25, krona: 6, hojd: 10 }, { x: 2, y: 25, krona: 4, hojd: 8, dolt: true }],
+    vagar: { linjer: [{ pts: [[0, -5], [40, -5]], slag: 'bil' }] },
+    skydd: { strand: { zoner: { m100: [[[0, 28], [40, 28]]], m300: [] } }, natur: [], lamningar: [{ x: 30, y: 2, klass: 'Fornlämning' }] },
+  };
+  const ledare = [{ id: 'l1', pts: [[10, 12], [30, 20]], text: 'Ny infart' }];
+  let R = S.ritning({ volymer: v, granser: TOMT, underlag, ledare, visa: { kurvor: true, trad: true, vagar: true, skydd: true, koordlista: true } });
+  assert.strictEqual(R.linjer.filter(l => l.lager === 'KURVA').length, 2);
+  assert.deepStrictEqual(R.texter.filter(t => t.lager === 'KURVTEXT').map(t => t.text), ['33'], 'siffror bara på hela meter');
+  assert.strictEqual(R.cirklar.filter(c => c.lager === 'TRAD').length, 1, 'dolda träd ritas inte');
+  assert.strictEqual(R.linjer.filter(l => l.lager === 'VAG').length, 1);
+  assert.strictEqual(R.linjer.filter(l => l.lager === 'STRAND').length, 1);
+  assert.strictEqual(R.cirklar.filter(c => c.lager === 'LAMNING').length, 1);
+  // gränsen kommer efter byggnaderna
+  const iGrans = R.linjer.findIndex(l => l.lager === 'GRANS'), iKryss = R.linjer.findIndex(l => l.lager === 'KRYSS');
+  assert(iGrans > iKryss, 'gränsen ritas ovanpå');
+  // krysset har indrag (1,5 mm på papperet = 0,6 m i 1:400)
+  const kr = R.linjer.find(l => l.lager === 'KRYSS');
+  nara(Math.hypot(kr.pts[0][0] - 6, kr.pts[0][1] - 8), 0.6, 1e-9);
+  // koordinatlistan: numrerade hörn, medurs från nordväst, för nya och tillbyggnader
+  assert.strictEqual(R.koordlista.length, 8);
+  assert.deepStrictEqual([R.koordlista[0].x, R.koordlista[0].y], [6, 16]);
+  assert.deepStrictEqual([R.koordlista[1].x, R.koordlista[1].y], [18, 16], 'medurs');
+  assert.strictEqual(R.texter.filter(t => t.lager === 'KOORDNR').length, 8);
+  assert.strictEqual(R.texter.filter(t => t.lager === 'KOORD').length, 0);
+  // ledaren: linje med hylla, pil och text till höger
+  assert.strictEqual(R.linjer.find(l => l.lager === 'LEDARE').pts.length, 3);
+  assert(R.pilar.some(p => p.lager === 'LEDARE'));
+  assert.strictEqual(R.texter.find(t => t.lager === 'LEDARTEXT').ha, 'left');
+  // skrafferingen går inte genom tillbyggnadens texter
+  const tx = R.texter.filter(t => t.lager === 'ETIKETT');
+  const sk = R.linjer.filter(l => l.lager === 'SKRAFF');
+  const mm = 0.4;
+  for (const t of tx.filter(t => t.p[0] > 18)) {
+    for (const l of sk) for (let k = 0; k <= 20; k++) {
+      const q = [l.pts[0][0] + (l.pts[1][0] - l.pts[0][0]) * k / 20, l.pts[0][1] + (l.pts[1][1] - l.pts[0][1]) * k / 20];
+      assert(!(Math.abs(q[0] - t.p[0]) < 0.4 * mm && Math.abs(q[1] - t.p[1]) < 0.4 * mm), 'skraffering genom texten');
+    }
+  }
+  // måtten av
+  R = S.ritning({ volymer: v, granser: TOMT, visa: { matt: false } });
+  assert.strictEqual(R.linjer.filter(l => l.lager === 'MATT').length, 0);
+  // PDF och DXF med allt
+  const buf = S.pdf({ volymer: v, granser: TOMT, underlag, ledare, visa: { kurvor: true, trad: true, vagar: true, skydd: true, koordlista: true }, zonNamn: 'SWEREF 99 15 00' });
+  assert(buf.byteLength > 5000);
+  const dxf = S.dxf({ volymer: v, granser: TOMT, underlag, ledare, visa: { kurvor: true, trad: true, koordlista: true } });
+  for (const l of ['SITPLAN_HOJDKURVA', 'SITPLAN_TRAD', 'SITPLAN_LEDARE', 'SITPLAN_KOORDINATLISTA']) assert(dxf.includes(l), l);
+  assert(dxf.includes('CIRCLE'));
+});
+
 console.log(`${antal} prov gick igenom`);

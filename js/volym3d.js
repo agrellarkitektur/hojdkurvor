@@ -508,7 +508,33 @@
     return ut;
   }
 
+
+  // ------------------------------------------------------------------
+  // Takanslutning (0.16.1): taket dras ut i 3D utan att fotavtrycket i plan ändras
+  // ------------------------------------------------------------------
+  /** Nockens riktning (enhetsvektor) och fotavtryckets läge längs den: { u, lg, lmin, lmax, tv, tmin, tmax }. */
+  function nockAxel(v) {
+    const a = (v.nockriktning != null ? v.nockriktning : langsida(v.fotavtryck)) * RAD, u = [Math.cos(a), Math.sin(a)];
+    const lg = v.fotavtryck.map(p => p[0] * u[0] + p[1] * u[1]), tv = v.fotavtryck.map(p => -p[0] * u[1] + p[1] * u[0]);
+    return { u, grader: a / RAD, lg, lmin: Math.min(...lg), lmax: Math.max(...lg), tv, tmin: Math.min(...tv), tmax: Math.max(...tv) };
+  }
+  const harTakfall = v => !!(v && v.takform && v.takform !== 'platt' && v.taklutning > 0);
+  /**
+   * Volymen som den ritas i 3D och räknas i analyserna: med takutdrag = [bak, fram] (meter) flyttas hörnen
+   * vid gavlarna längs nocken (bak = mot nockens början, fram = i nockens riktning), så att taket når in i
+   * en annan kropp. Fotavtrycket i plan är oförändrat. Utan utdrag (eller med platt tak) samma objekt.
+   */
+  function utdragen(v) {
+    const d = v && v.takutdrag;
+    if (!d || !harTakfall(v) || !((d[0] > 0) || (d[1] > 0)) || !v.fotavtryck || v.fotavtryck.length < 3) return v;
+    const ax = nockAxel(v), u = ax.u, tol = 0.01;
+    const fot = v.fotavtryck.map((p, i) => (ax.lg[i] > ax.lmax - tol && d[1] > 0 ? [p[0] + u[0] * d[1], p[1] + u[1] * d[1]]
+      : ax.lg[i] < ax.lmin + tol && d[0] > 0 ? [p[0] - u[0] * d[0], p[1] - u[1] * d[0]] : p));
+    return Object.assign({}, v, { fotavtryck: fot, nockriktning: v.nockriktning != null ? v.nockriktning : avrunda(ax.grader, 4), utdragen: true });
+  }
+
   return {
+    utdragen, nockAxel, harTakfall,
     TYPER, ny, franVolym, uppdatera, fotavtryck, mitt, plan, hojdVid, takytor, inutiVolym, topp,
     snapp, kontakter, komponent, lankade, vaxlaLank, flytta, vrid, underlag, synligaKanter, skarningar,
     tyngdpunkt, inuti, konvex, overlappar, langsida,

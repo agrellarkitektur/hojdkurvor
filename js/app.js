@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.16.0';
+  const FILVERSION = '0.16.1';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -2044,7 +2044,7 @@
         // dolda träd och hus (0.11.0) kastar ingen skugga
         // dolda hus och hus som ersatts av en byggnadskropp skärs bort; kropparna (utom de som rivs) bränns in nedan
         if (kor.laserYta) y.dsm = Objektval.skarBort(y, y.dsm, { trad: tradDolda, hus: (senaste.byggnaderDolda || []).concat(senaste.byggnaderErsatta || []) });
-        const volA = Kropp.forAnalys(senaste.volymer);
+        const volA = Kropp.for3d(senaste.volymer);
         // sol på fasaderna (0.15.0): omgivningen utan kropparna, och utan det som står där de står
         if (val.fasadsol && volA.length) kor.ytaFasad = { W: y.W, H: y.H, s: y.s, x0: y.x0, y1: y.y1, dtm: y.dtm, dsm: Fasadsol.rensaUnderKroppar(y, volA) };
         if (volA.length) y.dsm = Platsanalys.branInVolymer(y, y.dsm, volA);
@@ -2146,7 +2146,7 @@
           const sSky = Math.max(1, Math.ceil(Math.sqrt((omr.xmax - omr.xmin) * (omr.ymax - omr.ymin) / 1.5e6)));
           const gs = T.rutnat(mos, omr, sSky, epsg);
           const befSpar = senaste.byggnader ? Byggnad.somVolymer(senaste.byggnader, { utanHojd: 3 }) : [];
-          const hinder = Kropp.forAnalys(senaste.volymer).concat(befSpar);
+          const hinder = Kropp.for3d(senaste.volymer).concat(befSpar);
           if (hinder.length) gs.z = Platsanalys.branInVolymer(gs, gs.z, hinder, { spar: true });
           await new Promise(ok => setTimeout(ok, 0));
           const sk = Platsanalys.skyfall(gs, r);
@@ -2588,7 +2588,7 @@
             let nara = kor.laserTM || bara;   // laserTM är byggd utan tomten om det är valt, se Laserdata ovan
             if (Kropp.forAnalys(senaste.volymer).length) {   // skissen räknas med i horisonten
               const tm = epsg === 3006 ? (q => q) : T.omvandlare(epsg, 3006).forward;
-              const volTM = Kropp.forAnalys(senaste.volymer).map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
+              const volTM = Kropp.for3d(senaste.volymer).map(v => Object.assign({}, v, { fotavtryck: v.fotavtryck.map(q => tm(q)) }));
               nara = Object.assign({}, nara, { data: Platsanalys.branInVolymer({ x0: nara.E0 + 0.5, y1: nara.N1 - 0.5, s: 1, W: nara.w, H: nara.h }, nara.data, volTM) });
             }
             // står punkten i ett hus eller under en krona räknas det objektet bort
@@ -2647,12 +2647,13 @@
   async function skapaFasadsol(kor) {
     const { auth, delFramsteg, epsg, extraInfo, filer, mitt, namn, projekt, sammanExtra, senaste, val, varningar, MARG_SKUGGA } = kor;
     if (!val.fasadsol) return;
-    const volA = Kropp.forAnalys(senaste.volymer);
+    const volA = Kropp.for3d(senaste.volymer);
     if (!volA.length) return;
     try {
       delFramsteg('fasadsol', 0, 'Räknar sol på fasaderna');
       const yta = kor.ytaFasad || null, konv = mitt.konvergens;
-      const { punkter, fasader } = Fasadsol.punkter(volA, { steg: 1, konv, mark: yta ? (x, y) => Analys.nod(yta, yta.dtm, x, y) : null });
+      // skärmtak har inga fasader men skuggar (0.16.1)
+      const { punkter, fasader } = Fasadsol.punkter(volA.filter(v => Kropp.slag(v) !== 'skarmtak'), { steg: 1, konv, mark: yta ? (x, y) => Analys.nod(yta, yta.dtm, x, y) : null });
       if (!punkter.length) { varningar.push('Sol på fasaderna: byggnaderna har inga fasader ovan mark.'); return; }
       const miljo = { yta, vol: Fasadsol.hinderraster(volA) }, DEL = 150;
       for (let k = 0; k < punkter.length; k += DEL) {
@@ -2685,14 +2686,17 @@
       const n = punkter.length, f32 = k => Float32Array.from(punkter, p => p[k]);
       senaste.fasadsol = {
         period, tid, ar: SOL_AR, skala: Fasadsol.skala(res),
-        punkter: { x: Float64Array.from(punkter, p => p.x), y: Float64Array.from(punkter, p => p.y), z: f32('z'), nx: f32('nx'), ny: f32('ny'), w: f32('w'), h: f32('h'), summa: res.punkt.summa, topp: res.punkt.topp },
+        punkter: { x: Float64Array.from(punkter, p => p.x), y: Float64Array.from(punkter, p => p.y), z: f32('z'), nx: f32('nx'), ny: f32('ny'), w: f32('w'), h: f32('h'), summa: res.punkt.summa, topp: res.punkt.topp,
+          f: Uint16Array.from(punkter, p => p.f) },
+        // fasadernas nummer som på bladet (0.16.1): kropp och väderstreck i bladets ordning
+        fasadNr: res.fasader.map(f => res.grupper.findIndex(g => g.volym === f.volym && g.streck === f.streck) + 1),
         grupper: res.grupper.map(g => ({ id: g.id, namn: g.namn, streck: g.streck, area: g.area, summa: g.summa, lokal: g.lokal, samtidig: g.samtidig, skuggning: g.skuggning })),
         paket: Fasadsol.tillPaket(res, { horisont: fjarr }),
       };
       await laddaPdf();
       const PN = Fasadsol.PERIODER[period].namn, TN = Fasadsol.TIDER[tid].namn;
       filer[`fasadsol/${namn}_sol_pa_fasader.pdf`] = Fasadsolblad.blad({
-        res, fonter, titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
+        res, fonter, punkter, volymer: volA, titel: { projekt, kommun: kommunText(), system: `${T.zon(epsg).namn}, RH 2000` },
         notis: [`Omgivningen: ${kor.laserYta ? `terräng, hus och träd ur laserdata ${kor.laserDatum}` : 'bara terrängen (ingen laserdata)'} inom ${MARG_SKUGGA} m, terrängen inom 5 km bortom det. Byggnader som rivs räknas inte.`],
       });
       filer[`fasadsol/${namn}_fasader.csv`] = Fasadsolblad.csv(res);
@@ -3269,6 +3273,7 @@
   const volymLager = L.featureGroup();
   if (synlig('volymer')) volymLager.addTo(karta);
   state.volymer = [];          // sparas i projektet (0.13.0), förut i sessionStorage
+  state.ledareTM = [];         // situationsplanens ledare i SWEREF 99 TM (0.16.1), sparas i projektet
   state.volymEpsg = null;      // systemet som volymernas koordinater är i
   function sparaVolymer() { state.volymEpsg = state.volymEpsg || state.epsg; planeraSpara(); }
   /**
@@ -3352,12 +3357,12 @@
       }
     }
     state.volymEpsg = state.epsg;
-    // status, huvudbyggnad, källa och entré (0.14.0) och dolda och flyttade mått (0.16.0) följer inte med
+    // status, huvudbyggnad, källa och entré (0.14.0), dolda och flyttade mått (0.16.0), slag och takutdrag (0.16.1) följer inte med
     // cad-apa; de behålls för kroppar med samma id
     const forra = new Map(state.volymer.map(v => [v.id, v]));
     state.volymer = sk.volymer.map(v => {
       const n = Object.assign({}, v, { id: v.id || Utbyte.nyttId() }), f = forra.get(n.id);
-      if (f) ['status', 'huvudbyggnad', 'kalla', 'matt'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
+      if (f) ['status', 'huvudbyggnad', 'kalla', 'matt', 'slag', 'takutdrag'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
       if (f && f.entre && n.entre == null && f.fotavtryck.length === n.fotavtryck.length) n.entre = f.entre;
       return n;
     });
@@ -3527,8 +3532,12 @@
     const ram = d.ram, p = state.proj ? state.proj.d.projekt : {};
     const namn = (p.fastighet || $('projekt').value.trim() || 'situationsplan').replace(/[\\/:*?"<>|]+/g, '_');
     const ersatta = Kropp.ersatta(d.volymer);
+    const u = und.underlag || {};
     const data = {
-      volymer: d.volymer, granser: und.granser, ytor: und.ytor, visa: d.visa,
+      volymer: d.volymer, granser: und.granser, ytor: und.ytor, visa: d.visa, ledare: d.ledare || [],
+      underlag: { kurvor: u.kurvor, trad: d.trad || u.trad, vagar: u.vagar, skydd: u.skydd },
+      kallor: [d.visa.vagar && u.vagar ? 'Vägar © OpenStreetMap-bidragsgivare (ODbL).' : '', d.visa.skydd && u.skydd ? 'Skydd: Naturvårdsverket, Riksantikvarieämbetet, strandskyddet är en indikation.' : '',
+        d.visa.kurvor && u.kurvor ? 'Höjdkurvor ur Lantmäteriets markhöjdmodell.' : ''].filter(Boolean).join(' ') || null,
       hus: und.hus.filter(b => !ersatta.has(String(b.id))),
       zonNamn: T.zon(state.epsg).namn, centrum: ram.centrum, format: ram.format, liggande: ram.liggande, skala: ram.skala,
       uppgifter: { fastighet: p.fastighet || $('projekt').value.trim(), kommun: state.kommun ? state.kommun.namn : p.kommun, uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer, datum: idag() },
@@ -3563,6 +3572,16 @@
     const granser = s && s.fastigheter ? s.fastigheter.granser : [];
     const saknas = [!granser.length && 'fastighetsgränser', !hus.length && 'byggnader'].filter(Boolean);
     planAndrad = false;
+    // underlaget som i kartan (0.16.1)
+    const o = s && s.ortofoto;
+    const underlag = s ? {
+      ortofoto: o && o.bild ? { url: o.bild, x0: o.x0, y1: o.y1, s: o.s, W: o.W, H: o.H } : null,
+      kurvor: s.kurvor || null, trad: tradForPlan(),
+      vagar: s.vagar ? { linjer: s.vagar.linjer || [], ytor: s.vagar.ytor || null } : null,
+      skydd: s.strand || Array.isArray(s.natur) || Array.isArray(s.lamningar)
+        ? { strand: s.strand && !s.strand.fel ? s.strand : null, natur: Array.isArray(s.natur) ? s.natur : null, lamningar: Array.isArray(s.lamningar) ? s.lamningar : null } : null,
+    } : {};
+    const tillZon = franTM(state.epsg), franZon = tillTM(state.epsg);
     document.body.classList.add('planvy-oppen');
     planvy = Planvy.oppna($('planvy'), {
       volymer: state.volymer, granser,
@@ -3573,7 +3592,18 @@
       ramAndrad: r => lager.spara('localStorage', 'terrang-situationsplan', r),
       uppgifter: () => { const p = state.proj ? state.proj.d.projekt : {}; return { fastighet: p.fastighet || $('projekt').value.trim(), uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer }; },
       satUppgifter: delar => { if (!state.proj) return; Object.assign(state.proj.d.projekt, delar); planeraSpara(); },
-      situationsplan: (typ, d) => skapaSituationsplan(typ, d, { granser, hus, ytor: s && s.fastigheter ? s.fastigheter.ytor : [] }),
+      situationsplan: (typ, d) => skapaSituationsplan(typ, d, { granser, hus, ytor: s && s.fastigheter ? s.fastigheter.ytor : [], underlag }),
+      underlag,
+      visa: lager.las('localStorage', 'terrang-planvy-visa') || null,
+      visaAndrad: v => lager.spara('localStorage', 'terrang-planvy-visa', v),
+      ledare: (state.ledareTM || []).map(l => ({ id: l.id, text: l.text, pts: l.pts.map(tillZon) })),
+      ledareAndrad: l => { state.ledareTM = l.map(x => ({ id: x.id, text: x.text, pts: x.pts.map(franZon) })); planeraSpara(); },
+      tradAndrat: s ? tradIPlan : null,
+      fastighetVid: (x, y) => {
+        if (s && s.fastigheter) return Fastighet.vid(s.fastigheter, x, y);
+        const [lat, lon] = tillLatLng(state.epsg)([x, y]);
+        return fastigheterVid(x, y, state.epsg, lat, lon);
+      },
       till3d: s && s.rutnat ? () => $('visa-3d').click() : null,
       saknas: saknas.length ? `Underlaget saknar ${saknas.join(' och ')}. Välj ${saknas.length > 1 ? 'dem' : 'det'} under 02 Underlag och välj Skapa för att rita mot ${saknas.length > 1 ? 'dem' : 'det'}.` : null,
       stangd: () => {
@@ -3765,6 +3795,7 @@
       volymer: state.volymer.map(v => Object.assign(Projekt.flyttaVolym(v, f), { forslag: v.forslag || aktivt })),
       sektioner: state.sektioner.map(s => ({ id: s.id, namn: s.namn, a: runda3(ll(s.a)), b: runda3(ll(s.b)), vand: !!s.vand })),
       rattelser: samlaRattelser(),
+      ledare: (state.ledareTM || []).map(l => ({ id: l.id, text: l.text, pts: l.pts.map(runda3) })),
     };
   }
   /** Projektet som det ser ut nu, med okända fält ur det som lästes in. */
@@ -3895,6 +3926,7 @@
       state.volymEpsg = state.epsg;
       state.sektioner = im.sektioner.filter(s => s.a && s.b).map(s => ({ id: s.id || Utbyte.nyttId(), namn: s.namn, a: ll(s.a), b: ll(s.b), vand: !!s.vand }));
       state.horPunkt = pl.horisontpunkt ? ll(pl.horisontpunkt) : null;
+      state.ledareTM = (im.ledare || []).map(l => ({ id: l.id, text: l.text, pts: l.pts.map(q => q.slice()) }));
       // rättelserna gäller samma hus och träd i alla projekt, så de förs in bland de globala
       const rt = im.rattelser || {};
       const tak = takval(), hus = husval(), trad = tradval();
@@ -4568,6 +4600,25 @@
       .bindTooltip(esc(Byggnad.beteckning(b)) + (b.hojd != null ? `, ${fmt(b.hojd, 1)} m` : ''), { sticky: true })));
     visaResultatLager('byggnader', bgrp, () => bgrp.setStyle(bstil()));
   }
+  /** Träden för planvyn (0.16.1): ur laserdatan med rättelserna, egna träd och de dolda (dolt: true). */
+  function tradForPlan() {
+    const s = state.senaste;
+    if (!s) return [];
+    return Objektval.tillampaTrad(s.tradAlla || [], tradval(), { medDolda: true }).trad;
+  }
+  /** Ett träd tillagt, dolt, visat eller borttaget i planvyn (0.16.1). Ger den nya listan. */
+  function tradIPlan({ typ, t, x, y }) {
+    const val = tradval();
+    if (typ === 'ny') Objektval.nyttTrad(val, Math.round(x * 10) / 10, Math.round(y * 10) / 10);
+    else if (typ === 'bort') Objektval.sattTrad(val, t, {}, { taBort: true });
+    else if (typ === 'dolj') Objektval.sattTrad(val, t, Object.assign(Objektval.valFor(t, val), { dolt: true }));
+    else if (typ === 'visa') { const e = Objektval.valFor(t, val); delete e.dolt; Objektval.sattTrad(val, t, e); }
+    lager.spara('localStorage', TRADVAL, val);
+    const s = state.senaste;
+    if (s && !s.tradAlla) s.tradAlla = [];
+    objektAndrat(); planeraSpara();
+    return tradForPlan();
+  }
   /** Efter en ändring: träd och hus i state.senaste och på kartan. */
   function objektAndrat() {
     const s = state.senaste;
@@ -4618,7 +4669,7 @@
   function sparaTrad(e) {
     const s = state.senaste, i = tradVal;
     if (i == null || !s) return;
-    const orig = (s.tradAlla || s.trad)[i];
+    const orig = (s.tradAlla || s.trad)[i] || (trad3d[i] && trad3d[i].ny ? trad3d[i] : null);   // egna träd ligger efter laserträden (0.16.1)
     if (!orig) return;
     const val = Objektval.sattTrad(tradval(), orig, e);
     lager.spara('localStorage', TRADVAL, val);
@@ -4742,7 +4793,7 @@
     if (!vy3d || !s || !lassoTrad.length) return;
     const val = tradval();
     for (const i of lassoTrad) {
-      const orig = (s.tradAlla || s.trad)[i];
+      const orig = (s.tradAlla || s.trad)[i] || (trad3d[i] && trad3d[i].ny ? trad3d[i] : null);
       if (!orig || !trad3d[i]) continue;
       const e = Objektval.valFor(trad3d[i], val);
       e.dolt = true;
@@ -4761,7 +4812,8 @@
     const val = tradval();
     trad3d.forEach((t, i) => {
       if (!t.dolt) return;
-      const orig = (s.tradAlla || s.trad)[i], e = Objektval.valFor(t, val);
+      const orig = (s.tradAlla || s.trad)[i] || (t.ny ? t : null), e = Objektval.valFor(t, val);
+      if (!orig) return;
       delete e.dolt;
       Objektval.sattTrad(val, orig, e);
       trad3d[i] = Objektval.tillampaTrad([orig], val, { medDolda: true }).trad[0];

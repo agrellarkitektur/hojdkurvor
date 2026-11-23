@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **DC**.
+Senast använda nummer: **DQ**.
 
 ## Inkorg
 
@@ -23,6 +23,25 @@ Senast använda nummer: **DC**.
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.16.1
+
+Svar på testet 23 november (BG och synpunkterna på situationsplanen och sol på fasaderna).
+
+- **DD** Strandskydd (efter BG): gör en platsanalys med Skydd nära en sjö, utan Marktäcke. Kommer strandskyddet med från OpenStreetMap nu? Svarar huvudservern fortfarande inte går frågan till en reservserver (overpass.kumi.systems); vad säger varningen i så fall? Prova en plats vid en stor sjö (Vättern, Mälaren): räcker 40 s nu när svaret är klippt till rutan?
+- **DE** Underlaget i planvyn: skapa med Ortofoto, Träd och Skydd och öppna *Rita i plan*. Syns ortofotot, höjdkurvorna, träden och skydden under ritningen, och går de att slå av och på under *Visa*? Går det fortfarande lätt att panorera och zooma, också i ett stort utsnitt?
+- **DF** Underlaget på situationsplanen: kryssa i Höjdkurvor, Träd, Vägar och Skydd under *Visa* och skapa PDF och DXF. Kommer de med under byggnaderna, med siffror på hela meter-kurvorna och rätt rader i teckenförklaringen? Är lagren i DXF:en användbara?
+- **DG** Fastighetsgränserna ritas ovanpå byggnaderna, i planvyn och på ritningen. Syns de där en byggnad går ända fram till gränsen?
+- **DH** *Mått* i verktygsraden: försvinner alla mått, också på PDF:en och i DXF:en, och kommer de tillbaka?
+- **DI** Texterna på en tillbyggnad (och över kryss och nock): går de att läsa, i planvyn och på PDF:en?
+- **DJ** *Numrerade hörn och koordinatlista* under *Visa*: numren vid hörnen, listan i panelen, på PDF:en (ovanför teckenförklaringen) och i DXF:en (till höger om planen). Är ordningen (nya byggnader först, medurs från nordväst) rätt för en bygglovshandling?
+- **DK** *Redovisas i plan*: huvudbyggnad (kryss), komplementbyggnad (nock mellan gavlarna) och skärmtak (diagonal), alla med indrag från hörnen. Är indraget lagom (1,5 mm på papperet), och hamnar nocken åt rätt håll? Ser skärmtaket rimligt ut i 3D (tak på stolpar)?
+- **DL** *Vrid mot* (A): vrid en byggnad så att en sida följer en tomtgräns och en fasad på ett annat hus. Vrids den kring rätt punkt?
+- **DM** *Ledare* (T): lägg in en ledare med fritext, flytta texten och pilen, ändra texten och ta bort en. Ligger den kvar efter omladdning och i projektfilen? Hur ser den ut på PDF:en?
+- **DN** *Träd* (G): lägg till ett träd, dölj ett ur laserdatan och visa det igen, ta bort det egna. Följer det med i 3D-vyn (och går det att ändra där), på kartan och efter Skapa i skuggorna?
+- **DO** *Fastighet* (F): klicka på en fastighet. Fylls beteckningen i under *Situationsplan*?
+- **DP** Takanslutning: rita ett hus med sadeltak och en lägre flygel i vinkel mot det (som i bilden 23 november), markera flygeln och välj *Anslut taket*. Möts taken i 3D-vyn utan gavel mot huset, och är planen oförändrad? Prova att skriva utdraget för hand.
+- **DQ** Sol på fasaderna: är översikten (3D från två håll, nyckelplan, ett kort per fasad) begriplig och tillräckligt *smart*? Stämmer numren mellan sidorna och med 3D-vyn? Saknas något, till exempel timtoppen i 3D eller jämförelse mellan förslag?
 
 ### 0.16.0
 
@@ -77,7 +96,7 @@ Rättelser efter testet 20 november av AJ–AÅ.
 
 ### 0.13.5
 
-- **BG** Strandskydd på en riktig plats nära en sjö (vid havet godkänt 20 november): kommer strandskyddet med, utan *signal is aborted without reason*? Syns lagret *Strandskydd (indikation)* med en heldragen linje 100 m och en streckad 300 m från vattnet, och stämmer de ungefär med kartan? Prova med och utan Marktäcke ikryssat. Står det rätt sjö i texten? Prova också nära en liten damm eller bäck: säger texten att den saknar strandskydd enligt reglerna från 2025?
+- **BG** (23 november: med Marktäcke fungerar det; OpenStreetMap svarade 502 efter tre försök. Ändrat, testas som DD.) Strandskydd på en riktig plats nära en sjö (vid havet godkänt 20 november): kommer strandskyddet med, utan *signal is aborted without reason*? Syns lagret *Strandskydd (indikation)* med en heldragen linje 100 m och en streckad 300 m från vattnet, och stämmer de ungefär med kartan? Prova med och utan Marktäcke ikryssat. Står det rätt sjö i texten? Prova också nära en liten damm eller bäck: säger texten att den saknar strandskydd enligt reglerna från 2025?
 
 ### 0.13.1
 
@@ -103,6 +122,26 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 23 november 2026 → 0.16.1 (testet av situationsplanen och sol på fasaderna)
+
+Situationsplanen:
+
+- Rotera redan ritad byggnad med befintligt streck som referenslinje. *Verktyget Vrid mot (DL).*
+- Kunna inaktivera måttsättningar. *Knappen Mått (DH).*
+- Tillbyggnadsskrafferingen gör att det inte går att läsa texten ovanpå den. *Bakgrund bakom texten, skrafferingen klipps runt den (DI).*
+- Möjlighet att flytta ut koordinater till en koordinatlista istället med nummer vid respektive hushörn. *DJ.*
+- När man ritar vill man se samma vy som utanför ritläget med ortofoto, höjdkurvor, fastighetsgränser etc. *DE.*
+- På den färdiga ritningen vill man se höjdkurvor, träd (möjlighet att dölja och lägga till enskilda – gäller även 3D), vägar, skydd (man ska kunna ställa in vad som ska synas). *DF och DN.*
+- En byggnad ska inte skymma fastighetsgränser. *DG.*
+- Man ska kunna lägga till ledare med fritext. *DM.*
+- Huvudbyggnadkrysset ska inte gå hela vägen ut till hörnen utan ha ett visst indrag. Komplementbyggnader kan ha ett rakt streck i mitten mellan gavelspetsarna (som en nock) men med ett visst indrag. Ny byggvolym: skärmtak som redovisas med ett diagonalt streck (med indrag). *DK.*
+- Klicka i kartan för att hämta fastighetsnummer. *Verktyget Fastighet i planvyn (DO); i 01 Plats finns Hämta från kartan sedan 0.13.1.*
+- Man ska kunna rita takanslutningar (bild 23 november) utan att byggnaderna överlappar varandra. Förslagsvis att man först ritar avtrycket på mark (det som är utanför huset) men att man sen kan dra ut själva gavelspetsarna på en volym utan att det syns i plan. *Takanslutning med Anslut taket (DP).*
+
+Sol på fasaderna:
+
+- Försök göra att det ser lite mer "smart" ut med numrerade fasader, en 3D-översikt av byggnaden med projicerade diagram på etc. Bara tabeller och diagram ser lite tråkigt ut. Försök göra det mer visuellt och integrerat och fylligt. *Översiktssida och numrerade fasader (DQ).*
 
 ### 22 november 2026 → 0.16.0 (situationsplanen)
 

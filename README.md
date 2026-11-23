@@ -171,7 +171,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/fastighet.js` – fastighetsgränser, gränspunkter och beteckningar, DXF
 - `js/stompunkt.js` – Stompunkt Direkt: sökning inom utsnittet, DXF och CSV
 - `js/vagar.js` – vägar från OpenStreetMap via Overpass: bilvägar och gångvägar, klassning, utkast till vägytor (sträckor mellan korsningar med en bredd var, ur OSM, schablon eller mätt i ortofotot, och rundade hörn i korsningarna) och DXF
-- `js/objektval.js` (`Objektval`) – egna val för enskilda träd och hus: dölja, rätta trädens art, höjd och krona, skära bort dolda ur ytmodellen
+- `js/objektval.js` (`Objektval`) – egna val för enskilda träd och hus: dölja, rätta trädens art, höjd och krona, egna träd (0.16.1), skära bort dolda ur ytmodellen
 - `js/topowebb.js` – läser Topografisk webbkarta ur Lantmäteriets GeoPackage
   (172 GB) med HTTP Range, några få sidor åt gången
 - `js/analys.js` (`Analys`) – ytmodell ur laserdata, träd, skuggor, sektioner, horisont
@@ -193,10 +193,10 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter), också till cad-apa; laddas med sidan
 - `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer; laddas med sidan (takytorna används också i skissens DXF)
 - `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA; från 0.16.0 union och yttre skal (ren geometri, testas i Node)
-- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan; från 0.16.0 byggnaderna som yttre skal, dolda och flyttade mått, ramen och panelen *Situationsplan*
-- `js/situationsplan.js` (`Situationsplan`, 0.16.0) – situationsplanen: byggnaderna som yttre skal (enheter), måtten på skalet och hur de ändras, etiketter, skraffering, och planen som vektor-PDF (A3/A4, 1:400/1:500, ritningshuvud, teckenförklaring) och DXF med ett lager per innehåll (ren, testas i Node)
+- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan; från 0.16.0 byggnaderna som yttre skal, dolda och flyttade mått, ramen och panelen *Situationsplan*; från 0.16.1 underlaget (ortofoto, höjdkurvor, träd, vägar, skydd), verktygen Vrid mot, Ledare, Träd och Fastighet, koordinatlistan och takanslutningen
+- `js/situationsplan.js` (`Situationsplan`, 0.16.0) – situationsplanen: byggnaderna som yttre skal (enheter), måtten på skalet och hur de ändras, etiketter, skraffering, från 0.16.1 underlag, ledare och koordinatlista, och planen som vektor-PDF (A3/A4, 1:400/1:500, ritningshuvud, teckenförklaring) och DXF med ett lager per innehåll (ren, testas i Node)
 - `js/fasadsol.js` (`Fasadsol`, 0.15.0) – sol på fasaderna: fasadpunkter på byggnadskropparna, horisonten framför varje punkt (egen kropp, andra kroppar, omgivningen), klar himmel (ESRA) och Hay–Davies, summa, lokal och samtidig topp, timme × dag och värsta dygnet (ren beräkning, testas i Node, tänkt att kunna tas till cad-apa)
-- `js/fasadsolblad.js` (`Fasadsolblad`, 0.15.0) – sol på fasaderna som A3-PDF (staplar och tabell, timme × dag, värsta dygnet) och CSV
+- `js/fasadsolblad.js` (`Fasadsolblad`, 0.15.0) – sol på fasaderna som A3-PDF (från 0.16.1 en översikt med 3D från två håll, nyckelplan och ett kort per numrerad fasad; staplar och tabell, timme × dag, värsta dygnet) och CSV
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn
 - `js/utskrift.js` – skalenlig utskrift (PDF) och skuggstudiens översiktsblad
 - `js/sol.js` – solberäkningar och soldiagram som PDF, med eller utan horisont
@@ -234,7 +234,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   kontrollerat mot tjänsterna 19 november 2026
 - Lämningar: pub.raa.se/visning/lamningar_v1/wms (GetFeatureInfo)
 - Översvämning: gis-tjanster.mcf.se, Oversvamningskarteringar (WMS)
-- Vägar, vatten och skyddad natur när Naturvårdsverket inte svarar: overpass-api.de (OpenStreetMap)
+- Vägar, vatten och skyddad natur när Naturvårdsverket inte svarar: overpass-api.de (OpenStreetMap), med overpass.kumi.systems som reserv när den inte svarar (0.16.1)
 - Bakgrundskartor: tile.openstreetmap.org, tile.opentopomap.org, samt Esri om
   nyckel finns i config.js
 - Adressök: nominatim.openstreetmap.org

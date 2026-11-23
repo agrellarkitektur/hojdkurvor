@@ -59,4 +59,22 @@ assert.strictEqual(z(54, 10), 60, 'utanför kronan');
 assert.strictEqual(dsm[0], 60, 'originalet ändras inte');
 assert.strictEqual(O.skarBort(y, dsm, {}), dsm);
 
+// 0.16.1: egna träd läggs till, kan döljas och tas bort; nära ett laserträd blir de en rättelse av det
+{
+  const alla = [{ x: 10, y: 10, hojd: 12, krona: 6 }];
+  let val = O.nyttTrad({}, 30, 40);
+  let r = O.tillampaTrad(alla, val);
+  assert.strictEqual(r.trad.length, 2);
+  assert.deepStrictEqual([r.trad[1].x, r.trad[1].y, r.trad[1].hojd, r.trad[1].krona, r.trad[1].art, r.trad[1].ny], [30, 40, 8, 5, 'lov', true]);
+  val = O.sattTrad(val, r.trad[1], { hojd: 14 });
+  r = O.tillampaTrad(alla, val);
+  assert.deepStrictEqual([r.trad[1].hojd, r.trad[1].ny], [14, true], 'förblir eget när det ändras');
+  val = O.sattTrad(val, r.trad[1], { dolt: true });
+  r = O.tillampaTrad(alla, val, { medDolda: true });
+  assert.deepStrictEqual([r.trad.length, r.dolda.length, r.trad[1].dolt], [2, 1, true]);
+  val = O.sattTrad(val, r.trad[1], {}, { taBort: true });
+  assert.deepStrictEqual(val, {});
+  r = O.tillampaTrad(alla, O.nyttTrad({}, 10.3, 10, { hojd: 20 }));
+  assert.deepStrictEqual([r.trad.length, r.trad[0].hojd], [1, 20]);
+}
 console.log('objektval: ok');

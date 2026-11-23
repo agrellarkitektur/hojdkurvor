@@ -202,6 +202,10 @@ python3 test/situationsplan_test.py test/ut ritning
 ```
 
 ```
+python3 test/planverktyg_test.py test/ut ritning
+```
+
+```
 python3 test/las_test.py test/ut ritning
 ```
 
