@@ -8,8 +8,8 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 - **0.16.0** 22 november (grenen `v0.16.0`): **situationsplanen**, etapp 3 i
   `plan-skiss-situationsplan.md` (claude.ai-projektet), och ägarens synpunkt samma dag: kroppar i
   vinkel ska redovisas som en union, ett yttre skal, och visas var för sig först när de markeras.
-  Se avsnittet *Situationsplanen (0.16.0)* nedan. Testpunkter CÖ–DC. Sessionen hade **ingen
-  skrivrätt** till repot (push nekades); grenen lämnades som git-bundle till ägaren. Körda: alla 24
+  Se avsnittet *Situationsplanen (0.16.0)* nedan. Testpunkter CÖ–DC. Byggd utan skrivrätt (grenen
+  lämnades först som git-bundle); pushad till `main` och publicerad 23 november. Körda: alla 24
   enhetstester (nytt: `situationsplan.test.js`; union, skal och BYA i `kropp.test.js`), nya
   `situationsplan_test.py` och `planvy_test.py` i alla tre teman. Testdatan byggdes med GDAL
   (python3.12) enligt *Testmiljön*. **Inte provat**: riktiga tomter med sneda gränser, utskrift i
