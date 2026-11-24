@@ -1,9 +1,20 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 23 november 2026, 0.16.1.
+överlämning; historiken finns i git. Senast: 25 november 2026, 0.16.2.
 
 ## Läget
+
+- **0.16.2** 25 november (grenen `v0.16.2`): **BS**, utsnittets format på mobilen. Formatväljaren
+  `#mobil-format` (1:1, 3:2, 2:3, 2:1, Fritt) under ramen; `placeraRam()` i `app.js` sätter ramens
+  läge och storlek i bildpunkter mitt mellan sökrutan och bladet (`ramYta()`), och hörnen dras
+  symmetriskt kring mitten (pekarhändelser på `.hörn`, som gör formatet fritt). Valet sparas i
+  `terrang-mobil-format`. Testpunkt DT. Dessutom: prototyp 7 av Skissa i 3D i
+  `docs/prototyper/skissa-i-3d.html` och planen för 0.17.0 i `docs/SKISSA-I-3D.md` (förd hit från
+  claude.ai-projektet), och inkorgen sorterad efter versionsplanen 24 november. **Ägarens test av
+  0.16.1 (DD–DQ) fanns inte när versionen byggdes**; rättelserna efter det blir 0.16.3. Körda: alla
+  24 enhetstester och `mobil_test.py` (utökat med formatet) i alla tre teman. **Inte provat**:
+  iPhone (hörnen med fingret, Safari/Chrome på iOS), `ui_test.py` (inget i datorflödet är ändrat).
 
 - **0.16.1** 23 november (grenen `v0.16.1`): svar på ägarens test samma dag av situationsplanen
   (0.16.0), sol på fasaderna (0.15.0) och BG. Se avsnittet *Planvyn och situationsplanen (0.16.1)*
@@ -1047,8 +1058,8 @@ Flytten är klar (se `docs/FLYTT.md`). Kvar utanför repot: `url` i
 `apps/hojdkurvor/app.json` i agrellarkitektur/apps, och att ta bort
 FTP-secrets och `stang-webbhotellet.yml` när avstängningen är gjord.
 
-Versionsplanen (22 november, kan ändras av ägaren; omgivningen är ny som 0.17.0, och det som låg
-som 0.15.0–0.18.0 i planen 19 november är flyttat två steg):
+Versionsplanen (24 november, kan ändras av ägaren; omgivningen är en del av Skissa i 3D, beslut 24
+november):
 
 | Version | Innehåll |
 |---|---|
@@ -1056,22 +1067,26 @@ som 0.15.0–0.18.0 i planen 19 november är flyttat två steg):
 | 0.15.x | Rättelser efter ägarens test av 0.14.x och 0.15.0 |
 | 0.16.0 | Situationsplanen: yttre skal, annotering, ritningshuvud, teckenförklaring, PDF och DXF (byggd 22 november; testas som CÖ–DC) |
 | 0.16.1 | Svar på testet 23 november (byggd 23 november; testas som DD–DQ) |
-| 0.16.x | Rättelser efter ägarens test av 0.16.1 |
-| 0.17.0 | Användarskapad omgivning, etapp 1: intuitiv modellering och val per projekt och byggnad (CL–CV, `utredning-anvandarskapad-omgivning.md`) |
-| 0.18.0 | Förslag och sparade vyer (projektfilen, etapp 3) |
-| 0.19.0 | Geologi etapp 0–2: teknikprov SGU, kartlager, egna punkter med inklistring |
-| 0.20.0 | Bergytemodell och geologiblock i platspaketet (geologi etapp 3–4) |
-| 0.21.0 | Bilagor: eget bildunderlag (AM), anteckningar med foton; därefter AN |
-| ej bestämd | Omgivningen etapp 2–4 (CZ–CÄ), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY), räkna om skissen utan att räkna allt (BK) |
+| 0.16.2 | BS, utsnittets format på mobilen (byggd 25 november; testas som DT) |
+| 0.16.3 | Rättelser efter ägarens test av 0.16.1 (DD–DQ) och 0.16.2 (DT) |
+| 0.17.0 | Skissa i 3D med användarskapad omgivning etapp 1 (CL–CV), formpaletten med ikoner, CE; se `docs/SKISSA-I-3D.md` |
+| 0.18.0 | Arbetsgången (CD, CC, BK) och ikonbaserat gränssnitt (BL) |
+| 0.19.0 | Bedömning med regelbok för befintliga analyser |
+| 0.20.0 | Förslag och sparade vyer (projektfilen etapp 3); förslagen jämförs också på bedömningen |
+| 0.21.0 | Nya analyser, omgång 1: dagsljus på fasaderna, lutning/tillgänglighet, klimat, utsikt |
+| 0.22.0 → | Geologi (etapp 0–4), bilagor (AM, AN) och resten; nya analyser omgång 2 |
+| ej bestämd | Omgivningen etapp 3–4 (CÅ–CÄ, biblioteket; fråga ägaren om det ska komma direkt efter 0.17.0), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY) |
 
-1. För in ägarens testresultat (DD–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna
-   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.x.
+1. För in ägarens testresultat (DT för 0.16.2, DD–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna
+   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.3.
 2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
    inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid
    Skapa, föreslå den fastighet som har störst del av utsnittet
    (`fi.fastigheter[0]`).
-4. Omgivningen (0.17.0) börjar med en prototyp av interaktionen (CL) innan datamodellen låses.
+4. 0.17.0 (Skissa i 3D): prototypen är färdig (beslut 25 november). Börja i `docs/SKISSA-I-3D.md`:
+   datamodellen, algoritmerna att flytta ur `docs/prototyper/skissa-i-3d.html` och det appen måste
+   lösa som prototypen hoppar över (terräng, riktig laserdata, yttre skal, analyser och export).
 
 ### Fastighetsnamn ur kartan (AX, byggt i 0.13.1)
 

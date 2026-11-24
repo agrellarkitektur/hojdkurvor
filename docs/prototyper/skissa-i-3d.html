@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Agrell Arkitektur AB
+     Prototyp 7 av Skissa i 3D (CL), 25 november 2026. Referens för beteendet och algoritmerna i 0.17.0, se docs/SKISSA-I-3D.md.
+     Körs fristående och publiceras inte med appen. Laddar three.js r128 (MIT) och polygon-clipping 0.15.7 (MIT) från CDN. -->
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skissa i 3D (prototyp)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* VOICE: arbetsverktyg, sakligt, som Höjdkurvor självt.
+   IDEA: en ritbräda i 3D där laserpunkterna är kalkerpapperet under.
+   PICTURE: 3D-vyn är bilden, med basformer, takformer och grepp direkt i den.
+   COLOUR and TYPE: Höjdkurvors Ljust och Blueprint; Familjen Grotesk och IBM Plex Mono.
+   LAYOUT: vyn till vänster, panel till höger; under 900 px panelen under vyn. */
+:root{color-scheme:light;
+  --bg:#f5f5f2;--ink:#17191b;--muted:#5e6266;--rule:#d9d9d4;--panel:#ffffff;--acc:#c2410c;--acc-ink:#fff;
+  --scene:#eceae4;--ground:#e3e1da;--grid:#cfccc3;--std:#9a9a94;--body:#ffffff;--edge:#17191b;--pt0:#9fb3c9;--pt1:#1f4f86;--btn:#f0efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
+  --bg:#133b66;--ink:#f2f6fb;--muted:#9db6d3;--rule:rgba(242,246,251,.18);--panel:#0f3157;--acc:#ffb347;--acc-ink:#0b223d;
+  --scene:#0f3157;--ground:#17426f;--grid:#2c5a88;--std:#6f8fb3;--body:#f2f6fb;--edge:#0b223d;--pt0:#4f7aa8;--pt1:#d6e8ff;--btn:#174571}}
+:root[data-theme=dark]{color-scheme:dark;
+  --bg:#133b66;--ink:#f2f6fb;--muted:#9db6d3;--rule:rgba(242,246,251,.18);--panel:#0f3157;--acc:#ffb347;--acc-ink:#0b223d;
+  --scene:#0f3157;--ground:#17426f;--grid:#2c5a88;--std:#6f8fb3;--body:#f2f6fb;--edge:#0b223d;--pt0:#4f7aa8;--pt1:#d6e8ff;--btn:#174571}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Familjen Grotesk",system-ui,sans-serif;overflow-x:clip}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding:14px max(2vw,14px);border-bottom:1px solid var(--rule)}
+h1{font-size:24px;line-height:1.1;margin:0;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);font-size:14px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 360px}
+.vy{position:relative;height:calc(100vh - 62px);min-height:520px;touch-action:none;overflow:hidden}
+.vy canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.verktyg{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
+.verktyg .grupp{display:flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;pointer-events:auto;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.ikon{width:52px;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:0;border-radius:7px;background:transparent;color:var(--ink);font:500 11px/1.1 "IBM Plex Mono",monospace;cursor:pointer;padding:4px 2px}
+.ikon svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linejoin:round}
+.ikon:hover{background:var(--btn)}.ikon.pa{background:var(--acc);color:var(--acc-ink)}
+.ikon:disabled{opacity:.3;cursor:default;background:transparent}
+.vy::after{content:"";position:absolute;inset:0;border:3px solid #1f4f86;pointer-events:none;opacity:0;transition:opacity .2s}
+.vy.skiss::after{opacity:1}
+.vy.visa .redigera{display:none}
+#b-skissa.pa{background:#1f4f86;color:#fff;background-image:linear-gradient(rgba(255,255,255,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.16) 1px,transparent 1px);background-size:6px 6px}
+.ikon:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#status{position:absolute;left:10px;bottom:10px;right:10px;font:13px/1.4 "IBM Plex Mono",monospace;color:var(--ink);background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:7px 10px;max-width:680px;pointer-events:none}
+#matt{position:absolute;display:none;transform:translate(-50%,-140%);background:var(--acc);color:var(--acc-ink);font:600 13px/1.2 "IBM Plex Mono",monospace;padding:5px 8px;border-radius:6px;white-space:nowrap;pointer-events:none}
+#matt small{display:block;font-weight:400;font-size:11px;opacity:.85}
+.matlapp{position:absolute;transform:translate(-50%,-50%);background:var(--panel);color:var(--ink);border:1px solid var(--acc);font:500 12px/1.2 "IBM Plex Mono",monospace;padding:3px 6px;border-radius:5px;white-space:nowrap;pointer-events:none}
+aside{border-left:1px solid var(--rule);background:var(--panel);height:calc(100vh - 62px);min-height:520px;overflow-y:auto;padding:4px 16px 24px}
+section{padding:12px 0;border-bottom:1px solid var(--rule)}section:last-child{border:0}
+h2{font-size:15px;margin:0 0 8px}
+h3{font-size:14px;margin:14px 0 6px}
+ol,ul.mus{margin:0;padding-left:20px;font-size:14px}ol li,ul.mus li{margin:3px 0}
+.liten{font-size:13px;color:var(--muted);margin:6px 0 0}
+.falt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.falt .ande{font-size:13px;font-weight:600;color:var(--ink);margin:0}
+label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+input,select,textarea{font:16px "IBM Plex Mono",monospace;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:6px;padding:7px 8px;min-height:40px;width:100%}
+select{font-family:"Familjen Grotesk",sans-serif;font-size:15px}
+input:disabled,select:disabled{opacity:.5}
+textarea{min-height:110px;font:15px/1.45 "Familjen Grotesk",sans-serif;resize:vertical}
+.knapp{min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--rule);background:var(--btn);color:var(--ink);font:600 15px "Familjen Grotesk",sans-serif;cursor:pointer}
+.knapp.liten-k{min-height:38px;padding:6px 10px;font-size:14px}
+.knapp.huvud{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.knapp:disabled{opacity:.4;cursor:default}
+.rad{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.vaxel{flex-direction:row;align-items:center;gap:10px;font-size:14px;color:var(--ink);min-height:36px}
+.vaxel input{width:20px;min-height:20px;accent-color:var(--acc)}
+#tid{font:600 28px "IBM Plex Mono",monospace;letter-spacing:-.02em}
+#logg{font:13px/1.5 "IBM Plex Mono",monospace;margin:6px 0 0;padding:0;list-style:none}
+.tom{color:var(--muted);font-size:14px}
+kbd{font:12px "IBM Plex Mono",monospace;border:1px solid var(--rule);border-radius:4px;padding:0 4px}
+@media (max-width:900px){main{grid-template-columns:minmax(0,1fr)}.vy{height:70vh;min-height:420px}aside{height:auto;border-left:0;border-top:1px solid var(--rule)}.ikon{width:46px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Skissa i 3D</h1>
+  <p>Prototyp 7 till Höjdkurvor 0.17.0 (CL): ett verktyg för både projektet och omgivningen. Platsen och laserdatan är påhittade. Gjord för datorn med mus.</p>
+</header>
+<main>
+  <div class="vy skiss" id="vy">
+    <div class="verktyg">
+      <div class="grupp" role="group" aria-label="Läge">
+        <button class="ikon" id="b-visa" aria-pressed="false" title="Visa: titta, snurra och ta bilder"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Visa</button>
+        <button class="ikon pa" id="b-skissa" aria-pressed="true" title="Skissa: ändra volymer"><svg viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M14 6l4 4"/></svg>Skissa</button>
+      </div>
+      <div class="grupp redigera" role="toolbar" aria-label="Basformer">
+        <button class="ikon" data-bas="block" title="Rätblock"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v9"/></svg>Block</button>
+        <button class="ikon" data-bas="cylinder" title="Cylinder"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/></svg>Cylinder</button>
+        <button class="ikon" data-bas="manghorn" title="N-hörning (antal hörn i panelen)"><svg viewBox="0 0 24 24"><path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z"/></svg>N-hörn</button>
+        <button class="ikon" data-bas="sfar" title="Sfär (klot), med synlig höjd"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="8" ry="3"/></svg>Sfär</button>
+        <button class="ikon" data-rita="mur" title="Mur eller plank: klicka punkterna, dubbelklicka eller Enter för att avsluta"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 5 4 7-7"/><path d="M3 20l6-6 5 4 7-7" stroke-dasharray="2 2"/></svg>Mur</button>
+        <button class="ikon" data-rita="yta" title="Polygon med tjocklek och höjd över mark (skärmtak, platta, polygonhus): klicka hörnen, klicka på första punkten eller Enter för att stänga"><svg viewBox="0 0 24 24"><path d="M4 9l6-5 10 4-3 9-11 2z"/><path d="M4 12v-3M6 22v-3M17 20v-3M20 11V8"/></svg>Polygon</button>
+      </div>
+      <div class="grupp redigera" role="toolbar" aria-label="Takformer">
+        <button class="ikon" data-tak="platt" title="Platt tak"><svg viewBox="0 0 24 24"><path d="M4 10h16v10H4z"/></svg>Platt</button>
+        <button class="ikon" data-tak="pulpet" title="Pulpettak"><svg viewBox="0 0 24 24"><path d="M4 12l16-6v14H4z"/></svg>Pulpet</button>
+        <button class="ikon" data-tak="sadel" title="Sadeltak"><svg viewBox="0 0 24 24"><path d="M4 12l8-8 8 8v8H4z"/></svg>Sadel</button>
+        <button class="ikon" data-tak="mansard" title="Brutet tak (mansardtak)"><svg viewBox="0 0 24 24"><path d="M3 20v-7l3-5h12l3 5v7z"/><path d="M6 8l6-4 6 4"/></svg>Brutet</button>
+        <button class="ikon" data-tak="pyramid" title="Pyramidtak"><svg viewBox="0 0 24 24"><path d="M4 13l8-9 8 9v7H4z"/><path d="M12 4v9M4 13h16"/></svg>Pyramid</button>
+        <button class="ikon" data-tak="valv" title="Tunnvalv"><svg viewBox="0 0 24 24"><path d="M4 20v-8a8 7 0 0116 0v8z"/></svg>Valv</button>
+        <button class="ikon" data-tak="kon" title="Kon (på cylinder)"><svg viewBox="0 0 24 24"><path d="M12 3l7 13H5z"/><path d="M5 16v4h14v-4"/></svg>Kon</button>
+        <button class="ikon" data-tak="kupol" title="Kupol (på cylinder)"><svg viewBox="0 0 24 24"><path d="M5 14a7 7 0 0114 0z"/><path d="M5 14v6h14v-6"/></svg>Kupol</button>
+      </div>
+      <div class="grupp redigera" role="toolbar" aria-label="Verktyg">
+        <button class="ikon" id="b-vrid" title="Vrid: punkt, referens, mål (R)"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-3-6.3"/><path d="M17 2v4h4"/><circle cx="12" cy="12" r="1.5"/></svg>Vrid</button>
+        <button class="ikon" id="b-stapla" title="Stapla: klicka på ett tak (S)"><svg viewBox="0 0 24 24"><path d="M5 14l7-3 7 3-7 3z"/><path d="M5 14v4l7 3 7-3v-4M9 9V4h6v5"/></svg>Stapla</button>
+        <button class="ikon" id="b-kopiera" title="Duplicera bredvid (Ctrl+D)"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="1"/><path d="M4 16V5a1 1 0 011-1h11"/></svg>Kopia</button>
+        <button class="ikon" id="b-spegla" title="Spegla en kopia"><svg viewBox="0 0 24 24"><path d="M12 3v18" stroke-dasharray="2 2"/><path d="M9 6L3 18h6zM15 6l6 12h-6z"/></svg>Spegla</button>
+        <button class="ikon" id="b-bort" title="Ta bort (Delete)"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>Ta bort</button>
+        <button class="ikon" id="b-mat" title="Mät avstånd: klicka två punkter (M). Esc rensar."><svg viewBox="0 0 24 24"><path d="M3 16l13-13 5 5L8 21z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/></svg>Mät</button>
+        <button class="ikon" id="b-ihop" title="Slå ihop till en byggnad (J)"><svg viewBox="0 0 24 24"><path d="M4 4h10v6h6v10H10v-6H4z"/></svg>Förena</button>
+        <button class="ikon" id="b-las" title="Lås eller lås upp de markerade"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Lås</button>
+        <button class="ikon" id="b-angra" title="Ångra (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg>Ångra</button>
+        <button class="ikon" id="b-gorom" title="Gör om (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg>Gör om</button>
+      </div>
+      <div class="grupp redigera" role="toolbar" aria-label="Snäpp">
+        <button class="ikon pa" id="b-sn-kropp" aria-pressed="true" title="Snäpp mot ritade kroppar (K)"><svg viewBox="0 0 24 24"><path d="M4 9l7-4 7 4v8l-7 4-7-4z"/><path d="M4 9l7 4 7-4M11 13v8"/><circle cx="18" cy="9" r="2.4"/></svg>Kroppar</button>
+        <button class="ikon pa" id="b-sn-laser" aria-pressed="true" title="Snäpp mot laserdatan (L)"><svg viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="5" cy="17" r="1.3"/><circle cx="9" cy="17" r="1.3"/><circle cx="9" cy="9" r="1.3"/><circle cx="13" cy="9" r="1.3"/><circle cx="17" cy="9" r="1.3"/><circle cx="17" cy="5" r="1.3"/><circle cx="20" cy="17" r="1.3"/></g><path d="M3 20h18"/></svg>Laser</button>
+      </div>
+    </div>
+    <div id="matt"></div>
+    <div id="status">Laddar …</div>
+  </div>
+  <aside>
+    <section>
+      <h2>Nytt i prototyp 7</h2>
+      <ol>
+        <li><b>Våningar</b> i panelen ger BTA utöver BYA. Utan eget värde uppskattas våningarna ur vägghöjden (3 m per våning). För en förenad byggnad räknas BTA våning för våning, så att överlapp inte räknas två gånger.</li>
+        <li><b>Mät</b> (<kbd>M</kbd>): klicka två punkter. Visar avståndet, det vågräta och höjdskillnaden. Punkterna fäster mot hörn, sidor och ytor. Mätningarna står kvar tills du trycker Esc.</li>
+        <li><b>Parallellt och vinkelrätt</b>: när du ritar mur eller polygon fäster linjen parallellt eller vinkelrätt mot andra kroppars kanter, och kanten lyses upp.</li>
+        <li><b>Polygon</b> kan få <b>pulpettak</b>. Vänd lutningen i 90°-steg i panelen.</li>
+      </ol>
+      <h2 style="margin-top:12px">Prototyp 6</h2>
+      <ol>
+        <li><b>Förena</b> ligger på <kbd>J</kbd> utan Ctrl (Ctrl+G och Ctrl+J är webbläsarens). Ändar som du har gerat valmas inte längre när du förenar.</li>
+        <li><b>Gering</b> fäster vid vinklar som ger regelbundna 3–8-hörningar (60°, 45°, 36°, 30°, 25,71°, 22,50°) och säger vilken. Alla vinklar visas med två decimaler.</li>
+        <li><b>Area</b>: fotavtrycket i panelen, för en kropp och för en förenad byggnad (sammanslaget, utan dubbelräknade överlapp).</li>
+        <li><b>Sfär</b>: ett klot med diameter och synlig höjd, till exempel Globen.</li>
+        <li><b>Mur</b>: klicka en linje; tjocklek, höjd och om överkanten följer marken eller går rakt mellan punkterna. Platsen här är plan, så skillnaden syns först i appen, där punkterna fäster i terrängen.</li>
+        <li><b>Polygon</b>: klicka en yta; den får en tjocklek och en höjd över mark. Skärmtak, platta, eller ett polygonhus med höjd 0 över mark.</li>
+        <li><b>Titta uppåt</b>: med Shift + mitthjulet går kameran ner till marken, och fortsätter du lutar blicken uppåt.</li>
+        <li><b>Innergård</b> slås på i panelen. På ett block med sadel- eller brutet tak finns en triangel vid varje möjlig gavelspets: klicka för att visa eller dölja gaveln. Dolda är streckade.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>Prova så här</h2>
+      <ol>
+        <li>Klicka på <b>Stadshuset</b> och välj <b>Ersätt</b>, sedan <b>Sadel</b>. Klicka på trianglarna i hörnen för att visa och dölja gavlar.</li>
+        <li>Rita två <b>Block</b> som möts i ett L, ge båda <b>Sadel</b> och sätt <b>Gering</b> 45° i de ändar som möts. Kör ihop dem med hörngreppen och tryck <kbd>J</kbd>: arean visas sammanslagen.</li>
+        <li>Ge ett block <b>Sadel</b>, dra in ena nockänden tills det står <i>som takfallen</i>, och dra sedan upp den runda punkten på gaveln: halvvalm.</li>
+        <li>Prova en <b>lutande gavel</b>: skriv 70 i Lutning för ena änden i panelen.</li>
+        <li><b>Push-pull</b>: runda punkter mitt på sidorna, fyrkantiga på ovansidan. Klicka utan att dra så följer sidan pekaren; skriv ett mått och Enter.</li>
+        <li><b>Vrid</b>, <b>Stapla</b>, <b>Lås</b>, <b>Kopia</b> och <b>Spegla</b> som förut. Speglade kopior byter ändarnas inställningar.</li>
+        <li>Tryck <b>Klar med huset</b> efter varje hus och skriv ner vad som var krångligt.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>Mus och tangenter</h2>
+      <ul class="mus">
+        <li>Vänster: välj och redigera, aldrig vyn. Höger: ingenting.</li>
+        <li>Mitthjulet: panorera. <kbd>Shift</kbd> + mitthjulet: snurra; nere vid marken lutar blicken uppåt. Shift kan tryckas och släppas mitt i draget. Hjulet: zooma.</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Z</kbd>/<kbd>Y</kbd> ångra och gör om, <kbd>Ctrl</kbd>+<kbd>C</kbd>/<kbd>X</kbd>/<kbd>V</kbd> kopiera, klipp ut och klistra in, <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicera, <kbd>Ctrl</kbd>+<kbd>A</kbd> markera alla, <kbd>J</kbd> förena, <kbd>M</kbd> mät, <kbd>Delete</kbd> ta bort, <kbd>Esc</kbd> avbryt.</li>
+        <li>Under och efter ett drag: siffror och <kbd>Enter</kbd>. Gering och vridning tar minus. Måttet står kvar tills du klickar på något annat.</li>
+        <li>Rita mur och polygon: klicka punkterna, skriv en längd och Enter för exakt sträcka, <kbd>Backspace</kbd> tar bort senaste punkten, dubbelklick eller <kbd>Enter</kbd> avslutar. Fäster i 45°-steg och parallellt eller vinkelrätt mot andra kanter, <kbd>Shift</kbd> 15°.</li>
+        <li><kbd>Alt</kbd> medan du drar: utan snäpp. <kbd>Shift</kbd> under Vrid: 15°-steg. <kbd>K</kbd> och <kbd>L</kbd>: snäpp mot kroppar och laser.</li>
+      </ul>
+    </section>
+    <section id="p-valt">
+      <h2 id="valt-rubrik">Inget valt</h2>
+      <div id="valt-innehall"><p class="tom">Klicka på ett hus eller en egen kropp.</p></div>
+    </section>
+    <section>
+      <h2>Tid per hus</h2>
+      <div id="tid">–</div>
+      <div class="rad"><button class="knapp" id="b-klar" disabled>Klar med huset</button></div>
+      <ul id="logg"></ul>
+    </section>
+    <section>
+      <h2>Visa</h2>
+      <label class="vaxel"><input type="checkbox" id="v-laser" checked> Laserpunkter (ytmodellen)</label>
+      <label class="vaxel"><input type="checkbox" id="v-std" checked> Standardhus (fotavtryck × laserhöjd)</label>
+      <label class="vaxel"><input type="checkbox" id="v-fot" checked> Fotavtryck från Lantmäteriet (bara referens)</label>
+      <p class="liten">Inget fäster mot Lantmäteriets fotavtryck (beslut 22 november). <b>Ersätt</b> utgår från laserdatan.</p>
+    </section>
+    <section>
+      <h2>Anteckningar</h2>
+      <textarea id="anteckningar" placeholder="Vad var lätt, vad var krångligt, vad saknades? Kändes laserkanterna brusiga?"></textarea>
+      <div class="rad"><button class="knapp" id="b-kopiera-ant">Kopiera anteckningar och tider</button></div>
+      <p class="liten" id="kopierat"></p>
+    </section>
+  </aside>
+</main>
+<script>
+{
+const $ = s => document.querySelector(s);
+const vy = $('#vy'), matt = $('#matt'), statusEl = $('#status');
+const fmt = (n, d = 1) => n.toFixed(d).replace('.', ',').replace('-', '−');
+const grad = r => ((r * 180 / Math.PI) % 360 + 360) % 360;
+const status = t => { statusEl.textContent = t; };
+const RAD = Math.PI / 180, r1 = v => Math.round(v * 10) / 10;
+const klon = o => JSON.parse(JSON.stringify(o));
+
+if (!window.THREE || !THREE.OrbitControls) {
+  status('3D-biblioteket kunde inte laddas. Ladda om sidan.');
+} else {
+
+/* ---------- Påhittad plats ---------- */
+let seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const BYG = [
+  { namn: 'Stadshuset', cx: 25, cz: -20, r: 0.21, fot: [38, 30], hal: [26, 18], delar: [
+    { x: 0, z: -24, b: 76, d: 12, h: 24, tak: 5, f: 'sadel' }, { x: 0, z: 24, b: 76, d: 12, h: 24, tak: 5, f: 'sadel' },
+    { x: -32, z: 0, b: 36, d: 12, rr: Math.PI / 2, h: 22, tak: 5, f: 'sadel' }, { x: 32, z: 0, b: 36, d: 12, rr: Math.PI / 2, h: 22, tak: 5, f: 'sadel' },
+    { x: 33, z: -24, b: 9, d: 9, h: 88, tak: 18, f: 'pyr' }] },
+  { namn: 'Lamellhuset', cx: -62, cz: 58, r: -0.35, fot: [27, 6], delar: [{ x: 0, z: 0, b: 54, d: 12, h: 15, tak: 4, f: 'sadel' }] },
+  { namn: 'Villa 1', cx: -82, cz: -48, r: 0.1, fot: [5.5, 4], delar: [{ x: 0, z: 0, b: 11, d: 8, h: 5, tak: 3, f: 'sadel' }] },
+  { namn: 'Villa 2', cx: -60, cz: -70, r: 0.1, fot: [5.5, 4], delar: [{ x: 0, z: 0, b: 11, d: 8, h: 5, tak: 3, f: 'sadel' }] },
+  { namn: 'Villa 3', cx: -98, cz: -82, r: 0.6, fot: [5, 4.5], delar: [{ x: 0, z: 0, b: 10, d: 9, h: 4.5, tak: 2.5, f: 'pyr' }] },
+  { namn: 'Butiken', cx: 88, cz: 48, r: 0.21, fot: [11, 8], delar: [{ x: 0, z: 0, b: 22, d: 16, h: 8, tak: 0, f: 'platt' }] }];
+const PRIM = [];
+for (const B of BYG) {
+  const c = Math.cos(B.r), s = Math.sin(B.r);
+  for (const p of B.delar) PRIM.push({ ...p, wx: B.cx + p.x * c + p.z * s, wz: B.cz - p.x * s + p.z * c, R: B.r + (p.rr || 0) });
+}
+function husHojd(x, z) {
+  let m = 0;
+  for (const p of PRIM) {
+    const dx = x - p.wx, dz = z - p.wz, c = Math.cos(p.R), s = Math.sin(p.R);
+    const lx = dx * c - dz * s, lz = dx * s + dz * c;
+    if (Math.abs(lx) > p.b / 2 || Math.abs(lz) > p.d / 2) continue;
+    let h = p.h;
+    if (p.f === 'sadel') h += p.tak * (1 - Math.abs(lz) / (p.d / 2));
+    if (p.f === 'pyr') h += p.tak * (1 - Math.max(Math.abs(lx) / (p.b / 2), Math.abs(lz) / (p.d / 2)));
+    m = Math.max(m, h);
+  }
+  return m;
+}
+const TRAD = [];
+while (TRAD.length < 34) {
+  const x = rnd() * 240 - 120, z = rnd() * 240 - 120;
+  if ([[0, 0], [7, 0], [-7, 0], [0, 7], [0, -7]].some(([a, b]) => husHojd(x + a, z + b) > 0)) continue;
+  TRAD.push({ x, z, r: 2.5 + rnd() * 2, h: 8 + rnd() * 7 });
+}
+const G = 260, HALV = 130, DSM = new Float32Array(G * G);
+for (let row = 0; row < G; row++) for (let col = 0; col < G; col++) {
+  const x = col - HALV + 0.5, z = row - HALV + 0.5;
+  let h = husHojd(x, z);
+  for (const t of TRAD) { const d = Math.hypot(x - t.x, z - t.z); if (d < t.r) h = Math.max(h, t.h * (0.6 + 0.4 * Math.sqrt(1 - (d / t.r) ** 2))); }
+  if (h > 0.5) h += (rnd() - 0.5) * 0.35;
+  DSM[row * G + col] = Math.max(0, h);
+}
+const dsmVid = (x, z) => {
+  const col = Math.floor(x + HALV), row = Math.floor(z + HALV);
+  return col < 0 || row < 0 || col >= G || row >= G ? 0 : DSM[row * G + col];
+};
+
+/* ---------- Takformer och ändar ---------- */
+const TAK = { platt: 'Platt', pulpet: 'Pulpet', sadel: 'Sadel', mansard: 'Brutet', pyramid: 'Pyramid', valv: 'Valv', kon: 'Kon', kupol: 'Kupol' };
+const takFor = b => (b.typ === 'yta' ? ['platt', 'pulpet'] : ['mur', 'sfar'].includes(b.typ) ? [] : b.gard ? ['platt', 'sadel', 'mansard'] : b.typ === 'block' ? ['platt', 'pulpet', 'sadel', 'mansard', 'pyramid', 'valv'] : ['platt', 'kon', 'kupol']);
+const harNock = t => ['pulpet', 'sadel', 'mansard', 'valv'].includes(t);
+const profilTak = harNock;
+// Varje ände (ea = lokala −x, eb = +x): typ gavel | tak (samma lutning som takfallen = valm) | egen (lutning lut°),
+// k = var lutningen börjar, andel av takhöjden (0 = från takfoten, däremellan halvvalm), g = gering i plan, grader.
+const ANDE0 = Object.freeze({ typ: 'gavel', lut: 60, k: 0, g: 0 });
+const Er = (b, s) => (s < 0 ? b.ea : b.eb) || ANDE0;
+const Ew = (b, s) => { const n = s < 0 ? 'ea' : 'eb'; if (!b[n]) b[n] = { ...ANDE0 }; return b[n]; };
+const maxHd = b => (b.typ === 'cylinder' ? b.b / 2 * Math.cos(Math.PI / (b.n || 32)) : Math.min(b.b, b.d) / 2) - 0.5;
+const hdv = b => Math.max(1, Math.min(b.gard.hd, maxHd(b)));
+const djup = b => (b.gard ? hdv(b) : b.d);
+const tanG = (b, s) => (b.gard || b.typ !== 'block' ? 0 : Math.tan(Er(b, s).g * RAD));
+const xe = (b, s, z) => s * (b.b / 2 + tanG(b, s) * z); // ändens läge längs x vid tvärläget z
+function mans(b) { // brutet tak: nedre delens bredd mb och höjd mh
+  const D = djup(b) / 2, ml = b.ml != null ? b.ml : 70, mb = Math.min(b.mb != null ? b.mb : 0.2 * D, 0.8 * D);
+  return { ml, mb, mh: Math.min(mb * Math.tan(ml * RAD), 0.85 * b.th) };
+}
+function lop(b) { // horisontell längd som lutningen räknas över
+  if (b.typ === 'yta') return b.tak === 'pulpet' ? ytaSpann(b).L : null;
+  const dd = djup(b);
+  return { pulpet: dd, sadel: dd / 2, valv: dd / 2, pyramid: Math.min(b.b, b.d) / 2, kon: b.b / 2 }[b.tak] || null;
+}
+function lutning(b) {
+  if (b.tak === 'mansard') { const m = mans(b), D = djup(b) / 2; return Math.atan((b.th - m.mh) / (D - m.mb)) / RAD; }
+  return lop(b) ? Math.atan(b.th / lop(b)) / RAD : null;
+}
+function satLutning(b, g) {
+  g = Math.max(1, Math.min(80, g));
+  if (b.tak === 'mansard') { const m = mans({ ...b, th: 999 }), D = djup(b) / 2; b.th = Math.round((m.mh + (D - m.mb) * Math.tan(g * RAD)) * 100) / 100; }
+  else if (lop(b)) b.th = Math.round(lop(b) * Math.tan(g * RAD) * 100) / 100;
+}
+const ytaRiktning = b => [Math.cos(b.tr || 0), Math.sin(b.tr || 0)]; // polygonens pulpettak stiger åt detta håll (lokalt)
+function ytaSpann(b) { const [ux, uz] = ytaRiktning(b), pr = b.pts.map(([x, z]) => x * ux + z * uz), mi = Math.min(...pr), ma = Math.max(...pr);
+  return { pr, mi, L: Math.max(0.01, ma - mi) }; }
+const nock = b => b.golv + b.h + (b.tak === 'platt' ? 0 : b.th);
+function profil(b) { // takets tvärsnitt [z, y] från främre takfoten (+z) till bakre
+  const D = djup(b) / 2, t = b.th;
+  if (b.tak === 'sadel') return [[D, 0], [0, t], [-D, 0]];
+  if (b.tak === 'pulpet') return [[D, 0], [-D, t], [-D, 0]];
+  if (b.tak === 'mansard') { const m = mans(b); return [[D, 0], [D - m.mb, m.mh], [0, t], [-(D - m.mb), m.mh], [-D, 0]]; }
+  if (b.tak === 'valv') { const p = []; for (let i = 0; i <= 24; i++) { const a = Math.PI * i / 24; p.push([D * Math.cos(a), i === 0 || i === 24 ? 0 : t * Math.sin(a)]); } return p; }
+  return null;
+}
+function runAt(b, y) { // horisontellt avstånd från takfoten där takfallet når höjden y
+  const D = djup(b) / 2, t = b.th;
+  if (b.tak === 'pulpet') return 2 * D * y / t;
+  if (b.tak === 'mansard') { const m = mans(b); return y <= m.mh ? m.mb * y / m.mh : m.mb + (D - m.mb) * (y - m.mh) / (t - m.mh); }
+  if (b.tak === 'valv') return D - D * Math.cos(Math.asin(Math.min(1, y / t)));
+  return D * y / t;
+}
+function inset(b, s, y) { // hur långt in från gaveln takytan ligger på höjden y
+  const e = Er(b, s), y0 = e.k * b.th;
+  if (e.typ === 'gavel' || y <= y0 + 1e-9) return 0;
+  return e.typ === 'tak' ? runAt(b, y) - runAt(b, y0) : (y - y0) / Math.tan(Math.max(5, Math.min(89.9, e.lut)) * RAD);
+}
+function gavelLut(b, s) { const e = Er(b, s), t = b.th, y0 = e.k * t;
+  if (e.typ === 'gavel') return 90; if (e.typ === 'egen') return e.lut;
+  return Math.atan((t - y0) / Math.max(0.01, runAt(b, t) - runAt(b, y0))) / RAD; }
+function takKedjor(b) { // takets två ändkedjor A (−x) och B (+x) längs tvärsnittet
+  const P0 = profil(b); if (!P0) return null;
+  const niv = [...new Set([-1, 1].map(s => Er(b, s)).filter(e => e.typ !== 'gavel' && e.k > 0).map(e => e.k * b.th))];
+  const P = [P0[0]];
+  for (let i = 1; i < P0.length; i++) { const [za, ya] = P0[i - 1], [zb, yb] = P0[i];
+    for (const y of niv.sort((p, q) => (yb > ya ? p - q : q - p))) if ((y - ya) * (y - yb) < -1e-9) { const f = (y - ya) / (yb - ya); P.push([za + f * (zb - za), y]); }
+    P.push(P0[i]); }
+  const A = [], Bk = [];
+  for (const [z, y] of P) {
+    const xa = xe(b, -1, z), xb = xe(b, 1, z), L = Math.max(0, xb - xa);
+    let ia = inset(b, -1, y), ib = inset(b, 1, y);
+    if (ia + ib > L) { const f = L / (ia + ib); ia *= f; ib *= f; }
+    A.push([xa + ia, y, z]); Bk.push([xb - ib, y, z]);
+  }
+  let top = 0; P.forEach((p, i) => { if (p[1] > P[top][1] + 1e-9) top = i; });
+  return { A, Bk, top };
+}
+
+/* ---------- Tillstånd ---------- */
+const S = { kroppar: [], hus: [], val: [], valtHus: null, klickPunkt: null, lage: null, vrid: null, hist: [], fram: [],
+  skiss: true, snapp: true, snL: true, urklipp: null, senast: null, skriv: '', tid: null, logg: [], nasta: 1 };
+// Scenen har samma färger i ljust och mörkt tema, som 3D-vyn i appen med ortofoto under. Bara accenten följer temat.
+const SCEN = { scene: '#d9e1e6', ground: '#ffffff', grid: '#1f4f86', std: '#8e8f8a', body: '#ffffff', edge: '#2a2d30', pt0: '#8fb1d6', pt1: '#123f78', muted: '#4f5357' };
+const farg = () => { const cs = getComputedStyle(document.documentElement), f = { acc: new THREE.Color(cs.getPropertyValue('--acc').trim()) };
+  for (const k in SCEN) f[k] = new THREE.Color(SCEN[k]); return f; };
+let F = farg();
+
+/* ---------- Scen ---------- */
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+vy.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const kamera = new THREE.PerspectiveCamera(45, 1, 1, 3000);
+kamera.position.set(150, 150, 210);
+const kontroll = new THREE.OrbitControls(kamera, renderer.domElement);
+kontroll.target.set(0, 12, 0); kontroll.enableDamping = false; kontroll.maxPolarAngle = Math.PI * 0.97;
+kontroll.screenSpacePanning = true; kontroll.zoomSpeed = 1.2;
+// Som i cad-apa: mitthjulet panorerar, Shift + mitthjulet snurrar, och Shift kan tryckas eller släppas mitt i draget.
+kontroll.mouseButtons = { LEFT: null, MIDDLE: null, RIGHT: null };
+let kam = null; const KAMMIN = 1.6; // kamerans lägsta höjd över marken (ögonhöjd)
+renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
+renderer.domElement.addEventListener('pointerdown', e => { if (e.button !== 1) return; e.preventDefault(); kam = { x: e.clientX, y: e.clientY }; renderer.domElement.setPointerCapture(e.pointerId); });
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!kam) return; const dx = e.clientX - kam.x, dy = e.clientY - kam.y; kam = { x: e.clientX, y: e.clientY };
+  const off = kamera.position.clone().sub(kontroll.target);
+  if (e.shiftKey) { const sf = new THREE.Spherical().setFromVector3(off); sf.theta -= dx * 0.006;
+    const phi = Math.min(Math.PI * 0.97, Math.max(0.05, sf.phi - dy * 0.006));
+    if (phi <= sf.phi || kontroll.target.y + sf.radius * Math.cos(phi) >= KAMMIN) { sf.phi = phi; off.setFromSpherical(sf); kamera.position.copy(kontroll.target).add(off); }
+    else { // kameran står vid marken: blicken lutar uppåt i stället, målet vrids kring kameran
+      off.setFromSpherical(sf); kamera.position.copy(kontroll.target).add(off);
+      const d = kontroll.target.clone().sub(kamera.position), L = d.length(), hz = Math.hypot(d.x, d.z) || 1e-6;
+      const el = Math.min(1.4, Math.asin(d.y / L) + (phi - sf.phi));
+      kontroll.target.set(kamera.position.x + d.x / hz * L * Math.cos(el), kamera.position.y + L * Math.sin(el), kamera.position.z + d.z / hz * L * Math.cos(el)); } }
+  else { const k = 2 * off.length() * Math.tan(kamera.fov * Math.PI / 360) / renderer.domElement.clientHeight;
+    const flytt = new THREE.Vector3().setFromMatrixColumn(kamera.matrix, 0).multiplyScalar(-dx * k).add(new THREE.Vector3().setFromMatrixColumn(kamera.matrix, 1).multiplyScalar(dy * k));
+    kamera.position.add(flytt); kontroll.target.add(flytt); }
+  kamera.lookAt(kontroll.target);
+});
+const kamSlut = e => { if (e.button === 1 || e.type === 'pointercancel') kam = null; };
+renderer.domElement.addEventListener('pointerup', kamSlut); renderer.domElement.addEventListener('pointercancel', kamSlut);
+vy.addEventListener('auxclick', e => e.preventDefault());
+vy.addEventListener('contextmenu', e => e.preventDefault());
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.75));
+const sol = new THREE.DirectionalLight(0xffffff, 0.55); sol.position.set(-120, 220, 90); scene.add(sol);
+const mark = new THREE.Mesh(new THREE.PlaneGeometry(G, G).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial());
+scene.add(mark);
+let rutnat = null;
+const nordPil = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  x.font = '700 44px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText('N', 32, 34);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false })); sp.scale.set(10, 10, 1); sp.position.set(0, 4, -HALV - 6); scene.add(sp); return sp; })();
+
+const laserGrupp = new THREE.Group(), stdGrupp = new THREE.Group(), fotGrupp = new THREE.Group(),
+  kroppGrupp = new THREE.Group(), handtagGrupp = new THREE.Group(), hjalpGrupp = new THREE.Group();
+scene.add(laserGrupp, stdGrupp, fotGrupp, kroppGrupp, handtagGrupp, hjalpGrupp);
+
+function byggLaser() {
+  laserGrupp.clear();
+  const pos = [], col = [], c = new THREE.Color();
+  for (let row = 0; row < G; row++) for (let colI = 0; colI < G; colI++) {
+    const h = DSM[row * G + colI];
+    if (h < 1 && (row % 3 || colI % 3)) continue;
+    pos.push(colI - HALV + 0.5, h + 0.05, row - HALV + 0.5);
+    c.copy(F.pt0).lerp(F.pt1, Math.min(1, h / 30)); col.push(c.r, c.g, c.b);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  laserGrupp.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 0.75, vertexColors: true })));
+}
+
+/* Standardhus: Lantmäteriets fotavtryck med medianhöjden ur laserdatan */
+for (const B of BYG) {
+  const c = Math.cos(B.r), s = Math.sin(B.r), w = (x, z) => ({ x: B.cx + x * c + z * s, z: B.cz - x * s + z * c });
+  const ring = ([a, b]) => [w(-a, -b), w(a, -b), w(a, b), w(-a, b)];
+  const hs = [];
+  for (let row = 0; row < G; row++) for (let col = 0; col < G; col++) {
+    const dx = col - HALV + 0.5 - B.cx, dz = row - HALV + 0.5 - B.cz, lx = dx * c - dz * s, lz = dx * s + dz * c;
+    if (Math.abs(lx) > B.fot[0] || Math.abs(lz) > B.fot[1]) continue;
+    if (B.hal && Math.abs(lx) < B.hal[0] && Math.abs(lz) < B.hal[1]) continue;
+    const v = DSM[row * G + col]; if (v > 2) hs.push(v);
+  }
+  hs.sort((a, b) => a - b);
+  S.hus.push({ namn: B.namn, yttre: ring(B.fot), hal: B.hal ? ring(B.hal) : null, hojd: Math.round(hs[hs.length >> 1] * 10) / 10, ersatt: null });
+}
+function byggStandard() {
+  stdGrupp.clear(); fotGrupp.clear();
+  for (const h of S.hus) {
+    const sh = new THREE.Shape(h.yttre.map(p => new THREE.Vector2(p.x, -p.z)));
+    if (h.hal) sh.holes.push(new THREE.Path(h.hal.map(p => new THREE.Vector2(p.x, -p.z))));
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: h.hojd, bevelEnabled: false }).rotateX(-Math.PI / 2);
+    const ers = !!h.ersatt, vald = S.valtHus === h;
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: vald ? F.acc : F.std, transparent: true,
+      opacity: ers ? 0.1 : vald ? 0.75 : 0.62, depthWrite: !ers }));
+    m.userData.hus = h; stdGrupp.add(m);
+    for (const r of [h.yttre, h.hal]) if (r) {
+      const l = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(r.map(p => new THREE.Vector3(p.x, 0.08, p.z))),
+        new THREE.LineDashedMaterial({ color: F.muted, dashSize: 1.4, gapSize: 0.9 }));
+      l.computeLineDistances(); fotGrupp.add(l);
+    }
+  }
+}
+
+/* ---------- Kroppar ---------- */
+const l2w = (b, lx, lz) => { const c = Math.cos(b.r), s = Math.sin(b.r); return { x: b.x + lx * c + lz * s, z: b.z - lx * s + lz * c }; };
+const w2l = (b, x, z) => { const c = Math.cos(b.r), s = Math.sin(b.r), dx = x - b.x, dz = z - b.z; return { lx: dx * c - dz * s, lz: dx * s + dz * c }; };
+const inuti = (b, x, z, m = 0.01) => { const l = w2l(b, x, z);
+  if (b.typ === 'mur') { const P = b.pts; for (let i = 0; i < P.length - 1; i++) if (avstSeg(l.lx, l.lz, P[i], P[i + 1]) <= b.t / 2 + m) return true; return false; }
+  if (b.typ === 'yta') return iPolygon(l.lx, l.lz, b.pts);
+  if (b.typ === 'sfar') return Math.hypot(l.lx, l.lz) <= fpR(b) + m;
+  if (b.typ === 'cylinder') { const r = Math.hypot(l.lx, l.lz); if (r > b.b / 2 + m) return false;
+    return !(b.gard && r < b.b / 2 - hdv(b) / Math.cos(Math.PI / (b.n || 32)) - m); }
+  if (Math.abs(l.lz) > b.d / 2 + m || l.lx < xe(b, -1, l.lz) - m || l.lx > xe(b, 1, l.lz) + m) return false;
+  return !(b.gard && Math.abs(l.lx) < b.b / 2 - hdv(b) - m && Math.abs(l.lz) < b.d / 2 - hdv(b) - m); };
+const horn = b => ['mur', 'yta'].includes(b.typ) ? b.pts.map(([x, z]) => l2w(b, x, z))
+  : b.typ === 'sfar' ? [[1, 0], [0, -1], [-1, 0], [0, 1]].map(([a, c]) => l2w(b, a * fpR(b), c * fpR(b)))
+  : b.typ === 'cylinder'
+  ? (b.n ? Array.from({ length: b.n }, (_, i) => l2w(b, Math.sin(2 * Math.PI * i / b.n) * b.b / 2, Math.cos(2 * Math.PI * i / b.n) * b.b / 2))
+    : [[1, 0], [0, -1], [-1, 0], [0, 1]].map(([a, c]) => l2w(b, a * b.b / 2, c * b.b / 2)))
+  : [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, c]) => l2w(b, xe(b, a, c * b.d / 2), c * b.d / 2));
+const topp = b => b.golv + b.h;
+function avstSeg(x, z, a, c) { const dx = c[0] - a[0], dz = c[1] - a[1], L2 = dx * dx + dz * dz || 1e-9;
+  const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / L2)); return Math.hypot(x - a[0] - t * dx, z - a[1] - t * dz); }
+function iPolygon(x, z, P) { let in_ = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+  const [xi, zi] = P[i], [xj, zj] = P[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) in_ = !in_; } return in_; }
+const fpR = b => { const R = b.b / 2, h = Math.min(b.h, b.b); return h >= R ? R : Math.sqrt(Math.max(0, R * R - (R - h) * (R - h))); }; // sfärens fotavtryck
+const cirkel = (R, n) => Array.from({ length: n }, (_, i) => [Math.sin(2 * Math.PI * i / n) * R, Math.cos(2 * Math.PI * i / n) * R]);
+// Murens två sidor, med gerade skarvar i brytpunkterna
+function murKant(b) { const P = b.pts, n = P.length, t = b.t / 2, L = [], R = [];
+  const nrm = (a, c) => { const dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz) || 1; return [-dz / l, dx / l]; };
+  for (let i = 0; i < n; i++) { let v;
+    if (i === 0) v = nrm(P[0], P[1]); else if (i === n - 1) v = nrm(P[n - 2], P[n - 1]);
+    else { const a = nrm(P[i - 1], P[i]), c = nrm(P[i], P[i + 1]); let mx = a[0] + c[0], mz = a[1] + c[1]; const ml = Math.hypot(mx, mz) || 1; mx /= ml; mz /= ml;
+      const k = 1 / Math.max(0.25, mx * a[0] + mz * a[1]); v = [mx * k, mz * k]; }
+    L.push([P[i][0] + v[0] * t, P[i][1] + v[1] * t]); R.push([P[i][0] - v[0] * t, P[i][1] - v[1] * t]); }
+  return { L, R }; }
+const markH = (x, z) => 0; // platsen i prototypen är plan; i appen: terrängmodellens höjd i punkten
+function murGeo(b) { // botten följer marken; toppen följer marken eller går rakt mellan punkterna
+  const { L, R } = murKant(b), P = b.pts, ytor = [], snitt = [];
+  for (let i = 0; i < P.length - 1; i++) {
+    const len = Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]), m = b.topp === 'rak' ? 1 : Math.max(1, Math.ceil(len));
+    const ta = markH(...P[i]) + b.h, tb = markH(...P[i + 1]) + b.h;
+    for (let j = i ? 1 : 0; j <= m; j++) { const f = j / m, ip = (A, C) => [A[0] + f * (C[0] - A[0]), A[1] + f * (C[1] - A[1])];
+      const l = ip(L[i], L[i + 1]), r = ip(R[i], R[i + 1]), top = q => (b.topp === 'rak' ? ta + f * (tb - ta) : markH(...q) + b.h);
+      snitt.push({ l: [l[0], markH(...l), l[1]], lt: [l[0], top(l), l[1]], r: [r[0], markH(...r), r[1]], rt: [r[0], top(r), r[1]] }); } }
+  for (let k = 0; k < snitt.length - 1; k++) { const a = snitt[k], c = snitt[k + 1];
+    ytor.push([a.lt, a.rt, c.rt, c.lt], [a.l, c.l, c.lt, a.lt], [a.r, a.rt, c.rt, c.r], [a.l, a.r, c.r, c.l]); }
+  const f0 = snitt[0], f1 = snitt[snitt.length - 1]; ytor.push([f0.l, f0.lt, f0.rt, f0.r], [f1.l, f1.r, f1.rt, f1.lt]);
+  return poly(ytor); }
+function ytaPulpet(b) { // polygon med lutande ovansida: väggar upp till ett plan som stiger åt riktningen tr
+  const P = b.pts, { pr, mi, L } = ytaSpann(b), top = P.map((p, i) => b.h + b.th * (pr[i] - mi) / L), ytor = [];
+  P.forEach((p, i) => { const j = (i + 1) % P.length, q = P[j]; ytor.push([[p[0], 0, p[1]], [q[0], 0, q[1]], [q[0], top[j], q[1]], [p[0], top[i], p[1]]]); });
+  for (const [a, c, d] of THREE.ShapeUtils.triangulateShape(P.map(([x, z]) => new THREE.Vector2(x, z)), [])) {
+    ytor.push([[P[a][0], 0, P[a][1]], [P[c][0], 0, P[c][1]], [P[d][0], 0, P[d][1]]], [[P[a][0], top[a], P[a][1]], [P[c][0], top[c], P[c][1]], [P[d][0], top[d], P[d][1]]]); }
+  return poly(ytor); }
+function normPoly(b) { // fotpunkterna kring kroppens mitt, och b, d som yttermått
+  const xs = b.pts.map(p => p[0]), zs = b.pts.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = l2w(b, cx, cz);
+  b.pts = b.pts.map(p => [p[0] - cx, p[1] - cz]); b.x = w.x; b.z = w.z; b.b = x1 - x0 + (b.t || 0); b.d = z1 - z0 + (b.t || 0); }
+const murLangd = b => b.pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - b.pts[i][0], p[1] - b.pts[i][1]), 0);
+/* Fotavtryck och area. Förenade byggnader slås ihop (polygon-clipping), så att överlapp inte räknas två gånger. */
+function fotPolys(b) { const W = P => P.map(([x, z]) => { const p = l2w(b, x, z); return [p.x, p.z]; });
+  if (b.typ === 'mur') { const { L, R } = murKant(b); return [[W([...L, ...R.reverse()])]]; }
+  if (b.typ === 'yta') return [[W(b.pts)]];
+  if (b.typ === 'sfar') return [[W(cirkel(fpR(b), 64))]];
+  if (b.typ === 'cylinder' && !b.gard) return [[W(b.n ? ytterPts(b) : cirkel(b.b / 2, 64))]];
+  return [[W(ytterPts(b)), ...(b.gard ? [W(gardHal(b))] : [])]]; }
+const ringArea = P => Math.abs(P.reduce((s, p, i) => { const q = P[(i + 1) % P.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
+const multiArea = M => M.reduce((s, pol) => s + ringArea(pol[0]) - pol.slice(1).reduce((t, h) => t + ringArea(h), 0), 0);
+function area(kroppar) { const M = kroppar.map(fotPolys);
+  if (kroppar.length > 1 && window.polygonClipping) { try { return { a: multiArea(polygonClipping.union(...M)), exakt: true }; } catch (e) {} }
+  return { a: M.reduce((s, m) => s + multiArea(m), 0), exakt: kroppar.length < 2 }; }
+
+const hitta = id => S.kroppar.find(b => b.id === id);
+const valda = () => S.val.map(hitta).filter(Boolean);
+const ett = () => (S.val.length === 1 ? hitta(S.val[0]) : null);
+const MARKGOLV = 0.3; // förvald golvnivå över mark för kroppar som står på marken
+const underlag = b => S.kroppar.find(s => s.id !== b.id && b.golv > s.golv + 0.1 && b.golv <= nock(s) + 0.15 && inuti(s, b.x, b.z));
+// Sockeln: från golvet ner i marken (i appen till lägsta marken under huset + 0,5 m). Staplade kroppar har ingen.
+const sockelDjup = b => (b.sockel != null ? b.sockel : ['mur', 'yta', 'sfar'].includes(b.typ) || underlag(b) ? 0 : b.golv + 0.5);
+const matNamn = h => ({ sida: h.ax === 'z' ? 'Djup' : 'Bredd', h: 'Vägghöjd', th: 'Takhöjd', rad: 'Diameter', nock: 'Gavellutning', kv: 'Lutningen börjar',
+  gera: 'Gering', hd: 'Husdjup', lyft: 'Höjd över mark', vrid: 'Vridning' })[h.k];
+const NGON = [3, 4, 5, 6, 7, 8].map(n => 180 / n); // geringar som ger regelbundna n-hörningar
+const ngonText = g => { const n = 180 / Math.abs(g); return g && Math.abs(n - Math.round(n)) < 1e-6 && n <= 12 ? ` (${Math.round(n)}-hörning)` : ''; };
+const gradEnh = k => ['nock', 'gera', 'vrid'].includes(k);
+function vaderstreck(b, s, axz) { const dx = axz ? s * Math.sin(b.r) : s * Math.cos(b.r), dz = axz ? s * Math.cos(b.r) : -s * Math.sin(b.r), a = (Math.atan2(dx, -dz) / RAD + 360) % 360;
+  return ['N', 'NO', 'O', 'SO', 'S', 'SV', 'V', 'NV'][Math.round(a / 45) % 8]; }
+function kroppStopp(o, fx, fz, ax, s) { // var längs push-pull-axeln en annan kropps hörn och sidor ligger
+  const t = p => ((p.x - fx) * ax.x + (p.z - fz) * ax.z) * s;
+  if (o.typ === 'cylinder') { const c = t(o), r = o.b / 2; return [{ t: c - r, namn: 'annan kropp', p: o }, { t: c, namn: 'annan kropps centrum', p: o }, { t: c + r, namn: 'annan kropp', p: o }]; }
+  return horn(o).map(p => ({ t: t(p), namn: 'annan kropp', p }));
+}
+
+function poly(ytor) { // plana ytor -> trianglar (solfjäder), degenererade hoppas över
+  const p = [], v = (a, b) => [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  for (const y of ytor) for (let i = 1; i < y.length - 1; i++) {
+    const a = y[0], b = y[i], c = y[i + 1], u = v(a, b), w = v(a, c);
+    const n = Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]);
+    if (n > 1e-6) p.push(...a, ...b, ...c);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.computeVertexNormals(); return g;
+}
+function blixtlas(k, ytor) { // ändytan i band nerifrån och upp, så att halvvalm och brutna ändar blir rätt plan
+  let i = 0, j = k.length - 1;
+  while (j - i > 1) { const ni = i + 1, nj = j - 1;
+    if (ni === nj || k[ni][1] <= k[nj][1]) { ytor.push([k[i], k[j], k[ni]]); i = ni; } else { ytor.push([k[i], k[j], k[nj]]); j = nj; } }
+}
+function takGeo(b) {
+  const B = b.b / 2, D = b.d / 2, t = b.th;
+  if (b.tak === 'platt' || t <= 0) return null;
+  if (b.tak === 'kon') return new THREE.ConeGeometry(B, t, b.n || 40).translate(0, t / 2, 0);
+  if (b.tak === 'kupol') return new THREE.SphereGeometry(B, b.n || 32, 12, 0, Math.PI * 2, 0, Math.PI / 2).rotateY(Math.PI / 2).scale(1, t / B, 1);
+  if (b.tak === 'pyramid') { const T = [0, t, 0]; return poly([[[-B, 0, D], [B, 0, D], T], [[B, 0, D], [B, 0, -D], T], [[B, 0, -D], [-B, 0, -D], T], [[-B, 0, -D], [-B, 0, D], T]]); }
+  const K = takKedjor(b); if (!K) return null;
+  const ytor = [];
+  for (let i = 0; i < K.A.length - 1; i++) ytor.push([K.A[i], K.Bk[i], K.Bk[i + 1], K.A[i + 1]]);
+  blixtlas(K.A, ytor); blixtlas(K.Bk, ytor);
+  return poly(ytor);
+}
+function prisma(ytter, hal, hojd) { // fotavtryck [x, z] (lokalt) upp till hojd, med hål
+  const sh = new THREE.Shape(ytter.map(([x, z]) => new THREE.Vector2(x, -z)));
+  if (hal) sh.holes.push(new THREE.Path(hal.map(([x, z]) => new THREE.Vector2(x, -z))));
+  return new THREE.ExtrudeGeometry(sh, { depth: hojd, bevelEnabled: false }).rotateX(-Math.PI / 2);
+}
+function ytterPts(b) {
+  if (b.typ === 'cylinder') { const n = b.n || 32, R = b.b / 2; return Array.from({ length: n }, (_, i) => [Math.sin(2 * Math.PI * i / n) * R, Math.cos(2 * Math.PI * i / n) * R]); }
+  const D = b.d / 2; return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, c]) => [xe(b, a, c * D), c * D]);
+}
+function gardHal(b) {
+  const hd = hdv(b);
+  if (b.typ === 'cylinder') { const n = b.n || 32, R = b.b / 2 - hd / Math.cos(Math.PI / n); return Array.from({ length: n }, (_, i) => [Math.sin(2 * Math.PI * i / n) * R, Math.cos(2 * Math.PI * i / n) * R]); }
+  const X = b.b / 2 - hd, Z = b.d / 2 - hd; return [[-X, -Z], [X, -Z], [X, Z], [-X, Z]];
+}
+function gardNorm(b) { // innersidan där husdjupets handtag sitter
+  if (b.typ !== 'cylinder') return { nx: 0, nz: 1, a: b.d / 2 };
+  const n = b.n || 32, f = Math.PI / n; return { nx: Math.sin(f), nz: Math.cos(f), a: b.b / 2 * Math.cos(f) };
+}
+const gardFlagga = (b, sx, sz) => ((b.gard.gavlar || {})[sx + ',' + sz]) || (b.gard.horn === 'gavel' ? { x: true, z: false } : { x: false, z: false });
+function satGardFlaggor(b, f) { const g = {}; for (const sx of [-1, 1]) for (const sz of [-1, 1]) g[sx + ',' + sz] = f(sx, sz, gardFlagga(b, sx, sz)); b.gard.gavlar = g; delete b.gard.horn; }
+const gavelBar = b => b.gard && b.typ === 'block' && ['sadel', 'mansard'].includes(b.tak) && b.th > 0;
+// Innergården byggs av längor med samma husdjup. Gerade hörn: alla längor geras (45° i fyrkant, 180°/n i ett n-hörn),
+// så att takfallen möts i grat utåt och vinkelränna inåt. Med gavlar: långsidorna går hela vägen med gavlar i ändarna.
+function vingar(b) {
+  const hd = hdv(b), ut = [], ger = g => ({ ...ANDE0, g });
+  const v = (len, ea, eb) => ({ typ: 'block', b: len, d: hd, h: b.h, th: b.th, tak: b.tak, ml: b.ml, mb: b.mb, ea, eb });
+  if (b.typ === 'cylinder') { const n = b.n || 32, ac = b.b / 2 * Math.cos(Math.PI / n) - hd / 2;
+    for (let i = 0; i < n; i++) { const f = 2 * Math.PI * (i + 0.5) / n; ut.push({ lx: Math.sin(f) * ac, lz: Math.cos(f) * ac, r: f, w: v(2 * ac * Math.tan(Math.PI / n), ger(180 / n), ger(180 / n)) }); }
+    return ut; }
+  // Rektangel: varje hörn har två möjliga gavelspetsar, x (längan i x-led går igenom) och z. Ingen = gerat hörn.
+  const B = b.b / 2, D = b.d / 2, cl = hd / 2;
+  const xEnd = (sx, sz) => { const f = gardFlagga(b, sx, sz); return f.x ? { p: sx * B, g: 0 } : { p: sx * (B - cl), g: f.z ? 0 : 45 }; };
+  const zEnd = (sx, sz) => { const f = gardFlagga(b, sx, sz); return f.z ? { p: sz * D, g: 0 } : { p: sz * (D - cl), g: f.x ? 0 : 45 }; };
+  for (const sz of [1, -1]) { const a = xEnd(-1, sz), c = xEnd(1, sz);
+    ut.push({ lx: (a.p + c.p) / 2, lz: sz * (D - cl), r: sz > 0 ? 0 : Math.PI, w: sz > 0 ? v(c.p - a.p, ger(a.g), ger(c.g)) : v(c.p - a.p, ger(c.g), ger(a.g)) }); }
+  for (const sx of [1, -1]) { const f = zEnd(sx, 1), k = zEnd(sx, -1);
+    ut.push({ lx: sx * (B - cl), lz: (f.p + k.p) / 2, r: sx * Math.PI / 2, w: sx > 0 ? v(f.p - k.p, ger(f.g), ger(k.g)) : v(f.p - k.p, ger(k.g), ger(f.g)) }); }
+  return ut;
+}
+const grupper = new Map();
+function slangGrupp(g) { g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); kroppGrupp.remove(g); }
+function byggKropp(b) {
+  if (grupper.has(b.id)) slangGrupp(grupper.get(b.id));
+  const g = new THREE.Group(), vald = S.val.includes(b.id), sd = sockelDjup(b), delar = [];
+  if (b.typ === 'mur') delar.push([murGeo(b), 'vagg']);
+  else if (b.typ === 'yta') delar.push([b.tak === 'pulpet' && b.th > 0 ? ytaPulpet(b) : prisma(b.pts, null, b.h), 'vagg']);
+  else if (b.typ === 'sfar') { const R = b.b / 2, h = Math.min(b.h, b.b), th = Math.acos(Math.max(-1, Math.min(1, (R - h) / R)));
+    delar.push([new THREE.SphereGeometry(R, 48, 24, 0, Math.PI * 2, 0, th).translate(0, h - R, 0), 'vagg']);
+    if (h < b.b - 0.01) delar.push([new THREE.CircleGeometry(fpR(b), 48).rotateX(Math.PI / 2), 'sockel']); }
+  else if (b.typ === 'cylinder' && !b.gard) {
+    delar.push([new THREE.CylinderGeometry(b.b / 2, b.b / 2, b.h, b.n || 40).translate(0, b.h / 2, 0), 'vagg']);
+    const tak = takGeo(b); if (tak) delar.push([tak.translate(0, b.h, 0), 'tak']);
+    if (sd > 0.01) delar.push([new THREE.CylinderGeometry(b.b / 2, b.b / 2, sd, b.n || 40).translate(0, -sd / 2, 0), 'sockel']);
+  } else {
+    const ytter = ytterPts(b), hal = b.gard ? gardHal(b) : null;
+    delar.push([prisma(ytter, hal, b.h), 'vagg']);
+    if (sd > 0.01) delar.push([prisma(ytter, hal, sd).translate(0, -sd, 0), 'sockel']);
+    if (b.gard) { if (b.tak !== 'platt') for (const v of vingar(b)) { const t = takGeo(v.w); if (t) delar.push([t.translate(0, b.h, 0).rotateY(v.r).translate(v.lx, 0, v.lz), 'tak']); } }
+    else { const tak = takGeo(b); if (tak) delar.push([tak.translate(0, b.h, 0), 'tak']); }
+  }
+  const grund = b.roll === 'omgivning' ? F.body.clone().lerp(F.std, 0.35) : F.body.clone();
+  if (vald) grund.lerp(F.acc, 0.22);
+  for (const [geo, del] of delar) {
+    const farg = del === 'sockel' ? grund.clone().lerp(F.std, 0.55) : grund;
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: farg, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
+    m.userData = { kropp: b.id, del }; g.add(m);
+    g.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({ color: vald ? F.acc : b.last ? F.std : F.edge })));
+  }
+  g.position.set(b.x, b.golv, b.z); g.rotation.y = b.r; kroppGrupp.add(g); grupper.set(b.id, g);
+}
+function byggKroppar(ids) {
+  if (ids) { for (const id of ids) { const b = hitta(id); if (b) byggKropp(b); } return; }
+  for (const g of grupper.values()) slangGrupp(g); grupper.clear();
+  for (const b of S.kroppar) byggKropp(b);
+}
+
+/* ---------- Handtag: push-pull på sidorna, grepp i hörnen, gavlar och gering i ändarna ---------- */
+const HG = { rund: new THREE.SphereGeometry(0.7, 12, 8), kub: new THREE.BoxGeometry(1.4, 1.4, 1.4), grepp: new THREE.BoxGeometry(1.6, 0.5, 1.6),
+  diamant: new THREE.OctahedronGeometry(0.95), liten: new THREE.SphereGeometry(0.55, 12, 8),
+  tri: new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.3, 0, 0), new THREE.Vector3(1.3, 0, 0), new THREE.Vector3(0, 1.1, 0)]) };
+const triMat = new THREE.MeshBasicMaterial({ depthTest: false, transparent: true, side: THREE.DoubleSide });
+const triDold = new THREE.MeshBasicMaterial({ depthTest: false, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
+const triStreck = new THREE.LineDashedMaterial({ depthTest: false, transparent: true, dashSize: 0.3, gapSize: 0.22 });
+const hMat = new THREE.MeshBasicMaterial({ depthTest: false, transparent: true });
+const gMat = new THREE.MeshBasicMaterial({ depthTest: false, transparent: true });
+function handtagFor(b) {
+  if (b.typ === 'mur' || b.typ === 'yta') { const P = b.pts, ut = [], yt = b.typ === 'mur' ? b.h : b.h;
+    P.forEach((p, i) => ut.push({ k: 'pt', i, lx: p[0], y: yt, lz: p[1], geo: 'rund' }));
+    const m = [(P[0][0] + P[1][0]) / 2, (P[0][1] + P[1][1]) / 2];
+    ut.push({ k: 'h', lx: m[0], y: b.h, lz: m[1], geo: 'kub' });
+    if (b.typ === 'yta' && b.tak === 'pulpet') { const { pr } = ytaSpann(b), i = pr.indexOf(Math.max(...pr)); ut.push({ k: 'th', lx: P[i][0], y: b.h + b.th, lz: P[i][1], geo: 'kub' }); }
+    if (b.typ === 'yta') { ut.push({ k: 'lyft', lx: m[0], y: 0, lz: m[1], geo: 'kub' }); ut.push({ k: 'grepp', i: 0, lx: 0, y: b.h / 2, lz: 0, geo: 'grepp' }); }
+    else ut.push({ k: 'grepp', i: 0, lx: m[0], y: 0.1, lz: m[1], geo: 'grepp' });
+    return ut; }
+  if (b.typ === 'sfar') return [{ k: 'h', lx: 0, y: b.h, lz: 0, geo: 'kub' }, { k: 'rad', lx: b.b / 2, y: b.h - b.b / 2, lz: 0, geo: 'rund' },
+    ...horn(b).map((p, i) => { const l = w2l(b, p.x, p.z); return { k: 'grepp', i, lx: l.lx, y: 0.1, lz: l.lz, geo: 'grepp' }; })];
+  const ut = [], tak = b.tak !== 'platt', cyl = b.typ === 'cylinder', yt = cyl ? b.b / 2 : b.d / 2;
+  ut.push({ k: 'h', lx: 0, y: b.h, lz: tak ? yt : b.gard ? yt - hdv(b) / 2 : 0, geo: 'kub' });
+  if (tak) { const p = b.gard ? vingar(b)[0] : { lx: 0, lz: b.tak === 'pulpet' ? -b.d / 2 : 0 };
+    ut.push({ k: 'th', lx: p.lx, y: b.h + b.th, lz: p.lz, geo: 'kub' }); }
+  if (b.gard) { const n = gardNorm(b), r = n.a - hdv(b); ut.push({ k: 'hd', lx: n.nx * r, y: b.h / 2, lz: n.nz * r, geo: 'rund' }); }
+  if (gavelBar(b)) { const B = b.b / 2, D = b.d / 2, cl = hdv(b) / 2, y = b.h + b.th * 0.3;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const f = gardFlagga(b, sx, sz);
+      ut.push({ k: 'gtog', ax: 'x', sx, sz, vis: f.x, lx: sx * B, y, lz: sz * (D - cl), rot: sx * Math.PI / 2, geo: 'tri' });
+      ut.push({ k: 'gtog', ax: 'z', sx, sz, vis: f.z, lx: sx * (B - cl), y, lz: sz * D, rot: sz > 0 ? 0 : Math.PI, geo: 'tri' }); } }
+  if (b.typ === 'block' && !b.gard) {
+    const K = profilTak(b.tak) && b.th > 0 ? takKedjor(b) : null;
+    for (const s of [-1, 1]) {
+      ut.push({ k: 'gera', s, lx: xe(b, s, b.d / 2), y: b.h, lz: b.d / 2, geo: 'diamant' });
+      if (!K) continue;
+      const ch = s < 0 ? K.A : K.Bk, tp = ch[K.top];
+      ut.push({ k: 'nock', s, lx: tp[0], y: b.h + tp[1], lz: tp[2], geo: 'kub' });
+      const e = Er(b, s);
+      if (e.typ !== 'gavel') { const y0 = e.k * b.th, iv = ch.map((p, i) => (Math.abs(p[1] - y0) < 1e-6 ? i : -1)).filter(i => i >= 0);
+        const p = ch[iv[0]], q = ch[iv[iv.length - 1]]; ut.push({ k: 'kv', s, lx: (p[0] + q[0]) / 2, y: b.h + y0, lz: (p[2] + q[2]) / 2, geo: 'liten' }); }
+    }
+  }
+  if (cyl) ut.push({ k: 'rad', lx: b.b / 2, y: b.h / 2, lz: 0, geo: 'rund' });
+  else for (const s of [1, -1]) { ut.push({ k: 'sida', ax: 'x', s, lx: s * b.b / 2, y: b.h / 2, lz: 0, geo: 'rund' }); ut.push({ k: 'sida', ax: 'z', s, lx: 0, y: b.h / 2, lz: s * b.d / 2, geo: 'rund' }); }
+  horn(b).forEach((p, i) => { const l = w2l(b, p.x, p.z); ut.push({ k: 'grepp', i, lx: l.lx, y: 0.1, lz: l.lz, geo: 'grepp' }); });
+  return ut;
+}
+function byggHandtag() {
+  handtagGrupp.clear();
+  if (S.lage) return;
+  const sel = valda(), en = sel.length === 1;
+  if (sel.some(b => b.last)) return; // låsta kroppar har inga handtag
+  for (const b of sel) for (const h of handtagFor(b)) {
+    if (!en && h.k !== 'grepp') continue;
+    const p = l2w(b, h.lx, h.lz), m = new THREE.Mesh(HG[h.geo], h.k === 'grepp' ? gMat : h.k === 'gtog' ? (h.vis ? triMat : triDold) : hMat);
+    if (h.k === 'gtog' && !h.vis) { const l = new THREE.LineLoop(HG.tri, triStreck); l.computeLineDistances(); l.renderOrder = 10; m.add(l); }
+    m.position.set(p.x, b.golv + h.y, p.z); m.rotation.y = b.r + (h.rot || 0); m.renderOrder = 10; m.userData.handtag = { ...h, id: b.id }; handtagGrupp.add(m);
+  }
+}
+
+/* ---------- Laserdatan som stöd ---------- */
+function cellerI(b) {
+  const R = Math.hypot(b.b, b.d) / 2 + 1, ut = [];
+  for (let z = Math.floor(b.z - R); z <= b.z + R; z++) for (let x = Math.floor(b.x - R); x <= b.x + R; x++)
+    if (inuti(b, x + 0.5, z + 0.5, -0.3)) ut.push(dsmVid(x + 0.5, z + 0.5));
+  return ut;
+}
+const percentil = (a, p) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
+function hojdKandidater(b) {
+  const hs = cellerI(b).filter(v => v > b.golv + 1); if (hs.length < 5) return [];
+  const fack = new Map();
+  for (const v of hs) { const k = Math.round(v / 0.5); const f = fack.get(k) || []; f.push(v); fack.set(k, f); }
+  const min = Math.max(4, hs.length * 0.06), ut = [];
+  for (const [k, f] of fack) if (f.length >= min && f.length >= (fack.get(k - 1) || []).length && f.length >= (fack.get(k + 1) || []).length)
+    ut.push({ v: f.reduce((a, c) => a + c, 0) / f.length, namn: 'laserhöjd' });
+  ut.push({ v: percentil(hs, 0.97), namn: 'laserns topp' });
+  return ut;
+}
+function laserKant(fast, dir, vinkel, halvTvars, nara, troskel) {
+  const fynd = [];
+  for (const f of [-0.35, 0, 0.35]) {
+    const o = f * halvTvars; let fore = null, bast = null;
+    for (let t = 0; t <= nara + 6; t += 0.25) {
+      const x = fast.x + dir.x * t + vinkel.x * o, z = fast.z + dir.z * t + vinkel.z * o, inne = dsmVid(x, z) > troskel;
+      if (fore === true && !inne) { const k = t - 0.125; if (bast === null || Math.abs(k - nara) < Math.abs(bast - nara)) bast = k; }
+      fore = inne;
+    }
+    if (bast !== null && Math.abs(bast - nara) < 1.5) fynd.push(bast);
+  }
+  if (fynd.length < 2) return null;
+  fynd.sort((a, b) => a - b);
+  const m = fynd[fynd.length >> 1];
+  return Math.abs(m - nara) < 0.8 ? m : null;
+}
+function ersatt(hus) {
+  const p = S.klickPunkt || { x: (hus.yttre[0].x + hus.yttre[2].x) / 2, z: (hus.yttre[0].z + hus.yttre[2].z) / 2 };
+  let start = null;
+  for (let r = 0; r <= 4 && !start; r++) for (let dz = -r; dz <= r && !start; dz++) for (let dx = -r; dx <= r; dx++)
+    if (dsmVid(p.x + dx, p.z + dz) > 2.5) { start = [Math.floor(p.x + dx + HALV), Math.floor(p.z + dz + HALV)]; break; }
+  if (!start) { status('Hittade inga laserpunkter på huset här. Klicka närmare taket.'); return; }
+  const sedd = new Uint8Array(G * G), ko = [start], celler = [];
+  sedd[start[1] * G + start[0]] = 1;
+  while (ko.length && celler.length < 40000) {
+    const [c, r] = ko.pop(); celler.push([c - HALV + 0.5, r - HALV + 0.5, DSM[r * G + c]]);
+    for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const cc = c + a, rr = r + b, i = rr * G + cc;
+      if (cc >= 0 && rr >= 0 && cc < G && rr < G && !sedd[i] && DSM[i] > 2.5) { sedd[i] = 1; ko.push([cc, rr]); } }
+  }
+  let bast = null;
+  for (let g = 0; g < 90; g++) {
+    const r = g * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9;
+    for (const [x, z] of celler) { const u = x * c - z * s, v = x * s + z * c; a0 = Math.min(a0, u); a1 = Math.max(a1, u); b0 = Math.min(b0, v); b1 = Math.max(b1, v); }
+    const yta = (a1 - a0 + 1) * (b1 - b0 + 1);
+    if (!bast || yta < bast.yta) bast = { yta, r, a0: a0 - 0.5, a1: a1 + 0.5, b0: b0 - 0.5, b1: b1 + 0.5 };
+  }
+  const um = (bast.a0 + bast.a1) / 2, vm = (bast.b0 + bast.b1) / 2, c = Math.cos(bast.r), s = Math.sin(bast.r);
+  const b = { id: S.nasta++, typ: 'block', tak: 'platt', th: 0, x: um * c + vm * s, z: -um * s + vm * c, r: bast.r,
+    b: bast.a1 - bast.a0, d: bast.b1 - bast.b0, golv: MARKGOLV, h: 0, hus: hus.namn, roll: 'omgivning' };
+  if (b.d > b.b) { [b.b, b.d] = [b.d, b.b]; b.r += Math.PI / 2; }
+  b.b = r1(b.b); b.d = r1(b.d);
+  b.h = r1(percentil(celler.map(c => c[2]), 0.5) - b.golv);
+  // Innergård: tomt i mitten och bara en del av rektangeln täckt. Husdjupet mäts från mitten ut till första taket.
+  let gardText = '';
+  if (dsmVid(b.x, b.z) < 2.5 && celler.length < 0.8 * b.b * b.d) {
+    const ut = (ax, max) => { for (let t = 0; t < max; t += 0.25) { const q = ax === 'x' ? l2w(b, t, 0) : l2w(b, 0, t); if (dsmVid(q.x, q.z) > 2.5) return t; } return max; };
+    const hd = Math.round(Math.min(b.b / 2 - ut('x', b.b / 2), b.d / 2 - ut('z', b.d / 2)) * 2) / 2;
+    if (hd >= 3 && hd < Math.min(b.b, b.d) / 2 - 1) { b.gard = { hd, horn: 'gera' }; gardText = `, innergård med husdjup ${fmt(hd)} m`; }
+  }
+  spara(); S.kroppar.push(b); hus.ersatt = b.id; S.valtHus = null; S.val = [b.id];
+  S.tid = { namn: hus.namn, t0: performance.now() };
+  ritaOm(); status(`${hus.namn}: en kropp ${fmt(b.b)} × ${fmt(b.d)} m, ${fmt(b.h)} m hög ur laserdatan${gardText}. Dra i sidorna eller välj takform.`);
+}
+function valjBas(bas) {
+  if (!S.val.length) { S.lage = S.lage === 'placera:' + bas ? null : 'placera:' + bas; ritaOm(); return; }
+  const sel = valda().filter(b => !b.last && ['block', 'cylinder', 'sfar'].includes(b.typ)); if (!sel.length) return;
+  spara(); const typ = bas === 'block' ? 'block' : bas === 'sfar' ? 'sfar' : 'cylinder';
+  for (const b of sel) { if (typ === 'block' && b.typ === 'sfar') b.d = b.b;
+    b.typ = typ; b.n = bas === 'manghorn' ? (b.n || 6) : 0; if (typ !== 'block') b.b = b.d = Math.max(b.b, b.d);
+    if (typ === 'sfar') { delete b.gard; b.h = Math.min(b.h, b.b); }
+    if (!takFor(b).includes(b.tak)) { b.tak = 'platt'; b.th = 0; } }
+  ritaOm();
+}
+function valjTak(tak) {
+  const sel = valda().filter(b => takFor(b).includes(tak) && !b.last); if (!sel.length) return;
+  spara();
+  for (const b of sel) {
+    const forr = b.tak; b.tak = tak;
+    if (tak === 'platt') { b.th = 0; continue; }
+    if (forr === 'platt' || !b.th) {
+      if (b.typ === 'yta') { b.th = Math.max(0.1, r1(lop(b) * Math.tan(10 * RAD))); continue; }
+      const hs = cellerI(b).filter(v => v > b.golv + 1), lag = percentil(hs, 0.05), hog = percentil(hs, 0.97);
+      if (hs.length > 10 && hog - lag > 1 && lag > b.golv + 1) { b.h = r1(lag - b.golv); b.th = r1(hog - lag); }
+      else if (tak === 'mansard') { const m = mans({ ...b, th: 999 }); b.th = r1(m.mh + (djup(b) / 2 - m.mb) * Math.tan(25 * RAD)); }
+      else b.th = Math.max(1, r1((lop(b) || b.d / 2) * Math.tan(30 * RAD)));
+    }
+  }
+  ritaOm();
+}
+function vandNock() { const sel = valda().filter(b => ['block', 'yta'].includes(b.typ) && !b.last); if (!sel.length) return; spara();
+  for (const b of sel) { if (b.typ === 'yta') { b.tr = ((b.tr || 0) + Math.PI / 2) % (2 * Math.PI); continue; } [b.b, b.d] = [b.d, b.b]; b.r += Math.PI / 2; } ritaOm(); }
+function gardVaxla() {
+  const sel = valda().filter(b => !b.last && ['block', 'cylinder'].includes(b.typ)); if (!sel.length) { status('Innergård: markera först ett block, en cylinder eller ett N-hörn.'); return; }
+  spara(); const pa = !sel.every(b => b.gard);
+  for (const b of sel) {
+    if (!pa) { delete b.gard; continue; }
+    const m = b.typ === 'cylinder' ? b.b : Math.min(b.b, b.d);
+    b.gard = { hd: r1(Math.min(12, Math.max(3, m * 0.3), maxHd(b))), horn: 'gera' };
+    if (!takFor(b).includes(b.tak)) { b.tak = 'platt'; b.th = 0; }
+  }
+  ritaOm(); status(pa ? 'Innergård: ett husdjup för alla längor. Dra i den runda punkten på gårdssidan, eller skriv Husdjup i panelen. Med sadel- eller brutet tak: klicka på trianglarna för att visa eller dölja gavlar.' : 'Innergården borttagen.');
+}
+
+/* ---------- Historik ---------- */
+const bild = () => JSON.stringify({ k: S.kroppar, e: S.hus.map(h => h.ersatt) });
+function spara(fore) { S.hist.push(fore || bild()); if (S.hist.length > 120) S.hist.shift(); S.fram = []; }
+function aterstall(j) {
+  const d = JSON.parse(j); S.kroppar = d.k; S.hus.forEach((h, i) => { h.ersatt = d.e[i]; });
+  S.val = S.val.filter(id => hitta(id)); S.nasta = Math.max(S.nasta, ...S.kroppar.map(b => b.id + 1)); ritaOm();
+}
+const angra = () => { if (S.hist.length) { S.fram.push(bild()); aterstall(S.hist.pop()); } };
+const gorOm = () => { if (S.fram.length) { S.hist.push(bild()); aterstall(S.fram.pop()); } };
+
+/* ---------- Pekaren ---------- */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let mus = { x: 0, y: 0 };
+function siktaPa(e) { const r = renderer.domElement.getBoundingClientRect(); mus = { x: e.clientX - r.left, y: e.clientY - r.top };
+  ndc.set(mus.x / r.width * 2 - 1, -mus.y / r.height * 2 + 1); ray.setFromCamera(ndc, kamera); }
+const planY = y => ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -y), new THREE.Vector3());
+function lodPlan(p) { const n = new THREE.Vector3(); kamera.getWorldDirection(n); n.y = 0; n.normalize();
+  return ray.ray.intersectPlane(new THREE.Plane().setFromNormalAndCoplanarPoint(n, p), new THREE.Vector3()); }
+function skarm(x, y, z) { const v = new THREE.Vector3(x, y, z).project(kamera), r = renderer.domElement.getBoundingClientRect();
+  return { x: (v.x + 1) / 2 * r.width, y: (1 - v.y) / 2 * r.height, bak: v.z > 1 }; }
+// Närmaste hörn eller sidmitt på skärmen (inom 14 px), annars ytan under pekaren eller marken.
+function pekPunkt(uteslut = new Set(), fri = false, y0 = 0) {
+  if (!fri) {
+    let bast = null;
+    for (const b of S.kroppar) { if (uteslut.has(b.id)) continue;
+      const h = horn(b), pts = h.map(p => ({ ...p, namn: 'hörn' }));
+      if (!['cylinder', 'sfar'].includes(b.typ)) h.forEach((p, i) => { if (b.typ === 'mur' && i === h.length - 1) return; const q = h[(i + 1) % h.length]; pts.push({ x: (p.x + q.x) / 2, z: (p.z + q.z) / 2, namn: 'sidans mitt' }); });
+      else pts.push({ x: b.x, z: b.z, namn: 'centrum' });
+      for (const p of pts) for (const y of [b.golv, topp(b)]) { const s = skarm(p.x, y, p.z); if (s.bak) continue;
+        const d = Math.hypot(s.x - mus.x, s.y - mus.y); if (d < 14 && (!bast || d < bast.d)) bast = { d, x: p.x, y, z: p.z, namn: p.namn }; } }
+    if (bast) return bast;
+  }
+  const hit = ray.intersectObjects(kroppGrupp.children, true).find(h => h.object.userData.kropp && !uteslut.has(h.object.userData.kropp));
+  if (hit && !fri) return { x: hit.point.x, y: hit.point.y, z: hit.point.z, namn: 'yta' };
+  const p = planY(y0); return p ? { x: p.x, y: y0, z: p.z, namn: '' } : null;
+}
+function barn(rotter) {
+  const set = new Set(rotter); let andrat = true;
+  while (andrat) { andrat = false;
+    for (const b of S.kroppar) if (!set.has(b.id) && [...set].some(id => { const s = hitta(id); return b.golv > s.golv + 0.1 && b.golv <= nock(s) + 0.15 && inuti(s, b.x, b.z); })) { set.add(b.id); andrat = true; } }
+  rotter.forEach(id => set.delete(id)); return [...set];
+}
+let D = null, vantande = null, overH = null;
+const visaMatt = (p, t, under) => { const s = skarm(p.x, p.y, p.z);
+  matt.style.left = s.x + 'px'; matt.style.top = s.y + 'px';
+  matt.textContent = t; if (under) { const e = document.createElement('small'); e.textContent = under; matt.append(e); } matt.style.display = 'block'; };
+
+const MATTHANDTAG = ['sida', 'h', 'th', 'rad', 'nock', 'kv', 'gera', 'hd', 'lyft'];
+function startaHandtag(h, punkt, e) {
+  const b = hitta(h.id); S.val = S.val.includes(b.id) ? S.val : [b.id];
+  const sel = valda(), laser = k => ({ ...k, laser: true });
+  const andra = S.kroppar.filter(o => o.id !== b.id).flatMap(o => [{ v: topp(o), namn: 'annan kropps takfot' }, { v: nock(o), namn: 'annan kropps nock' }]);
+  D = { typ: h.k, h, b0: klon(b), fore: bild(), sx: e.clientX, sy: e.clientY, p: punkt.clone ? punkt.clone() : new THREE.Vector3(punkt.x, punkt.y, punkt.z),
+    kand: h.k === 'h' ? [...hojdKandidater(b).map(laser), ...andra]
+      : h.k === 'th' ? [...hojdKandidater({ ...b, golv: b.golv + b.h - 1 }).filter(k => k.namn === 'laserns topp').map(laser), ...andra] : null,
+    kids: barn(sel.map(s => s.id)).map(id => { const k = hitta(id); return { id, x: k.x, z: k.z, golv: k.golv }; }),
+    rotter: sel.map(s => ({ id: s.id, x: s.x, z: s.z, golv: s.golv, mark: underlag(s) ? MARKGOLV : s.golv })) };
+  if (h.k === 'grepp') { const c = l2w(b, h.lx, h.lz); D.horn = { x: c.x, z: c.z };
+    D.kids.forEach(k => { const rot = D.rotter.find(r => inuti(hitta(r.id), k.x, k.z)) || D.rotter[0]; k.rel = k.golv - rot.golv; k.rot = rot.id; }); }
+}
+
+renderer.domElement.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || !S.skiss) return;
+  siktaPa(e);
+  if (D && D.svavar) { avslutaDrag(); return; }
+  S.senast = null; S.skriv = ''; matt.style.display = 'none';
+  if (S.lage === 'vrid') { vridKlick(e); return; }
+  if (S.lage === 'mat') { matKlick(e); return; }
+  if (S.lage && S.lage.startsWith('rita:')) { ritKlick(e); return; }
+  if (S.lage) { placera(ray.intersectObjects(kroppGrupp.children, true).find(h => h.object.userData.kropp)); return; }
+  const hHit = ray.intersectObjects(handtagGrupp.children)[0];
+  const kHit = ray.intersectObjects(kroppGrupp.children, true).find(h => h.object.userData.kropp);
+  const sHit = stdGrupp.visible ? ray.intersectObjects(stdGrupp.children).find(h => !h.object.userData.hus.ersatt) : null;
+  if (hHit && !e.shiftKey && hHit.object.userData.handtag.k === 'gtog') { vaxlaGavel(hHit.object.userData.handtag); return; }
+  if (hHit && !e.shiftKey) startaHandtag(hHit.object.userData.handtag, hHit.object.position, e);
+  else if (kHit) {
+    const id = kHit.object.userData.kropp, k0 = hitta(id), grp = k0.grupp ? S.kroppar.filter(o => o.grupp === k0.grupp).map(o => o.id) : [id];
+    if (e.shiftKey) S.val = grp.every(g => S.val.includes(g)) ? S.val.filter(v => !grp.includes(v)) : [...new Set([...S.val, ...grp])];
+    else S.val = grp.length > 1 && S.val.length === grp.length && grp.every(g => S.val.includes(g)) ? [id] : grp;
+    S.valtHus = null; ritaOm(); return;
+  } else {
+    D = { typ: 'klick', x: e.clientX, y: e.clientY, hus: sHit ? sHit.object.userData.hus : null, punkt: sHit ? sHit.point : null };
+    return;
+  }
+  renderer.domElement.setPointerCapture(e.pointerId);
+});
+renderer.domElement.addEventListener('pointermove', e => { vantande = e; });
+const slapp = e => {
+  vantande = null;
+  if (!D || D.svavar) return;
+  if (D.typ === 'klick') {
+    if (Math.hypot(e.clientX - D.x, e.clientY - D.y) < 5) {
+      S.val = []; S.valtHus = D.hus; S.klickPunkt = D.punkt ? { x: D.punkt.x, z: D.punkt.z } : null;
+      if (D.hus) status(`${D.hus.namn}: välj Ersätt i panelen (eller tryck E).`);
+    }
+    D = null; matt.style.display = 'none'; ritaOm(); return;
+  }
+  if (Math.hypot(e.clientX - D.sx, e.clientY - D.sy) < 5) { // klick utan drag: handtaget följer pekaren till nästa klick
+    D.svavar = true;
+    status(D.typ === 'grepp' ? 'Flytta: hörnet följer pekaren. Klicka där det ska fästa. Esc avbryter.'
+      : `${matNamn(D.h)}: följer pekaren. Klicka för att släppa, eller skriv ett värde och tryck Enter. Esc avbryter.`);
+    return;
+  }
+  avslutaDrag();
+};
+function avslutaDrag(avbryt) {
+  if (!D) return;
+  const d = D; D = null; S.skriv = ''; ledLinje.visible = false; matt.style.display = 'none';
+  if (avbryt) { aterstall(d.fore); return; }
+  if (d.typ === 'pt') { const b = hitta(d.h.id); if (b) normPoly(b); }
+  if (bild() !== d.fore) spara(d.fore);
+  ritaOm();
+  if (d.klistra) status('Inklistrad.');
+  else if (MATTHANDTAG.includes(d.typ)) { S.senast = { ...d.h };
+    status(`${matNamn(d.h)} ändrad. Skriv ett värde och tryck Enter för att ändra exakt` + (d.typ === 'sida' ? ' (motsatt sida står still).' : '.')); }
+}
+function handtagPos(h) { const b = hitta(h.id); if (!b) return null;
+  const m = handtagFor(b).find(x => x.k === h.k && x.ax === h.ax && x.s === h.s); if (!m) return null;
+  const p = l2w(b, m.lx, m.lz); return { x: p.x, y: b.golv + m.y, z: p.z }; }
+function visaSkriv(h) { const p = h.k === 'vrid' ? h.bas : handtagPos(h); if (p) visaMatt(p, `${matNamn(h)}: ${S.skriv || '…'} ${gradEnh(h.k) ? '°' : 'm'}`, 'Enter sätter värdet · Esc avbryter'); }
+function satVarde(h, v) {
+  const b = hitta(h.id); if (!b) return;
+  const fore = D ? D.fore : bild();
+  if (h.k === 'sida') { const ax = h.ax === 'z' ? { x: Math.sin(b.r), z: Math.cos(b.r) } : { x: Math.cos(b.r), z: -Math.sin(b.r) };
+    const halv = (h.ax === 'z' ? b.d : b.b) / 2, fx = b.x - h.s * halv * ax.x, fz = b.z - h.s * halv * ax.z;
+    if (h.ax === 'z') b.d = v; else b.b = v; b.x = fx + h.s * ax.x * v / 2; b.z = fz + h.s * ax.z * v / 2; }
+  else if (h.k === 'h') { const dl = v - b.h; barn([b.id]).forEach(id => { hitta(id).golv += dl; }); b.h = v; }
+  else if (h.k === 'th') b.th = v;
+  else if (h.k === 'rad') b.b = b.d = v;
+  else if (h.k === 'nock') { const e = Ew(b, h.s); if (v >= 89.5) e.typ = 'gavel'; else { e.typ = 'egen'; e.lut = Math.max(5, v); } }
+  else if (h.k === 'kv') Ew(b, h.s).k = Math.max(0, Math.min(0.9, v / b.th));
+  else if (h.k === 'gera') Ew(b, h.s).g = Math.max(-60, Math.min(60, v));
+  else if (h.k === 'hd') b.gard.hd = Math.max(1, Math.min(maxHd(b), v));
+  else if (h.k === 'lyft') b.golv = Math.max(0, v);
+  D = null; ledLinje.visible = false; matt.style.display = 'none';
+  if (bild() !== fore) spara(fore); S.senast = { ...h }; ritaOm();
+  status(`${matNamn(h)} ${fmt(v, 2)} ${gradEnh(h.k) ? '°' : 'm'}. Skriv ett nytt värde och Enter för att ändra igen.`);
+}
+function kopieraUrklipp() {
+  const sel = valda(); if (!sel.length) return false;
+  const kids = barn(S.val).map(hitta);
+  S.urklipp = { rotter: sel.map(klon), barn: kids.map(klon) };
+  status(`${sel.length + kids.length} ${sel.length + kids.length === 1 ? 'kropp kopierad' : 'kroppar kopierade'}. Ctrl+V klistrar in.`); return true;
+}
+function klippUt() {
+  if (valda().some(b => b.last)) { status('Låsta kroppar klipps inte ut. Kopiera med Ctrl+C eller lås upp.'); return; }
+  if (!kopieraUrklipp()) return;
+  const ids = [...S.urklipp.rotter, ...S.urklipp.barn].map(b => b.id); spara();
+  for (const id of ids) { const h = S.hus.find(x => x.ersatt === id); if (h) h.ersatt = null; }
+  S.kroppar = S.kroppar.filter(b => !ids.includes(b.id)); S.val = []; ritaOm();
+  status('Urklippt. Ctrl+V klistrar in, och kopian följer pekaren.');
+}
+function klistraIn() {
+  const U = S.urklipp; if (!U) { status('Inget att klistra in. Markera något och tryck Ctrl+C först.'); return; }
+  if (D) avslutaDrag(true); if (S.lage === 'vrid') avbrytVrid(); S.lage = null;
+  const fore = bild(), gmap = new Map(), ny = b => { const n = { ...klon(b), id: S.nasta++ }; delete n.hus; n.last = false;
+    if (n.grupp) { if (!gmap.has(n.grupp)) gmap.set(n.grupp, n.grupp + '-k' + n.id); n.grupp = gmap.get(n.grupp); } S.kroppar.push(n); return n; };
+  const rotter = U.rotter.map(ny), kids = U.barn.map(ny), f = rotter[0], c = horn(f)[0];
+  S.val = rotter.map(b => b.id); S.valtHus = null;
+  D = { typ: 'grepp', h: { k: 'grepp', i: 0, id: f.id }, b0: klon(f), fore, p: new THREE.Vector3(c.x, f.golv, c.z), svavar: true, klistra: true,
+    horn: { x: c.x, z: c.z }, rotter: rotter.map(r => ({ id: r.id, x: r.x, z: r.z, golv: r.golv, mark: underlag(r) ? MARKGOLV : r.golv })),
+    kids: kids.map(k => { const rot = rotter.find(r => inuti(r, k.x, k.z)) || f; return { id: k.id, x: k.x, z: k.z, golv: k.golv, rel: k.golv - rot.golv, rot: rot.id }; }) };
+  ritaOm(); status('Klistra in: kopian följer pekaren och fäster med hörnet. Klicka för att släppa, Esc avbryter.');
+}
+function vardeText(h) { if (h.k === 'vrid') return `Vridning ${fmt(h.grader, 2)}°`;
+  const b = hitta(h.id); if (!b) return '';
+  if (h.k === 'nock') { const e = Er(b, h.s); return e.typ === 'gavel' ? 'Lodrät gavel' : `Gavellutning ${fmt(gavelLut(b, h.s), 2)}°` + (e.typ === 'tak' ? ' (som takfallen)' : ''); }
+  if (h.k === 'gera') return `Gering ${fmt(Er(b, h.s).g, 2)}°` + ngonText(Er(b, h.s).g);
+  const v = { sida: h.ax === 'z' ? b.d : b.b, h: b.h, th: b.th, rad: b.b, kv: Er(b, h.s).k * b.th, hd: b.gard ? hdv(b) : 0, lyft: b.golv }[h.k];
+  return `${matNamn(h)} ${fmt(v, 2)} m` + (h.k === 'kv' ? ' över takfot' : ''); }
+function visaKvar() { const h = S.senast; if (S.skriv) { visaSkriv(h); return; }
+  const p = h.k === 'vrid' ? h.bas : handtagPos(h); if (p) visaMatt(p, vardeText(h), 'skriv ett nytt värde och tryck Enter'); }
+function vridKlar(g) { const v = S.vrid; tillampaVrid(g * Math.PI / 180); spara(v.fore);
+  const info = { k: 'vrid', id: v.start[0].id, start: v.start, bas: v.bas, grader: g }; avbrytVrid(true); S.senast = info;
+  status(`Vriden ${fmt(g, 2)}°. Skriv en ny vinkel och tryck Enter för att ändra.`); }
+function satVrid(h, g) { const fore = bild(); S.vrid = { start: h.start, bas: h.bas }; tillampaVrid(g * Math.PI / 180); S.vrid = null;
+  if (bild() !== fore) spara(fore); S.senast = { ...h, grader: g }; ritaOm(); status(`Vriden ${fmt(g, 2)}° från läget före vridningen.`); }
+function slaIhop() {
+  const sel = valda(); if (sel.length < 2) { status('Förena: markera minst två kroppar med Shift-klick.'); return; }
+  spara(); const g = 'g' + S.nasta++; let valm = 0;
+  for (const b of sel) b.grupp = g;
+  // En gavel som står inne i (eller kant i kant med) en annan del blir valmad, så att inga gavelspetsar sticker ut i hörnen.
+  for (const b of sel) if (b.typ === 'block' && !b.gard && profilTak(b.tak)) for (const s of [-1, 1]) {
+    const p = l2w(b, s * b.b / 2, 0), e = Er(b, s);
+    if (e.typ === 'gavel' && !e.g && sel.some(o => o !== b && inuti(o, p.x, p.z, 0.05))) { const w = Ew(b, s); w.typ = 'tak'; w.k = 0; valm++; } }
+  ritaOm(); status(`Förenade ${sel.length} kroppar till en byggnad.` + (valm ? ` ${valm} ${valm === 1 ? 'gavel' : 'gavlar'} inne i andra delar blev valmade; för en ren hörna, gera ändarna 45° i stället.` : '') + ' Klicka en gång till på en del för att ändra den för sig.');
+}
+function delaUpp() { const sel = valda(); spara(); for (const b of sel) delete b.grupp; ritaOm(); status('Uppdelad i delar igen. Ändarnas inställningar är kvar.'); }
+function lasa() { const sel = valda(); if (!sel.length) return; spara(); const las = !sel.every(b => b.last);
+  for (const b of sel) b.last = las; ritaOm(); status(las ? 'Låst: handtagen är borta tills du låser upp.' : 'Upplåst.'); }
+function satLage(skiss) {
+  if (!skiss) { if (D) avslutaDrag(true); if (S.lage === 'vrid') avbrytVrid(); S.lage = null; S.val = []; S.valtHus = null; S.senast = null; S.skriv = ''; matt.style.display = 'none'; }
+  S.skiss = skiss; vy.classList.toggle('skiss', skiss); vy.classList.toggle('visa', !skiss);
+  $('#b-skissa').classList.toggle('pa', skiss); $('#b-visa').classList.toggle('pa', !skiss);
+  $('#b-skissa').setAttribute('aria-pressed', skiss); $('#b-visa').setAttribute('aria-pressed', !skiss);
+  if (rutnat) rutnat.visible = skiss; handtagGrupp.visible = skiss; ritaOm();
+  status(skiss ? 'Skissa: ändra volymer. Klicka på ett hus och välj Ersätt, eller välj en basform.' : 'Visa: titta, snurra och ta bilder. Inget går att ändra här. Byt till Skissa för att ändra volymer.');
+}
+renderer.domElement.addEventListener('pointerup', slapp);
+renderer.domElement.addEventListener('pointercancel', slapp);
+
+function hanteraFlytt(e) {
+  siktaPa(e);
+  if (S.lage === 'vrid') { vridFlytt(e); return; }
+  if (S.lage === 'mat') { matFlytt(e); return; }
+  if (S.lage && S.lage.startsWith('rita:')) { ritFlytt(e); return; }
+  if (!D) { // pekaren över ett handtag? Bara handtagen är redigerbara, inte ytorna.
+    const over = S.lage ? null : ray.intersectObjects(handtagGrupp.children)[0];
+    overH = over ? over.object : null;
+    renderer.domElement.style.cursor = S.lage ? 'crosshair' : over ? (over.object.userData.handtag.k === 'grepp' ? 'move' : 'grab') : '';
+    return;
+  }
+  if (D.typ === 'klick') return;
+  dragHandtag(e.altKey);
+}
+function dragHandtag(fri) {
+  const b = hitta(D.h.id), b0 = D.b0, h = D.h; if (!b) return;
+  let text = '', fast = '', ankare = null;
+  const ax = h.ax === 'z' ? { x: Math.sin(b0.r), z: Math.cos(b0.r) } : { x: Math.cos(b0.r), z: -Math.sin(b0.r) };
+  const tvars = h.ax === 'z' ? { x: Math.cos(b0.r), z: -Math.sin(b0.r) } : { x: Math.sin(b0.r), z: Math.cos(b0.r) };
+  const troskel = b0.golv + Math.max(1.5, 0.6 * b0.h);
+  const andrade = [b.id];
+  const snK = !fri && S.snapp, snL = !fri && S.snL, tol = Math.max(0.3, kamera.position.distanceTo(D.p) * 0.005);
+  ledLinje.visible = false;
+  if (h.k === 'sida') {
+    const p = planY(D.p.y); if (!p) return;
+    const halv = (h.ax === 'z' ? b0.d : b0.b) / 2, fx = b0.x - h.s * halv * ax.x, fz = b0.z - h.s * halv * ax.z;
+    let L = Math.max(0.5, ((p.x - fx) * ax.x + (p.z - fz) * ax.z) * h.s);
+    if (!fri) { const kand = [];
+      if (snL) { const k = laserKant({ x: fx, z: fz }, { x: ax.x * h.s, z: ax.z * h.s }, tvars, (h.ax === 'z' ? b0.b : b0.d) / 2, L, troskel); if (k !== null) kand.push({ t: k, namn: 'laserkant' }); }
+      if (snK) for (const o of S.kroppar) if (o.id !== b.id) for (const s of kroppStopp(o, fx, fz, ax, h.s)) if (s.t > 0.3 && Math.abs(s.t - L) < tol) kand.push(s);
+      const bast = kand.sort((a, c) => Math.abs(a.t - L) - Math.abs(c.t - L))[0];
+      if (bast) { L = bast.t; fast = bast.namn;
+        if (bast.p) { const y = b0.golv + b0.h / 2; satLinje(ledLinje, { x: fx + h.s * ax.x * L, y, z: fz + h.s * ax.z * L }, { x: bast.p.x, y, z: bast.p.z }); ledLinje.visible = true; } }
+      else L = r1(L); }
+    if (h.ax === 'z') b.d = L; else b.b = L;
+    b.x = fx + h.s * ax.x * L / 2; b.z = fz + h.s * ax.z * L / 2;
+    text = `${h.ax === 'z' ? 'djup' : 'bredd'} ${fmt(L, 2)} m`;
+    ankare = { x: fx + h.s * ax.x * L, y: b.golv + b.h / 2, z: fz + h.s * ax.z * L };
+  } else if (h.k === 'grepp') {
+    const flytt = new Set([...D.rotter.map(r => r.id), ...D.kids.map(k => k.id)]);
+    const m = pekPunkt(flytt, !snK, b0.golv); if (!m) return;
+    let dx = m.x - D.horn.x, dz = m.z - D.horn.z;
+    if (!snK || !m.namn || m.namn === 'yta') { dx = r1(dx); dz = r1(dz); }
+    const stat = S.kroppar.filter(o => !flytt.has(o.id));
+    for (const r of D.rotter) { const k = hitta(r.id); k.x = r.x + dx; k.z = r.z + dz;
+      const under = stat.filter(o => inuti(o, k.x, k.z)).sort((a, c) => topp(c) - topp(a))[0];
+      k.golv = ['mur', 'yta'].includes(k.typ) ? r.golv : under ? topp(under) : r.mark; }
+    for (const k of D.kids) { const kb = hitta(k.id), rot = hitta(k.rot); kb.x = k.x + dx; kb.z = k.z + dz; kb.golv = rot.golv + k.rel; andrade.push(k.id); }
+    D.rotter.forEach(r => andrade.push(r.id));
+    text = `Δ ${fmt(dx, 2)} · ${fmt(-dz, 2)} m`; fast = m.namn && m.namn !== 'yta' ? 'fäst: ' + m.namn : '';
+    ankare = { x: D.horn.x + dx, y: b.golv + 0.5, z: D.horn.z + dz };
+  } else if (h.k === 'h' || h.k === 'th') {
+    const p = lodPlan(D.p); if (!p) return;
+    let y = p.y;
+    if (!fri) {
+      const bast = D.kand.filter(k => (k.laser ? snL : snK)).map(k => ({ ...k, d: Math.abs(k.v - y) })).sort((a, c) => a.d - c.d)[0];
+      if (bast && bast.d < 0.7) { y = bast.v; fast = bast.namn; } else y = r1(y);
+    }
+    if (h.k === 'h') { b.h = Math.max(0.3, y - b0.golv); const dl = b.h - b0.h; D.kids.forEach(k => { hitta(k.id).golv = k.golv + dl; andrade.push(k.id); }); text = `vägghöjd ${fmt(b.h, 1)} m`; }
+    else { b.th = Math.max(0.2, y - b0.golv - b0.h); const lt = lutning(b); text = `takhöjd ${fmt(b.th, 1)} m` + (lt !== null ? ` · ${fmt(lt, 2)}°` : ''); }
+    fast = (fast ? 'fäst: ' + fast + ' · ' : '') + `+${fmt(y, 1)} över mark`;
+    ankare = { x: D.p.x, y, z: D.p.z };
+  } else if (h.k === 'nock') { // nockänden: lodrät gavel, egen lutning eller samma lutning som takfallen
+    const p = planY(D.p.y); if (!p) return;
+    const l = w2l(b0, p.x, p.z), e = Ew(b, h.s), t = b0.th, y0 = e.k * t, stig = t - y0;
+    const xi = Math.max(0, Math.min(b0.b, h.s * (xe(b0, h.s, h.lz) - l.lx)));
+    const xf = runAt(b0, t) - runAt(b0, y0);
+    if (!fri && xi < 0.25) { e.typ = 'gavel'; fast = 'lodrät gavel'; }
+    else if (!fri && Math.abs(xi - xf) < 0.35) { e.typ = 'tak'; fast = 'som takfallen (valm)'; }
+    else { e.typ = 'egen'; e.lut = Math.max(5, Math.min(89, fri ? Math.atan2(stig, xi) / RAD : Math.round(Math.atan2(stig, xi) / RAD))); }
+    text = e.typ === 'gavel' ? 'gavel' : `gavellutning ${fmt(gavelLut(b, h.s), 2)}°`;
+    ankare = handtagPos(h);
+  } else if (h.k === 'kv') { // var lutningen börjar: 0 = hela gaveln lutar, högre upp = halvvalm
+    const p = lodPlan(D.p); if (!p) return;
+    const e = Ew(b, h.s), t = b0.th;
+    let k = Math.max(0, Math.min(0.9, (p.y - b0.golv - b0.h) / t));
+    if (!fri) { if (k < 0.06) { k = 0; fast = 'hela gaveln lutar'; } else if (Math.abs(k - 0.5) < 0.05) { k = 0.5; fast = 'halvvägs upp'; } else k = r1(k * t) / t; }
+    e.k = k; text = `börjar ${fmt(k * t, 2)} m över takfot`;
+    ankare = handtagPos(h);
+  } else if (h.k === 'gera') { // gering i plan: änden snedställs kring sin mitt
+    const p = planY(D.p.y); if (!p) return;
+    const l = w2l(b0, p.x, p.z);
+    let g = Math.max(-60, Math.min(60, Math.atan((h.s * l.lx - b0.b / 2) / (b0.d / 2)) / RAD));
+    if (!fri) { const q = NGON.map(v => v * Math.sign(g || 1)).concat(0).sort((a, c) => Math.abs(a - g) - Math.abs(c - g))[0];
+      if (Math.abs(g - q) < 1.5) { g = q; fast = q === 0 ? 'rak ände' : `snäpper till ${fmt(Math.abs(q), 2)}°; bygger ${Math.round(180 / Math.abs(q))}-hörningar`; } else g = Math.round(g); }
+    Ew(b, h.s).g = g; text = `gering ${fmt(g, 2)}°`;
+    ankare = handtagPos(h);
+  } else if (h.k === 'pt') { // en punkt i muren eller polygonen
+    const m = pekPunkt(new Set([b.id]), !snK, 0); if (!m) return;
+    let x = m.x, z = m.z; if (!m.namn || m.namn === 'yta') { x = r1(x); z = r1(z); }
+    const l = w2l(b, x, z); b.pts[h.i] = [l.lx, l.lz];
+    text = b.typ === 'mur' ? `längd ${fmt(murLangd(b), 2)} m` : `area ${fmt(area([b]).a, 1)} m²`; fast = m.namn && m.namn !== 'yta' ? 'fäst: ' + m.namn : '';
+    ankare = { x, y: b.golv + b.h, z };
+  } else if (h.k === 'lyft') {
+    const p = lodPlan(D.p); if (!p) return;
+    let y = Math.max(0, p.y); if (!fri) y = r1(y);
+    b.golv = y; text = `höjd över mark ${fmt(y, 2)} m`; ankare = { x: D.p.x, y, z: D.p.z };
+  } else if (h.k === 'hd') {
+    const p = planY(D.p.y); if (!p) return;
+    const l = w2l(b0, p.x, p.z), n = gardNorm(b0);
+    let hd = Math.max(1, Math.min(maxHd(b0), n.a - (l.lx * n.nx + l.lz * n.nz)));
+    if (!fri) hd = r1(hd);
+    b.gard.hd = hd; text = `husdjup ${fmt(hd, 2)} m`;
+    ankare = handtagPos(h);
+  } else if (h.k === 'rad') {
+    const p = planY(D.p.y); if (!p) return;
+    const r = Math.hypot(p.x - b0.x, p.z - b0.z) || 0.01;
+    let dm = 2 * r;
+    if (!fri) { const kand = [];
+      if (snL) { const k = laserKant({ x: b0.x, z: b0.z }, { x: (p.x - b0.x) / r, z: (p.z - b0.z) / r }, { x: 0, z: 0 }, 0, r, troskel); if (k !== null) kand.push({ r: k, namn: 'laserkant' }); }
+      if (snK) for (const o of S.kroppar) if (o.id !== b.id) for (const q of horn(o)) { const rr = Math.hypot(q.x - b0.x, q.z - b0.z); if (Math.abs(rr - r) < tol) kand.push({ r: rr, namn: 'annan kropp' }); }
+      const bast = kand.sort((a, c) => Math.abs(a.r - r) - Math.abs(c.r - r))[0];
+      if (bast) { dm = 2 * bast.r; fast = bast.namn; } else dm = r1(dm); }
+    b.b = b.d = Math.max(0.5, dm); text = `diameter ${fmt(b.b, 2)} m`;
+    ankare = { x: p.x, y: D.p.y, z: p.z };
+  }
+  if (fast && !fast.startsWith('fäst') && !fast.startsWith('+')) fast = 'fäst: ' + fast;
+  byggKroppar(andrade); byggHandtag();
+  visaMatt(ankare || { x: b.x, y: topp(b), z: b.z }, S.skriv ? `${matNamn(h)}: ${S.skriv} ${gradEnh(h.k) ? '°' : 'm'}` : text, S.skriv ? 'Enter sätter värdet · Esc avbryter' : fast);
+}
+
+/* ---------- Vrid: punkt, referens, mål ---------- */
+const mark1 = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 8), new THREE.MeshBasicMaterial({ depthTest: false, transparent: true }));
+const linje = (farg) => { const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({ depthTest: false, transparent: true })); l.renderOrder = 11; l.userData.farg = farg; return l; };
+const refLinje = linje('muted'), malLinje = linje('acc'), pekMark = mark1.clone(); pekMark.material = mark1.material.clone();
+const ledLinje = linje('acc'); ledLinje.visible = false; scene.add(ledLinje);
+mark1.renderOrder = pekMark.renderOrder = 12;
+function satLinje(l, a, b) { const p = l.geometry.attributes.position; p.setXYZ(0, a.x, a.y, a.z); p.setXYZ(1, b.x, b.y, b.z); p.needsUpdate = true; l.geometry.computeBoundingSphere(); }
+function startaVrid() {
+  if (!S.val.length) { status('Vrid: välj först en eller flera kroppar.'); return; }
+  if (valda().some(b => b.last)) { status('Vrid: lås upp de låsta kropparna först.'); return; }
+  S.lage = 'vrid'; S.vrid = { steg: 0, fore: bild(), start: null };
+  hjalpGrupp.clear(); hjalpGrupp.add(pekMark); ritaOm();
+}
+function avbrytVrid(behall) {
+  if (S.vrid && !behall && S.vrid.start) aterstallStart();
+  S.lage = null; S.vrid = null; hjalpGrupp.clear(); matt.style.display = 'none'; ritaOm();
+}
+function aterstallStart() { for (const s of S.vrid.start) Object.assign(hitta(s.id), s); }
+const vinkel = (a, b) => Math.atan2(-(b.z - a.z), b.x - a.x);
+function tillampaVrid(delta) {
+  const v = S.vrid; aterstallStart();
+  const c = Math.cos(delta), s = Math.sin(delta);
+  for (const st of v.start) { const k = hitta(st.id), X = st.x - v.bas.x, Y = -(st.z - v.bas.z);
+    k.x = v.bas.x + X * c - Y * s; k.z = v.bas.z - (X * s + Y * c); k.r = st.r + delta; }
+  byggKroppar(v.start.map(s => s.id));
+}
+function vridMal(e) {
+  const v = S.vrid, m = pekPunkt(new Set(v.start.map(s => s.id)), !S.snapp || e.altKey, v.bas.y);
+  if (!m) return null;
+  let a = vinkel(v.bas, m) - v.a0, namn = m.namn;
+  a = Math.atan2(Math.sin(a), Math.cos(a));
+  if (e.shiftKey) { a = Math.round(a / (Math.PI / 12)) * Math.PI / 12; namn = '15°-steg'; }
+  else if (!e.altKey && !m.namn) { const q = Math.round(a / (Math.PI / 4)) * Math.PI / 4; if (Math.abs(a - q) < 0.07) { a = q; namn = '45°-steg'; } }
+  return { m, a, namn };
+}
+function vridKlick(e) {
+  const v = S.vrid;
+  if (v.steg === 0) { const p = pekPunkt(new Set(), !S.snapp || e.altKey); if (!p) return;
+    v.bas = p; v.steg = 1; mark1.position.set(p.x, p.y, p.z); hjalpGrupp.add(mark1);
+    status('Vrid 2/3: klicka på referenspunkten, en punkt på den linje som ska vridas. Esc avbryter.'); return; }
+  if (v.steg === 1) { const p = pekPunkt(new Set(), !S.snapp || e.altKey, v.bas.y); if (!p || Math.hypot(p.x - v.bas.x, p.z - v.bas.z) < 0.05) return;
+    v.ref = p; v.a0 = vinkel(v.bas, p); v.steg = 2; v.start = valda().concat(barn(S.val).map(hitta)).map(b => ({ ...b }));
+    satLinje(refLinje, v.bas, p); hjalpGrupp.add(refLinje, malLinje);
+    status('Vrid 3/3: klicka på punkten att vrida mot. Shift: 15°-steg. Eller skriv vinkeln i panelen.'); return; }
+  const r = vridMal(e); if (!r) return; vridKlar(r.a * 180 / Math.PI);
+}
+function vridFlytt(e) {
+  const v = S.vrid; if (!v) return;
+  const p = v.steg < 2 ? pekPunkt(new Set(), !S.snapp || e.altKey, v.bas ? v.bas.y : 0) : null;
+  if (p) { pekMark.position.set(p.x, p.y, p.z); pekMark.visible = true; if (p.namn) visaMatt(p, p.namn); else matt.style.display = 'none';
+    if (v.steg === 1) { satLinje(refLinje, v.bas, p); if (!refLinje.parent) hjalpGrupp.add(refLinje); } return; }
+  if (v.steg === 2) { const r = vridMal(e); if (!r) return; pekMark.position.set(r.m.x, r.m.y, r.m.z);
+    satLinje(malLinje, v.bas, { x: r.m.x, y: v.bas.y, z: r.m.z }); tillampaVrid(r.a);
+    visaMatt(r.m, `${fmt(r.a * 180 / Math.PI, 2)}°`, r.namn ? 'fäst: ' + r.namn : ''); }
+}
+
+/* ---------- Gavelspetsar på innergården ---------- */
+function vaxlaGavel(h) { const b = hitta(h.id); if (!b || b.last) return; spara();
+  satGardFlaggor(b, (sx, sz, f) => (sx === h.sx && sz === h.sz ? { ...f, [h.ax]: !f[h.ax] } : f)); ritaOm();
+  status(`Gaveln mot ${vaderstreck(b, h.ax === 'x' ? h.sx : h.sz, h.ax === 'z')} ${h.vis ? 'dold: hörnet gerades eller längan går in i den andra' : 'synlig'}. Klicka igen för att växla.`); }
+
+/* ---------- Rita mur och polygon ---------- */
+const ritLinje = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ depthTest: false, transparent: true })); ritLinje.renderOrder = 11;
+function startaRita(typ) {
+  if (D) avslutaDrag(true); if (S.lage === 'vrid') avbrytVrid();
+  if (S.lage === 'rita:' + typ) { avbrytRita(); return; }
+  S.lage = 'rita:' + typ; S.rit = { typ, pts: [], pek: null, t: 0 }; S.val = []; S.valtHus = null; S.skriv = '';
+  hjalpGrupp.clear(); hjalpGrupp.add(pekMark, ritLinje); ritaOm();
+}
+function avbrytRita() { ledLinje.visible = false; S.lage = null; S.rit = null; S.skriv = ''; hjalpGrupp.clear(); matt.style.display = 'none'; ritaOm(); }
+function ritPunkt(e) {
+  const R = S.rit, sist = R.pts[R.pts.length - 1];
+  if (R.typ === 'yta' && R.pts.length >= 3) { const s0 = skarm(R.pts[0].x, 0, R.pts[0].z); if (Math.hypot(s0.x - mus.x, s0.y - mus.y) < 14) return { x: R.pts[0].x, z: R.pts[0].z, namn: 'stäng polygonen', stang: true }; }
+  const m = pekPunkt(new Set(), !S.snapp || e.altKey, 0); if (!m) return null;
+  let x = m.x, z = m.z, namn = m.namn === 'yta' ? '' : m.namn;
+  ledLinje.visible = false;
+  if (sist && !namn && !e.altKey) { let a = Math.atan2(z - sist.z, x - sist.x); const L = r1(Math.hypot(x - sist.x, z - sist.z)), st = e.shiftKey ? Math.PI / 12 : Math.PI / 4, q = Math.round(a / st) * st;
+    const pk = !e.shiftKey && S.snapp ? parallellKant(a) : null;
+    if (pk) { a -= pk.d; namn = pk.namn; const ux = Math.cos(pk.e), uz = Math.sin(pk.e);
+      satLinje(ledLinje, { x: pk.p.x - ux * 6, y: 0.2, z: pk.p.z - uz * 6 }, { x: pk.q.x + ux * 6, y: 0.2, z: pk.q.z + uz * 6 }); ledLinje.visible = true; }
+    else if (e.shiftKey || Math.abs(a - q) < 0.06) { a = q; namn = e.shiftKey ? '15°-steg' : '45°-steg'; }
+    x = sist.x + Math.cos(a) * L; z = sist.z + Math.sin(a) * L; }
+  else if (!namn) { x = r1(x); z = r1(z); }
+  return { x, z, namn };
+}
+function kanter() { // raka kanter att rikta in sig mot: andra kroppars sidor och de egna ritade sträckorna
+  const ut = [];
+  for (const b of S.kroppar) { if (b.typ === 'sfar' || (b.typ === 'cylinder' && !b.n)) continue;
+    const h = horn(b), n = b.typ === 'mur' ? h.length - 1 : h.length; for (let i = 0; i < n; i++) ut.push([h[i], h[(i + 1) % h.length]]); }
+  const P = S.rit ? S.rit.pts : []; for (let i = 0; i < P.length - 1; i++) ut.push([P[i], P[i + 1]]);
+  return ut; }
+function parallellKant(a) { let bast = null;
+  for (const [p, q] of kanter()) { if (Math.hypot(q.x - p.x, q.z - p.z) < 0.5) continue;
+    const e = Math.atan2(q.z - p.z, q.x - p.x); let d = ((a - e) % (Math.PI / 2) + Math.PI) % (Math.PI / 2); if (d > Math.PI / 4) d -= Math.PI / 2;
+    if (Math.abs(d) < 0.03 && (!bast || Math.abs(d) < Math.abs(bast.d))) bast = { d, p, q, e }; }
+  if (bast) { const r = Math.abs(Math.sin(a - bast.d - bast.e)); bast.namn = r < 0.5 ? 'parallell med kant' : 'vinkelrät mot kant'; }
+  return bast; }
+function ritVisa(p) { const R = S.rit, y = 0.15, pts = R.pts.map(q => new THREE.Vector3(q.x, y, q.z));
+  if (p) pts.push(new THREE.Vector3(p.x, y, p.z)); if (R.typ === 'yta' && pts.length > 2) pts.push(pts[0].clone());
+  ritLinje.geometry.dispose(); ritLinje.geometry = new THREE.BufferGeometry().setFromPoints(pts.length > 1 ? pts : [new THREE.Vector3(), new THREE.Vector3()]); }
+function ritFlytt(e) { const p = ritPunkt(e); if (!p) return; S.rit.pek = p; pekMark.position.set(p.x, 0.15, p.z); ritVisa(p);
+  const sist = S.rit.pts[S.rit.pts.length - 1];
+  if (S.skriv) visaMatt({ x: p.x, y: 0.15, z: p.z }, `Längd: ${S.skriv} m`, 'Enter sätter punkten');
+  else if (sist) visaMatt({ x: p.x, y: 0.15, z: p.z }, `${fmt(Math.hypot(p.x - sist.x, p.z - sist.z), 2)} m`, p.namn ? 'fäst: ' + p.namn : '');
+  else if (p.namn) visaMatt({ x: p.x, y: 0.15, z: p.z }, p.namn); else matt.style.display = 'none'; }
+function ritKlick(e) { const R = S.rit, p = ritPunkt(e); if (!p) return;
+  if (p.stang) { klarRita(); return; }
+  const sist = R.pts[R.pts.length - 1], nu = performance.now();
+  if (sist && Math.hypot(p.x - sist.x, p.z - sist.z) < 0.05) { if (nu - R.t < 400) klarRita(); return; } // dubbelklick avslutar
+  R.pts.push({ x: p.x, z: p.z }); R.t = nu; ritVisa(R.pek); uppdatera(); }
+function ritLangd(L) { const R = S.rit, sist = R.pts[R.pts.length - 1], p = R.pek; if (!sist || !p) return;
+  const d = Math.hypot(p.x - sist.x, p.z - sist.z) || 1, ux = d > 0.01 ? (p.x - sist.x) / d : 1, uz = d > 0.01 ? (p.z - sist.z) / d : 0;
+  R.pts.push({ x: sist.x + ux * L, z: sist.z + uz * L }); ritVisa(null); uppdatera(); }
+function klarRita() {
+  const R = S.rit, P = R.pts, min = R.typ === 'mur' ? 2 : 3;
+  if (P.length < min) { status(R.typ === 'mur' ? 'Muren behöver minst två punkter.' : 'Polygonen behöver minst tre hörn.'); return; }
+  const yta = R.typ === 'yta', b = { id: S.nasta++, typ: R.typ, tak: 'platt', th: 0, x: P[0].x, z: P[0].z, r: 0, pts: P.map(q => [q.x - P[0].x, q.z - P[0].z]),
+    golv: yta ? 2.5 : 0, h: yta ? 0.3 : 1.8, t: yta ? 0 : 0.2, topp: 'mark', roll: 'projekt' };
+  normPoly(b); spara(); S.kroppar.push(b); ledLinje.visible = false; S.lage = null; S.rit = null; S.skriv = ''; hjalpGrupp.clear(); matt.style.display = 'none'; S.val = [b.id]; ritaOm();
+  status(yta ? 'Polygon: 0,3 m tjock, 2,5 m över mark. Ändra i panelen, eller dra i punkterna. Höjd 0 över mark ger ett polygonhus.' : 'Mur: 0,2 m tjock och 1,8 m hög. Ändra i panelen, eller dra i punkterna.');
+}
+
+/* ---------- Mät ---------- */
+const matGrupp = new THREE.Group(); scene.add(matGrupp);
+S.matningar = [];
+function startaMat() { if (D) avslutaDrag(true); if (S.lage === 'vrid') avbrytVrid(); if (S.lage && S.lage.startsWith('rita:')) avbrytRita();
+  if (S.lage === 'mat') { slutaMat(); return; }
+  S.lage = 'mat'; S.matA = null; S.val = []; S.valtHus = null; hjalpGrupp.clear(); hjalpGrupp.add(pekMark); ritaOm(); }
+function slutaMat() { S.lage = null; S.matA = null; hjalpGrupp.clear(); matt.style.display = 'none'; ritaOm(); }
+function rensaMat() { for (const m of S.matningar) m.lapp.remove(); S.matningar = []; matGrupp.clear(); }
+const matText = (a, b) => { const v = Math.hypot(b.x - a.x, b.z - a.z), h = b.y - a.y;
+  return [`${fmt(Math.hypot(v, h), 2)} m`, `vågrätt ${fmt(v, 2)} · höjd ${fmt(h, 2)} m`]; };
+function matPunkt(e) { const p = pekPunkt(new Set(), !S.snapp || e.altKey, 0); return p ? { x: p.x, y: p.y, z: p.z, namn: p.namn } : null; }
+function matFlytt(e) { const p = matPunkt(e); if (!p) return; pekMark.position.set(p.x, p.y, p.z);
+  if (!S.matA) { if (p.namn) visaMatt(p, p.namn); else matt.style.display = 'none'; return; }
+  ritLinje.geometry.dispose(); ritLinje.geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(S.matA.x, S.matA.y, S.matA.z), new THREE.Vector3(p.x, p.y, p.z)]);
+  if (!ritLinje.parent) hjalpGrupp.add(ritLinje);
+  const [t, u] = matText(S.matA, p); visaMatt(p, t, u + (p.namn && p.namn !== 'yta' ? ' · fäst: ' + p.namn : '')); }
+function matKlick(e) { const p = matPunkt(e); if (!p) return;
+  if (!S.matA) { S.matA = p; status('Mät: klicka den andra punkten. Esc avbryter.'); return; }
+  const a = S.matA, l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a.x, a.y, a.z), new THREE.Vector3(p.x, p.y, p.z)]), ritLinje.material);
+  l.renderOrder = 11; matGrupp.add(l);
+  for (const q of [a, p]) { const m = new THREE.Mesh(HG.liten, mark1.material); m.position.set(q.x, q.y, q.z); m.renderOrder = 12; matGrupp.add(m); }
+  const [t, u] = matText(a, p), lapp = el('div', { className: 'matlapp' }, `${t} · ${u}`); vy.append(lapp);
+  S.matningar.push({ mid: { x: (a.x + p.x) / 2, y: (a.y + p.y) / 2, z: (a.z + p.z) / 2 }, lapp });
+  S.matA = null; hjalpGrupp.remove(ritLinje); matt.style.display = 'none';
+  status(`${t}, ${u}. Klicka nästa mätning, eller Esc för att rensa.`); }
+function placeraLappar() { for (const m of S.matningar) { const s = skarm(m.mid.x, m.mid.y, m.mid.z);
+  m.lapp.style.display = s.bak ? 'none' : ''; m.lapp.style.left = s.x + 'px'; m.lapp.style.top = s.y + 'px'; } }
+
+/* ---------- Placera och stapla ---------- */
+function placera(kHit) {
+  const lage = S.lage; let p = null, golv = MARKGOLV, foralder = null;
+  if (kHit && kHit.face) { const n = kHit.face.normal.clone().transformDirection(kHit.object.matrixWorld);
+    if (Math.abs(n.y) > 0.5) { foralder = hitta(kHit.object.userData.kropp); p = kHit.point; golv = kHit.object.userData.del === 'tak' ? p.y : topp(foralder); } }
+  if (lage === 'stapla' && !foralder) { status('Stapla: klicka på ovansidan av en kropp.'); return; }
+  if (!p) { p = planY(0); if (!p) return; }
+  const bas = lage === 'stapla' ? 'block' : lage.split(':')[1], typ = bas === 'block' ? 'block' : bas === 'sfar' ? 'sfar' : 'cylinder';
+  const s = foralder ? Math.max(2, Math.min(8, Math.round(0.4 * Math.min(foralder.b, foralder.d)))) : 10;
+  const b = { id: S.nasta++, typ, tak: 'platt', th: 0, x: p.x, z: p.z, r: foralder ? foralder.r : 0, b: s, d: typ === 'cylinder' || foralder ? s : 8, golv, h: 6,
+    roll: foralder ? foralder.roll || 'projekt' : 'projekt', n: bas === 'manghorn' ? 6 : 0 };
+  if (typ === 'sfar') { b.b = b.d = foralder ? s : 16; b.h = 0.85 * b.b; }
+  spara(); S.kroppar.push(b); S.val = [b.id]; S.lage = null; ritaOm();
+  status(foralder ? `Staplad, golv +${fmt(golv)} m. Dra i ovansidan för att höja den.` : 'Ny kropp. Dra i sidorna, eller skriv mått i panelen.');
+}
+
+/* ---------- Kopiera, spegla, ta bort ---------- */
+function kopiera() { const sel = valda(); if (!sel.length) return; spara(); const f = sel[0], dx = Math.cos(f.r) * (f.b + 1), dz = -Math.sin(f.r) * (f.b + 1), st = '-k' + S.nasta;
+  S.val = sel.map(b => { const n = { ...klon(b), id: S.nasta++, x: b.x + dx, z: b.z + dz }; delete n.hus; n.last = false; if (n.grupp) n.grupp += st; S.kroppar.push(n); return n.id; }); ritaOm(); }
+function spegla() {
+  const sel = valda(); if (!sel.length) return; spara(); const f = sel[0], st = '-s' + S.nasta;
+  const L = Math.max(...sel.flatMap(b => horn(b).map(p => w2l(f, p.x, p.z).lx)));
+  S.val = sel.map(b => { const l = w2l(f, b.x, b.z), w = l2w(f, 2 * L - l.lx, l.lz), n = { ...klon(b), id: S.nasta++, x: w.x, z: w.z, r: 2 * f.r - b.r };
+    // Speglingen vänder kroppens x-axel, så ändarna byter plats (geringen följer med utan teckenbyte).
+    if (n.pts) n.pts = n.pts.map(([x, z]) => [-x, z]);
+    const a = n.ea, c = n.eb; delete n.ea; delete n.eb; if (c) n.ea = c; if (a) n.eb = a;
+    delete n.hus; n.last = false; if (n.grupp) n.grupp += st; S.kroppar.push(n); return n.id; });
+  ritaOm(); status('Speglad kopia på andra sidan om den markerade gruppens kant.');
+}
+function taBort() { const sel = valda().filter(b => !b.last); if (!sel.length) { if (S.val.length) status('Låsta kroppar tas inte bort. Lås upp dem först.'); return; } spara();
+  for (const b of sel) { const h = S.hus.find(x => x.ersatt === b.id); if (h) h.ersatt = null; }
+  const ids = sel.map(b => b.id); S.kroppar = S.kroppar.filter(b => !ids.includes(b.id)); S.val = S.val.filter(id => !ids.includes(id)); ritaOm(); }
+
+/* ---------- Panelen ---------- */
+const inneh = $('#valt-innehall'), rubrik = $('#valt-rubrik');
+function el(tag, attr = {}, text) { const e = document.createElement(tag); Object.assign(e, attr); if (text != null) e.textContent = text; return e; }
+function panel() {
+  inneh.replaceChildren();
+  const b = ett(), h = S.valtHus;
+  if (S.lage === 'vrid') {
+    rubrik.textContent = 'Vrid';
+    const l = el('label', {}, 'Eller skriv vinkeln (grader, moturs) och tryck Enter'), i = el('input', { type: 'number', step: '1', id: 'f-vinkel' });
+    i.onkeydown = e => { if (e.key !== 'Enter' || isNaN(parseFloat(i.value))) return; const v = S.vrid;
+      if (!v.bas) { status('Klicka först på vridpunkten.'); return; }
+      if (!v.start) { v.start = valda().concat(barn(S.val).map(hitta)).map(k => ({ ...k })); }
+      vridKlar(parseFloat(i.value)); };
+    l.append(i); inneh.append(l); return;
+  }
+  if (h) {
+    rubrik.textContent = h.namn;
+    inneh.append(el('p', { className: 'liten' }, h.ersatt ? 'Ersatt av en egen kropp.' : `Standardhus: fotavtrycket med laserns medianhöjd, ${fmt(h.hojd)} m.`));
+    const rad = el('div', { className: 'rad' });
+    const k = el('button', { className: 'knapp huvud' }, 'Ersätt'); k.onclick = () => ersatt(h); rad.append(k); inneh.append(rad);
+    inneh.append(el('p', { className: 'liten' }, 'Kroppen anpassas till laserpunkterna, inte till fotavtrycket. En innergård känns igen av sig själv.'));
+    return;
+  }
+  if (!S.val.length) { rubrik.textContent = 'Inget valt'; inneh.append(el('p', { className: 'tom' }, S.lage ? 'Klicka i vyn för att placera.' : 'Klicka på ett hus eller en egen kropp.')); return; }
+  if (!b) { const sel = valda(), grp = !!sel[0].grupp && sel.every(x => x.grupp === sel[0].grupp);
+    rubrik.textContent = grp ? `Sammanfogad byggnad, ${sel.length} delar` : `${S.val.length} kroppar`;
+    inneh.append(el('p', { className: 'liten' }, grp ? 'Flyttas, vrids och kopieras som en. Klicka en gång till på en del för att ändra den för sig. Förena delar upp den igen.'
+      : 'Flytta med ett hörngrepp, vrid, kopiera, spegla eller ta bort dem tillsammans. Shift-klick lägger till och tar bort. Förena slår ihop dem till en byggnad.'));
+    if (sel.some(x => x.last)) inneh.append(el('p', { className: 'liten' }, 'Någon av dem är låst, så handtagen är dolda.'));
+    inneh.append(areaRad(sel));
+    return; }
+  const form = { mur: 'Mur', yta: 'Polygon', sfar: 'Sfär', block: 'Block' }[b.typ] || (b.n ? b.n + '-hörning' : 'Cylinder');
+  rubrik.textContent = (b.last ? 'Låst: ' : '') + form + (b.gard ? ' med innergård' : '') + (takFor(b).length ? `, ${TAK[b.tak].toLowerCase()} tak` : '') + (b.hus ? ` (${b.hus})` : '');
+  const roll = el('div', { className: 'rad' }), nu = b.roll || 'projekt';
+  for (const [v, t] of [['projekt', 'Projektet'], ['omgivning', 'Omgivningen']]) {
+    const k = el('button', { className: 'knapp' + (nu === v ? ' huvud' : '') }, t); k.setAttribute('aria-pressed', nu === v);
+    k.onclick = () => { if (nu === v) return; spara(); b.roll = v; ritaOm(); }; roll.append(k); }
+  inneh.append(el('p', { className: 'liten', style: 'margin:0' }, 'Hör till'), roll);
+  if (b.last) inneh.append(el('p', { className: 'liten' }, 'Låst: inga handtag och fälten går inte att ändra. Lås upp med knappen Lås.'));
+  if (b.grupp) inneh.append(el('p', { className: 'liten' }, 'Del av en sammanfogad byggnad. Klicka på en annan del för att välja hela.'));
+  const nr = (forald, namn, nyckel, varde, satt, steg = '0.1', av = false) => { const l = el('label', {}, namn),
+    i = el('input', { type: 'number', step: steg, value: (Math.round(varde * 100) / 100).toString(), id: 'f-' + nyckel, disabled: !!b.last || av });
+    i.onchange = () => { const v = parseFloat(i.value); if (isNaN(v)) return; spara(); satt(v); ritaOm(); }; l.append(i); forald.append(l); };
+  const falt = el('div', { className: 'falt' });
+  if (['mur', 'yta', 'sfar'].includes(b.typ)) { enklaFalt(b, nr, falt); return; }
+  if (b.typ === 'cylinder') { nr(falt, 'Diameter', 'b', b.b, v => { b.b = b.d = Math.max(0.5, v); });
+    nr(falt, 'Hörn (0 = rund)', 'n', b.n || 0, v => { b.n = v >= 3 ? Math.min(32, Math.round(v)) : 0; }, '1'); }
+  else { nr(falt, 'Bredd', 'b', b.b, v => { b.b = Math.max(0.5, v); }); nr(falt, 'Djup', 'd', b.d, v => { b.d = Math.max(0.5, v); }); }
+  if (b.gard) nr(falt, 'Husdjup (alla längor)', 'hd', hdv(b), v => { b.gard.hd = Math.max(1, Math.min(maxHd(b), v)); });
+  nr(falt, 'Vägghöjd', 'h', b.h, v => { const dl = Math.max(0.3, v) - b.h; barn([b.id]).forEach(id => { hitta(id).golv += dl; }); b.h += dl; });
+  if (b.tak !== 'platt') {
+    nr(falt, 'Takhöjd', 'th', b.th, v => { b.th = Math.max(0.2, v); });
+    if (lutning(b) !== null) nr(falt, b.tak === 'mansard' ? 'Övre lutning °' : 'Taklutning °', 'lutning', lutning(b), v => satLutning(b, v), '0.01');
+    if (b.tak === 'mansard') { const m = mans(b);
+      nr(falt, 'Nedre lutning °', 'ml', m.ml, v => { b.ml = Math.max(30, Math.min(85, v)); }, '0.01');
+      nr(falt, 'Nedre del, bredd', 'mb', m.mb, v => { b.mb = Math.max(0.2, Math.min(0.8 * djup(b) / 2, v)); }); }
+  }
+  nr(falt, 'Golvnivå', 'golv', b.golv, v => { const dl = Math.max(0, v) - b.golv; barn([b.id]).forEach(id => { hitta(id).golv += dl; }); b.golv += dl; });
+  nr(falt, 'Sockel ner', 'sockel', sockelDjup(b), v => { b.sockel = Math.max(0, v); });
+  if (b.typ !== 'cylinder') nr(falt, 'Vridning °', 'r', grad(b.r), v => { b.r = v * Math.PI / 180; }, '0.01');
+  nr(falt, b.vn == null ? 'Våningar (uppskattat)' : 'Våningar', 'vn', vnv(b), v => { b.vn = Math.max(0, Math.round(v)); }, '1');
+  inneh.append(falt, areaRad([b]));
+  const auto = el('label', { className: 'vaxel' }), ak = el('input', { type: 'checkbox', checked: b.sockel == null, disabled: !!b.last });
+  ak.onchange = () => { spara(); b.sockel = ak.checked ? null : sockelDjup(b); ritaOm(); };
+  auto.append(ak, document.createTextNode(' Sockeln går ner i marken av sig själv')); inneh.append(auto);
+  const gk = el('label', { className: 'vaxel' }), gi = el('input', { type: 'checkbox', checked: !!b.gard, disabled: !!b.last, id: 'f-gard' });
+  gi.onchange = gardVaxla; gk.append(gi, document.createTextNode(' Innergård (ett husdjup för alla längor)')); inneh.append(gk);
+  if (gavelBar(b)) {
+    inneh.append(el('h3', {}, 'Gavelspetsar'));
+    const r = el('div', { className: 'rad' }), vx = `${vaderstreck(b, -1)} och ${vaderstreck(b, 1)}`, vz = `${vaderstreck(b, -1, true)} och ${vaderstreck(b, 1, true)}`;
+    for (const [t, fx, fz] of [['Inga', false, false], ['Mot ' + vx, true, false], ['Mot ' + vz, false, true], ['Alla, korsade', true, true]]) {
+      const k = el('button', { className: 'knapp liten-k', disabled: !!b.last }, t); k.onclick = () => { spara(); satGardFlaggor(b, () => ({ x: fx, z: fz })); ritaOm(); }; r.append(k); }
+    inneh.append(r, el('p', { className: 'liten' }, 'Eller klicka på trianglarna i vyn, en per möjlig gavelspets: fylld = synlig, streckad = dold. Inga gavlar i ett hörn ger gering med grat och vinkelränna; en gavel låter den längan gå igenom; två ger korsade tak.'));
+  }
+  if (b.typ === 'block' && harNock(b.tak)) { const r = el('div', { className: 'rad' }), k = el('button', { className: 'knapp', disabled: !!b.last }, 'Vänd nocken 90°'); k.onclick = vandNock; r.append(k); inneh.append(r); }
+  if (b.typ === 'block' && !b.gard) andarPanel(b, nr);
+  const l = el('label', { style: 'margin-top:10px' }, 'Skriv mått (12,6x9 · h18 · t4 · l30 · v30 · @3;4)');
+  const i = el('input', { id: 'f-rad', placeholder: '12,6x9 h18 l27', autocomplete: 'off', disabled: !!b.last });
+  i.onkeydown = e => { if (e.key === 'Enter') { tolka(i.value); i.value = ''; } };
+  l.append(i); inneh.append(l);
+  inneh.append(el('p', { className: 'liten' }, `Nock +${fmt(nock(b))} m. h vägghöjd, t takhöjd, l taklutning i grader, v vridning, @ flyttar öster;norr.`));
+  if (nu === 'omgivning') { const r = el('div', { className: 'rad' }); r.append(el('button', { className: 'knapp', disabled: true }, 'Dela med andra i Höjdkurvor …')); inneh.append(r,
+    el('p', { className: 'liten' }, 'Omgivning räknas i analyserna men måttsätts inte och räknas inte i BYA. Delningen kommer med biblioteket (etapp 3–4).')); }
+  else inneh.append(el('p', { className: 'liten' }, 'Projektets byggnad: måttsätts och räknas i BYA i situationsplanen.'));
+}
+const vnAuto = b => (b.typ === 'mur' ? 0 : b.typ === 'yta' ? (b.golv < 0.5 ? Math.max(1, Math.round(b.h / 3)) : 0) : b.typ === 'sfar' ? Math.max(1, Math.round(b.h / 3)) : Math.max(1, Math.round(b.h / 3)));
+const vnv = b => (b.vn != null ? b.vn : vnAuto(b));
+function bta(kroppar) { // våning för våning: unionen av de kroppar som har minst k våningar, så att överlapp räknas en gång
+  let s = 0; const max = Math.max(0, ...kroppar.map(vnv));
+  for (let k = 1; k <= max; k++) { const ks = kroppar.filter(b => vnv(b) >= k); if (ks.length) s += area(ks).a; } return s; }
+function areaRad(kroppar) {
+  const egen = area(kroppar), grp = kroppar.length === 1 && kroppar[0].grupp ? S.kroppar.filter(o => o.grupp === kroppar[0].grupp) : null;
+  const rad = el('p', { className: 'liten', style: 'color:var(--ink)' });
+  let t = kroppar.length > 1 ? `Fotavtryck sammanslaget ${fmt(egen.a, 1)} m²` : `Fotavtryck ${fmt(egen.a, 1)} m²`;
+  if (kroppar.length > 1) t += ` (delarna sammanlagt ${fmt(kroppar.reduce((s, k) => s + area([k]).a, 0), 1)} m²)`;
+  if (grp) t += ` · hela byggnaden ${fmt(area(grp).a, 1)} m²`;
+  if (!egen.exakt) t += ' (överlapp ej borträknat)';
+  const alla = grp || kroppar, vns = alla.map(vnv), upp = alla.some(b => b.vn == null && vnv(b) > 0);
+  if (vns.some(v => v > 0)) t += ` · BTA ${grp ? 'hela byggnaden ' : ''}${fmt(bta(alla), 1)} m²` + (upp ? ' (våningar uppskattade ur höjden)' : '');
+  rad.textContent = t.replace(/^Fotavtryck/, 'BYA'); return rad;
+}
+function enklaFalt(b, nr, falt) { // mur, polygon och sfär
+  if (b.typ === 'sfar') { nr(falt, 'Diameter', 'b', b.b, v => { b.b = b.d = Math.max(0.5, v); b.h = Math.min(b.h, b.b); });
+    nr(falt, 'Synlig höjd', 'h', b.h, v => { b.h = Math.max(0.3, Math.min(b.b, v)); });
+    nr(falt, 'Golvnivå', 'golv', b.golv, v => { b.golv = Math.max(0, v); }); }
+  if (b.typ === 'mur') { nr(falt, 'Höjd', 'h', b.h, v => { b.h = Math.max(0.1, v); }); nr(falt, 'Tjocklek', 't', b.t, v => { b.t = Math.max(0.02, v); normPoly(b); }, '0.01'); }
+  if (b.typ === 'yta') { nr(falt, 'Höjd över mark', 'golv', b.golv, v => { b.golv = Math.max(0, v); }); nr(falt, b.tak === 'pulpet' ? 'Tjocklek, låga sidan' : 'Tjocklek', 'h', b.h, v => { b.h = Math.max(0.02, v); }, '0.01');
+    if (b.tak === 'pulpet') { nr(falt, 'Takhöjd', 'th', b.th, v => { b.th = Math.max(0.02, v); }); nr(falt, 'Taklutning °', 'lutning', lutning(b), v => satLutning(b, v), '0.01'); } }
+  if (b.typ !== 'mur') nr(falt, b.vn == null ? 'Våningar (uppskattat)' : 'Våningar', 'vn', vnv(b), v => { b.vn = Math.max(0, Math.round(v)); }, '1');
+  inneh.append(falt);
+  if (b.typ === 'yta' && b.tak === 'pulpet') { const [ux, uz] = ytaRiktning(b), w = { x: ux * Math.cos(b.r) + uz * Math.sin(b.r), z: -ux * Math.sin(b.r) + uz * Math.cos(b.r) };
+    const vs = ['N', 'NO', 'O', 'SO', 'S', 'SV', 'V', 'NV'][Math.round(((Math.atan2(w.x, -w.z) / RAD + 360) % 360) / 45) % 8];
+    const r = el('div', { className: 'rad' }), k = el('button', { className: 'knapp liten-k', disabled: !!b.last }, 'Vänd lutningen 90°'); k.onclick = vandNock; r.append(k);
+    inneh.append(r, el('p', { className: 'liten' }, `Taket stiger mot ${vs}.`)); }
+  if (b.typ === 'mur') { const l = el('label', { style: 'margin-top:8px' }, 'Överkanten'), sel = el('select', { id: 'f-topp', disabled: !!b.last });
+    for (const [v, t] of [['mark', 'Följer marken'], ['rak', 'Rak mellan punkterna']]) sel.append(el('option', { value: v, selected: (b.topp || 'mark') === v }, t));
+    sel.onchange = () => { spara(); b.topp = sel.value; ritaOm(); }; l.append(sel); inneh.append(l,
+      el('p', { className: 'liten' }, `Längd ${fmt(murLangd(b), 2)} m, ${b.pts.length} punkter. Platsen här är plan, så överkanten ser likadan ut; i appen fäster punkterna i terrängen och skillnaden syns i lutningar.`)); }
+  if (b.typ === 'yta') inneh.append(el('p', { className: 'liten' }, `${b.pts.length} hörn. Skärmtak och platta: höjd över mark och tjocklek. Polygonhus: höjd 0 över mark och husets höjd som tjocklek.`));
+  inneh.append(areaRad([b]));
+  if (b.typ !== 'sfar') inneh.append(el('p', { className: 'liten' }, 'Dra i de runda punkterna för att flytta hörn; de fäster mot andra kroppar. Det platta greppet flyttar hela.'));
+}
+// Ändarna: gavelns lutning (lodrät, som takfallen eller egen), var lutningen börjar (halvvalm) och gering i plan.
+function andarPanel(b, nr) {
+  const tak = profilTak(b.tak) && b.th > 0, gard = !!b.gard;
+  inneh.append(el('h3', {}, gard ? 'Gavlarna' : 'Ändarna'));
+  if (tak) { const r = el('div', { className: 'rad' });
+    for (const [t, typ, k, lut] of [['Gavlar', 'gavel', 0, 60], ['Valm', 'tak', 0, 60], ['Halvvalm', 'tak', 0.5, 60], ['Lutande gavlar', 'egen', 0, 70]]) {
+      const kn = el('button', { className: 'knapp liten-k', disabled: !!b.last }, t);
+      kn.onclick = () => { spara(); for (const s of [-1, 1]) Object.assign(Ew(b, s), { typ, k, lut }); ritaOm(); }; r.append(kn); }
+    inneh.append(r); }
+  const f = el('div', { className: 'falt', style: 'margin-top:8px' });
+  for (const s of [-1, 1]) f.append(el('p', { className: 'ande' }, 'Änden mot ' + vaderstreck(b, s)));
+  if (tak) {
+    for (const s of [-1, 1]) { const e = Er(b, s), l = el('label', {}, 'Gaveln'), sel = el('select', { id: 'f-typ' + s, disabled: !!b.last });
+      for (const [v, t] of [['gavel', 'Lodrät'], ['tak', 'Som takfallen'], ['egen', 'Egen lutning']]) sel.append(el('option', { value: v, selected: e.typ === v }, t));
+      sel.onchange = () => { spara(); const w = Ew(b, s); if (sel.value === 'egen' && w.typ !== 'egen') w.lut = Math.round(w.typ === 'tak' ? gavelLut(b, s) : 70); w.typ = sel.value; ritaOm(); };
+      l.append(sel); f.append(l); }
+    for (const s of [-1, 1]) nr(f, 'Lutning °', 'lut' + s, gavelLut(b, s), v => { const w = Ew(b, s); if (v >= 89.5) w.typ = 'gavel'; else { w.typ = 'egen'; w.lut = Math.max(5, v); } }, '0.01', Er(b, s).typ !== 'egen');
+    for (const s of [-1, 1]) nr(f, 'Börjar, m över takfot', 'kv' + s, Er(b, s).k * b.th, v => { Ew(b, s).k = Math.max(0, Math.min(0.9, v / b.th)); }, '0.1', Er(b, s).typ === 'gavel');
+  }
+  if (!gard) for (const s of [-1, 1]) nr(f, 'Gering °' + ngonText(Er(b, s).g), 'g' + s, Er(b, s).g, v => { Ew(b, s).g = Math.max(-60, Math.min(60, v)); }, '0.01');
+  inneh.append(f, el('p', { className: 'liten' }, (tak ? 'Börjar 0 = hela gaveln lutar; högre upp = halvvalm. ' : '') +
+    (gard ? '' : 'Gering 45° i två ändar som möts ger en ren hörna; 180°/n ger en regelbunden n-hörning. I vyn: fyrkanten i nockänden, den runda punkten på gaveln och rutertecknet i takfotens hörn.')));
+}
+function tolka(txt) {
+  const b = ett(); if (!b || b.last) return; const fore = bild(); let ok = false;
+  for (const t of txt.toLowerCase().replace(/,/g, '.').split(/\s+/).filter(Boolean)) { let m;
+    if ((m = t.match(/^(\d*\.?\d+)x(\d*\.?\d+)$/))) { b.b = +m[1]; b.d = +m[2]; ok = true; }
+    else if ((m = t.match(/^h(\d*\.?\d+)$/))) { b.h = +m[1]; ok = true; }
+    else if ((m = t.match(/^t(\d*\.?\d+)$/)) && b.tak !== 'platt') { b.th = +m[1]; ok = true; }
+    else if ((m = t.match(/^l(\d*\.?\d+)$/)) && lutning(b) !== null) { satLutning(b, +m[1]); ok = true; }
+    else if ((m = t.match(/^v(-?\d*\.?\d+)$/))) { b.r = +m[1] * Math.PI / 180; ok = true; }
+    else if ((m = t.match(/^@(-?\d*\.?\d+);(-?\d*\.?\d+)$/))) { b.x += +m[1]; b.z -= +m[2]; ok = true; } }
+  if (!ok) { status('Förstod inte. Exempel: 12,6x9 h18 t4 l27 v30 @3;4 (t och l kräver en takform).'); return; }
+  if (b.typ === 'cylinder') b.d = b.b; spara(fore); ritaOm();
+}
+function uppdatera() {
+  const b = ett(), sel = valda();
+  document.querySelectorAll('[data-bas]').forEach(k => k.classList.toggle('pa', S.lage === 'placera:' + k.dataset.bas || (!!b && (b.typ === 'cylinder' && b.n ? 'manghorn' : b.typ) === k.dataset.bas)));
+  document.querySelectorAll('[data-tak]').forEach(k => { k.classList.toggle('pa', !!b && b.tak === k.dataset.tak);
+    k.disabled = !sel.some(x => takFor(x).includes(k.dataset.tak)); });
+  document.querySelectorAll('[data-rita]').forEach(k => k.classList.toggle('pa', S.lage === 'rita:' + k.dataset.rita));
+  $('#b-mat').classList.toggle('pa', S.lage === 'mat');
+  $('#b-stapla').classList.toggle('pa', S.lage === 'stapla');
+  $('#b-vrid').classList.toggle('pa', S.lage === 'vrid'); $('#b-vrid').disabled = !sel.length && S.lage !== 'vrid';
+  for (const id of ['#b-kopiera', '#b-spegla', '#b-bort']) $(id).disabled = !sel.length;
+  const grp = sel.length > 1 && !!sel[0].grupp && sel.every(x => x.grupp === sel[0].grupp);
+  $('#b-ihop').disabled = sel.length < 2; $('#b-ihop').classList.toggle('pa', grp);
+  $('#b-ihop').title = grp ? 'Dela upp i delar igen (J)' : 'Slå ihop till en byggnad (J). Raka gavlar inne i andra delar blir valmade.';
+  $('#b-las').disabled = !sel.length; $('#b-las').classList.toggle('pa', !!sel.length && sel.every(x => x.last));
+  $('#b-angra').disabled = !S.hist.length; $('#b-gorom').disabled = !S.fram.length;
+  $('#b-klar').disabled = !S.tid;
+  if (S.lage === 'stapla') status('Stapla: klicka på ovansidan av en kropp. Esc avbryter.');
+  else if (S.lage === 'vrid' && S.vrid.steg === 0) status('Vrid 1/3: klicka på vridpunkten. Den fäster mot hörn och sidmitter. Esc avbryter.');
+  else if (S.lage === 'mat' && !S.matA) status('Mät: klicka första punkten. Den fäster mot hörn, sidor och ytor. Esc rensar mätningarna.');
+  else if (S.lage && S.lage.startsWith('rita:')) { const n = S.rit.pts.length, yta = S.rit.typ === 'yta';
+    status(n === 0 ? `${yta ? 'Polygon' : 'Mur'}: klicka första punkten. Esc avbryter.` : yta ? `${n} hörn. Klicka nästa, skriv en längd och Enter, eller klicka på första punkten (eller Enter) för att stänga.`
+      : `${n} punkter. Klicka nästa, skriv en längd och Enter, eller dubbelklicka (eller Enter) för att avsluta. Backspace ångrar en punkt.`); }
+  else if (S.lage && S.lage.startsWith('placera')) status('Klicka på marken eller ovanpå en kropp för att placera. Esc avbryter.');
+}
+function ritaOm() { byggKroppar(); byggHandtag(); byggStandard(); panel(); uppdatera(); }
+
+/* ---------- Knappar och tangenter ---------- */
+document.querySelectorAll('[data-bas]').forEach(k => { k.onclick = () => valjBas(k.dataset.bas); });
+document.querySelectorAll('[data-tak]').forEach(k => { k.onclick = () => valjTak(k.dataset.tak); });
+document.querySelectorAll('[data-rita]').forEach(k => { k.onclick = () => startaRita(k.dataset.rita); });
+$('#b-mat').onclick = startaMat;
+$('#b-vrid').onclick = () => (S.lage === 'vrid' ? avbrytVrid() : startaVrid());
+$('#b-stapla').onclick = () => { if (S.lage === 'vrid') avbrytVrid(); S.lage = S.lage === 'stapla' ? null : 'stapla'; S.val = []; ritaOm(); };
+$('#b-kopiera').onclick = kopiera; $('#b-spegla').onclick = spegla; $('#b-bort').onclick = taBort;
+$('#b-angra').onclick = angra; $('#b-gorom').onclick = gorOm;
+$('#b-ihop').onclick = () => { const sel = valda(); if (sel.length > 1 && sel[0].grupp && sel.every(x => x.grupp === sel[0].grupp)) delaUpp(); else slaIhop(); };
+$('#b-las').onclick = lasa;
+$('#b-visa').onclick = () => satLage(false); $('#b-skissa').onclick = () => satLage(true);
+$('.verktyg').addEventListener('click', () => { S.senast = null; S.skriv = ''; matt.style.display = 'none'; }, true);
+$('#b-klar').onclick = () => { if (!S.tid) return; S.logg.push(`${S.tid.namn}: ${mmss(performance.now() - S.tid.t0)}`); S.tid = null;
+  $('#logg').replaceChildren(...S.logg.map(t => el('li', {}, t))); $('#tid').textContent = '–'; uppdatera(); };
+const vaxla = (id, f) => { $(id).onchange = e => f(e.target.checked); };
+vaxla('#v-laser', v => { laserGrupp.visible = v; }); vaxla('#v-std', v => { stdGrupp.visible = v; });
+vaxla('#v-fot', v => { fotGrupp.visible = v; });
+const snKnapp = (id, nyckel, namn) => { const k = $(id); k.onclick = () => { S[nyckel] = !S[nyckel]; k.classList.toggle('pa', S[nyckel]);
+  k.setAttribute('aria-pressed', S[nyckel]); status(`Snäpp mot ${namn}: ${S[nyckel] ? 'på' : 'av'}.`); }; };
+snKnapp('#b-sn-kropp', 'snapp', 'ritade kroppar'); snKnapp('#b-sn-laser', 'snL', 'laserdatan');
+const ant = $('#anteckningar');
+try { ant.value = localStorage.getItem('hk-prototyp-omgivning') || ''; } catch (e) {}
+ant.oninput = () => { try { localStorage.setItem('hk-prototyp-omgivning', ant.value); } catch (e) {} };
+$('#b-kopiera-ant').onclick = async () => {
+  const t = `Prototyp CL (version 7), skissa i 3D\n\nTider:\n${S.logg.join('\n') || '(inga)'}\n\nAnteckningar:\n${ant.value}`;
+  try { await navigator.clipboard.writeText(t); $('#kopierat').textContent = 'Kopierat. Klistra in i chatten.'; }
+  catch (e) { ant.select(); $('#kopierat').textContent = 'Kunde inte kopiera automatiskt. Markera texten och kopiera själv.'; }
+};
+window.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, textarea, select')) return;
+  const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+  if (!S.skiss) return;
+  if (S.lage === 'mat' && k === 'escape') { if (S.matA) { S.matA = null; hjalpGrupp.remove(ritLinje); matt.style.display = 'none'; status('Mätningen avbröts.'); }
+    else { rensaMat(); slutaMat(); status('Mätningarna rensade.'); } return; }
+  if (S.lage && S.lage.startsWith('rita:')) { // ritläget: längd, Enter, Backspace, Esc
+    if (/^[0-9.,]$/.test(e.key) && !mod) { e.preventDefault(); S.skriv += e.key; if (S.rit.pek) visaMatt({ x: S.rit.pek.x, y: 0.15, z: S.rit.pek.z }, `Längd: ${S.skriv} m`, 'Enter sätter punkten'); return; }
+    if (k === 'enter') { e.preventDefault(); if (S.skriv) { const v = parseFloat(S.skriv.replace(',', '.')); S.skriv = ''; if (v > 0) ritLangd(v); } else klarRita(); return; }
+    if (k === 'backspace') { e.preventDefault(); if (S.skriv) S.skriv = S.skriv.slice(0, -1); else { S.rit.pts.pop(); ritVisa(S.rit.pek); uppdatera(); } return; }
+    if (k === 'escape') { avbrytRita(); status('Ritningen avbröts.'); return; }
+    return; }
+  const mal = D && MATTHANDTAG.includes(D.typ) ? D.h
+    : S.lage === 'vrid' && S.vrid && S.vrid.steg === 2 ? { k: 'vrid', live: true, bas: S.vrid.bas }
+    : (!D && !S.lage && S.senast && (S.senast.k === 'vrid' || hitta(S.senast.id)) ? S.senast : null);
+  if (mal && !mod && (/^[0-9.,]$/.test(e.key) || (e.key === '-' && ['vrid', 'gera'].includes(mal.k)) || (S.skriv && (e.key === 'Backspace' || e.key === 'Enter')))) {
+    e.preventDefault();
+    if (e.key === 'Enter') { const v = parseFloat(S.skriv.replace(',', '.')); S.skriv = '';
+      if (mal.k === 'vrid') { if (!isNaN(v)) { if (mal.live) vridKlar(v); else satVrid(mal, v); } return; }
+      if (!isNaN(v) && (v > 0 || (v === 0 && ['kv', 'gera'].includes(mal.k)) || mal.k === 'gera')) satVarde(mal, v); else status('Skriv ett värde större än noll.'); return; }
+    S.skriv = e.key === 'Backspace' ? S.skriv.slice(0, -1) : S.skriv + e.key; visaSkriv(mal); return;
+  }
+  if (k === 'escape' && D) { const kl = D.klistra; avslutaDrag(true); status(kl ? 'Inklistringen avbröts.' : 'Avbrutet, tillbaka som innan.'); return; }
+  if (k === 'escape' && S.skriv) { S.skriv = ''; matt.style.display = 'none'; return; }
+  if (D) return; // under drag: inga andra kommandon
+  if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? gorOm() : angra(); }
+  else if (mod && k === 'c') { if (kopieraUrklipp()) e.preventDefault(); }
+  else if (mod && k === 'x') { e.preventDefault(); klippUt(); }
+  else if (mod && k === 'v') { e.preventDefault(); klistraIn(); }
+  else if (mod && k === 'a') { e.preventDefault(); S.val = S.kroppar.map(b => b.id); S.valtHus = null; ritaOm(); }
+  else if (k === 'j' && !mod) $('#b-ihop').click();
+  else if (k === 'm' && !mod) startaMat();
+  else if (k === 'k' && !mod) $('#b-sn-kropp').click();
+  else if (k === 'l' && !mod) $('#b-sn-laser').click();
+  else if (mod && k === 'y') { e.preventDefault(); gorOm(); }
+  else if (mod && k === 'd') { e.preventDefault(); kopiera(); }
+  else if (k === 'delete' || k === 'backspace') taBort();
+  else if (k === 'escape') { if (S.lage === 'vrid') { avbrytVrid(); status('Vridningen avbröts.'); return; }
+    S.senast = null; S.lage = null; S.val = []; S.valtHus = null; matt.style.display = 'none'; ritaOm(); status('Klicka på ett hus och välj Ersätt, eller välj en basform.'); }
+  else if (k === 'e' && S.valtHus && !S.valtHus.ersatt) ersatt(S.valtHus);
+  else if (k === 's' && !mod) $('#b-stapla').click();
+  else if (k === 'r' && !mod) $('#b-vrid').click();
+});
+
+/* ---------- Tema, storlek och ritslinga ---------- */
+/* Påhittat ortofoto som underlag, som i appens vanliga 3D-vy */
+let orto = null;
+function ortofoto() {
+  if (orto) return orto;
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const x = c.getContext('2d'), s = 1024 / G, P = (wx, wz) => [(wx + HALV) * s, (wz + HALV) * s];
+  let sd = 3; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  x.fillStyle = '#8f9a74'; x.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 9000; i++) { x.fillStyle = `rgba(${60 + r() * 60},${70 + r() * 50},${40 + r() * 30},0.18)`; x.fillRect(r() * 1024, r() * 1024, 2 + r() * 6, 2 + r() * 6); }
+  x.lineCap = 'round';
+  x.strokeStyle = '#7d7b76'; x.lineWidth = 9 * s; x.beginPath(); x.moveTo(...P(-130, 98)); x.lineTo(...P(130, 108)); x.stroke();
+  x.strokeStyle = '#bdb6a8'; x.lineWidth = 2.5 * s; x.beginPath(); x.moveTo(...P(-32, -130)); x.lineTo(...P(-28, 98)); x.stroke();
+  for (const h of S.hus) { x.fillStyle = '#6f6c69'; x.beginPath(); h.yttre.forEach((p, i) => x[i ? 'lineTo' : 'moveTo'](...P(p.x, p.z))); x.closePath();
+    if (h.hal) { h.hal.forEach((p, i) => x[i ? 'lineTo' : 'moveTo'](...P(p.x, p.z))); x.closePath(); } x.fill('evenodd'); }
+  for (const t of TRAD) { const [a, b] = P(t.x, t.z), rr = t.r * s * 1.15, g = x.createRadialGradient(a, b, 0, a, b, rr);
+    g.addColorStop(0, '#46612f'); g.addColorStop(1, 'rgba(46,70,34,0)'); x.fillStyle = g; x.beginPath(); x.arc(a, b, rr, 0, 7); x.fill(); }
+  orto = new THREE.CanvasTexture(c); return orto;
+}
+function tema() { F = farg(); scene.background = F.scene.clone(); mark.material.map = ortofoto(); mark.material.color.copy(F.ground); mark.material.needsUpdate = true;
+  if (rutnat) scene.remove(rutnat); rutnat = new THREE.GridHelper(G, 26, F.grid, F.grid); rutnat.position.y = 0.02;
+  rutnat.material.transparent = true; rutnat.material.opacity = 0.35; rutnat.visible = S.skiss; scene.add(rutnat);
+  nordPil.material.color.copy(F.muted); hMat.color.copy(F.acc); gMat.color.copy(F.edge).lerp(F.acc, 0.5);
+  mark1.material.color.copy(F.acc); pekMark.material.color.copy(F.acc); triMat.color.copy(F.acc); triDold.color.copy(F.acc); triStreck.color.copy(F.acc); ritLinje.material.color.copy(F.acc);
+  refLinje.material.color.copy(F.muted); malLinje.material.color.copy(F.acc); ledLinje.material.color.copy(F.acc);
+  byggLaser(); ritaOm(); }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', tema);
+new MutationObserver(tema).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+const storlek = new ResizeObserver(() => { const w = vy.clientWidth, h = vy.clientHeight; renderer.setSize(w, h, false); kamera.aspect = w / h; kamera.updateProjectionMatrix(); });
+storlek.observe(vy);
+const mmss = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+let senastTid = 0;
+(function slinga(t) {
+  requestAnimationFrame(slinga);
+  if (vantande) { const e = vantande; vantande = null; hanteraFlytt(e); }
+  if (!D && !S.lage && S.senast && S.skiss) visaKvar(); // måttet står kvar tills nästa klick eller verktyg
+  const skala = m => m.scale.setScalar(kamera.position.distanceTo(m.position) * 0.0075 * (m === overH && !D ? 1.6 : 1));
+  handtagGrupp.children.forEach(skala); skala(mark1); skala(pekMark); matGrupp.children.forEach(m => { if (m.isMesh) skala(m); }); placeraLappar();
+  if (S.tid && t - senastTid > 400) { senastTid = t; $('#tid').textContent = `${S.tid.namn} ${mmss(performance.now() - S.tid.t0)}`; }
+  renderer.render(scene, kamera);
+})(0);
+tema();
+status('Klicka på ett hus och välj Ersätt, eller välj en basform och klicka på marken.');
+}
+}
+</script>
+</body>
+</html>

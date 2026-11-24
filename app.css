@@ -748,6 +748,12 @@ body.planvy-oppen { overflow: hidden; }
 .mobil-ram .hörn-sv { left: -2px; bottom: -2px; border-left-width: 3px; border-bottom-width: 3px; }
 .mobil-ram .hörn-so { right: -2px; bottom: -2px; border-right-width: 3px; border-bottom-width: 3px; }
 .mobil-matt { position: absolute; left: 50%; top: -24px; transform: translateX(-50%); font-family: var(--mono); font-size: 12px; color: var(--annot); white-space: nowrap; text-shadow: 0 0 3px var(--halo), 0 0 3px var(--halo); }
+.mobil-ram .hörn { pointer-events: auto; touch-action: none; }
+.mobil-ram .hörn::before { content: ''; position: absolute; inset: -14px; }
+.mobil-format { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--seg-rule); }
+.mobil-format button { min-height: 40px; border: 0; background: transparent; color: var(--panel-ink); font-family: var(--mono); font-size: 13px; }
+.mobil-format button + button { border-left: 1px solid var(--seg-rule); }
+.mobil-format button[aria-checked="true"] { background: var(--seg-on-bg); color: var(--seg-on-fg); }
 .mobil-kors { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); }
 .mobil-kors path { stroke: var(--ram); stroke-width: 1.4; fill: none; }
 .mobil-sok { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1000; display: flex; background: var(--panel-bg); border: 1px solid var(--panel-kant); }

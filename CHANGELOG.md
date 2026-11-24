@@ -3,6 +3,16 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.16.2 – 2026-11-25
+
+- **Utsnittets format på mobilen (BS)**: under ramen väljs förhållandet mellan sidorna (1:1, 3:2, 2:3,
+  2:1) eller *Fritt*. Hörnen går att dra i (lika mycket åt båda håll, så att mitten står still), vilket
+  gör formatet fritt. Ramen står mitt mellan sökrutan och bladet, och valet sparas i webbläsaren
+  (`terrang-mobil-format`). Testpunkt DT i `docs/SYNPUNKTER.md`.
+- **Skissa i 3D**: prototyp 7 ligger i `docs/prototyper/skissa-i-3d.html`, och planen för 0.17.0
+  med datamodell, algoritmer och synpunkterna på prototyperna i `docs/SKISSA-I-3D.md`. Inkorgen är
+  sorterad efter versionsplanen 24 november.
+
 ## 0.16.1 – 2026-11-23
 
 Ägarens test 23 november av situationsplanen (0.16.0), sol på fasaderna (0.15.0) och strandskyddet

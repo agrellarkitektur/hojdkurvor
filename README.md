@@ -69,7 +69,7 @@ behöver godkännas (kontrollerat 17 november 2026, se `docs/FLYTT.md`).
 
 - `index.html` – kartan (blad 01). Panelen har fyra steg: 01 Plats, 02 Underlag,
   03 Analys och 04 Skiss. På mobil visas i stället ett enklare flöde: markera
-  med en ram, kopiera, skicka länken till datorn eller beställ.
+  med en ram (format 1:1, 3:2, 2:3, 2:1 eller fritt), kopiera, skicka länken till datorn eller beställ.
 - `instruktioner.html` – konto, produkter, arbetsgång, platsanalys, cad-apa,
   ritprogram, mobil (blad 02)
 - `om.html` – om tjänsten, ansvar, licensen och källkoden, stöd utvecklingen, källor och ändringar (blad 03)
@@ -257,8 +257,8 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
-- Planerat (se `docs/SYNPUNKTER.md` och planen för skiss och situationsplan): användarskapad omgivning med *Ersätt* på ett hus och val
-  mellan standardhus och egna (0.17.0), förslag och sparade vyer i projektet, utkragning per våning
+- Planerat (se `docs/SYNPUNKTER.md` och `docs/SKISSA-I-3D.md`): Skissa i 3D med basformer, takformer och
+  användarskapad omgivning med *Ersätt* på ett hus och val mellan standardhus och egna (0.17.0), förslag och sparade vyer i projektet, utkragning per våning
   och verkligt väder (SMHI STRÅNG) i sol på fasaderna, eget bildunderlag som överlagring (projektfilens bilagor), skissvolymer ur
   inskannat underlag, en html-visare i nedladdningsmappen och DXF med inlänkade filer (xref)
   och ortofoto.
@@ -274,7 +274,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
   när något som resultatet bygger på ändras. Under 02 Underlag, "Sparat i
   webbläsaren", kan man ta bort enstaka filer och projekt (med resultatet) eller tömma filerna.
 - localStorage: tema, bakgrund, dolda lager, utskriftens inställningar, situationsplanens format och skala (`terrang-situationsplan`), 3D-vyns färger, konturer, takformer och trädnivå, egna takformer per hus (`terrang-takval`), dolda och rättade träd (`terrang-tradval`) och dolda hus (`terrang-husval`),
-  formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy och,
+  formulärets val, senaste utsnittet (för sidan Beställ), mobil- eller helvy, mobilramens format (`terrang-mobil-format`) och,
   om användaren väljer det, inloggningen.
 - sessionStorage: aktivt steg, vilket projekt fliken har öppet (`terrang-projekt-aktivt`),
   dolda lager (följer också med i projektet), skuggor och soltid i 3D-vyn, bara så länge fliken är öppen.

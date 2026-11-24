@@ -5,7 +5,7 @@ Test av mobilflödet (390 × 844, pekskärm) mot testservern.
 
     python3 test/mobil_test.py <utkatalog>
 
-Markera med ramen, läs resultatbladet, kopiera, byt till hela verktyget och tillbaka,
+Markera med ramen (och välj dess format, BS), läs resultatbladet, kopiera, byt till hela verktyget och tillbaka,
 i alla tre teman. Kontrollerar också att sidan inte rullar i sidled.
 """
 import re, sys, os, json
@@ -36,7 +36,29 @@ with sync_playwright() as p:
         pg.fill('#mobil-sok-text', 'Staren'); pg.press('#mobil-sok-text', 'Enter'); pg.wait_for_timeout(400)
         pg.tap('#mobil-sokresultat button >> nth=0'); pg.wait_for_timeout(900)
         print('   ram:', pg.locator('#mobil-matt').inner_text(), '|', pg.locator('#mobil-markera').inner_text().replace('\n', ' / ')[:120])
+        # format (BS): 2:1 ger en bred ram, att dra i ett hörn gör formatet fritt, och valet sparas
+        def ram():
+            return pg.evaluate("(() => { const r = document.getElementById('mobil-ram').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()")
+        r11 = ram()
+        pg.tap('[data-format="2:1"]'); pg.wait_for_timeout(150)
+        r21 = ram()
+        print('   format 1:1', [round(v) for v in r11], '→ 2:1', [round(v) for v in r21], '|', pg.locator('#mobil-matt').inner_text())
+        assert abs(r11[2] - r11[3]) < 2 and abs(r21[2] - 2 * r21[3]) < 2
+        cx, cy = r21[0] + r21[2] / 2, r21[1] + r21[3] / 2
+        hx, hy = r21[0] + r21[2], r21[1] + r21[3]
+        pg.evaluate(f"""(() => {{ const h = document.querySelector('.mobil-ram .hörn-so'), o = {{ bubbles: true, pointerId: 7, pointerType: 'touch', isPrimary: true }};
+          h.dispatchEvent(new PointerEvent('pointerdown', Object.assign({{ clientX: {hx}, clientY: {hy} }}, o)));
+          h.dispatchEvent(new PointerEvent('pointermove', Object.assign({{ clientX: {cx + 70}, clientY: {cy + 90} }}, o)));
+          h.dispatchEvent(new PointerEvent('pointerup', Object.assign({{ clientX: {cx + 70}, clientY: {cy + 90} }}, o))); }})()""")
+        pg.wait_for_timeout(150)
+        rf = ram()
+        print('   dragen:', [round(v) for v in rf], '| valt:', pg.get_attribute('[data-format="fri"]', 'aria-checked'),
+              '| sparat:', pg.evaluate("localStorage.getItem('terrang-mobil-format')"))
+        assert abs(rf[2] - 140) < 2 and abs(rf[3] - 180) < 2 and pg.get_attribute('[data-format="fri"]', 'aria-checked') == 'true'
+        assert abs(rf[0] + rf[2] / 2 - cx) < 2 and abs(rf[1] + rf[3] / 2 - cy) < 2
+        pg.screenshot(path=f'{UT}/m1b_format_{tema}.png')
         pg.tap('#mobil-markera-knapp'); pg.wait_for_timeout(600)
+        print('   utsnittets sidor:', pg.evaluate("(() => { const x = +document.getElementById('xmax').value - +document.getElementById('xmin').value, y = +document.getElementById('ymax').value - +document.getElementById('ymin').value; return [x, y]; })()"))
         print('  ', pg.locator('#mobil-storlek').inner_text(), '|', pg.locator('#mobil-kommun').inner_text(), '|', pg.locator('#mobil-system').inner_text())
         pg.screenshot(path=f'{UT}/m2_resultat_{tema}.png')
         pg.tap('#mobil-kopiera'); pg.wait_for_timeout(200)

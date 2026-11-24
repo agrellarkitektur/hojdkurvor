@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.16.1';
+  const FILVERSION = '0.16.2';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -4260,19 +4260,75 @@
     ['mobil-sok', 'mobil-blad'].forEach(id => { $(id).hidden = !pa; });
     $('mobil-ram').hidden = !pa || !!state.utsnitt;
     document.querySelector('.mobilvy-rad').hidden = pa || !mobilMQ.matches;
-    setTimeout(() => karta.invalidateSize(), 50);
+    setTimeout(() => { karta.invalidateSize(); placeraRam(); }, 50);
     uppdateraMobil();
   }
   function uppdateraMobil() {
     if (!document.body.classList.contains('mobilflode')) return;
     const r = state.utsnitt;
     $('mobil-markera').hidden = !!r; $('mobil-resultat').hidden = !r; $('mobil-ram').hidden = !!r;
-    if (!r) { mobilMatt(); return; }
+    if (!r) { placeraRam(); return; }
     $('mobil-storlek').textContent = `${fmt(r.xmax - r.xmin)} × ${fmt(r.ymax - r.ymin)} m`;
     $('mobil-kommun').textContent = state.kommun ? `${state.kommun.namn} kommun` : '';
     $('mobil-system').textContent = `HÖRN I ${T.zon(state.epsg).namn.toUpperCase()}`;
     $('mobil-koord').innerHTML = [['Väst', r.xmin], ['Öst', r.xmax], ['Syd', r.ymin], ['Nord', r.ymax]].map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('');
   }
+  /**
+   * Ramens format (BS, 0.16.2): ett förhållande mellan sidorna ('1:1', '3:2', '2:3', '2:1') eller 'fri' med
+   * bredd och höjd i bildpunkter. Ramen står mitt mellan sökrutan och bladet, och hörnen går att dra
+   * (symmetriskt kring mitten), vilket gör formatet fritt. Valet sparas i webbläsaren.
+   */
+  const mobilFormat = Object.assign({ format: '1:1', b: 240, h: 160 }, lager.las('localStorage', 'terrang-mobil-format') || {});
+  /** Ytan som ramen får använda, i bildpunkter relativt kartytan. */
+  function ramYta() {
+    const k = $('mobil-ram').parentElement.getBoundingClientRect(), sok = $('mobil-sok').getBoundingClientRect(), blad = $('mobil-blad').getBoundingClientRect();
+    const top = (sok.height ? sok.bottom - k.top : 0) + 34, bot = (blad.height ? blad.top - k.top : k.height) - 14;
+    return { x0: 20, x1: k.width - 20, y0: top, y1: Math.max(top + 80, bot) };
+  }
+  function placeraRam() {
+    const ram = $('mobil-ram');
+    if (ram.hidden) return;
+    const y = ramYta(), bMax = y.x1 - y.x0, hMax = y.y1 - y.y0;
+    let b, h;
+    if (mobilFormat.format === 'fri') {
+      b = Math.min(Math.max(mobilFormat.b, 60), bMax); h = Math.min(Math.max(mobilFormat.h, 60), hMax);
+    } else {
+      const [p, q] = mobilFormat.format.split(':').map(Number), kvot = p / q || 1;
+      b = Math.min(bMax * 0.9, hMax * 0.92 * kvot); h = b / kvot;
+    }
+    const cx = (y.x0 + y.x1) / 2, cy = (y.y0 + y.y1) / 2;
+    Object.assign(ram.style, { left: `${cx - b / 2}px`, top: `${cy - h / 2}px`, width: `${b}px`, height: `${h}px`, right: 'auto', bottom: 'auto' });
+    $('mobil-format').querySelectorAll('button').forEach(k => k.setAttribute('aria-checked', String(k.dataset.format === mobilFormat.format)));
+    mobilMatt();
+  }
+  function sparaMobilFormat() { lager.spara('localStorage', 'terrang-mobil-format', mobilFormat); }
+  $('mobil-format').addEventListener('click', e => {
+    const k = e.target.closest('button[data-format]');
+    if (!k) return;
+    if (k.dataset.format === 'fri' && mobilFormat.format !== 'fri') {
+      const r = $('mobil-ram').getBoundingClientRect();
+      if (r.width) { mobilFormat.b = r.width; mobilFormat.h = r.height; }
+    }
+    mobilFormat.format = k.dataset.format; sparaMobilFormat(); placeraRam();
+  });
+  // Dra i ett hörn: bredd och höjd ändras lika mycket åt båda håll, så att mitten ligger still.
+  $('mobil-ram').querySelectorAll('.hörn').forEach(h => {
+    h.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      try { h.setPointerCapture(e.pointerId); } catch (_) { /* pekaren kan sakna fångst */ }
+      const r = $('mobil-ram').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const flytta = ev => {
+        mobilFormat.format = 'fri';
+        mobilFormat.b = 2 * Math.abs(ev.clientX - cx); mobilFormat.h = 2 * Math.abs(ev.clientY - cy);
+        placeraRam();
+      };
+      const slut = () => { h.removeEventListener('pointermove', flytta); sparaMobilFormat(); };
+      h.addEventListener('pointermove', flytta);
+      h.addEventListener('pointerup', slut, { once: true });
+      h.addEventListener('pointercancel', slut, { once: true });
+    });
+  });
+  window.addEventListener('resize', () => { if (document.body.classList.contains('mobilflode') && !state.utsnitt) placeraRam(); });
   /** Ramens storlek i meter, visas ovanför ramen. */
   function mobilMatt() {
     const ram = $('mobil-ram').getBoundingClientRect(), k = karta.getContainer().getBoundingClientRect();

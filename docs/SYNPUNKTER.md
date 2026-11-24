@@ -7,24 +7,22 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **DS**.
+Senast använda nummer: **DT**.
 
 ## Inkorg
 
-- **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0. 0.14.3: med hämtminnet hämtas inget igen för samma område (AY); själva beräkningarna görs fortfarande om.*
-- **BL** Stöd-knappen blir ett hjärta när gränssnittet går över till ikoner.
 - **BÅ** Skicka med datan: kan zip-filen och projektfilen räcka för att någon annan ska kunna öppna platsen och snurra i 3D, utan egen inloggning hos Lantmäteriet? *Bedömning: går, eftersom Lantmäteriets öppna data får spridas med källangivelse (CC BY 4.0). Det sparade resultatet (0.13.6) är redan det som behövs; det skulle läggas i projektfilen som bilaga (etapp 4) eller läsas ur zip-filen. Hänger ihop med AP. Inte gjort.*
-- **CC** (efter BJ) När utsnittet ändras försvinner underlaget. Förväntat, men kan det lösas på annat sätt? Det som redan är skapat fortsätter att synas, och *Skapa igen* fyller i tomrummen (skapar underlag för hela platsen igen). *Hämtminnet (0.14.3) töms i dag när området byts; det skulle behöva behålla rutorna som fortfarande täcker platsen.*
-- **CD** Mer linjär arbetsgång med flikarna. 01 Plats: bara låsa platsen, inget Skapa där. 02 Underlag: välj underlag; skapar man bara underlaget får man höjdkurvorna och terrängsektionerna. 03 Analys: fyll i analyserna, de skapas, och först då kommer en samlad zip med allt. 04 Skiss: skissa vidare där, eller ta det till cad-apa. *Hänger ihop med AY och BZ (Lås området och hämtminnet finns; Skapa är fortfarande en knapp för allt).*
-- **CE** Markera och dölja träd och byggnader även i planvyn, inte bara i 3D-vyn.
 - **CF** Konkurrent: hojdkartan.se (C. Frid AB) läser in allt underlag dynamiskt utan att man anger inloggning till Lantmäteriet. Går det med licensvillkoren? *Bedömning: Markhöjdmodellen är en värdefull datamängd under CC BY 4.0 utan personuppgifter och får spridas fritt med källangivelse, också från egen server. Byggnad, Fastighetsindelning och Ortofoto räknar Lantmäteriet som personuppgifter, med egna villkor (prövning, lagring inom EU/EES) som måste läsas innan de visas fritt. Rätten till datan är inte rätt att låta andra använda ditt konto mot tjänsten: det kräver att data hämtas och lagras på egen server, eller besked från Lantmäteriet. Att vem som helst kan hämta datan är redan fallet: den är öppen. Fråga Lantmäteriet (geodatasupport@lm.se) innan något byggs. Hänger ihop med BÅ.*
-- **BS** Mobilen: välj utsnittets format (förhållandet mellan sidorna) själv, inte bara storleken; nu är proportionerna fasta. Mobilen behöver bara det grundläggande: markera ett område och skicka det till datorn eller beställa underlaget. Annat mobilstöd behöver vi inte lägga tid på.
 - **DR** Koordinatkryss med jämna intervaller, utritade i zip-filen och på situationsplanen.
 - **DS** Baskarteutdrag: många kommuner erbjuder gratis baskarteutdrag som PDF. Det vore fint om man kunde ladda upp en sådan PDF i sitt projekt, klicka i hur till exempel en kantstenslinje, ett staket eller en stödmur ser ut (tjocklek och färg), och få det som ett DXF-lager med rätt skala och placering.
 
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.16.2
+
+- **DT** Utsnittets format på mobilen (efter BS): på iPhone, välj 1:1, 3:2, 2:3 och 2:1 under ramen. Byter ramen form och står den mitt mellan sökrutan och bladet? Dra i ett hörn: blir formatet *Fritt* och ändras ramen lika mycket åt båda håll? Går hörnet lätt att ta tag i utan att kartan flyttas? Markera: har utsnittet samma proportioner som ramen? Ladda om: är formatet kvar?
 
 ### 0.16.1
 
@@ -125,6 +123,15 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
 
+### 25 november 2026 → 0.16.2
+
+- **BS** Mobilen: välj utsnittets format (förhållandet mellan sidorna) själv, inte bara storleken; nu är proportionerna fasta. Mobilen behöver bara det grundläggande: markera ett område och skicka det till datorn eller beställa underlaget. Annat mobilstöd behöver vi inte lägga tid på. *Formatväljaren under ramen (1:1, 3:2, 2:3, 2:1, Fritt) och hörn att dra i (DT).*
+
+### 24–25 november 2026 → 0.17.0 (prototypen Skissa i 3D)
+
+Synpunkterna på prototyp 1–6 och besluten står i `docs/SKISSA-I-3D.md`, med prototypen i
+`docs/prototyper/skissa-i-3d.html`. De byggs i 0.17.0 och testas då.
+
 ### 23 november 2026 → 0.16.1 (testet av situationsplanen och sol på fasaderna)
 
 Situationsplanen:
@@ -182,7 +189,13 @@ Sol på fasaderna:
 
 Grupperat efter den version där de är planerade.
 
-### 0.17.0 – användarskapad omgivning, etapp 1 (`utredning-anvandarskapad-omgivning.md` i claude.ai-projektet)
+### 0.17.0 – Skissa i 3D, med användarskapad omgivning etapp 1 (`docs/SKISSA-I-3D.md`)
+
+Versionsplanen 24 november: omgivningen är en del av skissverktyget i 3D-fönstret (beslut 24
+november), med formpaletten med ikoner från början, och CE. Hela planen, datamodellen och
+algoritmerna står i `docs/SKISSA-I-3D.md`.
+
+- **CE** Markera och dölja träd och byggnader även i planvyn, inte bara i 3D-vyn.
 
 Från utredningen 22 november 2026. Det viktigaste är att det känns intuitivt och inte omständligt att
 modellera omgivningen och egna byggnader; det väger tyngre än funktionsbredd. Ingen server krävs i den
@@ -204,6 +217,23 @@ de syns bara som tonad referens, utan snäpp eller mätning, och kan döljas.
 Öppna frågor ur utredningen: standardhusen eller användarskapade som förval i nya projekt (förslag:
 standardhusen), hur användarskapade modeller anges i utskrifter (förslag: en källrad med modellnamn,
 bidragsgivare och licens).
+
+### 0.18.0 – arbetsgången och ikoner
+
+- **CD** Mer linjär arbetsgång med flikarna. 01 Plats: bara låsa platsen, inget Skapa där. 02 Underlag: välj underlag; skapar man bara underlaget får man höjdkurvorna och terrängsektionerna. 03 Analys: fyll i analyserna, de skapas, och först då kommer en samlad zip med allt. 04 Skiss: skissa vidare där, eller ta det till cad-apa. *Hänger ihop med AY och BZ (Lås området och hämtminnet finns; Skapa är fortfarande en knapp för allt).*
+- **CC** (efter BJ) När utsnittet ändras försvinner underlaget. Förväntat, men kan det lösas på annat sätt? Det som redan är skapat fortsätter att synas, och *Skapa igen* fyller i tomrummen (skapar underlag för hela platsen igen). *Hämtminnet (0.14.3) töms i dag när området byts; det skulle behöva behålla rutorna som fortfarande täcker platsen.*
+- **BK** Räkna om skissen utan att hämta allt igen: skuggor, sol, volymer och platsanalysbladet med data som redan är hämtad. *Före eller efter 0.14.0. 0.14.3: med hämtminnet hämtas inget igen för samma område (AY); själva beräkningarna görs fortfarande om.*
+- **BL** Stöd-knappen blir ett hjärta när gränssnittet går över till ikoner.
+
+### 0.19.0 och senare (versionsplanen 24 november)
+
+- 0.19.0: bedömning med en regelbok för befintliga analyser (nivå, kort bedömning, åtgärder och
+  källa per utfall; märks *indikation*). En AI-sammanfattning kan läggas ovanpå senare.
+- 0.20.0: förslag och sparade vyer (projektfilen, etapp 3), med jämförelse också på bedömningen.
+- 0.21.0: nya analyser, första omgången: dagsljus på fasaderna, lutning och tillgänglighet, klimat
+  (snölast, referensvind, växtzon), utsikt.
+- 0.22.0 →: geologi (etapp 0–4), bilagor (AM, AN) och resten; nya analyser omgång två (vind på
+  platsen, översvämning och havsnivå m.m.). Datakällorna är inte kontrollerade.
 
 ### Sol på fasaderna, senare
 

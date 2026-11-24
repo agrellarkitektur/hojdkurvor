@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Om – Höjdkurvor</title>
   <meta name="description" content="Höjdkurvor gör Lantmäteriets öppna geodata till underlag som går att rita på. En gratis betatjänst från Agrell Arkitektur.">
-  <script src="js/version.js?v=0.16.1"></script>
-  <script src="js/kalla.js?v=0.16.1" defer></script>
-  <script src="js/tema.js?v=0.16.1"></script>
-  <script src="js/synpunkter.js?v=0.16.1" defer></script>
-  <script src="js/stod.js?v=0.16.1" defer></script>
+  <script src="js/version.js?v=0.16.2"></script>
+  <script src="js/kalla.js?v=0.16.2" defer></script>
+  <script src="js/tema.js?v=0.16.2"></script>
+  <script src="js/synpunkter.js?v=0.16.2" defer></script>
+  <script src="js/stod.js?v=0.16.2" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.16.1">
+  <link rel="stylesheet" href="app.css?v=0.16.2">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -119,6 +119,7 @@
       <section id="andringar" style="padding-top: 40px; border-top: 1px solid var(--rule)">
         <h2>Ändringar</h2>
         <dl class="par bred">
+          <dt>0.16.2 · 25 nov 2026</dt><dd>På mobilen väljer du ramens format själv: 1:1, 3:2, 2:3, 2:1, eller ett eget genom att dra i ett hörn.</dd>
           <dt>0.16.1 · 23 nov 2026</dt><dd>Rita i plan visar ortofotot, höjdkurvorna, träden, vägarna och skydden under ritningen, och det som är ikryssat följer med på situationsplanen. Fastighetsgränserna ligger ovanpå byggnaderna. Nya verktyg: vrid en byggnad mot en linje, ledare med fritext, lägg till och dölj träd, och hämta fastigheten ur kartan. Alla mått kan stängas av med ett klick, hörnen kan numreras med en koordinatlista, och kryss, nock för komplementbyggnad och diagonal för skärmtak ritas med indrag. Texterna går att läsa på skrafferingen. Ett tak kan dras ut i 3D in i huset bredvid, så att taken möts. Sol på fasaderna börjar med en översikt i 3D med numrerade fasader och ett kort per fasad. Strandskyddet frågar en andra server när OpenStreetMap inte svarar.</dd>
           <dt>0.16.0 · 22 nov 2026</dt><dd>Situationsplanen: under Rita i plan blir planen en vektor-PDF i A3 eller A4, 1:400 eller 1:500, med ritningshuvud, teckenförklaring, norrpil och skalstock, och en DXF med ett lager per innehåll. Byggnader som sätts ihop av flera kroppar visas som en byggnad med ett yttre skal och mått runt hela byggnaden; markera en kropp för att ändra den för sig. Mått går att dölja och flytta, och BYA räknar överlapp en gång.</dd>
           <dt>0.15.0 · 22 nov 2026</dt><dd>Sol på fasaderna: hur mycket sol som når fasaderna på byggnaderna du har ritat, timme för timme vid klar himmel, med skuggor från de andra byggnaderna, terrängen, husen och träden. Summan och de högsta timmarna per punkt och per fasad, som A3-blad med staplar, timme × dag och värsta dygnet, som CSV, och färgat på fasaderna i 3D-vyn. Välj period och tid under Anpassa sol.</dd>
