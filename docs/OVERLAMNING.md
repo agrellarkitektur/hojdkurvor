@@ -5,7 +5,7 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 
 ## Läget
 
-- **0.16.2** 25 november (grenen `v0.16.2`): **BS**, utsnittets format på mobilen. Formatväljaren
+- **0.16.2** 25 november (grenen `v0.16.2`, publicerad samma dag): **BS**, utsnittets format på mobilen. Formatväljaren
   `#mobil-format` (1:1, 3:2, 2:3, 2:1, Fritt) under ramen; `placeraRam()` i `app.js` sätter ramens
   läge och storlek i bildpunkter mitt mellan sökrutan och bladet (`ramYta()`), och hörnen dras
   symmetriskt kring mitten (pekarhändelser på `.hörn`, som gör formatet fritt). Valet sparas i
@@ -1078,7 +1078,8 @@ november):
 | ej bestämd | Omgivningen etapp 3–4 (CÅ–CÄ, biblioteket; fråga ägaren om det ska komma direkt efter 0.17.0), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY) |
 
 1. För in ägarens testresultat (DT för 0.16.2, DD–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna
-   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.3.
+   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.3 (ägaren 25 november: testresultaten
+   tas i nästa version).
 2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
    inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid
