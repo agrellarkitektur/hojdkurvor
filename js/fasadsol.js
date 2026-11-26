@@ -252,8 +252,9 @@
     for (let b = 0; b < nb; b++) { const f = (-90 + (b + 0.5) * azSteg) * RAD; cosB[b] = Math.cos(f); sinB[b] = Math.sin(f); }
     for (let k = fran; k < till; k++) {
       const p = pts[k], egen = new Float32Array(nb), vol = new Float32Array(nb), alla = new Float32Array(nb);
-      // normalen och tangenten (åt höger sett utifrån)
-      const tx = -p.ny, ty = p.nx;
+      // normalen och tangenten: positiv vinkel är medurs från normalen, som solens azimut (phi i analys).
+      // Före 0.16.3 hade tangenten fel tecken, så horisonten blev spegelvänd (B3 i granskningen 26 nov).
+      const tx = p.ny, ty = -p.nx;
       for (let b = 0; b < nb; b++) {
         const dx = p.nx * cosB[b] + tx * sinB[b], dy = p.ny * cosB[b] + ty * sinB[b];
         let tE = -Infinity, tV = -Infinity, tA = -Infinity;   // tan av höjdvinkeln

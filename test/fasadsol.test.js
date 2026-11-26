@@ -89,6 +89,23 @@ prov('en annan kropp skuggar, den egna inte (konvex)', () => {
   for (const p of res.punkter) assert(p.hor.egen.every(v => v === -90), 'egen horisont för ett rätblock');
 });
 
+prov('horisonten är inte spegelvänd: ett torn snett framför fasaden (0.16.3, B3)', () => {
+  // södervägg (normalen mot söder, azimut 180°) och ett torn i sydost. Sydost ligger vid phi = 135 − 180 = −45°
+  // (medurs positivt, som solens azimut), alltså i den vänstra halvan av horisonten och inte vid +45°.
+  const v = block('a', 0, 0, 20, 10, 6), torn = block('t', 20, -25, 8, 8, 40);   // block() har mitten i (x, y)
+  const { punkter } = F.punkter([v, torn]);
+  F.horisonter(punkter, { yta: null, vol: F.hinderraster([v, torn]) });
+  const p = punkter.find(q => q.v === 0 && q.ny < -0.9 && Math.abs(q.x) < 1 && q.z < 12);
+  assert(p, 'en punkt mitt på södersidan');
+  const minus = F.horVid(p.hor.vol, p.hor.azSteg, -45), plus = F.horVid(p.hor.vol, p.hor.azSteg, 45);
+  assert(minus > 20, `tornet syns vid −45°: ${minus}`);
+  assert(plus < 0, `inget vid +45°: ${plus}`);
+  // och i analysen: tornet i sydost skuggar på förmiddagen, inte på eftermiddagen
+  const res = F.analys([v, torn], { ...HUD, period: 'april', tid: 'kontor' });
+  const s = res.grupper.find(g => g.id === 'a' && g.streck === 'S');
+  assert(s.skuggning.volymer > 0, `tornet skuggar södersidan: ${s.skuggning.volymer}`);
+});
+
 prov('inbuktad kropp skuggar sig själv i innerhörnet', () => {
   const L = { id: 'L', namn: 'L', golv: 10, takfot: 15, takform: 'platt', taklutning: 0, fotavtryck: [[0, 0], [30, 0], [30, 10], [10, 10], [10, 30], [0, 30]] };
   const { punkter } = F.punkter([L]);
