@@ -155,6 +155,12 @@ const somDen = p => p;
     members: [{ type: 'way', role: 'outer', geometry: [null, { lat: 58, lon: 15 }, { lat: 58, lon: 15.01 }, null] }] }] })) : svar(500, ''));
   let vt = await G.vatten(ll, somDen);
   assert.deepStrictEqual(vt.map(x => [x.namn, x.yta, x.sluten, x.pts.length]), [['Vättern', true, false, 2]]);
+  // 0.16.3 (B6): en sjö vars ytterring består av flera vägar fogas till en sluten yta
+  globalThis.fetch = async url => (url.includes('overpass-api.de') ? svar(200, JSON.stringify({ elements: [{ type: 'relation', id: 6, tags: { natural: 'water', name: 'Delsjön' },
+    members: [{ type: 'way', role: 'outer', geometry: [{ lat: 58, lon: 15 }, { lat: 58, lon: 15.01 }, { lat: 58.01, lon: 15.01 }] },
+      { type: 'way', role: 'outer', geometry: [{ lat: 58, lon: 15 }, { lat: 58.01, lon: 15 }, { lat: 58.01, lon: 15.01 }] }] }] })) : svar(500, ''));
+  vt = await G.vatten(ll, somDen);
+  assert.deepStrictEqual(vt.map(x => [x.namn, x.yta, x.sluten, x.pts.length]), [['Delsjön', true, true, 4]]);
   // huvudservern 502 tre gånger: reserven svarar
   anrop = [];
   globalThis.fetch = async url => { anrop.push(url); return url.includes('overpass-api.de') ? svar(502, '') : svar(200, JSON.stringify({ elements: [] })); };

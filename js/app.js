@@ -2660,9 +2660,12 @@
       delFramsteg('fasadsol', 0, 'Räknar sol på fasaderna');
       const yta = kor.ytaFasad || null, konv = mitt.konvergens;
       // skärmtak har inga fasader men skuggar (0.16.1)
-      const { punkter, fasader } = Fasadsol.punkter(volA.filter(v => Kropp.slag(v) !== 'skarmtak'), { steg: 1, konv, mark: yta ? (x, y) => Analys.nod(yta, yta.dtm, x, y) : null });
+      // Kropparna först och skärmtaken sist i hinderrastret, så att kroppens nummer är samma i punkterna och
+      // i rastret (0.16.3, B4: annars räknades en annan kropps skugga som kroppens egen)
+      const kroppar = volA.filter(v => Kropp.slag(v) !== 'skarmtak'), skarmtak = volA.filter(v => Kropp.slag(v) === 'skarmtak');
+      const { punkter, fasader } = Fasadsol.punkter(kroppar, { steg: 1, konv, mark: yta ? (x, y) => Analys.nod(yta, yta.dtm, x, y) : null });
       if (!punkter.length) { varningar.push('Sol på fasaderna: byggnaderna har inga fasader ovan mark.'); return; }
-      const miljo = { yta, vol: Fasadsol.hinderraster(volA) }, DEL = 150;
+      const miljo = { yta, vol: Fasadsol.hinderraster(kroppar.concat(skarmtak)) }, DEL = 150;
       for (let k = 0; k < punkter.length; k += DEL) {
         Fasadsol.horisonter(punkter, miljo, { fran: k, till: Math.min(punkter.length, k + DEL), maxAvst: MARG_SKUGGA });
         delFramsteg('fasadsol', 0.7 * Math.min(1, (k + DEL) / punkter.length));

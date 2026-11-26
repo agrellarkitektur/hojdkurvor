@@ -367,10 +367,18 @@
       const typ = t.natural === 'coastline' ? 'kust' : t.waterway ? (t.waterway === 'stream' ? 'bäck' : t.waterway === 'canal' ? 'kanal' : 'vattendrag')
         : t.water === 'river' ? 'vattendrag' : ANLAGT.test(t.water || '') ? 'anlagt' : 'sjö';
       const linjer = e.type === 'way' ? [e.geometry] : (e.members || []).filter(m => m.geometry).map(m => m.geometry);
-      for (const g of linjer) {
-        for (const d of osmDelar(g)) {
-          ut.push({ typ, namn: t.name || '', yta: e.type !== 'way' || (t.natural === 'water' && d.sluten), sluten: d.sluten, pts: d.pts.map(p => tillZon([p.lon, p.lat])) });
-        }
+      if (e.type === 'way') {
+        for (const d of osmDelar(e.geometry)) ut.push({ typ, namn: t.name || '', yta: t.natural === 'water' && d.sluten, sluten: d.sluten, pts: d.pts.map(p => tillZon([p.lon, p.lat])) });
+        continue;
+      }
+      // En relation: vägarna fogas till ringar (0.16.3, B6). Det som inte går ihop (klippt mot rutan) är en
+      // strandlinje, inte en yta som går tillbaka till sin första punkt.
+      const delar = linjer.flatMap(g => osmDelar(g)), lika = (a, b) => Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+      const hela = delar.filter(d => d.sluten).map(d => d.pts.map(p => [p.lon, p.lat]));
+      const fogade = fogaRingar(delar.filter(d => !d.sluten).map(d => d.pts.map(p => [p.lon, p.lat])));
+      for (const r of hela.concat(fogade)) {
+        const sluten = r.length >= 4 && lika(r[0], r[r.length - 1]);
+        ut.push({ typ, namn: t.name || '', yta: true, sluten, pts: (sluten ? r.slice(0, -1) : r).map(p => tillZon(p)) });
       }
     }
     return ut;

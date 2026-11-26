@@ -63,6 +63,18 @@ Terrang.registreraZoner();
   const csv = B.csv(bygg, 0, 0, 0);
   assert.strictEqual(csv.trim().split('\r\n').length, 3);
   assert.ok(csv.includes('Bostad;Småhus friliggande;1;'), csv);
+  // 0.16.3 (B5): de lokala kolumnerna följer nollpunkten och vridningen
+  {
+    const b0 = bygg[0], c = B.tyngdpunkt ? B.tyngdpunkt(b0.fotavtryck) : null;
+    Terrang.lokal.vrid = 17.5;
+    try {
+      const rader = B.csv([b0], r.xmin, r.ymin, 0).trim().split('\r\n'), k = rader[0].split(';'), v = rader[1].split(';');
+      const tal = s => Number(String(s).replace(',', '.'));
+      const x = tal(v[k.indexOf('x')]), y = tal(v[k.indexOf('y')]), [lx, ly] = Terrang.tillLokal(r.xmin, r.ymin)(x, y);
+      assert(Math.abs(tal(v[k.indexOf('x_lokal')]) - lx) < 0.01 && Math.abs(tal(v[k.indexOf('y_lokal')]) - ly) < 0.01, rader[1]);
+      assert(Math.abs(lx - (x - r.xmin)) > 1, 'vridningen gör skillnad');
+    } finally { Terrang.lokal.vrid = 0; }
+  }
 
   // riktig fil
   if (process.env.BYGGNAD_GPKG) {

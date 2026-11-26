@@ -533,7 +533,7 @@
         const d = avstandSegmentRuta(p[i], p[i + 1], r);
         if (d < bast.avstand) bast = { avstand: d, objekt: v };
       }
-      if (v.yta && p.length > 2) {
+      if (v.yta && v.sluten !== false && p.length > 2) {
         const c = [(r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2];
         if (inuti(p, c[0], c[1])) bast = { avstand: 0, objekt: v };
       }
@@ -594,7 +594,9 @@
     const satt = (x, y) => { const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s); if (i >= 0 && i < W && j >= 0 && j < H) f[j * W + i] = 0; };
     for (const v of vatten) {
       const p = v.pts;
-      const kanter = v.yta && p.length > 2 ? p.length : p.length - 1;
+      // en del som inte är sluten (en strand som är klippt mot rutan, en bit av en relation) är en linje:
+      // sträckan tillbaka till första punkten är ingen strand (0.16.3, B6)
+      const kanter = v.yta && v.sluten !== false && p.length > 2 ? p.length : p.length - 1;
       for (let a = 0; a < kanter; a++) {
         const A = p[a], B = p[(a + 1) % p.length], l = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(l / (s / 2)));
         for (let t = 0; t <= n; t++) satt(A[0] + (B[0] - A[0]) * t / n, A[1] + (B[1] - A[1]) * t / n);

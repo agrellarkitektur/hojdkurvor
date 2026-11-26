@@ -491,12 +491,14 @@
 
   /** CSV med en rad per byggnad (semikolon, decimalkomma som i övriga CSV-listor med text). */
   function csv(byggnader, dx, dy, dz) {
+    // de lokala kolumnerna räknas med nollpunkten och vridningen, som alla andra lokala filer (0.16.3, B5)
+    const lok = Terrang.tillLokal(dx, dy);
     const f = (v, d = 2) => v == null ? '' : String(Math.round(v * 10 ** d) / 10 ** d).replace('.', ',');
     const rad = ['id;objekttyp;andamal;husnummer;namn;huvudbyggnad;yta_m2;x;y;x_lokal;y_lokal;markhojd;hojd_m'];
     for (const b of byggnader) {
-      const c = tyngdpunkt(b.fotavtryck);
+      const c = tyngdpunkt(b.fotavtryck), l = lok(c[0], c[1]);
       rad.push([b.id || '', b.typ, b.andamal.join(', '), b.husnummer || '', b.namn || '', b.huvud ? 'ja' : 'nej', f(b.yta, 1),
-        f(c[0]), f(c[1]), f(c[0] - dx), f(c[1] - dy), b.mark != null ? f(b.mark - dz) : '', f(b.hojd, 1)]
+        f(c[0]), f(c[1]), f(l[0]), f(l[1]), b.mark != null ? f(b.mark - dz) : '', f(b.hojd, 1)]
         .map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';'));
     }
     return '﻿' + rad.join('\r\n') + '\r\n';

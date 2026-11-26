@@ -95,6 +95,20 @@ assert.strictEqual(P.strandKlass({ typ: 'anlagt', yta: true, pts: [[0, 0], [500,
   assert(st.zoner.m300.length > 0);
   const dxf = P.dxfStrandskydd(st, [damm].concat(vatten), r, 0, 0);
   assert(/STRANDSKYDD_100/.test(dxf) && /STRANDSKYDD_VATTEN/.test(dxf));
+  // 0.16.3 (B6): en strand som är klippt mot rutan är en linje. Stranden buktar 150 m åt öster; sträckan
+  // tillbaka till första punkten (x = 0) är ingen strand, så 100-metersgränsen ligger vid x = 50 som för hela sjön.
+  {
+    const bukt = []; for (let i = 0; i <= 24; i++) { const y = -600 + i * 50; bukt.push([150 * Math.cos((y / 600) * Math.PI / 2), y]); }
+    const hel = { typ: 'sjö', namn: 'Hel', yta: true, pts: bukt.concat([[2000, 600], [2000, -600]]) };
+    const klippt = { typ: 'sjö', namn: 'Klippt', yta: true, sluten: false, pts: bukt };
+    const tomt = { xmin: -60, ymin: -20, xmax: 10, ymax: 20 };
+    const m100 = st => st.zoner.m100.flat().filter(p => Math.abs(p[1]) < 30 && p[0] > -150 && p[0] < 100).map(p => p[0]);
+    for (const v of [hel, klippt]) {
+      const st = P.strandskydd(tomt, [v], { zoner: true }), xs = m100(st);
+      assert(xs.length && xs.every(x => Math.abs(x - 50) < 6), `${v.namn}: ${xs.join(', ')}`);
+      assert(st.avstand > 130, `${v.namn}: ${st.avstand}`);
+    }
+  }
   const t0 = Date.now(); P.strandskydd({ xmin: 0, ymin: 0, xmax: 2000, ymax: 2000 }, [{ typ: 'kust', pts: [[-200, -100], [2200, 2300]] }], { zoner: true });
   assert(Date.now() - t0 < 3000, 'zonerna för 2 × 2 km tar under 3 s');
 }
