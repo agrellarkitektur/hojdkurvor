@@ -168,10 +168,13 @@ T.registreraZoner();
   assert.deepStrictEqual([snall.projekt.namn, snall.projekt.fastighet, snall.projekt.ritadAv], ['', '12', '']);
   assert.ok(!JSON.stringify(snall.inmatning).includes('onerror'), 'ingen HTML kvar i inmatningen');
   // ett utsnitt som är orimligt stort är en trasig fil
-  for (const u of [{ xmin: 0, ymin: 0, xmax: 1e9, ymax: 1e9 }, { xmin: 5e5, ymin: 6.4e6, xmax: 5e5 + 60000, ymax: 6.4e6 + 100 }, { xmin: 5e8, ymin: 6.4e6, xmax: 5e8 + 100, ymax: 6.4e6 + 100 }]) {
+  for (const u of [{ xmin: 0, ymin: 0, xmax: 1e9, ymax: 1e9 }, { xmin: 5e5, ymin: 6.4e6, xmax: 5e5 + 60000, ymax: 6.4e6 + 100 }, { xmin: 5e8, ymin: 6.4e6, xmax: 5e8 + 100, ymax: 6.4e6 + 100 },
+    { xmin: 5e5, ymin: 6.4e6, xmax: 5e5 + 2100, ymax: 6.4e6 + 2000 }, { xmin: 5e5, ymin: 6.4e6, xmax: 5e5 + 11000, ymax: 6.4e6 + 100 }]) {
     const x = P.nytt(); x.plats.utsnitt = u; assert.strictEqual(P.las(x).plats.utsnitt, null);
   }
-  const rimligt = P.nytt(); rimligt.plats.utsnitt = { xmin: 539000, ymin: 6427000, xmax: 541000, ymax: 6429000 };
+  const rimligt = P.nytt(); rimligt.plats.utsnitt = { xmin: 539000, ymin: 6427000, xmax: 541000, ymax: 6429000 };   // 4 km², största
+  const okand = P.nytt(); okand.inmatning.volymer = [{ id: 'k', namn: 'K', fotavtryck: fot, takform: 'kupol' }];
+  assert.strictEqual(P.las(okand).inmatning.volymer[0].takform, undefined, 'okänd takform tas bort');
   assert.deepStrictEqual(P.las(rimligt).plats.utsnitt, rimligt.plats.utsnitt);
 
   // --- trädvalen slås ihop utan tvillingar (0.13.3): zon → TM → zon flyttar var femte nyckel en decimeter,

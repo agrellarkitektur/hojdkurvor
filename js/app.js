@@ -3659,7 +3659,7 @@
     let p;
     try { p = JSON.parse(b64url.avkoda(m[1])); } catch (e) { visaStatus('Projektlänken gick inte att läsa.', true); return false; }
     const arTal = v => typeof v === 'number' && isFinite(v);
-    if (!p || p.v !== 1 || !Array.isArray(p.r) || p.r.length < 4 || !p.r.slice(0, 4).every(arTal) || !(p.r[2] > p.r[0] && p.r[3] > p.r[1]) || (p.r[2] - p.r[0]) * (p.r[3] - p.r[1]) > MAX_AREA * 4 || !T.ZONER.some(z => z.epsg === p.e)) return false;
+    if (!p || p.v !== 1 || !Array.isArray(p.r) || p.r.length < 4 || !p.r.slice(0, 4).every(arTal) || !(p.r[2] > p.r[0] && p.r[3] > p.r[1]) || (p.r[2] - p.r[0]) * (p.r[3] - p.r[1]) > MAX_AREA || Math.max(p.r[2] - p.r[0], p.r[3] - p.r[1]) > 10000 || !T.ZONER.some(z => z.epsg === p.e)) return false;
     const satt = (namn, lista) => { if (Array.isArray(lista)) document.querySelectorAll(`input[name=${namn}]`).forEach(c => { if (!c.disabled) c.checked = lista.includes(c.value); }); };
     satt('tillval', p.t); satt('kapitel', p.k); satt('format', p.f);
     if (p.i) $('intervall').value = p.i;

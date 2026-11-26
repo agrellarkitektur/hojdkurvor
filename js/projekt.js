@@ -19,8 +19,11 @@
   const ANDELSE = '.hojdkurvor';
   const RAD = Math.PI / 180;
   const MAX_HISTORIK = 200;
-  /** Längsta sidan på ett utsnitt i en fil, i meter. Större än så är filen trasig (appen hämtar högst 4 km²). */
-  const MAX_SIDA = 50000;
+  /** Största utsnitt i en fil: lika stort som appen hämtar (4 km², MAX_AREA i app.js) och högst 10 km långt.
+   * Större än så kommer inte från appen och avvisas (beslut 26 nov 2026). */
+  const MAX_YTA = 4e6, MAX_SIDA = 10000;
+  /** Takformerna som appen känner (TAKFORMER i app.js). */
+  const TAKFORMER = ['platt', 'pulpet', 'sadel', 'valm'];
 
   /** En fil från en nyare version av appen. */
   class NyareVersion extends Error {}
@@ -109,7 +112,7 @@
       if (v.nockriktning != null) v.nockriktning = tal(v.nockriktning, null);
       v.namn = text(v.namn, 60) || `Volym ${i + 1}`;
       if (v.id != null && typeof v.id !== 'string') v.id = text(v.id, 80) || undefined;
-      if (v.takform != null && typeof v.takform !== 'string') delete v.takform;
+      if (v.takform != null && !TAKFORMER.includes(v.takform)) delete v.takform;
     });
     ut.inmatning.sektioner.forEach(s => { s.namn = text(s.namn, 40); });
     for (const k of ['namn', 'kommun', 'fastighet', 'uppdrag', 'anteckning', 'ritadAv', 'ritningsnummer']) {
@@ -120,7 +123,7 @@
       .map(l => Object.assign({}, l, { text: l.text.slice(0, 200), pts: l.pts.slice(0, 2) }));
     const u = ut.plats.utsnitt;
     if (u && !(['xmin', 'ymin', 'xmax', 'ymax'].every(k => typeof u[k] === 'number' && isFinite(u[k])) && u.xmax > u.xmin && u.ymax > u.ymin
-      && u.xmax - u.xmin <= MAX_SIDA && u.ymax - u.ymin <= MAX_SIDA && Math.abs(u.xmin) < 1e7 && Math.abs(u.ymin) < 1e8)) ut.plats.utsnitt = null;
+      && u.xmax - u.xmin <= MAX_SIDA && u.ymax - u.ymin <= MAX_SIDA && (u.xmax - u.xmin) * (u.ymax - u.ymin) <= MAX_YTA && Math.abs(u.xmin) < 1e7 && Math.abs(u.ymin) < 1e8)) ut.plats.utsnitt = null;
     if (ut.plats.mitt && !arPunkt(ut.plats.mitt)) ut.plats.mitt = null;
     if (ut.plats.horisontpunkt && !arPunkt(ut.plats.horisontpunkt)) ut.plats.horisontpunkt = null;
     if (typeof ut.plats.last !== 'boolean') ut.plats.last = false;
