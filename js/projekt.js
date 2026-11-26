@@ -19,6 +19,8 @@
   const ANDELSE = '.hojdkurvor';
   const RAD = Math.PI / 180;
   const MAX_HISTORIK = 200;
+  /** Längsta sidan på ett utsnitt i en fil, i meter. Större än så är filen trasig (appen hämtar högst 4 km²). */
+  const MAX_SIDA = 50000;
 
   /** En fil från en nyare version av appen. */
   class NyareVersion extends Error {}
@@ -96,11 +98,29 @@
     ut.inmatning.forslag = ut.inmatning.forslag.filter(arObjekt);
     ut.inmatning.volymer = ut.inmatning.volymer.filter(v => arObjekt(v) && Array.isArray(v.fotavtryck) && v.fotavtryck.length >= 3 && v.fotavtryck.every(arPunkt));
     ut.inmatning.sektioner = ut.inmatning.sektioner.filter(s => arObjekt(s) && arPunkt(s.a) && arPunkt(s.b));
+    // Tal ska vara tal och text ska vara text (0.16.3): appen skriver fälten i panelen, och en fil från
+    // någon annan får inte kunna föra in något annat där. golv null = volymen står på marken.
+    const tal = (v, def) => (typeof v === 'number' && isFinite(v) ? v : def);
+    const text = (v, max) => (v == null || typeof v === 'object' ? '' : String(v)).slice(0, max);
+    ut.inmatning.volymer.forEach((v, i) => {
+      v.golv = tal(v.golv, null);
+      v.takfot = Math.max(0, tal(v.takfot, 3));
+      v.taklutning = Math.min(89, Math.max(0, tal(v.taklutning, 0)));
+      if (v.nockriktning != null) v.nockriktning = tal(v.nockriktning, null);
+      v.namn = text(v.namn, 60) || `Volym ${i + 1}`;
+      if (v.id != null && typeof v.id !== 'string') v.id = text(v.id, 80) || undefined;
+      if (v.takform != null && typeof v.takform !== 'string') delete v.takform;
+    });
+    ut.inmatning.sektioner.forEach(s => { s.namn = text(s.namn, 40); });
+    for (const k of ['namn', 'kommun', 'fastighet', 'uppdrag', 'anteckning', 'ritadAv', 'ritningsnummer']) {
+      if (k in ut.projekt && typeof ut.projekt[k] !== 'string') ut.projekt[k] = text(ut.projekt[k], 200);
+    }
     // situationsplanens ledare (0.16.1): text och två punkter
     ut.inmatning.ledare = ut.inmatning.ledare.filter(l => arObjekt(l) && typeof l.text === 'string' && l.text && Array.isArray(l.pts) && l.pts.length >= 2 && l.pts.every(arPunkt))
       .map(l => Object.assign({}, l, { text: l.text.slice(0, 200), pts: l.pts.slice(0, 2) }));
     const u = ut.plats.utsnitt;
-    if (u && !(['xmin', 'ymin', 'xmax', 'ymax'].every(k => typeof u[k] === 'number' && isFinite(u[k])) && u.xmax > u.xmin && u.ymax > u.ymin)) ut.plats.utsnitt = null;
+    if (u && !(['xmin', 'ymin', 'xmax', 'ymax'].every(k => typeof u[k] === 'number' && isFinite(u[k])) && u.xmax > u.xmin && u.ymax > u.ymin
+      && u.xmax - u.xmin <= MAX_SIDA && u.ymax - u.ymin <= MAX_SIDA && Math.abs(u.xmin) < 1e7 && Math.abs(u.ymin) < 1e8)) ut.plats.utsnitt = null;
     if (ut.plats.mitt && !arPunkt(ut.plats.mitt)) ut.plats.mitt = null;
     if (ut.plats.horisontpunkt && !arPunkt(ut.plats.horisontpunkt)) ut.plats.horisontpunkt = null;
     if (typeof ut.plats.last !== 'boolean') ut.plats.last = false;

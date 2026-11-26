@@ -149,6 +149,31 @@ T.registreraZoner();
   assert.strictEqual(rensad.plats.utsnitt, null); assert.strictEqual(rensad.plats.mitt, null); assert.strictEqual(rensad.plats.horisontpunkt, null);
   assert.strictEqual(P.las({ format: P.FORMAT, version: 1, projekt: { id: 7 } }).projekt.id, '7');
 
+  // --- tal är tal och text är text (0.16.3): fälten skrivs i panelen, så en fil från någon annan får inte
+  // kunna föra in HTML genom takfot, golv eller taklutning
+  const elak = P.nytt();
+  const html = '"><img src=x onerror=alert(1)>', fot = [[0, 0], [10, 0], [10, 8], [0, 8]];
+  elak.inmatning.volymer = [
+    { id: 'a', namn: 'Hus', fotavtryck: fot, golv: html, takfot: html, taklutning: html, nockriktning: html, takform: { x: 1 } },
+    { id: 7, namn: null, fotavtryck: fot, golv: 12.5, takfot: -2, taklutning: 400, nockriktning: 30, takform: 'sadel' },
+    { id: 'c', namn: { a: 1 }, fotavtryck: fot },
+  ];
+  elak.inmatning.sektioner = [{ id: 's', namn: { a: 1 }, a: [1, 2], b: [3, 4] }, { id: 't', namn: 5, a: [1, 2], b: [3, 4] }];
+  elak.projekt.namn = { a: 1 }; elak.projekt.fastighet = 12; elak.projekt.ritadAv = ['x'];
+  const snall = P.las(JSON.stringify(elak)), [va, vb, vc] = snall.inmatning.volymer;
+  assert.deepStrictEqual([va.golv, va.takfot, va.taklutning, va.nockriktning, va.takform], [null, 3, 0, null, undefined]);
+  assert.deepStrictEqual([vb.id, vb.namn, vb.golv, vb.takfot, vb.taklutning, vb.nockriktning, vb.takform], ['7', 'Volym 2', 12.5, 0, 89, 30, 'sadel']);
+  assert.deepStrictEqual([vc.namn, vc.golv, vc.takfot, vc.taklutning], ['Volym 3', null, 3, 0]);
+  assert.deepStrictEqual(snall.inmatning.sektioner.map(x => x.namn), ['', '5']);
+  assert.deepStrictEqual([snall.projekt.namn, snall.projekt.fastighet, snall.projekt.ritadAv], ['', '12', '']);
+  assert.ok(!JSON.stringify(snall.inmatning).includes('onerror'), 'ingen HTML kvar i inmatningen');
+  // ett utsnitt som är orimligt stort är en trasig fil
+  for (const u of [{ xmin: 0, ymin: 0, xmax: 1e9, ymax: 1e9 }, { xmin: 5e5, ymin: 6.4e6, xmax: 5e5 + 60000, ymax: 6.4e6 + 100 }, { xmin: 5e8, ymin: 6.4e6, xmax: 5e8 + 100, ymax: 6.4e6 + 100 }]) {
+    const x = P.nytt(); x.plats.utsnitt = u; assert.strictEqual(P.las(x).plats.utsnitt, null);
+  }
+  const rimligt = P.nytt(); rimligt.plats.utsnitt = { xmin: 539000, ymin: 6427000, xmax: 541000, ymax: 6429000 };
+  assert.deepStrictEqual(P.las(rimligt).plats.utsnitt, rimligt.plats.utsnitt);
+
   // --- trädvalen slås ihop utan tvillingar (0.13.3): zon → TM → zon flyttar var femte nyckel en decimeter,
   // och förut låg då både den gamla och den nya nyckeln kvar, så att ett träd som visades igen förblev dolt
   const globala = {}; let fro = 1; const slump = () => (fro = (fro * 16807) % 2147483647) / 2147483647;

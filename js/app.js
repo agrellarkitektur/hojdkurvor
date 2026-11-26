@@ -1116,9 +1116,11 @@
     autocad: { format: { dxf: true, xyz: false, csv: false }, hojdpunkter: true, text: 'AutoCAD: kurvor och höjdpunkter som DXF.' },
     annat: { format: { dxf: true, xyz: true, csv: true }, hojdpunkter: true, text: 'Alla terrängfiler. Välj bort det du inte behöver.' },
   };
+  const harRitprogram = p => typeof p === 'string' && Object.prototype.hasOwnProperty.call(RITPROGRAM, p);
   function visaRitprogram() {
     document.querySelectorAll('#ritprogram button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.prog === state.ritprogram)));
-    if (state.ritprogram) $('ritprogram-hjalp').textContent = RITPROGRAM[state.ritprogram].text + ' Du kan ändra filerna nedan.';
+    const rp = harRitprogram(state.ritprogram) ? RITPROGRAM[state.ritprogram] : null;
+    if (rp) $('ritprogram-hjalp').textContent = rp.text + ' Du kan ändra filerna nedan.';
   }
   state.ritprogram = inst.ritprogram || null;
   document.querySelectorAll('#ritprogram button').forEach(b => b.addEventListener('click', () => {
@@ -3308,10 +3310,10 @@
       const li = document.createElement('li');
       li.innerHTML = `<div class="volym-huvud"><strong>${esc(v.namn)}</strong><span>${fmt(Platsanalys.area(v.fotavtryck))} m²</span></div>
         <div class="volym-falt">
-          <label>Golv (FG)<input type="text" inputmode="decimal" data-f="golv" value="${v.golv === v.golv && v.golv != null ? String(v.golv).replace('.', ',') : ''}" placeholder="marken"></label>
-          <label>Takfot, m<input type="text" inputmode="decimal" data-f="takfot" value="${String(v.takfot).replace('.', ',')}"></label>
+          <label>Golv (FG)<input type="text" inputmode="decimal" data-f="golv" value="${esc(v.golv === v.golv && v.golv != null ? String(v.golv).replace('.', ',') : '')}" placeholder="marken"></label>
+          <label>Takfot, m<input type="text" inputmode="decimal" data-f="takfot" value="${esc(String(v.takfot).replace('.', ','))}"></label>
           <label>Tak<select data-f="takform">${Object.entries(TAKFORMER).map(([k, n]) => `<option value="${k}"${k === v.takform ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
-          <label>Lutning, °<input type="text" inputmode="decimal" data-f="taklutning" value="${v.taklutning || 0}"></label>
+          <label>Lutning, °<input type="text" inputmode="decimal" data-f="taklutning" value="${esc(v.taklutning || 0)}"></label>
         </div>
         <button type="button" class="lank-ta-bort">Ta bort</button>`;
       li.querySelectorAll('[data-f]').forEach(el => el.addEventListener('change', () => {
@@ -3654,19 +3656,19 @@
     let p;
     try { p = JSON.parse(b64url.avkoda(m[1])); } catch (e) { visaStatus('Projektlänken gick inte att läsa.', true); return false; }
     const arTal = v => typeof v === 'number' && isFinite(v);
-    if (!p || p.v !== 1 || !Array.isArray(p.r) || p.r.length < 4 || !p.r.slice(0, 4).every(arTal) || !(p.r[2] > p.r[0] && p.r[3] > p.r[1]) || !T.ZONER.some(z => z.epsg === p.e)) return false;
-    const satt = (namn, lista) => { if (lista) document.querySelectorAll(`input[name=${namn}]`).forEach(c => { if (!c.disabled) c.checked = lista.includes(c.value); }); };
+    if (!p || p.v !== 1 || !Array.isArray(p.r) || p.r.length < 4 || !p.r.slice(0, 4).every(arTal) || !(p.r[2] > p.r[0] && p.r[3] > p.r[1]) || (p.r[2] - p.r[0]) * (p.r[3] - p.r[1]) > MAX_AREA * 4 || !T.ZONER.some(z => z.epsg === p.e)) return false;
+    const satt = (namn, lista) => { if (Array.isArray(lista)) document.querySelectorAll(`input[name=${namn}]`).forEach(c => { if (!c.disabled) c.checked = lista.includes(c.value); }); };
     satt('tillval', p.t); satt('kapitel', p.k); satt('format', p.f);
     if (p.i) $('intervall').value = p.i;
     if (p.m) $('mesh').value = p.m;
     if (p.hp) $('hojdpunkt-steg').value = p.hp;
     if (p.u != null) { const rr = [...document.querySelectorAll('input[name=utjamning]')].find(c => c.value === String(p.u)); if (rr) rr.checked = true; }
     if (p.n) { $('projekt').value = p.n; $('projekt').dispatchEvent(new Event('input')); }
-    if (p.np) {
+    if (Array.isArray(p.np) && p.np.length >= 2) {
       document.querySelector('input[name=nollpunkt][value=egen]').checked = true; $('egen-nollpunkt').hidden = false;
       [$('np-x').value, $('np-y').value, $('np-z').value] = p.np.map(String);
     }
-    if (p.vr) { $('vrid').value = p.vr[0]; $('vrid-grader').value = p.vr[1] || ''; $('vrid-egen-rad').hidden = p.vr[0] !== 'egen'; }
+    if (Array.isArray(p.vr)) { $('vrid').value = p.vr[0]; $('vrid-grader').value = p.vr[1] || ''; $('vrid-egen-rad').hidden = p.vr[0] !== 'egen'; }
     if (Array.isArray(p.s)) {
       state.sektioner = p.s.filter(x => Array.isArray(x) && [1, 2, 3, 4].every(i => typeof x[i] === 'number' && isFinite(x[i])))
         .map(x => ({ id: Utbyte.nyttId(), namn: String(x[0] == null ? '' : x[0]).slice(0, 40), a: [x[1], x[2]], b: [x[3], x[4]], vand: !!x[5] }));
@@ -3740,7 +3742,8 @@
     if (v.mesh) $('mesh').value = v.mesh;
     if (v.hojdpunktSteg) $('hojdpunkt-steg').value = v.hojdpunktSteg;
     if (v.utjamning != null) { const r = [...document.querySelectorAll('input[name=utjamning]')].find(c => c.value === String(v.utjamning)); if (r) r.checked = true; }
-    if (v.ritprogram !== undefined) { state.ritprogram = v.ritprogram; visaRitprogram(); }
+    // ett ritprogram som den här versionen inte känner till (en fil från en nyare version) räknas som inget val
+    if (v.ritprogram !== undefined) { state.ritprogram = harRitprogram(v.ritprogram) ? v.ritprogram : null; visaRitprogram(); }
     const a = v.analys;
     if (a) {
       if (Array.isArray(a.skuggdatum)) document.querySelectorAll('input[name=skuggdatum]').forEach(c => { c.checked = a.skuggdatum.includes(c.value); });
@@ -3894,6 +3897,18 @@
 
   /** Öppnar projektet d: panelen, utsnittet och inmatningen byts mot projektets. */
   function oppnaProjekt(d, o = {}) {
+    const forra = state.proj;
+    try { oppnaProjektInre(d, o); } catch (e) {
+      // Öppnandet avbröts (0.16.3). Panelen visar då delar av båda projekten, och nästa autospar skulle skriva
+      // det förra projektets innehåll under det nya projektets id. Gå tillbaka till det som var öppet.
+      if (forra) {
+        try { oppnaProjektInre(forra.d, { iDb: forra.iDb, senastInnehall: forra.senastInnehall, filInnehall: forra.filInnehall, sparadFil: forra.sparadFil, bilagor: forra.bilagor }); }
+        catch (e2) { console.error(e2); state.proj = forra; }
+      } else state.proj = null;
+      throw e;
+    }
+  }
+  function oppnaProjektInre(d, o = {}) {
     if (state.proj) clearTimeout(state.proj.timer);
     if (sektionRitar) satSektionslage(false);
     if (horValjer) satHorisontlage(false);
