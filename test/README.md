@@ -166,6 +166,16 @@ med när kroppen ändras, kroppen ur ett befintligt hus och länkade kroppar.
 python3 test/las_test.py test/ut ritning
 ```
 
+```
+python3 test/rattelser_test.py test/ut ritning
+```
+
+`rattelser_test.py` (0.16.3) prövar rättelserna efter granskningen 26 november: panelen är inert
+och ramen saknar handtag under Skapa, och ett ändrat hörn låser inte upp Skapa (C1, C2); Tab når inte
+sidan bakom en öppen planvy (D6); två klick på Visa i 3D ger en vy (C17); en skiss från cad-apa
+stänger planvyn (C7, med `TERRANG_CADAPA` på samma ursprung); och efter omladdning och ett Skapa med
+fel lösenord finns det förra underlaget kvar, också efter nästa omladdning (C8).
+
 `las_test.py` (0.14.3) skapar underlag tre gånger för samma område: andra gången hämtas nästan
 inget från testservern, knappen säger *igen* och sammanfattningen har raden Hämtat. Ramen går att
 dra efter flera Skapa (AT). *Lås området* stänger av Rita, hörnen och zonen, tar bort handtagen

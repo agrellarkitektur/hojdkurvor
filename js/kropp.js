@@ -605,7 +605,8 @@
    * skrev förut "befintlig 0,0 m²" när husen inte var gjorda till kroppar. hus: Lantmäteriets hus som inte
    * ersätts av en kropp ({ fotavtryck, hal }); ytor: fastigheterna ({ beteckning, etikett, ringar }). Fastigheten
    * är den som huvudbyggnaden (annars första kroppen som inte rivs) står på, annars den med beteckningen
-   * fastighet. Gårdarna dras av. Ger bya() och { lmhus (antal hus som räknas), tomt (fastigheten eller null) }.
+   * fastighet. Ett hus som en kropp är ritad över räknas inte, och gårdarna dras av. Ger bya() och
+   * { lmhus (antal hus som räknas), tomt (fastigheten eller null) }.
    */
   function byaMedHus(volymer, hus, ytor, fastighet) {
     const vol = (volymer || []).filter(v => v.fotavtryck && v.fotavtryck.length >= 3);
@@ -616,7 +617,10 @@
     let tomt = null;
     if (ref) { const c = mitt(moturs(ref.fotavtryck)); tomt = kand.filter(y => iRingar(y.ringar, c[0], c[1])).sort((a, b) => (b.yta || 0) - (a.yta || 0))[0] || null; }
     if (!tomt && fastighet) { const f = String(fastighet).trim().toLowerCase(); tomt = kand.find(y => [y.beteckning, y.etikett].some(t => t && String(t).trim().toLowerCase() === f)) || null; }
-    const pa = tomt ? (hus || []).filter(h => h.fotavtryck && h.fotavtryck.length >= 3 && (c => iRingar(tomt.ringar, c[0], c[1]))(mitt(h.fotavtryck))) : [];
+    // Ett hus som en kropp (som inte rivs) är ritad över står inte kvar; det räknas inte.
+    const byggs = vol.filter(v => status(v) !== 'rivs').map(v => v.fotavtryck);
+    const overRitat = h => { const a = Math.abs(area(h.fotavtryck)); return byggs.some(f => a + Math.abs(area(f)) - unionArea([h.fotavtryck, f]) > 0.5); };
+    const pa = tomt ? (hus || []).filter(h => h.fotavtryck && h.fotavtryck.length >= 3 && (c => iRingar(tomt.ringar, c[0], c[1]))(mitt(h.fotavtryck)) && !overRitat(h)) : [];
     const b = bya(vol.concat(pa.map(h => ({ fotavtryck: h.fotavtryck, status: 'befintlig' }))));
     const gard = pa.reduce((s, h) => s + (h.hal || []).reduce((t, r) => t + (r && r.length >= 3 ? Math.abs(area(r)) : 0), 0), 0);
     b.befintlig = Math.max(0, b.befintlig - gard); b.totalt = Math.max(0, b.totalt - gard);

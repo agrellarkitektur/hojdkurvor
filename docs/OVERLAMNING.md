@@ -1,9 +1,26 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 25 november 2026, 0.16.2.
+överlämning; historiken finns i git. Senast: 26 november 2026, 0.16.3.
 
 ## Läget
+
+- **0.16.3** 26 november (grenen `v0.16.3`): **rättelser efter granskningen av 0.16.2** (fyra sessioner
+  26 november; sammanställningen `granskning-0.16.2.md`, delrapporterna A–D och session A:s patch i
+  claude.ai-projektet). Byggd i förslagets ordning: B3 först (spegelvänd horisont i sol på fasaderna,
+  `Fasadsol.horisonter`), sedan patchen med `git am` (A1–A4, formuläret för A8), utsnittsgränserna 4 km²
+  och 10 km och takformen, `inert` under Skapa och vyerna (D6, C1, C2, C17), C7 och C8, ritningen (B2,
+  B1, P6, hörn över en sida), exporten (B5, B6, B4), småsakerna (C3, C9, C16, D9, A6) och texterna
+  (D1, D2, D3). **Ägarens beslut 26 november**: inget resultat av sol på fasaderna har lämnats ut, så
+  inget räknas om; byggnadsarean räknar Lantmäteriets hus på fastigheten som befintliga
+  (`Kropp.byaMedHus`, fastigheten är den huvudbyggnaden står på); utsnitt i fil och länk högst 4 km²
+  och 10 km, samma som appen hämtar. **P6** är löst genom att ett hus med innergård inte blir någon
+  kropp; gårdar som kroppar kommer med 0.17.0. **Inte gjort ur listan**: C4, C5, C6, A5, D7, D8,
+  norrpilen och C14 (kan vänta enligt granskningen), Content-Security-Policyn i `drift/apps.caddy`
+  (apps-repot, Report-Only först). Körda: alla 24 enhetstester (nya prov i `fasadsol`, `kropp`,
+  `projekt`, `byggnad`, `platsanalys`, `geodata`), nya `rattelser_test.py` i alla tre teman, och de
+  andra gränssnittstesterna i temat ritning. **Inte provat**: iPhone, riktiga Overpass-svar för
+  sjöar i flera vägar, Content-Security-Policyn mot Skapa och 3D-vyn.
 
 - **0.16.2** 25 november (grenen `v0.16.2`, publicerad samma dag): **BS**, utsnittets format på mobilen. Formatväljaren
   `#mobil-format` (1:1, 3:2, 2:3, 2:1, Fritt) under ramen; `placeraRam()` i `app.js` sätter ramens
@@ -1073,7 +1090,8 @@ november):
 | 0.16.0 | Situationsplanen: yttre skal, annotering, ritningshuvud, teckenförklaring, PDF och DXF (byggd 22 november; testas som CÖ–DC) |
 | 0.16.1 | Svar på testet 23 november (byggd 23 november; testas som DD–DQ) |
 | 0.16.2 | BS, utsnittets format på mobilen (byggd 25 november; testas som DT) |
-| 0.16.3 | Rättelser efter ägarens test av 0.16.1 (DD–DQ) och 0.16.2 (DT) |
+| 0.16.3 | Rättelser efter granskningen av 0.16.2 (byggd 26 november) |
+| 0.16.4 | Rättelser efter ägarens test av 0.16.1 (DD–DQ) och 0.16.2 (DT) |
 | 0.17.0 | Skissa i 3D med användarskapad omgivning etapp 1 (CL–CV), formpaletten med ikoner, CE; se `docs/SKISSA-I-3D.md` |
 | 0.18.0 | Arbetsgången (CD, CC, BK) och ikonbaserat gränssnitt (BL) |
 | 0.19.0 | Bedömning med regelbok för befintliga analyser |
@@ -1083,8 +1101,8 @@ november):
 | ej bestämd | Omgivningen etapp 3–4 (CÅ–CÄ, biblioteket; fråga ägaren om det ska komma direkt efter 0.17.0), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY) |
 
 1. För in ägarens testresultat (DT för 0.16.2, DD–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna
-   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.3 (ägaren 25 november: testresultaten
-   tas i nästa version).
+   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.4 (0.16.3 blev granskningens
+   rättelser). Kontrollen mot Hudiksvall *med omgivning* (CH) går att göra nu när B3 är rättad.
 2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
    inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid

@@ -209,6 +209,10 @@ python3 test/planverktyg_test.py test/ut ritning
 python3 test/las_test.py test/ut ritning
 ```
 
+```
+python3 test/rattelser_test.py test/ut ritning
+```
+
 Kör enhetstestet efter ändringar i beräkningarna och gränssnittstesterna efter
 ändringar i panelen. Titta på skärmbilderna i alla tre teman, och rendera
 PDF:erna (`pdftoppm`) och titta på dem. WebKit saknas i testmiljön, så be

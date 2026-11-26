@@ -3,6 +3,44 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.16.3 – 2026-11-26
+
+Rättelser efter granskningen av 0.16.2 (26 november, `granskning-0.16.2.md` i claude.ai-projektet).
+Ingen ny funktion utom byggnadsarean.
+
+- **Sol på fasaderna (B3)**: horisonten framför fasaden var spegelvänd, så det som stod till vänster
+  om en fasad skuggade den när solen stod till höger. Gällde alla resultat med skuggande grannar eller
+  omgivning sedan 0.15.0; fristående hus utan omgivning påverkades inte. Tangenten i
+  `Fasadsol.horisonter` har bytt tecken. *Skugga, byggnader* blev också fel när ett skärmtak låg före
+  kroppen i listan (B4).
+- **Projektfiler (A1–A4)**: `Projekt.las` gör golv, takfot, taklutning och nockriktning till tal, namn
+  till text och takformen till en av de fyra kända, så att en projektfil från någon annan inte kan föra
+  in HTML i volymlistan. Ett öppnande som avbryts går tillbaka till projektet som var öppet. En trasig
+  projektlänk stoppar inte starten. Utsnitt i fil och länk får vara högst 4 km² och 10 km långa (ägarens
+  beslut). Inloggningsformuläret har ingen `onsubmit` i sidan, inför en Content-Security-Policy.
+- **Under Skapa (C1, C2, C3, C8)**: panelen är `inert` och ramen går inte att dra medan underlaget
+  skapas, så att knappen inte låses upp och stegen inte läser ändrade val. Ett fel i ett steg utom
+  terrängen, laserdatan och visningen blir en varning. Det sparade resultatet tas bort först när
+  terrängen är klar; går Skapa fel före det läses det förra underlaget in igen.
+- **Planvyn och 3D-vyn (D6, C7, C16, C17)**: sidan bakom en öppen vy är `inert`. Vyerna stängs när en
+  skiss kommer från cad-apa eller ett annat projekt öppnas, så att deras kopia inte skriver över den
+  nya. Visa i 3D öppnar en vy i taget, och vyn släpper grafikminnet när den stängs.
+- **Ritningen (B1, B2, P6)**: ett mått till tomtgräns slutar på gränsen också när gränsen har en
+  brytpunkt. En kropp försvinner inte ur skalet och BYA när en fog slutar några millimeter från ett
+  hörn. Ett hus med innergård blir ingen kropp (gården fylldes). Ett hörn eller en sida som skulle få
+  fotavtrycket att korsa sig självt ändrar ingenting.
+- **Byggnadsarean** på situationsplanen och i planvyn räknar Lantmäteriets hus på fastigheten som
+  befintliga (ägarens beslut), med gårdarna avdragna (`Kropp.byaMedHus`). Ett hus som en ny kropp är
+  ritad över räknas inte. Fastigheten är den som huvudbyggnaden står på, annars den med beteckningen i
+  ritningshuvudet.
+- **Exporten (B5, B6)**: `byggnader.csv` vrider de lokala koordinaterna som de andra filerna.
+  Strandskyddets linjer ritas inte kring en strand som är klippt mot rutan, och en sjös vägar fogas till
+  ringar.
+- **Övrigt**: ett typsnitt som inte gick att hämta sparas inte (C9), filfältet under 04 Skiss står inte i
+  tabbordningen (D9), ett projekt som tas bort i en flik sparas inte tillbaka från en annan (A6).
+- **Texter**: Om-sidans *Dina uppgifter* (D1), databasversionen i `docs/PROJEKTFIL.md` (D2) och
+  Skapa-stegen i `docs/OVERLAMNING.md` (D3).
+
 ## 0.16.2 – 2026-11-25
 
 - **Utsnittets format på mobilen (BS)**: under ramen väljs förhållandet mellan sidorna (1:1, 3:2, 2:3,

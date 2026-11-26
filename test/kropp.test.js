@@ -105,6 +105,9 @@ prov('BYA med Lantmäteriets hus på fastigheten som befintliga (0.16.3)', () =>
   nara(b.befintlig, 80 + 140, 1e-6); nara(b.tillkommande, 120, 1e-6); nara(b.totalt, 340, 1e-6);
   // utan kroppar: fastigheten ur beteckningen; utan fastighet: bara kropparna
   nara(K.byaMedHus([], hus, [tomt, granne], '1:3').befintlig, 100, 1e-6);
+  // ett hus som en ny kropp är ritad över står inte kvar
+  const over = K.byaMedHus([ny, { id: 'o', fotavtryck: [[24, 4], [30, 4], [30, 10], [24, 10]] }], hus, [tomt, granne], null);
+  assert.strictEqual(over.lmhus, 1); nara(over.befintlig, 140, 1e-6); nara(over.tillkommande, 156, 1e-6);
   const utan = K.byaMedHus([ny], hus, [], null);
   assert.strictEqual(utan.lmhus, 0); nara(utan.befintlig, 0, 1e-9); nara(utan.totalt, 120, 1e-6);
 });

@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instruktioner – Höjdkurvor</title>
   <meta name="description" content="Så skaffar du konto hos Lantmäteriet, beställer produkterna och tar in underlaget i Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.16.2"></script>
-  <script src="js/kalla.js?v=0.16.2" defer></script>
-  <script src="js/tema.js?v=0.16.2"></script>
-  <script src="js/synpunkter.js?v=0.16.2" defer></script>
-  <script src="js/stod.js?v=0.16.2" defer></script>
+  <script src="js/version.js?v=0.16.3"></script>
+  <script src="js/kalla.js?v=0.16.3" defer></script>
+  <script src="js/tema.js?v=0.16.3"></script>
+  <script src="js/synpunkter.js?v=0.16.3" defer></script>
+  <script src="js/stod.js?v=0.16.3" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.16.2">
+  <link rel="stylesheet" href="app.css?v=0.16.3">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -163,7 +163,7 @@
           <li><strong>Polygon</strong> (P): klicka hörnen, eller skriv dem i raden längst ner: en längd (<code>6</code>) går mot markören, <code>6&lt;90</code> är längd och vinkel från ritriktningen, <code>@3;4</code> är ett steg längs och tvärs ritriktningen, och <code>E;N</code> (två stora tal) är koordinater. Enter, dubbelklick eller ett klick på första hörnet stänger.</li>
           <li><strong>Riktning</strong> (D): klicka på en gräns, en fasad eller ett hus. Rektanglar, Ortho och vinklar följer den. Planvyn börjar med riktningen efter den närmaste gränsen.</li>
           <li><strong>Snäpp och Ortho</strong> (F3 och F8): klick och drag fäster mot hörn, mittpunkter och linjer, också vinkelrätt mot en linje. Ortho håller linjerna längs och tvärs ritriktningen.</li>
-          <li><strong>Befintlig</strong> (L): klicka på ett grått hus från Lantmäteriet så blir det en byggnad i skissen, med status Befintlig. Höjd och golv är skattade; skriv in rätt värden. Huset ersätts av byggnaden i 3D-vyn och analyserna.</li>
+          <li><strong>Befintlig</strong> (L): klicka på ett grått hus från Lantmäteriet så blir det en byggnad i skissen, med status Befintlig. Höjd och golv är skattade; skriv in rätt värden. Huset ersätts av byggnaden i 3D-vyn och analyserna. Ett hus med innergård går inte att ta in än.</li>
           <li><strong>Entré</strong> (E): klicka på fasaden där entrépilen ska vara.</li>
           <li><strong>Välj</strong> (V): klicka på en byggnad och dra för att flytta den. Tar du i ett hörn fäster hörnet mot det du drar till. På en vald byggnad flyttar de små rutorna i hörnen ett hörn; en rektangel förblir en rektangel (Alt släpper det).</li>
           <li><strong>Vrid mot</strong> (A): klicka på den sida i byggnaden som ska vridas och sedan på en linje (en gräns, en fasad eller ett hus). Byggnaden vrids kring punkten du klickade så att sidan blir parallell med linjen. Finns också som <em>Vrid mot linje</em> i panelen.</li>
@@ -178,7 +178,7 @@
           <li><strong>Yttermått</strong>: en lång och en kort sida på en rektangel, alla sidor på andra former. Klicka och skriv för att ändra längden.</li>
           <li><strong>Mellan byggnader</strong>: ligger en tillbyggnad an mot huset måttsätts hur långt dess hörn ligger från husets, längs fogen. Har tillbyggnaden samma golv som det befintliga står det <em>FG lika bef</em>.</li>
         </ul>
-        <p><strong>Byggnader av flera kroppar.</strong> Ritar du två kroppar som går in i varandra, till exempel en vinkelbyggnad av två rektanglar, och de har samma status, visas de som en byggnad: en kontur runt hela, utan linjen mellan dem, och måtten runt byggnadens utsida. Klicka på byggnaden för att markera den kropp du klickar i; då syns kropparna var för sig och går att ändra. En tillbyggnad mot ett befintligt hus har olika status och ritas för sig, så att fogen syns. BYA räknar arean där kropparna går in i varandra en gång.</p>
+        <p><strong>Byggnader av flera kroppar.</strong> Ritar du två kroppar som går in i varandra, till exempel en vinkelbyggnad av två rektanglar, och de har samma status, visas de som en byggnad: en kontur runt hela, utan linjen mellan dem, och måtten runt byggnadens utsida. Klicka på byggnaden för att markera den kropp du klickar i; då syns kropparna var för sig och går att ändra. En tillbyggnad mot ett befintligt hus har olika status och ritas för sig, så att fogen syns. BYA räknar arean där kropparna går in i varandra en gång. Lantmäteriets hus på fastigheten räknas som befintliga också när du inte har tagit in dem, med gårdarna avdragna. Ett hus som du har ritat en ny byggnad över räknas inte. Fastigheten är den som huvudbyggnaden står på.</p>
         <p><strong>Takanslutning.</strong> När en flygel går in mot ett hus med högre tak slutar flygelns tak annars med en gavel mot huset. Markera flygeln och välj <em>Anslut taket</em> under <em>Takanslutning</em>: taket dras ut längs nocken in i huset tills gaveln är inne i det, så att taken möts i en vinkelränna. Du kan också skriva hur långt taket ska dras ut vid varje gavel. Det syns bara i 3D-vyn och räknas i skuggorna och sol på fasaderna; planen visar fotavtrycket som förut.</p>
         <p><strong>Underlaget.</strong> Under <em>Visa</em> finns det underlag som du har skapat: ortofotot, höjdkurvorna, träden, vägarna och skydden (strandskydd, skyddad natur och lämningar). Det som är ikryssat syns under ritningen och följer med på situationsplanen, utom ortofotot. Fastighetsgränserna ritas alltid ovanpå byggnaderna.</p>
         <p><strong>Mått.</strong> Knappen <em>Mått</em> visar eller döljer alla mått, också på situationsplanen. Klicka på ett mått för att skriva ett nytt eller välja <em>Dölj</em>. <em>Visa dolda mått</em> i panelen tar tillbaka dem. Dra ett yttermått eller ett mått mellan byggnader för att flytta måttlinjen längre ut eller in.</p>
