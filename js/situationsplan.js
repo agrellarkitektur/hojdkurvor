@@ -623,13 +623,13 @@
   /** Ritningshuvudet. Ger överkanten (mm). */
   function ritningshuvud(doc, skrift, font, opt, bx, bw, f, skala, format) {
     const U = g('Utskrift') || require('./utskrift.js');
-    const up = opt.uppgifter || {}, b = K().bya(opt.volymer || []);
+    const up = opt.uppgifter || {}, b = K().byaMedHus(opt.volymer || [], opt.hus || [], opt.ytor || [], up.fastighet);
     const rad = (etikett, varde) => [etikett, varde == null || varde === '' ? '–' : String(varde)];
     const falt = [
       rad('Fastighet', up.fastighet), rad('Kommun', up.kommun), rad('Åtgärd', up.uppdrag),
       rad('Skala', `1:${skala} (${format.toUpperCase()})`), rad('Datum', up.datum), rad('Ritad av', up.ritadAv), rad('Ritningsnummer', up.ritningsnummer),
       rad('Koordinatsystem', `${opt.zonNamn || ''}, RH 2000`.replace(/^, /, '')),
-      rad('Byggnadsarea', `tillkommande ${fmt(b.tillkommande, 1)} m², befintlig ${fmt(b.befintlig, 1)} m², totalt ${fmt(b.totalt, 1)} m²`),
+      rad('Byggnadsarea', `tillkommande ${fmt(b.tillkommande, 1)} m², befintlig ${fmt(b.befintlig, 1)} m²${b.lmhus ? ` (inräknat ${b.lmhus} hus från Lantmäteriet)` : !b.tomt && (opt.hus || []).length ? ' (bara inritade byggnader)' : ''}, totalt ${fmt(b.totalt, 1)} m²`),
     ];
     doc.setFontSize(7);
     const vw = bw - 30, varden = falt.map(([, v]) => doc.splitTextToSize(v, vw - 2));

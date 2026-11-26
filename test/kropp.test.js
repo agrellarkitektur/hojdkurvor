@@ -67,6 +67,80 @@ prov('måtten till tomtgräns: två gränser, två från långsidan och ett frå
   assert.deepStrictEqual(K.gransmatt(vr.fotavtryck, []), []);
 });
 
+prov('måtten till tomtgräns slutar på gränsen när gränsen har en brytpunkt (0.16.3, B2)', () => {
+  const hus = [[2, 0], [18, 0], [18, 4], [2, 4]];
+  const gr = [[[-5, 10], [10, 10], [25, 5]], [[-5, -20], [-5, 10]], [[-5, -20], [25, -20]], [[25, -20], [25, 5]]];
+  // avståndet från punkten p till gränslinjen
+  const avst = p => Math.min(...gr.flatMap(g => g.slice(1).map((b, i) => { const a = g[i], e = [b[0] - a[0], b[1] - a[1]], l2 = e[0] ** 2 + e[1] ** 2;
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * e[0] + (p[1] - a[1]) * e[1]) / l2)); return Math.hypot(p[0] - a[0] - e[0] * t, p[1] - a[1] - e[1] * t); })));
+  const m = K.gransmatt(hus, gr);
+  assert(m.length >= 2, `${m.length} mått`);
+  m.forEach(x => assert(avst(x.till) < 0.01, `måttet från ${x.fran} slutar ${avst(x.till).toFixed(2)} m från gränsen`));
+  // slumpade tomter: inget mått slutar utanför gränsen
+  let fro = 7; const sl = () => (fro = (fro * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 300; k++) {
+    const n = 4 + Math.floor(sl() * 3), ring = [];
+    for (let i = 0; i < n; i++) { const a = (i / n) * 2 * Math.PI + sl() * 0.6, r = 18 + sl() * 14; ring.push([Math.cos(a) * r, Math.sin(a) * r]); }
+    ring.push(ring[0]);
+    const b = 4 + sl() * 8, d = 3 + sl() * 5, h = [[-b / 2, -d / 2], [b / 2, -d / 2], [b / 2, d / 2], [-b / 2, d / 2]];
+    for (const x of K.gransmatt(h, [ring])) {
+      const dd = Math.min(...ring.slice(1).map((q, i) => { const a = ring[i], e = [q[0] - a[0], q[1] - a[1]], l2 = e[0] ** 2 + e[1] ** 2;
+        const t = Math.max(0, Math.min(1, ((x.till[0] - a[0]) * e[0] + (x.till[1] - a[1]) * e[1]) / l2)); return Math.hypot(x.till[0] - a[0] - e[0] * t, x.till[1] - a[1] - e[1] * t); }));
+      assert(dd < 0.05, `tomt ${k}: måttet slutar ${dd.toFixed(2)} m från gränsen`);
+    }
+  }
+});
+
+prov('BYA med Lantmäteriets hus på fastigheten som befintliga (0.16.3)', () => {
+  const tomt = { beteckning: 'Kinda Tomten 1:2', etikett: '1:2', ringar: [[[0, 0], [40, 0], [40, 30], [0, 30]]] };
+  const granne = { beteckning: 'Kinda Tomten 1:3', etikett: '1:3', ringar: [[[40, 0], [80, 0], [80, 30], [40, 30]]] };
+  const ny = { id: 'n', fotavtryck: [[5, 5], [17, 5], [17, 15], [5, 15]], huvudbyggnad: true };   // 120 m²
+  const hus = [
+    { id: 1, fotavtryck: [[25, 5], [35, 5], [35, 13], [25, 13]] },                                        // 80 m² på tomten
+    { id: 2, fotavtryck: [[50, 5], [60, 5], [60, 15], [50, 15]] },                                        // grannens
+    { id: 3, fotavtryck: [[20, 18], [38, 18], [38, 28], [20, 28]], hal: [[[24, 21], [34, 21], [34, 25], [24, 25]]] },   // 180 − 40
+  ];
+  const b = K.byaMedHus([ny], hus, [tomt, granne], null);
+  assert.strictEqual(b.lmhus, 2); assert.strictEqual(b.tomt, tomt);
+  nara(b.befintlig, 80 + 140, 1e-6); nara(b.tillkommande, 120, 1e-6); nara(b.totalt, 340, 1e-6);
+  // utan kroppar: fastigheten ur beteckningen; utan fastighet: bara kropparna
+  nara(K.byaMedHus([], hus, [tomt, granne], '1:3').befintlig, 100, 1e-6);
+  const utan = K.byaMedHus([ny], hus, [], null);
+  assert.strictEqual(utan.lmhus, 0); nara(utan.befintlig, 0, 1e-9); nara(utan.totalt, 120, 1e-6);
+});
+
+prov('ett hörn som dras över en annan sida ändrar ingenting (0.16.3)', () => {
+  const fem = [[0, 0], [10, 0], [10, 6], [5, 9], [0, 6]];
+  const v = K.nyPolygon(fem, { id: 'p', namn: 'P', golv: 10, takfot: 3 });
+  const fore = JSON.stringify(v.fotavtryck), a0 = K.area(v.fotavtryck);
+  const over = fem.map(q => q.slice()); over[3] = [5, -4];   // nocken dras ner under bottensidan
+  assert.strictEqual(K.korsarSig(over), true);
+  assert.strictEqual(K.satHorn(v, over), false);
+  assert.strictEqual(JSON.stringify(v.fotavtryck), fore); nara(K.area(v.fotavtryck), a0, 1e-9);
+  const ok = fem.map(q => q.slice()); ok[3] = [5, 12];
+  assert.strictEqual(K.korsarSig(ok), false);
+  K.satHorn(v, ok); nara(Math.abs(K.area(v.fotavtryck)), 60 + 30, 1e-6);
+});
+
+prov('union: en fog som slutar några millimeter från ett hörn (0.16.3, B1)', () => {
+  const A = [[0, 0], [10, 0], [10, 5], [0, 5]];
+  for (const d of [0, 0.001, 0.002, 0.003, 0.004, 0.01]) {
+    const B = [[10, d], [14, d], [14, 5 + d], [10, 5 + d]], C = [[10, d], [14, 0], [14, 5], [10, 5]];
+    nara(K.unionArea([A, B]), 70, 0.01); nara(K.unionArea([A, C]), 70 - 2 * d, 0.01);
+    nara(K.bya([{ id: 'a', fotavtryck: A }, { id: 'b', fotavtryck: B }]).totalt, 70, 0.01);
+  }
+  // slumpade par av axelparallella rätblock som ligger an eller nästan an: arean som summan minus överlappet
+  let fro = 11; const sl = () => (fro = (fro * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 2000; k++) {
+    const w = 2 + sl() * 10, h = 2 + sl() * 10, w2 = 2 + sl() * 10, h2 = 2 + sl() * 10;
+    const x2 = w + (sl() < 0.5 ? 0 : (sl() - 0.5) * 0.01), y2 = (sl() - 0.5) * h + (sl() < 0.3 ? Math.round(sl() * 8 - 4) / 1000 : 0);
+    const R = (x, y, b, c) => [[x, y], [x + b, y], [x + b, y + c], [x, y + c]];
+    const ox = Math.max(0, Math.min(w, x2 + w2) - Math.max(0, x2)), oy = Math.max(0, Math.min(h, y2 + h2) - Math.max(0, y2));
+    const ratt = w * h + w2 * h2 - ox * oy;
+    nara(K.unionArea([R(0, 0, w, h), R(x2, y2, w2, h2)]), ratt, 0.03, `par ${k}`);   // hörnen fogas inom 2 mm
+  }
+});
+
 prov('måtten mellan kroppar: tillbyggnaden mot huvudbyggnaden', () => {
   const h = rekt('h', 5, 6, 12.8, 9.4, { status: 'befintlig' });
   const t = rekt('t', 17.8, 6.3, 4, 5.6, { status: 'tillbyggnad' });
@@ -172,6 +246,10 @@ prov('kroppen ur ett befintligt hus och rensade hörn', () => {
   assert(K.area(v.fotavtryck) > 0);
   nara(v.golv, 101.23, 1e-9); nara(v.takfot, 5.6, 1e-9);
   assert(K.arRektangel(v.fotavtryck));
+  // ett hus med innergård blir ingen kropp, gården skulle annars fyllas (0.16.3, P6)
+  const gard = { id: 'g', fotavtryck: [[0, 0], [30, 0], [30, 30], [0, 30]], hal: [[[8, 8], [22, 8], [22, 22], [8, 22]]], mark: 10, hojd: 12 };
+  assert.strictEqual(K.franHus(gard, { id: 'k2', namn: 'Kvarter', golv: NaN }), null);
+  assert(K.franHus(Object.assign({}, gard, { hal: [] }), { id: 'k3', namn: 'Kvarter', golv: NaN }));
 });
 
 prov('flytta och vrida följer länkade kroppar (kedjan i 3D-vyn)', () => {

@@ -3621,7 +3621,8 @@
     document.body.classList.add('planvy-oppen');
     planvy = Planvy.oppna($('planvy'), {
       volymer: state.volymer, granser,
-      hus: hus.map(b => ({ id: b.id, fotavtryck: b.fotavtryck, mark: b.mark, hojd: b.hojd, huvudbyggnad: !!b.huvud, namn: Byggnad.beteckning(b) || 'Befintlig byggnad' })),
+      ytor: s && s.fastigheter ? s.fastigheter.ytor : [],
+      hus: hus.map(b => ({ id: b.id, fotavtryck: b.fotavtryck, hal: b.hal || [], mark: b.mark, hojd: b.hojd, huvudbyggnad: !!b.huvud, namn: Byggnad.beteckning(b) || 'Befintlig byggnad' })),
       utsnitt: state.utsnitt, zonNamn: T.zon(state.epsg).namn,
       markhojd: markhojdVid, nyttId: () => Utbyte.nyttId(), andrad: skissFranPlan,
       ram: lager.las('localStorage', 'terrang-situationsplan') || null,

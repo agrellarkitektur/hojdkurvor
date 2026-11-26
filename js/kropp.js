@@ -251,6 +251,9 @@
   }
   /** Kropp ur en befintlig byggnad från Lantmäteriet. Höjd och golv är skattade och kan ändras. */
   function franHus(b, mall) {
+    // En kropp är en ring utan hål. Ett hus med innergård skulle få gården fylld (BYA, skal, skuggor och sol på
+    // fasaderna), så det blir ingen kropp av det (0.16.3, P6 i granskningen 26 nov).
+    if ((b.hal || []).some(h => Array.isArray(h) && h.length >= 3)) return null;
     const v = nyPolygon(b.fotavtryck, Object.assign({ takfot: b.hojd != null ? avrunda(b.hojd, 1) : 3 }, mall));
     v.golv = b.mark != null && isFinite(b.mark) ? avrunda(b.mark, 2) : mall.golv;
     v.status = 'befintlig';
@@ -277,6 +280,9 @@
    * kroppen en polygon.
    */
   function satHorn(v, pts) {
+    // ett hörn som dras över en annan sida ger ett fotavtryck som korsar sig självt: fel area och fel vända
+    // fasader. Då ändras ingenting (0.16.3, granskningen 26 nov).
+    if (korsarSig(pts)) return false;
     const p = v.primitiv;
     if (p && (p.typ === 'block' || p.typ === 'prisma') && pts.length === 4 && arRektangel(pts)) {
       const r = (p.vrid || 0) * RAD, u = [Math.cos(r), Math.sin(r)], w = [-u[1], u[0]];
@@ -447,6 +453,25 @@
   /** Ett mått från hörnet c vinkelrätt mot sträckan s. */
   function mattMot(c, s) { const r = fot(c, s.a, s.b); return { fran: c, till: r.f, d: len(sub(r.f, c)) }; }
   /**
+   * Ett mått från hörnet c ut från sidan sd mot gränsen: mot sträckan s om hörnets fotpunkt ligger på den,
+   * annars mot en annan nästan parallell sträcka där fotpunkten hamnar (gränsen har en brytpunkt). Finns
+   * ingen sådan blir det inget mått. Förut drogs måttet mot sträckans förlängning och kunde sluta utanför
+   * gränsen (0.16.3, B2 i granskningen 26 nov).
+   */
+  function mattFran(c, sd, s, str) {
+    const cosMax = Math.cos(35 * RAD), pa = t => { const e = 0.02 / t.l, r = fot(c, t.a, t.b); return r.t >= -e && r.t <= 1 + e ? r : null; };
+    if (pa(s)) return mattMot(c, s);
+    let bast = null;
+    for (const t of str) {
+      if (t === s || Math.abs(dot(t.u, sd.u)) < cosMax) continue;
+      const r = pa(t);
+      if (!r || dot(sub(r.f, c), sd.n) <= 0.05) continue;
+      const d = len(sub(r.f, c));
+      if (!bast || d < bast.d) bast = { fran: c, till: r.f, d };
+    }
+    return bast;
+  }
+  /**
    * Mått till tomtgräns för ett fotavtryck, mot två gränser: långsidan får två mått (från båda hörnen
    * mot gränsen utanför den) och kortsidan ett (från hörnet som den delar med långsidan, mot en annan
    * gräns). Två av måtten går alltså till samma hörn, som SKR:s exempel. Alla mått är vinkelräta mot
@@ -474,7 +499,8 @@
     if (val) {
       const L = sd[val.i], S = sd[val.j], gemensam = val.j === (val.i + 1) % sd.length ? L.b : L.a;
       const sl = bast[val.i].s, ss = bast[val.j].s;
-      return [Object.assign(mattMot(L.a, sl), { sida: L.i }), Object.assign(mattMot(L.b, sl), { sida: L.i }), Object.assign(mattMot(gemensam, ss), { sida: S.i })];
+      return [[L.a, L, sl], [L.b, L, sl], [gemensam, S, ss]].map(([c, sd, st]) => { const m = mattFran(c, sd, st, str); return m && Object.assign(m, { sida: sd.i }); })
+        .filter(Boolean);
     }
     // reserv: de tre kortaste vinkelräta måtten från hörnen
     const alla = [];
@@ -574,6 +600,29 @@
     const befintlig = a(ytor(st => st === 'befintlig')), totalt = a(ytor(st => st !== 'rivs'));
     return { tillkommande: Math.max(0, totalt - befintlig), befintlig, rivs: a(ytor(st => st === 'rivs')), totalt };
   }
+  /**
+   * BYA med Lantmäteriets hus på fastigheten som befintliga (0.16.3, ägarens beslut 26 nov 2026): situationsplanen
+   * skrev förut "befintlig 0,0 m²" när husen inte var gjorda till kroppar. hus: Lantmäteriets hus som inte
+   * ersätts av en kropp ({ fotavtryck, hal }); ytor: fastigheterna ({ beteckning, etikett, ringar }). Fastigheten
+   * är den som huvudbyggnaden (annars första kroppen som inte rivs) står på, annars den med beteckningen
+   * fastighet. Gårdarna dras av. Ger bya() och { lmhus (antal hus som räknas), tomt (fastigheten eller null) }.
+   */
+  function byaMedHus(volymer, hus, ytor, fastighet) {
+    const vol = (volymer || []).filter(v => v.fotavtryck && v.fotavtryck.length >= 3);
+    const mitt = p => mul(p.reduce((s, q) => add(s, q), [0, 0]), 1 / p.length);
+    const iRingar = (ringar, x, y) => ringar.reduce((c, r) => (r && r.length >= 3 && inuti(r, x, y) ? !c : c), false);
+    const kand = (ytor || []).filter(y => Array.isArray(y.ringar) && y.ringar.length);
+    const ref = vol.find(v => v.huvudbyggnad && status(v) !== 'rivs') || vol.find(v => status(v) !== 'rivs');
+    let tomt = null;
+    if (ref) { const c = mitt(moturs(ref.fotavtryck)); tomt = kand.filter(y => iRingar(y.ringar, c[0], c[1])).sort((a, b) => (b.yta || 0) - (a.yta || 0))[0] || null; }
+    if (!tomt && fastighet) { const f = String(fastighet).trim().toLowerCase(); tomt = kand.find(y => [y.beteckning, y.etikett].some(t => t && String(t).trim().toLowerCase() === f)) || null; }
+    const pa = tomt ? (hus || []).filter(h => h.fotavtryck && h.fotavtryck.length >= 3 && (c => iRingar(tomt.ringar, c[0], c[1]))(mitt(h.fotavtryck))) : [];
+    const b = bya(vol.concat(pa.map(h => ({ fotavtryck: h.fotavtryck, status: 'befintlig' }))));
+    const gard = pa.reduce((s, h) => s + (h.hal || []).reduce((t, r) => t + (r && r.length >= 3 ? Math.abs(area(r)) : 0), 0), 0);
+    b.befintlig = Math.max(0, b.befintlig - gard); b.totalt = Math.max(0, b.totalt - gard);
+    b.lmhus = pa.length; b.tomt = tomt;
+    return b;
+  }
 
   // ------------------------------------------------------------------
   // Union och yttre skal (0.16.0)
@@ -590,6 +639,16 @@
   /** Avståndet från punkten c till sträckan a–b. */
   function avstand(c, a, b) { const r = fot(c, a, b), t = Math.max(0, Math.min(1, r.t)); return len(sub(c, add(a, mul(sub(b, a), t)))); }
   /** Skärningen mellan sträckorna a–b och c–d som läget längs a–b (0–1), eller null. Parallella ger null. */
+  /** Om fotavtrycket korsar sig självt: två sidor som inte är grannar möts. */
+  function korsarSig(pts) {
+    const p = rensa(pts), n = p.length;
+    if (n < 4) return false;
+    for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue;   // grannar genom slutet
+      if (skarning(p[i], p[(i + 1) % n], p[j], p[(j + 1) % n]) != null) return true;
+    }
+    return false;
+  }
   function skarning(a, b, c, d) {
     const r = sub(b, a), s = sub(d, c), q = r[0] * s[1] - r[1] * s[0];
     if (Math.abs(q) < 1e-12) return null;
@@ -630,7 +689,10 @@
           let behall = true;
           for (let j = 0; j < P.length && behall; j++) {
             if (j === i || !nara(i, j)) continue;
-            const pa = kant[j].find(([c, d]) => avstand(m, c, d) < tol && Math.abs(Math.abs(dot(norm(sub(d, c)), u)) - 1) < 1e-4);
+            // fog bara om mitten ligger längs den andra sidan, inte bara nära dess ände (0.16.3, B1: en bit på 2–4 mm
+            // intill en fog togs annars för fog, och ringen gick inte ihop)
+            const langs = (c, d) => { const r = fot(m, c, d); return r.t >= 0 && r.t <= 1 && len(sub(r.f, m)) < tol; };
+            const pa = kant[j].find(([c, d]) => langs(c, d) && Math.abs(Math.abs(dot(norm(sub(d, c)), u)) - 1) < 1e-4);
             if (pa) { if (dot(norm(sub(pa[1], pa[0])), u) < 0 || j < i) behall = false; }   // fog, eller samma sida i en tidigare polygon
             else if (inuti(P[j], m[0], m[1])) behall = false;
           }
@@ -645,11 +707,13 @@
     const sid = delar.map(([p0, p1]) => ({ a: index(p0), b: index(p1), anvand: false })).filter(s => s.a !== s.b);
     sid.forEach(s => { if (!ut.has(s.a)) ut.set(s.a, []); ut.get(s.a).push(s); });
     const ringar = [];
+    let oppen = false;
     for (const s0 of sid) {
       if (s0.anvand) continue;
       const ring = [];
-      let s = s0;
+      let s = s0, sista = null;
       while (s && !s.anvand) {
+        sista = s;
         s.anvand = true; ring.push(punkter[s.a]);
         const kand = (ut.get(s.b) || []).filter(x => !x.anvand);
         if (kand.length <= 1) { s = kand[0]; continue; }
@@ -658,9 +722,12 @@
         const sving = x => { const v = norm(sub(punkter[x.b], punkter[x.a])); return Math.atan2(inn[0] * v[1] - inn[1] * v[0], dot(inn, v)); };
         s = kand.sort((x, y) => sving(x) - sving(y))[0];
       }
+      if (sista.b !== s0.a) oppen = true;
       const r = rensa(ring, tol / 2);
       if (r.length >= 3 && Math.abs(area(r)) > 1e-6) ringar.push(r);
     }
+    // En ring som inte går ihop är ett fel i unionen. Hellre kropparna var för sig än en kropp som försvinner.
+    if (oppen) return P.map(p => p.map(q => q.slice()));
     return ringar;
   }
   /** Arean av unionen (hål dras av). */
@@ -714,7 +781,7 @@
 
   return {
     STATUS, SLAG, slag, satSlag, planmarke, for3d, gavlar, anslutTak, status, normalisera, forAnalys, ersatta, area, moturs, rensa, sidor, arRektangel, vinkel,
-    entrePunkt, flyttaEntre, andra, nyRektangel, nyPolygon, franHus, satFotavtryck, satHorn, satTakform, nockVal, satNock, flytta, vrid,
+    entrePunkt, flyttaEntre, andra, nyRektangel, nyPolygon, franHus, satFotavtryck, satHorn, korsarSig, byaMedHus, satTakform, nockVal, satNock, flytta, vrid,
     tal, tolka, strackor, gransmatt, relativaMatt, fogsidor, anliggande, yttermattSidor, hojdText, fgText, bya,
     inuti, union, unionArea, horIhop, skal,
   };

@@ -25,6 +25,7 @@
  *     ledare, ledareAndrad(ledare)  (valfria, 0.16.1) ledare med fritext [{ id, pts: [pil, text], text }]
  *     tradAndrat({ typ: 'ny'|'dolj'|'visa'|'bort', t, x, y }) (valfri, 0.16.1) ger den nya trädlistan
  *     fastighetVid(x, y)  (valfri, 0.16.1) Promise med fastigheterna i punkten [{ beteckning }]
+ *     ytor               (valfri, 0.16.3) fastigheterna med ringar, för BYA med Lantmäteriets hus på fastigheten
  *   }) → { stang(), volymer() }
  *
  * Kräver Kropp, Volym3D och Situationsplan. Kroppar med samma status som går in i varandra ritas som ett
@@ -486,9 +487,10 @@
         <section><h3>Hörn och sidor</h3><table class="pv-horn" data-horn></table>
           <p class="pv-not">${Kr.arRektangel(k.fotavtryck) ? 'Rektangel: en ny koordinat flyttar hela kroppen, en ny sidlängd flyttar motstående sida.' : 'En ny koordinat flyttar hörnet, en ny sidlängd flyttar nästa hörn.'} Koordinaterna är i ${esc(opt.zonNamn || 'zonen')}.</p></section>`;
       } else {
-        const b = Kr.bya(S.volymer);
+        // Lantmäteriets hus på fastigheten räknas som befintliga, som på situationsplanen (0.16.3)
+        const b = Kr.byaMedHus(S.volymer, synligaHus(), opt.ytor || [], opt.uppgifter ? opt.uppgifter().fastighet : null);
         o += `<section><h3>Byggnadskroppar</h3><div class="pv-lista">${S.volymer.map(v => `<button type="button" data-valj="${esc(v.id)}"><span>${esc(v.namn)}</span><span class="pv-tagg">${Kr.STATUS[Kr.status(v)]}</span></button>`).join('') || '<p class="pv-not">Inga kroppar än. Rita med Rektangel eller Polygon, eller ta in ett befintligt hus.</p>'}</div>
-          <div class="pv-harlett">BYA tillkommande ${fmt(b.tillkommande, 1)} m²<br>BYA befintlig ${fmt(b.befintlig, 1)} m²<br>BYA totalt ${fmt(b.totalt, 1)} m²${b.rivs ? `<br>Rivs ${fmt(b.rivs, 1)} m²` : ''}</div>
+          <div class="pv-harlett">BYA tillkommande ${fmt(b.tillkommande, 1)} m²<br>BYA befintlig ${fmt(b.befintlig, 1)} m²<br>BYA totalt ${fmt(b.totalt, 1)} m²${b.rivs ? `<br>Rivs ${fmt(b.rivs, 1)} m²` : ''}${b.lmhus ? `<br>Befintlig inräknat ${b.lmhus} hus från Lantmäteriet` : ''}</div>
           ${opt.saknas ? `<p class="pv-not">${esc(opt.saknas)}</p>` : ''}</section>`;
         if (S.visa.koordlista) {
           const kl = SP().numreradeHorn(S.volymer);
@@ -574,7 +576,7 @@
           const p = k.fotavtryck.map(q => q.slice()), d = [0, 0];
           d[c] = x - p[i][c];
           if (Kr.arRektangel(p)) Kr.flytta(S.volymer, k.id, d[0], d[1]);
-          else { p[i] = add(p[i], d); Kr.satHorn(k, p); }
+          else { p[i] = add(p[i], d); if (Kr.satHorn(k, p) === false) besked('Hörnet kan inte ligga där: sidorna skulle korsa varandra.'); }
         });
         return;
       }
@@ -588,7 +590,7 @@
       const p = k.fotavtryck.map(q => q.slice()), n = p.length, a = p[i], b = p[(i + 1) % n], u = norm(sub(b, a)), d = mul(u, l - len(sub(b, a)));
       if (Kr.arRektangel(p)) { p[(i + 1) % n] = add(p[(i + 1) % n], d); p[(i + 2) % n] = add(p[(i + 2) % n], d); }
       else p[(i + 1) % n] = add(b, d);
-      Kr.satHorn(k, p);
+      if (Kr.satHorn(k, p) === false) besked('Sidan kan inte vara så lång: sidorna skulle korsa varandra.');
     }
     panel.addEventListener('click', e => {
       const b = e.target.closest('button');
@@ -675,6 +677,10 @@
       S.ritar = []; satVerktyg('valj');
     }
     function franHus(h) {
+      if ((h.hal || []).some(r => r && r.length >= 3)) {
+        besked('Huset har en innergård. Hus med gård går inte att göra om till kropp än, eftersom gården då skulle räknas som byggd.');
+        return;
+      }
       andra(() => {
         const v = Kr.franHus(h, { id: opt.nyttId(), namn: h.namn || 'Befintlig byggnad', golv: golvVid(tyngd(h.fotavtryck)) });
         S.volymer.unshift(v); S.vald = v.id;
