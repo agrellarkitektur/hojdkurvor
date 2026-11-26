@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **DX**.
+Senast använda nummer: **ED**.
 
 ## Inkorg
 
@@ -19,6 +19,12 @@ Senast använda nummer: **DX**.
 - **DV** Knappen för att uppdatera: förtydliga att man bara uppdaterar befintligt utsnitt när man klickar igen. Tooltipen säger att redan hämtat underlag inte hämtas om, men andra gången går det mycket fortare, och det syns inte i knappen.
 - **DW** Kopiera sammanfattning och logg som text: en knapp som kopierar statusen och loggen, så att man kan klistra in den här som felsökning.
 - **DX** Strandskydd (till BG): nu får jag strandskydd även med marktäcke urkryssat, men det dyker upp på båda sidor om strandlinjen, även inne i sjön. Det blir olyckligt.
+- **DY** Fler soldiagram för andra plushöjder än marknivå, så att man kan se hur det blir på en takterrass till exempel. Då kan man lägga till flera extra rader som skapar fler soldiagram i mappen, men bara marknivå syns i platsanalysen.
+- **DZ** Byta ut träd från ringar till andra symboler i exporterna direkt i Höjdkurvor-appen.
+- **EA** Exportera träd som block i DXF i stället för cirklar, så att man kan byta ut dem mot egna block.
+- **EB** Importera volymmodeller i IFC i skissläget, för att kunna anpassa analyserna efter redan befintliga modeller.
+- **EC** Uppdatera sektionsfunktionen så att den faktiskt ritar ut byggnader och träd i och framför snittet. Möjlighet att välja sektionens siktdjup grafiskt i planen?
+- **ED** Möjlighet att importera träd i Revit och ArchiCAD. Dels som plansymboler (cirkel eller trädsymbol som i DXF-symbolen), men också som 3D-objekt där varje objekt har en ankarpunkt i centrum vid mark och möjlighet att automatiskt byta ut 3D-objekten mot Enscape-proxies (eller andra proxies). Behövs importplugin för respektive program då?
 
 ## Att testa
 
