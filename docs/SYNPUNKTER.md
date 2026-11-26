@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **DT**.
+Senast använda nummer: **DX**.
 
 ## Inkorg
 
@@ -15,6 +15,10 @@ Senast använda nummer: **DT**.
 - **CF** Konkurrent: hojdkartan.se (C. Frid AB) läser in allt underlag dynamiskt utan att man anger inloggning till Lantmäteriet. Går det med licensvillkoren? *Bedömning: Markhöjdmodellen är en värdefull datamängd under CC BY 4.0 utan personuppgifter och får spridas fritt med källangivelse, också från egen server. Byggnad, Fastighetsindelning och Ortofoto räknar Lantmäteriet som personuppgifter, med egna villkor (prövning, lagring inom EU/EES) som måste läsas innan de visas fritt. Rätten till datan är inte rätt att låta andra använda ditt konto mot tjänsten: det kräver att data hämtas och lagras på egen server, eller besked från Lantmäteriet. Att vem som helst kan hämta datan är redan fallet: den är öppen. Fråga Lantmäteriet (geodatasupport@lm.se) innan något byggs. Hänger ihop med BÅ.*
 - **DR** Koordinatkryss med jämna intervaller, utritade i zip-filen och på situationsplanen.
 - **DS** Baskarteutdrag: många kommuner erbjuder gratis baskarteutdrag som PDF. Det vore fint om man kunde ladda upp en sådan PDF i sitt projekt, klicka i hur till exempel en kantstenslinje, ett staket eller en stödmur ser ut (tjocklek och färg), och få det som ett DXF-lager med rätt skala och placering.
+- **DU** Statusen under *Skapa*: en klocka som tickar eller liknande, så man ser att något händer. Väntar den på ett underlag för länge (till exempel OSM-vägarna, som hängde sig nyss) går den vidare och gör klart resten, och man kan försöka skapa det saknade igen.
+- **DV** Knappen för att uppdatera: förtydliga att man bara uppdaterar befintligt utsnitt när man klickar igen. Tooltipen säger att redan hämtat underlag inte hämtas om, men andra gången går det mycket fortare, och det syns inte i knappen.
+- **DW** Kopiera sammanfattning och logg som text: en knapp som kopierar statusen och loggen, så att man kan klistra in den här som felsökning.
+- **DX** Strandskydd (till BG): nu får jag strandskydd även med marktäcke urkryssat, men det dyker upp på båda sidor om strandlinjen, även inne i sjön. Det blir olyckligt.
 
 ## Att testa
 
