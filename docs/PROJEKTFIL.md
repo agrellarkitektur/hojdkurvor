@@ -185,8 +185,9 @@ Nya fält som en äldre app kan strunta i kräver ingen ny version.
 
 ## I webbläsaren
 
-- IndexedDB-databasen `terrangunderlag`, version 2 (version 1 hade bara
-  kommunfilerna), objektlagringen `projekt` med `projekt.id` som nyckel. En post:
+- IndexedDB-databasen `terrangunderlag`, version 3 (version 1 hade bara
+  kommunfilerna, version 2 lade till `projekt` och version 3, i 0.13.6, `resultat` med det
+  senaste underlaget per projekt). Objektlagringen `projekt` har `projekt.id` som nyckel. En post:
   `{ id, namn, kommun, andrad, sparadFil, filInnehall, forhand, antal, storlek,
   data, bilagor }`, där `data` är projektet i samma form som `projekt.json`,
   `forhand` en liten SVG till listan och `filInnehall` innehållet när filen

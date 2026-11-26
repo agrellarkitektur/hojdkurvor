@@ -583,7 +583,8 @@ Blocket *Skapa underlag* i `app.js`. Lyssnaren på `#skapa` gör bara detta:
 
 1. `lasSkapaVal(kor)`: läser och kontrollerar valen. Ger inget (och ett besked på statusraden)
    om något saknas. Inget är låst än.
-2. Låser knappen och projektbytet, nollställer resultatet.
+2. Låser knappen och projektbytet, gör panelen `inert` och ramen fast (0.16.3), och tar bort
+   resultatet från kartan. Det sparade resultatet tas bort först när terrängen är klar.
 3. `planeraSkapa(kor)`: områdena (`kor.rm` i zonen, `kor.tmBox` i TM, med marginaler för
    skuggor 150 m, skyfall 60 m, hus 30 m, sektioner och horisontens 400 m) och förloppets
    vikter (`kor.delFramsteg`). Ger `false` om analysområdet blir över 6 km².
@@ -591,10 +592,14 @@ Blocket *Skapa underlag* i `app.js`. Lyssnaren på `#skapa` gör bara detta:
    `skapaTerrang`, `skapaLaser`, `skapaByggnader`, `stallVolymerPaMarken`, `skapaAnalyser`
    (träd, höjd över mark, skuggor), `skapaMarklager` (höjdpunkter, lutning, skyfall),
    `skapaSkissfiler`, `skapaSkydd`, `skapaSektioner`, `skapaFastigheter`, `skapaMarktacke`, `skapaStrandskydd` (0.13.5),
-   `skapaOrtofoto`, `skapaStompunkter`, `skapaVagar`, `skapaSol`, `skapaLagerPdf`, `skapaBlad`,
-   `skapaProjektfilen`, `skapaSamladDxf`, `forberedZip` (0.13.5, förut `packaZip`), `visaKlart`.
-5. `catch` (inloggningsfel och andra fel på statusraden) och `finally` (knappen, vridningen,
-   projektlåset) som förut.
+   `skapaOrtofoto`, `skapaStompunkter`, `skapaVagar`, `skapaSol`, `skapaFasadsol` (0.15.0),
+   `skapaLagerPdf`, `skapaBlad`, `skrivBildguide`, `skapaProjektfilen`, `skapaSamladDxf`,
+   `forberedZip` (0.13.5, förut `packaZip`), `noteraHamtminne`, `visaKlart`: 25 steg. Ett fel i
+   ett steg utom `SKAPA_AVBRYTER` (terrängen, laserdatan, visningen) blir en varning med namnet ur
+   `STEG_NAMN` (0.16.3).
+5. `catch` (inloggningsfel och andra fel på statusraden, lagren som hann ritas tas bort) och
+   `finally` (knappen, vridningen, projektlåset). Kom terrängen aldrig fram läses det förra
+   resultatet in igen (0.16.3).
 
 - **`kor`** är körningens objekt. Varje steg läser det det behöver överst
   (`const { val, r, epsg, filer, … } = kor;`) och lägger det det tar fram i `kor`
