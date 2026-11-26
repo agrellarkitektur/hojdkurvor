@@ -1164,6 +1164,9 @@
   ['change'].forEach(t => $('g-lokalt').addEventListener(t, sammanfatta));
 
   const NYCKEL = 'terrang-inloggning';
+  // Enter i inloggningen ska inte skicka formuläret. Lyssnaren ersätter onsubmit i sidan (0.16.3), så att
+  // sidorna är fria från inbäddade skript och en Content-Security-Policy utan 'unsafe-inline' går att slå på.
+  $('inloggning').addEventListener('submit', e => e.preventDefault());
   const b64url = {
     koda(text) {
       let bin = '';
