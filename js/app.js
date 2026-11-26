@@ -444,10 +444,12 @@
     m.on('dragend', () => { satGeoFranUtsnitt(); uppdateraKommun(); visaUtsnitt(); });
     return m;
   }
+  /** Ramen går inte att ändra när området är låst eller medan underlaget skapas (0.16.3, C1). */
+  const ramLast = () => state.last || !!state.skapar;
   /** Flytta hela området genom att dra i ramen. Kanterna stannar på jämna STEG. */
   let ramDrag = null;
   function startaRamDrag(e) {
-    if (ritar || punktlage || !state.utsnitt || state.last) return;
+    if (ritar || punktlage || !state.utsnitt || ramLast()) return;
     if (e.originalEvent && e.originalEvent.button) return;
     L.DomEvent.stop(e);
     const p0 = franLatLng(state.epsg)([e.latlng.lat, e.latlng.lng]);
@@ -494,14 +496,14 @@
       ramGrepp = L.polygon(poly, { pane: 'ramPane', renderer: ramRitare, color: '#000', opacity: 0, weight: 16, fill: false, interactive: true, bubblingMouseEvents: false });
       ramGrepp.on('mousedown', startaRamDrag);
     } else ramGrepp.setLatLngs(poly);
-    if (!karta.hasLayer(ramGrepp) && !state.last) ramGrepp.addTo(karta);
-    if (state.last) ramGrepp.remove();
+    if (!karta.hasLayer(ramGrepp) && !ramLast()) ramGrepp.addTo(karta);
+    if (ramLast()) ramGrepp.remove();
     const mx = (r.xmin + r.xmax) / 2, my = (r.ymin + r.ymax) / 2;
     const pos = { n: [mx, r.ymax], s: [mx, r.ymin], v: [r.xmin, my], o: [r.xmax, my] };
     for (const k of ['n', 's', 'v', 'o']) {
       if (!handtag[k]) handtag[k] = nyttHandtag(k);
       if (k !== utom) handtag[k].setLatLng(t(pos[k]));
-      if (state.last) handtag[k].remove();
+      if (ramLast()) handtag[k].remove();
       else if (!karta.hasLayer(handtag[k])) handtag[k].addTo(karta);
     }
     // kryssrutan sitter i ramens övre högra innerhörn
@@ -513,7 +515,7 @@
       stangMarkor.on('click', rensaUtsnitt);
     }
     stangMarkor.setLatLng(t([r.xmax, r.ymax]));
-    if (state.last) stangMarkor.remove();
+    if (ramLast()) stangMarkor.remove();
     else if (!karta.hasLayer(stangMarkor)) stangMarkor.addTo(karta);
     // mått utan decimaler: bredden ovanför ramen, höjden till höger
     const mattIkon = (txt, klass) => L.divIcon({ className: '', html: `<span class="matt ${klass}">${txt}</span>`, iconSize: [0, 0] });
@@ -604,7 +606,7 @@
       $('skapa').disabled = true;
     } else {
       visaStatus(area > STOR_AREA ? 'Stort område – det kan ta en halv minut eller mer.' : 'Klart att skapa underlag.');
-      $('skapa').disabled = false;
+      $('skapa').disabled = !!state.skapar;   // inte upplåst mitt i en körning (0.16.3, C1)
     }
   }
 
@@ -1513,7 +1515,7 @@
     const p = $('hor-punkt-text');
     if (!state.horPunkt) { p.textContent = 'Punkten är utsnittets mitt.'; return; }
     horMarkor = L.marker(state.horPunkt, {
-      draggable: true, keyboard: false, title: 'Betraktelsepunkt för horisonten',
+      draggable: !state.skapar, keyboard: false, title: 'Betraktelsepunkt för horisonten',
       icon: L.divIcon({ className: 'horpunkt', iconSize: [22, 22], iconAnchor: [11, 11], html: '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8"/><circle class="prick" cx="11" cy="11" r="2.5"/></svg>' }),
     }).addTo(karta);
     horMarkor.on('dragend', () => { const ll = horMarkor.getLatLng(); state.horPunkt = [ll.lat, ll.lng]; planeraSpara(); ritaHorPunkt(); nollstallResultat(); });
@@ -3568,6 +3570,16 @@
       visaStatus('Situationsplanen kunde inte skapas: ' + e.message);
     }
   }
+  /**
+   * Sidan bakom en öppen planvy eller 3D-vy går inte att nå (0.16.3, D6): förut kom man med Tab till Skapa och
+   * till en andra 3D-vy bakom den öppna. Planvyn kan öppnas ovanpå 3D-vyn, och då är 3D-vyn bakgrund.
+   */
+  function satVyBakgrund() {
+    const plan = !!planvy, tre = !$('vy3d').hidden;
+    document.querySelector('.toppmeny').inert = plan || tre;
+    document.querySelector('.layout').inert = plan || tre;
+    $('vy3d').inert = plan && tre;
+  }
   function oppnaPlanvy() {
     if (planvy) return;
     if (!state.utsnitt) { visaStatus('Rita ett utsnitt under 01 Plats först.'); return; }
@@ -3614,6 +3626,7 @@
       stangd: () => {
         document.body.classList.remove('planvy-oppen');
         planvy = null;
+        satVyBakgrund();
         if (planAndrad && state.senaste) {
           $('skapa').classList.remove('gjord');
           visaStatus('Skissen är ändrad i planvyn. Välj Skapa igen för att räkna om skuggor, horisont och filer med den.');
@@ -3623,6 +3636,7 @@
       },
     });
     if (window.TERRANG_TEST) window.TERRANG_TEST.planvy = planvy;
+    satVyBakgrund();
   }
   $('skiss-plan').addEventListener('click', oppnaPlanvy);
   $('till-cadapa').addEventListener('click', () => tillCadApa($('status-text')));
@@ -3881,6 +3895,18 @@
     state.skapar = pa;
     ['projekt-nytt', 'projekt-oppna', 'projekt-las-igen', 'skiss-importera'].forEach(id => { $(id).disabled = pa; });
     document.querySelectorAll('#projekt-lista .projekt-post:not(.aktivt)').forEach(b => { b.disabled = pa; });
+    // Panelen och ramen ligger stilla medan underlaget skapas (0.16.3, C1 och C2): stegen läser panelen under
+    // körningen, och en ändring där tog bort lager som redan var ritade eller släppte Skapa-knappen.
+    $('panel-rulla').inert = pa;
+    document.body.classList.toggle('skapar', pa);
+    if (pa) {
+      if (ritar) satRitlage(false);
+      if (punktlage) satPunktlage(false);
+      if (sektionRitar) satSektionslage(false);
+      if (horValjer) satHorisontlage(false);
+    }
+    if (horMarkor && horMarkor.dragging) { if (pa) horMarkor.dragging.disable(); else horMarkor.dragging.enable(); }
+    if (state.utsnitt) ritaUtsnittsGrafik();
   }
   /** Sant, med ett besked, om ett projektbyte försöks medan underlaget skapas (fil som släpps på kartan, skiss från cad-apa). */
   function bytetLast() {
@@ -4407,11 +4433,20 @@
   const HJALP3D = $('vy3d-hjalp').innerHTML;
   /** Sparade val i 3D-vyn: en färg (#rrggbb) ur localStorage, annars förvalet. */
   const sparadFarg = (nyckel, forval) => { const c = lager.las('localStorage', nyckel); return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : forval; };
+  // En vy i taget (0.16.3, C17): två klick innan den första vyn är klar gav två vyer, och den första ritade
+  // vidare utan att synas och behöll sina lyssnare.
+  let oppnar3d = false;
   $('visa-3d').addEventListener('click', async () => {
+    if (oppnar3d) return;
+    oppnar3d = true;
+    try { await visa3d(); } finally { oppnar3d = false; }
+  });
+  async function visa3d() {
     const s = state.senaste;
     if (!s || !s.rutnat) return;
     $('vy3d').hidden = false;
     document.body.classList.add('vy3d-oppen');
+    satVyBakgrund();
     try {
       await Promise.all([!window.Trad3D && 'js/trad3d.js', 'js/bild3d.js', !window.Volym3D && 'js/volym3d.js'].filter(Boolean).map(laddaSkript));
       await laddaSkript('js/vy3d.js');
@@ -4483,9 +4518,10 @@
       $('vy3d-yta').textContent = '3D-vyn kunde inte öppnas: ' + e.message;
     }
     $('vy3d-stang').focus();
-  });
+  }
   const stang3d = () => {
     stoppaUppspelning(); $('vy3d').hidden = true; document.body.classList.remove('vy3d-oppen');
+    satVyBakgrund();
     const andrad = vy3d && vy3d.skissAndrad();
     stangTakpanel(); stangTradpanel(); stangLasso(); $('vy3d-modell').hidden = true;
     if (vy3d) { vy3d.stang(); vy3d = null; }
