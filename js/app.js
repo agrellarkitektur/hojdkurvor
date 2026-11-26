@@ -2896,7 +2896,11 @@
     const knapp = $('skapa');
     knapp.disabled = true;
     lasProjektbyte(true);
-    nollstallResultat();
+    // Det sparade resultatet tas bort först när terrängen är klar (0.16.3, C8): säger planeringen nej eller
+    // går höjddatan inte att hämta (fel lösenord, Lantmäteriet nere) läses det förra underlaget in igen.
+    nollstallResultat({ behall: true });
+    const projektId = aktivtProjekt();
+    let felText = null;
     matare(0);
     try {
       if (!planeraSkapa(kor)) { matare(null); return; }
@@ -2905,17 +2909,25 @@
       T.lokal.vrid = kor.vrid;
       // det som redan är hämtat för samma område används igen (AY)
       if (typeof Hamtminne !== 'undefined') Hamtminne.borja({ r: kor.r, epsg: kor.epsg });
-      for (const steg of SKAPA_STEG) await steg(kor);
+      for (const steg of SKAPA_STEG) {
+        await steg(kor);
+        if (steg === skapaTerrang) { glomResultat(); kor.forraBorta = true; }
+      }
     } catch (err) {
       matare(null);
-      if (err instanceof T.InloggningsFel) { visaStatus(err.message, true); $('anv').focus(); }
-      else { console.error(err); visaStatus((err && err.message) || 'Något gick fel när underlaget skapades.', true); }
+      if (err instanceof T.InloggningsFel) { felText = err.message; visaStatus(err.message, true); $('anv').focus(); }
+      else { console.error(err); felText = (err && err.message) || 'Något gick fel när underlaget skapades.'; visaStatus(felText, true); }
     } finally {
       if (typeof Hamtminne !== 'undefined') Hamtminne.sluta();
       knapp.disabled = false;
       sammanfatta();
       T.lokal.vrid = 0;
       lasProjektbyte(false);
+    }
+    if (!kor.forraBorta && !state.senaste && projektId === aktivtProjekt()) {
+      const st = $('status-text'), text = felText || st.textContent, fel = !!felText || st.classList.contains('fel');
+      await lasInResultat(projektId);
+      if (state.senaste) visaStatus(`${text} Det förra underlaget finns kvar.`, fel);
     }
   });
 
@@ -3340,6 +3352,7 @@
    */
   async function laddaSkiss(sk, kalla) {
     if (bytetLast()) return;
+    stangVyer();
     const p = sk.plats;
     if (p && p.utsnitt && p.koordinatsystem && p.koordinatsystem.plan) {
       const e = Number(p.koordinatsystem.plan.epsg), u = p.utsnitt;
@@ -3579,6 +3592,12 @@
     document.querySelector('.toppmeny').inert = plan || tre;
     document.querySelector('.layout').inert = plan || tre;
     $('vy3d').inert = plan && tre;
+  }
+  /** Stänger planvyn och 3D-vyn. Båda håller en egen kopia av kropparna, och nästa ändring där skulle skriva
+   * tillbaka den över en ny skiss eller in i ett annat projekt (0.16.3, C7). */
+  function stangVyer() {
+    if (planvy) planvy.stang();
+    if (!$('vy3d').hidden) stang3d();
   }
   function oppnaPlanvy() {
     if (planvy) return;
@@ -3939,6 +3958,7 @@
   }
   function oppnaProjektInre(d, o = {}) {
     if (state.proj) clearTimeout(state.proj.timer);
+    stangVyer();
     if (sektionRitar) satSektionslage(false);
     if (horValjer) satHorisontlage(false);
     if (ritar) satRitlage(false);
