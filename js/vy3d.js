@@ -1596,9 +1596,16 @@
         window.removeEventListener('blur', slappTangenter);
         document.removeEventListener('mousemove', musLas);
         document.removeEventListener('pointerlockchange', lasAndrat);
-        renderer.dispose();
+        // Grafikminnet släpps (0.16.3, C16): dolda hus och fasadnumren ligger utanför scenen, skuggkartan
+        // släpps inte av renderer.dispose(), och kontexten lever annars tills webbläsaren städar.
+        const slapp = o => o.traverse(q => { if (q.geometry) q.geometry.dispose(); if (q.material && q.material.dispose) { if (q.material.map) q.material.map.dispose(); q.material.dispose(); } });
+        doldaHus.forEach(lista => lista.forEach(slapp)); doldaHus.clear();
+        nummerCache.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); nummerCache.clear();
+        if (sol.shadow && sol.shadow.map) sol.shadow.dispose();
         scen.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.dispose) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
         material().concat([djupMat, normalMat, leraMat]).forEach(m => { if (m) { if (m.map) m.map.dispose(); m.dispose(); } });
+        renderer.dispose();
+        renderer.forceContextLoss();
         yta.innerHTML = '';
       },
     };

@@ -1291,7 +1291,10 @@
     return laddade[src];
   }
   async function base64Fil(url) {
-    const buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    // en felsida är inget typsnitt (0.16.3, C9): förut sparades den och alla PDF:er gick fel till omladdning
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`${url} kunde inte hämtas (${r.status})`);
+    const buf = new Uint8Array(await r.arrayBuffer());
     let bin = '';
     for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
     return btoa(bin);
@@ -1708,7 +1711,7 @@
   // kor.laserYta (ytmodellen), kor.filer (zip-filens innehåll), kor.varningar och kor.senaste
   // (det som blir state.senaste). Ett steg läser det det behöver ur kor överst och lägger det
   // det tar fram i kor. Ett steg som misslyckas lägger en varning och låter resten fortsätta;
-  // bara höjddatan och terrängen avbryter hela körningen.
+  // bara terrängen (med höjddatan), laserdatan och visningen avbryter hela körningen (SKAPA_AVBRYTER, 0.16.3).
   /** Läser och kontrollerar det användaren har valt. Ger false (med ett besked på statusraden) om något saknas. */
   function lasSkapaVal(kor) {
     const anv = $('anv').value.trim(), losen = $('losen').value; kor.anv = anv; kor.losen = losen;
@@ -2891,6 +2894,13 @@
    * räknas in i markmodellen från skapaTerrang, byggnaderna behövs för träden och skuggorna,
    * ortofotot för vägarnas bredd, och bladet, den samlade DXF:en och zip-filen kommer sist.
    */
+  const SKAPA_AVBRYTER = new Set([skapaTerrang, skapaLaser, visaKlart]);
+  /** Stegen med namn i en varning, när de går fel (0.16.3). */
+  const STEG_NAMN = { skapaByggnader: 'Byggnaderna', stallVolymerPaMarken: 'Skissvolymerna', skapaAnalyser: 'Analyserna', skapaMarklager: 'Marklagren',
+    skapaSkissfiler: 'Skissfilerna', skapaSkydd: 'Skydd', skapaSektioner: 'Sektionerna', skapaFastigheter: 'Fastighetsindelningen', skapaMarktacke: 'Marktäcket',
+    skapaStrandskydd: 'Strandskyddet', skapaOrtofoto: 'Ortofotot', skapaStompunkter: 'Stompunkterna', skapaVagar: 'Vägarna', skapaSol: 'Solen',
+    skapaFasadsol: 'Sol på fasaderna', skapaLagerPdf: 'Lager-PDF:en', skapaBlad: 'Platsanalysbladet', skrivBildguide: 'Bildguiden',
+    skapaProjektfilen: 'Projektfilen', skapaSamladDxf: 'Den samlade DXF:en', forberedZip: 'Zip-filen', noteraHamtminne: 'Hämtminnet' };
   const SKAPA_STEG = [skapaTerrang, skapaLaser, skapaByggnader, stallVolymerPaMarken, skapaAnalyser, skapaMarklager, skapaSkissfiler, skapaSkydd, skapaSektioner, skapaFastigheter, skapaMarktacke, skapaStrandskydd, skapaOrtofoto, skapaStompunkter, skapaVagar, skapaSol, skapaFasadsol, skapaLagerPdf, skapaBlad, skrivBildguide, skapaProjektfilen, skapaSamladDxf, forberedZip, noteraHamtminne, visaKlart];
 
   $('skapa').addEventListener('click', async () => {
@@ -2913,11 +2923,21 @@
       // det som redan är hämtat för samma område används igen (AY)
       if (typeof Hamtminne !== 'undefined') Hamtminne.borja({ r: kor.r, epsg: kor.epsg });
       for (const steg of SKAPA_STEG) {
-        await steg(kor);
+        // Höjddatan, terrängen, laserdatan och visningen avbryter körningen. Ett fel i något annat steg blir en
+        // varning, så att resten av underlaget blir klart (0.16.3, C3).
+        if (SKAPA_AVBRYTER.has(steg)) await steg(kor);
+        else {
+          try { await steg(kor); } catch (e) {
+            if (e instanceof T.InloggningsFel) throw e;
+            console.error(e);
+            kor.varningar.push(`${STEG_NAMN[steg.name] || steg.name} gick inte att göra: ${(e && e.message) || e}`);
+          }
+        }
         if (steg === skapaTerrang) { glomResultat(); kor.forraBorta = true; }
       }
     } catch (err) {
       matare(null);
+      nollstallResultat({ behall: true });   // lagren som hann ritas hör inte till något resultat (C3)
       if (err instanceof T.InloggningsFel) { felText = err.message; visaStatus(err.message, true); $('anv').focus(); }
       else { console.error(err); felText = (err && err.message) || 'Något gick fel när underlaget skapades.'; visaStatus(felText, true); }
     } finally {
@@ -4122,9 +4142,11 @@
     else if (!pr.filInnehall) text = `${namn}. Sparas i webbläsaren medan du arbetar. Ingen projektfil är sparad.`;
     else if (osparad) text = `${namn}. Ändrat sedan projektfilen sparades${pr.sparadFil ? ' ' + datumKort(pr.sparadFil) : ''}. Allt finns kvar i webbläsaren.`;
     else text = `${namn}. Samma som projektfilen${pr.sparadFil ? ' från ' + datumKort(pr.sparadFil) : ''}.`;
-    if (pr.annanFlik) text = 'Projektet har ändrats i en annan flik. Ändringar här sparas inte förrän du väljer.';
+    if (pr.annanFlik === 'borttaget') text = 'Projektet är borttaget i en annan flik. Ändringar här sparas inte, om du inte väljer att behålla det.';
+    else if (pr.annanFlik) text = 'Projektet har ändrats i en annan flik. Ändringar här sparas inte förrän du väljer.';
     $('projekt-status').textContent = visaProjektbesked.text || text;
     $('projekt-annan-flik').hidden = !pr.annanFlik;
+    $('projekt-las-igen').hidden = pr.annanFlik === 'borttaget';
   }
   /** Säger till om volymer eller sektioner hamnat utanför utsnittet. De ligger kvar i projektet. */
   function flaggaUtanfor() {
@@ -4185,6 +4207,8 @@
         if (!window.confirm(`Ta bort projektet ${p.namn || 'utan namn'} ur webbläsaren?` + (oppet ? ' Det är öppet, så ett nytt, tomt projekt öppnas.' : '') + ' En sparad projektfil påverkas inte.')) return;
         await Projekt.dbTaBort(p.id);
         try { await Resultat.taBort(p.id); } catch (e) { /* ignoreras */ }
+        // en annan flik med projektet öppet ska inte spara tillbaka det (0.16.3, A6)
+        if (KANAL) KANAL.postMessage({ id: p.id, flik: FLIK, borttaget: true });
         if (oppet) { state.proj.iDb = false; state.proj.senastInnehall = Projekt.innehall(state.proj.d); await nyttProjekt(); }
         ritaProjektlista(); visaSparadeProjekt();
       });
@@ -4238,7 +4262,11 @@
   if (KANAL) KANAL.onmessage = e => {
     const m = e.data || {};
     if (!state.proj || m.flik === FLIK) return;
-    if (m.id === state.proj.d.projekt.id) { state.proj.annanFlik = true; visaProjektStatus(); }
+    if (m.id === state.proj.d.projekt.id) {
+      state.proj.annanFlik = m.borttaget ? 'borttaget' : true;
+      if (m.borttaget) state.proj.iDb = false;
+      visaProjektStatus();
+    }
     ritaProjektlista();
   };
 
