@@ -131,7 +131,7 @@ inskick förrän en jurist har granskat villkoren. Förslag till ordning (stäm 
 
 Öppna frågor: ska etapp 3 komma direkt efter 0.17.0 (versionsplanen har projektfilen etapp 3 som
 0.20.0)? Gränser för rimlighetskontrollerna? Biblioteket som öppen data? Polygonens höjd i lutande
-terräng? Svar från Lantmäteriet om objektidentiteten och om att rita ovanpå deras underlag?
+terräng? Svar från Lantmäteriet om att rita ovanpå deras underlag (frågan skickad 27 november)? Objektidentiteten används inte i biblioteket: matchningen sker på en kontrollsumma av fotavtrycket och i andra hand på överlapp (beslut 27 november, CÅ).
 
 ## Synpunkter på prototyperna, 24–25 november
 
