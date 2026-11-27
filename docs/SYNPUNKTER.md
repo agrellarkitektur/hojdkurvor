@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **ED**.
+Senast använda nummer: **EN**.
 
 ## Inkorg
 
@@ -30,21 +30,25 @@ Senast använda nummer: **ED**.
 
 Grupperat efter den version där testbehovet uppstod.
 
-### 0.16.2
+### 0.16.4
 
-- **DT** Utsnittets format på mobilen (efter BS): på iPhone, välj 1:1, 3:2, 2:3 och 2:1 under ramen. Byter ramen form och står den mitt mellan sökrutan och bladet? Dra i ett hörn: blir formatet *Fritt* och ändras ramen lika mycket åt båda håll? Går hörnet lätt att ta tag i utan att kartan flyttas? Markera: har utsnittet samma proportioner som ramen? Ladda om: är formatet kvar?
+Svar på testet 27 november (DD–DJ, DT, BÄ, BÖ, CA, CB). Synpunkterna står ordagrant under *Inarbetat ur inkorgen*.
+
+- **EE** Mobilen (efter DT): på iPhone, öppna menyn med hamburgaren uppe till höger och stäng den. Är formatväljaren ihopfälld, och visar knappen valt format? Välj 3:2 och dra i ett hörn: blir ramen större och mindre men behåller 3:2? Nyp för att zooma med ett finger nära ett hörn: står formatet kvar? Ladda om utan att markera: kommer kartan tillbaka dit du var? Välj *Hela verktyget*: finns *Mobilvyn* på kartan och i menyn, och tar den dig tillbaka?
+- **EF** Skydd vid en stor sjö (efter DE): gör en platsanalys med Skydd vid Vättern. Går det fortare nu när de skyddade områdena klipps till utsnittet (50 m utanför), och syns det i infon att området är klippt?
+- **EG** Situationsplanen (efter DF): skapa DXF med Höjdkurvor ikryssat och öppna den i AutoCAD. Kryssa i *Ritningens ram*: syns ritningshuvudet, teckenförklaringen och upplysningen som grå rutor i ramen, och går ramen att flytta genom att dra i kanten? Ligger den kvar efter omladdning, och tar *Ramen kring byggnaderna* tillbaka den? Är nya byggnader skrafferade på PDF:en och i planvyn?
+- **EH** Måtten och tecknen (efter DG): syns vinkelrätsymbolen där gränsmåtten möter gränsen? Dra ett gränsmått till en annan gräns: följer måttet med, och ligger det kvar efter omladdning? Rita en polygon och välj huvudbyggnad, komplementbyggnad och skärmtak: får den sitt tecken? Sätt en vriden byggnad till Rivs: är krysset 45° mot norr?
+- **EI** Befintlig och tillbyggnad (efter DH): ta in ett befintligt hus och rita en tillbyggnad strax bredvid det, vriden lite. Dockar den mot fasaden när du släpper den, eller när du sätter status Tillbyggnad? Har det befintliga huset bara yttermåttet på sidan mot tillbyggnaden, och inga gränsmått?
+- **EJ** Texterna (efter DI): ligger måtten tätt intill sina linjer på PDF:en? Har texterna i planvyn samma storlek mot byggnaderna som på PDF:en när du zoomar? Rita en liten tillbyggnad: står texten utanför med en ledare? Är *BYGGNAD 1* i fetstil och FG och arean mindre?
+- **EK** Koordinatlistan (efter DJ): är den grupperad per byggnad med *Ny huvudbyggnad*, *Tillbyggnad huvudbyggnad*, *Befintlig huvudbyggnad* osv., i panelen, på PDF:en och i DXF:en? Blir beskrivningen rätt för en tillbyggnad till en komplementbyggnad?
+- **EL** Se dolda i 3D-vyn (efter CB): dölj några träd och ett hus, välj *Se dolda*. Syns de utgråade? Klicka på ett dolt träd och ett dolt hus och välj *Visa*. Ringa in flera dolda med lassot och välj *Visa dolda*. Stängs *Se dolda* av när inget dolt är kvar?
+- **EM** Info när du håller över kartan (efter BÖ): använd kartan länge med Höjdkurvor, Laserpunkter och Skydd. Kommer infon fortfarande upp över skydd, strandskydd och byggnader? Står det i infon om ett skyddat område kommer från Naturvårdsverket eller OpenStreetMap, och var strandskyddets vatten kommer ifrån?
+- **EN** Skriv ut i skala (efter BÄ): dra i den streckade ramen. Flyttas utskriftsytan inom utsnittet, och kommer det med på PDF:en (också Lantmäteriets karta)? Står koordinatsiffrorna längs linjerna och centrerade på dem, med streck längs ramen, och är kryssen svarta och tydliga?
 
 ### 0.16.1
 
-Svar på testet 23 november (BG och synpunkterna på situationsplanen och sol på fasaderna).
+Svar på testet 23 november (BG och synpunkterna på situationsplanen och sol på fasaderna). DD–DJ besvarade 27 november (se 0.16.4).
 
-- **DD** Strandskydd (efter BG): gör en platsanalys med Skydd nära en sjö, utan Marktäcke. Kommer strandskyddet med från OpenStreetMap nu? Svarar huvudservern fortfarande inte går frågan till en reservserver (overpass.kumi.systems); vad säger varningen i så fall? Prova en plats vid en stor sjö (Vättern, Mälaren): räcker 40 s nu när svaret är klippt till rutan?
-- **DE** Underlaget i planvyn: skapa med Ortofoto, Träd och Skydd och öppna *Rita i plan*. Syns ortofotot, höjdkurvorna, träden och skydden under ritningen, och går de att slå av och på under *Visa*? Går det fortfarande lätt att panorera och zooma, också i ett stort utsnitt?
-- **DF** Underlaget på situationsplanen: kryssa i Höjdkurvor, Träd, Vägar och Skydd under *Visa* och skapa PDF och DXF. Kommer de med under byggnaderna, med siffror på hela meter-kurvorna och rätt rader i teckenförklaringen? Är lagren i DXF:en användbara?
-- **DG** Fastighetsgränserna ritas ovanpå byggnaderna, i planvyn och på ritningen. Syns de där en byggnad går ända fram till gränsen?
-- **DH** *Mått* i verktygsraden: försvinner alla mått, också på PDF:en och i DXF:en, och kommer de tillbaka?
-- **DI** Texterna på en tillbyggnad (och över kryss och nock): går de att läsa, i planvyn och på PDF:en?
-- **DJ** *Numrerade hörn och koordinatlista* under *Visa*: numren vid hörnen, listan i panelen, på PDF:en (ovanför teckenförklaringen) och i DXF:en (till höger om planen). Är ordningen (nya byggnader först, medurs från nordväst) rätt för en bygglovshandling?
 - **DK** *Redovisas i plan*: huvudbyggnad (kryss), komplementbyggnad (nock mellan gavlarna) och skärmtak (diagonal), alla med indrag från hörnen. Är indraget lagom (1,5 mm på papperet), och hamnar nocken åt rätt håll? Ser skärmtaket rimligt ut i 3D (tak på stolpar)?
 - **DL** *Vrid mot* (A): vrid en byggnad så att en sida följer en tomtgräns och en fasad på ett annat hus. Vrids den kring rätt punkt?
 - **DM** *Ledare* (T): lägg in en ledare med fritext, flytta texten och pilen, ändra texten och ta bort en. Ligger den kvar efter omladdning och i projektfilen? Hur ser den ut på PDF:en?
@@ -71,15 +75,6 @@ Sol på fasaderna, efter `overlamning-solanalys.md` i claude.ai-projektet, på b
 - **CI** Period och tid: välj April, September och Hela dygnet. Ändras bladen och 3D-färgerna, och ligger valen kvar efter omladdning och i projektfilen?
 - **CJ** 3D-vyn: *Sol på fasader* bland valen (Summa och Timtopp, med skala). Är färgerna lätta att läsa mot den grå skissen, i alla tre teman? Ändra en byggnad i 3D-vyn eller planvyn: försvinner färgerna tills du skapar igen?
 - **CK** Platsen till cad-apa har fältet `fasadsol` (topparna per fasad och horisonten). cad-apa läser det inte än; prova bara att *Rita i cad-apa* fungerar som förut.
-
-### 0.14.4
-
-Rättelser efter testet 20 november av AÄ–BM.
-
-- **BÄ** Skriv ut i skala (efter BE): öppna *Skriv ut i skala*. Syns en streckad ram på kartan, och är kartan nedtonad utanför? Byt format och skala: följer ramen med, och zoomar kartan ut när utsnittet inte får plats? Välj *Skapa PDF*: öppnas PDF:en i en ny flik, och sparar *Spara PDF* den med rätt namn? Stäng rutan: försvinner ramen?
-- **BÖ** Skyddad natur (efter BB): gör en platsanalys med Skydd vid naturreservatet du vet om. Svarar Naturvårdsverket fortfarande inte: kommer reservatet nu från OpenStreetMap, märkt *(OpenStreetMap)*, och vad säger varningen (skriv av den; den säger om frågan gick via servern)? Svarar Naturvårdsverket: kommer reservatet utan märkning?
-- **CA** Terrängsektioner: rita en sektion och skapa, utan någon kryssruta. Kommer sektionen med? Ta bort den och skapa igen: går det utan besked, och kommer allt annat?
-- **CB** Trädvalet i 3D-vyn: välj *Lasso* och dra en slinga. Släcks slingan när du släpper musknappen, och har träden en ring vid marken (ingen cylinder)? Shift-klicka på ett omarkerat träd och på ett markerat: läggs det till och tas det bort? Shift-klicka på ett träd utan att lassot är på: öppnas urvalet? Dölj, och *Visa dolda*.
 
 ### 0.14.3
 
@@ -112,6 +107,9 @@ Rättelser efter testet 20 november av AJ–AÅ.
 
 - **AÄ** (20 november: skissen kan inte skickas tillbaka från cad-apa än; det arbetas på där. Analyserna och vad skissen behöver står i `docs/UTBYTE-CAD-APA.md`.) cad-apa på nya adressen: på <https://hojdkurvor.danaid.cloud/>, välj *Rita i cad-apa*. Öppnas <https://cad-apa.danaid.cloud/> med platsen? Skicka tillbaka en skiss från cad-apa: dyker volymerna upp i 04 Skiss? Prova också *Fortsätt rita i cad-apa* under resultatet.
 
+Klart vid testet 27 november (strukna, se CHANGELOG.md under 0.16.4): DD (strandskydd ur OpenStreetMap) och
+CA (terrängsektioner utan kryssruta) godkända. DT, DE–DJ, BÄ, BÖ och CB ledde till ändringar, testas som EE–EN.
+
 Klart vid testet 20 november, andra omgången (strukna, se CHANGELOG.md under 0.14.4): AÖ, BD, BF,
 BH (på datorn; mobilen behöver bara det enkla flödet), BI, BJ och BM godkända. BE godkänd, med
 önskemål om förhandsvy och PDF i ny flik (gjort, testas som BÄ). BB: skyddad natur svarade fortfarande
@@ -132,6 +130,21 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 27 november 2026 → 0.16.4 (testet av 0.16.1, 0.16.2 och de öppna punkterna från 0.14.4)
+
+- **DT** ok! Formatet är kvar vid omladdning men inte platsen, man skickas ut till hela sverigekartan. Det kanske är som det ska. Gränssnittet i mobilen är dock väl trångt. Vi behöver fälla ihop huvudmenyn till en hamburgare uppe till höger. Man borde kunna minimera "formatväljaren". De valda formaten bör vara låsta om man inte väljer fritt så att man inte råkar ändra det vid zoomning. Trycker man hela kartan så försvinner hela vänsterpanelen och man kan inte komma tillbaka till den mobilanpassade panelen i början. *Hamburgare, ihopfälld formatväljare, låst format när hörnet dras och vid nypning, kartans läge sparat, knappen Mobilvyn på kartan och i menyn (EE).*
+- **DD** ok. *Struken.*
+- **DE** Funkar ok utom att skydd begränsas inte till utsnittet så vid vättern hämtade det ett jättestort område och då blev det segt. Hade den klippts efter utsnittet hade det nog varit ok. *Skyddade områden klipps till utsnittet med 50 m marginal (EF). Naturvårdsverkets tjänst lämnar ändå hela geometrin, så själva hämtningen blir inte mindre.*
+- **DF** Ok, förutom att DXF exporteras som en fil med 0 kB filstorlek och så står det "invalid or incomplete DXF input -- drawing discarded" i autocad. Det vore också bra om man kunde flytta ritningsramen (eller vyn egentligen) i skissläget, inte alltid man vill göra en situationsplan av det som ligger i mitten av utsnittet. Visa även vad som döljs av namnrutan på ritningen i förhandsvisningen av ritningsramen. Även nya byggnader (inte bara tillbyggnader) ska vara skrafferade. *DXF:en rättad (stacken sprängdes av höjdkurvorna), ramen flyttbar och det som täcks visas grått, nya byggnader skrafferade (EG).*
+- **DG** ok! Visa även vinkelrättsymboler där måtten ansluter till tomtgränser. Se bifogat. Man ska kunna dra i en måttsättning för att byta mot vilken tomtgräns den ansluter. Polygonformade byggnader får inget kryss/snedstreck eller liknande beroende på byggnadstyp. "Rivs"-byggnader ska få ett stort kryss över sig som är "linjerat mot norr" dvs, påverkas inte av själva byggnadens vridning. *Gjort så (EH).*
+- **DH** En befintlig byggnad ska inte ha mått till tomtgräns eller yttermått (om det inte är på den sidan som en tillbyggnad ska byggas). En tillbyggnad ska "docka" mot en befintlig byggnads fasad. *Gjort så (EI).*
+- **DI** Måtten hamnar lite väl långt från sina linjer i PDF:en. (Se bifogad jämförelse) Texterna inom byggnaden ser inte heller lika bra ut i pdf som på skiss-planen, de har liksom en annan storlek och radavstånd. Det är nog bättre om texter i skissplanen visas med "model units" så som de kommer plottas och inte lika stora oavsett zoomnivå. Som du ser försvinner också texten från en liten tillbyggnad. Då borde texten placeras utanför byggnaden med ett streck in mot mot fotavtrycket. Det är "Byggnad X" som borde vara i fetstil och FG samt area (ska läggas till i avtrycket) som ska visas med smalare/mindre text. *Vridna texter i PDF:en placeras nu rätt, planvyn ritar i ritningens storlek, texter utanför med ledare, namnet fett och FG och area mindre (EJ).*
+- **DJ** Ser hyfsat ok ut. Kanske gruppera dem efter byggnad med beskrivning "Befintlig huvudbyggnad", "Tillbyggnad huvudbyggnad", "Ny komplementbyggnad" osv? *Gjort så, med befintliga byggnader i listan (EK).*
+- **CB** "Visa dolda" kanska ska heta "se dolda" och så visas dolda träd och byggnader men utgråade och så får m an markera dem igen och välja "visa" för markeringen så att man inte unhidear allt med en knapp. *Gjort så (EL).*
+- **CA** ok. *Struken.*
+- **BÖ** förut kunde jag hålla över ett objekt för att få info om den "strandskydd, 100 meter, indikativ" osv. Men nu när jag använt fönstret rätt mycket så kommer det inte upp längre. F5 hjälper inte heller. Starta om fönstret hjälpte. Det står inget om OSM i skyddsmarkeringarna, bara "natura 2000" osv. *Trolig orsak: kurvornas och laserpunkternas canvas låg överst och tog musen. De ligger nu i ett lager som inte tar musen. Källan står i infon (EM). Inte återskapat i testmiljön.*
+- **BÄ** ok! Men man bör kunna flytta utskriftsytan inom ens utsnitt. Vrid koordinatsifforna i pdf:en, centrera dem längs linjerna, markera linjerna med små streck längs ramen och gör kryssen lite tydligare (svart) *Gjort så (EN).*
 
 ### 25 november 2026 → 0.16.2
 

@@ -74,11 +74,12 @@ prov('dolda och flyttade mått: sparas på ägaren, nyckeln följer skalet', () 
 prov('etiketter: FG en gång för skalet, per kropp om golven skiljer', () => {
   const v = L();
   let e = S.enheter(v)[0], et = S.etiketter(e, v);
-  assert.strictEqual(et.length, 1); assert.deepStrictEqual(et[0].rader.map(r => r.text), ['HUS', 'FG +32,8']);
+  assert.strictEqual(et.length, 1); assert.deepStrictEqual(et[0].rader.map(r => r.text), ['HUS', 'FG +32,8', '120,0 m²']);
+  assert(et[0].rader[0].fet && !et[0].rader[1].fet, 'namnet i fetstil, FG mindre (0.16.4)');
   v[1].golv = 33.1;
   et = S.etiketter(S.enheter(v)[0], v);
   assert.strictEqual(et.length, 2);
-  assert.deepStrictEqual(et.map(x => x.rader.map(r => r.text).join(' ')), ['HUS FG +32,8', 'FG +33,1']);
+  assert.deepStrictEqual(et.map(x => x.rader.map(r => r.text).join(' ')), ['HUS FG +32,8 120,0 m²', 'FG +33,1']);
   // flygelns etikett ligger i den del som inte täcks av huset
   assert(et[1].p[1] > 16, 'ovanför huset');
   const r = rekt('r', 30, 20, 5, 4, { status: 'rivs' });
@@ -170,6 +171,49 @@ prov('0.16.1: underlag, gränser ovanpå, mått av, koordinatlista, ledare, skra
   const dxf = S.dxf({ volymer: v, granser: TOMT, underlag, ledare, visa: { kurvor: true, trad: true, koordlista: true } });
   for (const l of ['SITPLAN_HOJDKURVA', 'SITPLAN_TRAD', 'SITPLAN_LEDARE', 'SITPLAN_KOORDINATLISTA']) assert(dxf.includes(l), l);
   assert(dxf.includes('CIRCLE'));
+});
+
+prov('0.16.4: texter utanför små byggnader, gränsmått mot en annan gräns, befintliga utan mått, grupperad koordinatlista, rutorna, stor DXF', () => {
+  // en liten tillbyggnad: texterna får inte plats och står utanför med en ledare
+  const hus = rekt('hus', 6, 8, 12, 8, { status: 'befintlig', huvudbyggnad: true, namn: 'Hus' });
+  const till = rekt('till', 18, 10, 2, 3, { status: 'tillbyggnad', namn: 'Byggnad 2' });
+  const v = [hus, till];
+  const R = S.ritning({ volymer: v, granser: TOMT, visa: { koordlista: true } });
+  assert(R.linjer.some(l => l.lager === 'ETIKETTLEDARE'), 'ledare till den lilla tillbyggnaden');
+  const tt = R.texter.filter(t => t.lager === 'ETIKETT' && t.text === 'BYGGNAD 2')[0];
+  assert(tt && !K.inuti(till.fotavtryck, tt.p[0], tt.p[1]), 'namnet utanför');
+  assert(R.texter.some(t => t.lager === 'ETIKETT' && t.text === '6,0 m²'), 'arean');
+  // det befintliga får bara yttermått på sidan mot tillbyggnaden, och inga gränsmått
+  const m = S.matt(v, TOMT);
+  const befMatt = m.filter(x => x.enhet === 'hus');
+  assert.deepStrictEqual(befMatt.map(x => [x.typ, x.text]), [['sida', '8,0']]);
+  assert(befMatt[0].bas >= 2 - 1e-9, 'utanför tillbyggnaden');
+  // vinkelrätsymbol: en linje med tre punkter i varje gränsmåtts ände
+  assert(R.linjer.filter(l => l.lager === 'MATT' && l.pts.length === 3).length >= 1);
+  // rivs: kryss mot norr
+  const r = rekt('r', 30, 20, 5, 4, { status: 'rivs' });
+  assert(S.ritning({ volymer: [r] }).linjer.filter(l => l.lager === 'RIVSKRYSS').length >= 2, 'krysset, delat runt texten RIVS');
+  // koordinatlistan grupperad: nya, tillbyggnader, befintliga
+  assert.deepStrictEqual([...new Set(R.koordlista.map(p => p.grupp))], ['Tillbyggnad huvudbyggnad (Byggnad 2)', 'Befintlig huvudbyggnad (Hus)']);
+  // gränsmåttet draget till en annan gräns: { mot: [gräns, sträcka] }
+  const ny = [rekt('n', 10, 10, 8, 6)];
+  const g0 = S.matt(ny, TOMT).filter(x => x.typ === 'grans')[0];
+  const sista = TOMT[0].pts.length - 2;
+  let andra = 0;
+  for (let si = 0; si <= sista; si++) {
+    S.satAnnot(ny, g0, { mot: [0, si] });
+    const g = S.matt(ny, TOMT).find(x => x.nyckel === g0.nyckel);
+    if (g.mot) { assert.deepStrictEqual(g.mot, [0, si]); if (Math.abs(g.d - g0.d) > 1e-6) andra++; }
+  }
+  assert(andra >= 1, 'måttet går till en annan gräns');
+  // rutorna som ritningshuvudet m.m. täcker, på papperet
+  const ru = S.rutor({ volymer: ny, granser: TOMT, format: 'a3', liggande: true, skala: 400, uppgifter: { fastighet: 'X 1' } });
+  assert(ru.rutor.length >= 3 && ru.rutor.every(q => q.x >= ru.ram.falt.x - 0.01 && q.x + q.w <= ru.ram.falt.x + ru.ram.falt.w + 0.01));
+  // DXF med många kurvpunkter (DF: Math.min(...) sprängde stacken och filen blev 0 kB)
+  const kurvor = [];
+  for (let k = 0; k < 200; k++) { const pts = []; for (let i = 0; i < 1000; i++) pts.push([i * 0.05, k * 0.2]); kurvor.push({ lager: 'HOJDKURVA_1M', h: 100 + k, pts }); }
+  const d = S.dxf({ volymer: ny, granser: TOMT, underlag: { kurvor }, visa: { kurvor: true } });
+  assert(d.length > 1e6 && d.endsWith('EOF\r\n'));
 });
 
 console.log(`${antal} prov gick igenom`);

@@ -151,7 +151,7 @@ Inga inloggningsuppgifter passerar någon av filerna.
 
 Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `window`.
 
-- `js/tema.js` – temaval och temamenyn (laddas först i `<head>`)
+- `js/tema.js` – temaval och temamenyn (laddas först i `<head>`); från 0.16.4 också hamburgarmenyn på mobilen
 - `js/kalla.js` (`Kalla`) – länken till källkoden vid den commit som körs (AGPL §13), på alla sidor
 - `js/version.js` – versionsnummer och datum (`window.HOJDKURVOR`). Skript och
   stilmallar laddas med `?v=<version>`; `node test/version.test.js --skriv`
@@ -192,9 +192,9 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
   ur laserdatan, ögonhöjd och bilder
 - `js/trad3d.js` (`Trad3D`) – trädmodellerna i 3D (gran, tall, lövträd och björk; enkla och detaljerade i flera varianter), också till cad-apa; laddas med sidan
 - `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer; laddas med sidan (takytorna används också i skissens DXF)
-- `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA (från 0.16.3 med Lantmäteriets hus på fastigheten, `byaMedHus`); från 0.16.0 union och yttre skal (ren geometri, testas i Node)
-- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan; från 0.16.0 byggnaderna som yttre skal, dolda och flyttade mått, ramen och panelen *Situationsplan*; från 0.16.1 underlaget (ortofoto, höjdkurvor, träd, vägar, skydd), verktygen Vrid mot, Ledare, Träd och Fastighet, koordinatlistan och takanslutningen
-- `js/situationsplan.js` (`Situationsplan`, 0.16.0) – situationsplanen: byggnaderna som yttre skal (enheter), måtten på skalet och hur de ändras, etiketter, skraffering, från 0.16.1 underlag, ledare och koordinatlista, och planen som vektor-PDF (A3/A4, 1:400/1:500, ritningshuvud, teckenförklaring) och DXF med ett lager per innehåll (ren, testas i Node)
+- `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA (från 0.16.3 med Lantmäteriets hus på fastigheten, `byaMedHus`); från 0.16.0 union och yttre skal; från 0.16.4 markering på polygoner, `rivsKryss`, `dockning` och `beskrivning` (ren geometri, testas i Node)
+- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan; från 0.16.0 byggnaderna som yttre skal, dolda och flyttade mått, ramen och panelen *Situationsplan*; från 0.16.1 underlaget (ortofoto, höjdkurvor, träd, vägar, skydd), verktygen Vrid mot, Ledare, Träd och Fastighet, koordinatlistan och takanslutningen; från 0.16.4 texter och mått i ritningens storlek, ramen att flytta med det som ritningshuvudet täcker, gränsmått att dra till en annan gräns och dockning av tillbyggnader
+- `js/situationsplan.js` (`Situationsplan`, 0.16.0) – situationsplanen: byggnaderna som yttre skal (enheter), måtten på skalet och hur de ändras, etiketter, skraffering, från 0.16.1 underlag, ledare och koordinatlista; från 0.16.4 etiketter utanför med ledare (`etikettText`), rivningskryss, grupperad koordinatlista och rutorna som ritningshuvudet täcker (`rutor`), och planen som vektor-PDF (A3/A4, 1:400/1:500, ritningshuvud, teckenförklaring) och DXF med ett lager per innehåll (ren, testas i Node)
 - `js/fasadsol.js` (`Fasadsol`, 0.15.0) – sol på fasaderna: fasadpunkter på byggnadskropparna, horisonten framför varje punkt (egen kropp, andra kroppar, omgivningen), klar himmel (ESRA) och Hay–Davies, summa, lokal och samtidig topp, timme × dag och värsta dygnet (ren beräkning, testas i Node, tänkt att kunna tas till cad-apa)
 - `js/fasadsolblad.js` (`Fasadsolblad`, 0.15.0) – sol på fasaderna som A3-PDF (från 0.16.1 en översikt med 3D från två håll, nyckelplan och ett kort per numrerad fasad; staplar och tabell, timme × dag, värsta dygnet) och CSV
 - `js/bild3d.js` (`Bild3D`) – kantlinjer, djupkarta och storlek för bilderna ur 3D-vyn

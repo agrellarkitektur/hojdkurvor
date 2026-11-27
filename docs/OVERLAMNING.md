@@ -1,9 +1,20 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 26 november 2026, 0.16.3.
+överlämning; historiken finns i git. Senast: 27 november 2026, 0.16.4.
 
 ## Läget
+
+- **0.16.4** 27 november (grenen `v0.16.4`): **rättelser efter ägarens test 27 november** av 0.16.1 (DD–DJ),
+  0.16.2 (DT) och de öppna punkterna från 0.14.4 (BÄ, BÖ, CA, CB). DD och CA godkända och strukna; resten
+  ändrat och testas som EE–EN. Synpunkterna står ordagrant under *Inarbetat ur inkorgen* i
+  `docs/SYNPUNKTER.md`. Se avsnittet *Rättelserna efter testet 27 november (0.16.4)* nedan. DK–DQ (0.16.1)
+  fick inget besked och står kvar. Körda: alla 24 enhetstester (nya prov i `kropp`, `situationsplan`,
+  `geodata`), `mobil_test.py` (utökat: hamburgaren, ihopfälld formatväljare, låst format, mobilvyn
+  tillbaka, kartans läge) i alla tre teman, `planvy_test.py` i alla tre teman och de andra
+  gränssnittstesterna i temat ritning (`ui_test.py` utökat för Se dolda). PDF:en är renderad och
+  DXF:en läst med ezdxf. **Inte provat**: iPhone (hamburgaren, nypning nära ett hörn), AutoCAD,
+  riktiga skydd vid Vättern, att hovringsinfon (BÖ) verkligen var canvasen (inte återskapat).
 
 - **0.16.3** 26 november (grenen `v0.16.3`): **rättelser efter granskningen av 0.16.2** (fyra sessioner
   26 november; sammanställningen `granskning-0.16.2.md`, delrapporterna A–D och session A:s patch i
@@ -374,6 +385,62 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## Rättelserna efter testet 27 november (0.16.4)
+
+- **DF, DXF:en 0 kB**: `Situationsplan.dxf` räknade utbredningen med `Math.min(...pts)` över alla punkter;
+  med höjdkurvorna (hundratusentals) sprängdes stacken. Felet kom efter `valjFil`, som redan hade skapat
+  filen. Nu en slinga, och `skapaSituationsplan` bygger DXF:en före spardialogen och visar felet på
+  statusraden. Sök efter fler `Math.min(...` på stora listor om liknande dyker upp (`kropp.js`,
+  `planvy.js` har bara små listor).
+- **Ramen (DF)**: `S.ramCentrum` i planvyn (zonen), till appen med `opt.ramCentrumAndrad`, i projektet som
+  `projekt.ramCentrum` (SWEREF 99 TM; `Projekt.las` kontrollerar punkten). Planvyn drar i
+  `.pv-ramgrepp` (osynlig bred kant). `Situationsplan.rutor(opt)` kör `rama()` (det som pdf() ritar runt
+  planen, utbrutet) med ett låtsasdokument (Proxy) som skattar textbredder och samlar fyllda
+  rektanglar; planvyn räknar om dem i `allt()` (`raknaRamRutor`, med ett tunt underlag för
+  teckenförklaringen), inte vid varje musrörelse, och ritar dem som `.pv-ramdold`.
+- **Etiketterna (DI)**: `Situationsplan.etikettText(e, volymer, mm, marken, enh)` ger texterna (namn fett 2,6
+  mm, FG och area 2,0 mm, radavstånd 3,0 mm), rutorna och ledarna; både `ritning()` och planvyn använder
+  den. Får texterna inte plats provas åtta riktningar ut från byggnaden, bort från de andra enheterna;
+  ledaren är `ledarGeometri`. Planvyn ritar texter, mått, entrépilen, tecknen och koordinatnumren i
+  ritningens mått (`MM()` = skalan/1000, `pxmm(h)`), halon i em.
+- **Vridna texter i PDF (DI)**: jsPDF flyttar texten för `align` och `baseline` i sidans riktning, inte
+  textens, så en vriden text hamnade bredvid sin punkt. `skrift` i situationsplan.js och `text`/`halo`
+  i utskrift.js (`ankare`) räknar punkten själva och sätter texten vänsterställd på baslinjen.
+- **Måtten (DG, DH)**: gränsmåttets anteckning kan ha `mot: [gräns, sträcka]` (index i `granser`); måttet
+  dras då till den sträckan om hörnet når den vinkelrätt. Planvyn: `mattDrag.kan` gäller också
+  gränsmått, `dragMatt` föreslår närmaste gränssträcka (`kanter()` har `gi`, `si`). Vinkelrätsymbolen är
+  en linje med tre punkter i lagret MATT. En befintlig enhet får yttermått bara på `fogsidor` mot
+  tillbyggnader, med `bas` = tillbyggnadens djup, så att måttlinjen hamnar utanför den.
+- **Dockning (DH)**: `Kropp.dockning(v, fotavtryck, { maxAvst, maxVinkel })` ger vridning och flytt;
+  planvyn (`dockaTillbyggnad`) dockar efter flytt och vid status Tillbyggnad mot befintliga kroppar och
+  Lantmäteriets hus inom 0,6 m eller 24 px.
+- **Tecknen (DG)**: `Kropp.planmarke` gör andra former än fyrhörningar i den omskrivna rektangeln längs
+  nocken eller längsta sidan, klippt mot fotavtrycket (`Kropp.klippLinje`). `Kropp.rivsKryss(ringar,
+  indrag)`: 45° mot rutnätet genom tyngdpunkten, lagret RIVSKRYSS (DXF: SITPLAN_RIVS). Nya byggnader
+  skrafferas som tillbyggnader och fylls vitt; teckenförklaringen slår ihop raderna.
+- **Koordinatlistan (DJ)**: `numreradeHorn(enh, volymer)` ger `grupp` = `Kropp.beskrivning(kroppar,
+  volymer)` och namnet; nya, tillbyggnader och befintliga. PDF:en sätter en rubrikrad per grupp.
+- **Mobilen (DT)**: `.meny-knapp` i alla fyra sidhuvuden, `kopplaMeny` i `tema.js`, `.toppmeny.meny-oppen`
+  fäller ut `#huvudmeny`. `#mobil-format-knapp` fäller ut `#mobil-format` (`mobilFormat.oppen`). Låst format:
+  `mobilFormat.andel` (0,25–1 av största ramen); hörnen ändrar bara storleken. Två fingrar (`touchstart`
+  med fler än en beröring) avbryter ett hörndrag och återställer ramen. Kartans läge i
+  `terrang-mobil-vy`, läses efter `startaProjekt` när inget område finns. `#mobilvy-flyt` och
+  `[data-mobilvy]` i menyn visas i hela verktyget på mobilen.
+- **Skydd (DE)**: `Geodata.klippRingar` (Sutherland–Hodgman ring för ring) i `skapaSkydd`, utsnittet + 50
+  m; `o.klippt` står i infon. Naturvårdsverkets WFS lämnar hela geometrin, så hämtningen är lika stor.
+- **Hovringen (BÖ)**: `kurvRitare` och `laserRitare` ligger i panen `ickeMusPane` (z 390,
+  `pointer-events: none`); `hojdpunktRitare` är borta (höjdpunkterna har info och ritas med kartans
+  canvas). Ägarens iakttagelse att F5 inte hjälpte men ett nytt fönster gjorde det är inte förklarad.
+- **Se dolda (CB)**: `Vy3D` har `seDolda(pa)` och `husDolt(id)`. Dolda träd ritas som spöken
+  (`spokTrad`, `doldMat`) och går att välja; dolda hus läggs tillbaka i husLager med `doldMat`
+  (`userData.doldVisning` håller materialet). Appen: `#vy3d-dolda` växlar läget, trädpanelen och
+  husets panel säger *Visa* för ett dolt, lassot har `#lasso-visa`. Läget slås av när inget är dolt.
+- **Skriv ut i skala (BÄ)**: `prFlytt` = { nyckel (utsnittet), c } i appen, `prCentrum()` klampar mitten
+  till utsnittet; `Utskrift.kartfalt(…, centrum)` och `Utskrift.plan({ centrum })`. Ramen dras med en
+  osynlig bred kant i `ramPane`, musen följs på `document`. Kryssen är svarta 4 mm, streck 2,5 mm vid
+  ramen på alla fyra sidor, östvärdena lodrätt vid överkanten och nordvärdena vågrätt vid vänsterkanten,
+  centrerade på linjerna med halo.
 
 ## Planvyn och situationsplanen (0.16.1)
 
@@ -1091,7 +1158,7 @@ november):
 | 0.16.1 | Svar på testet 23 november (byggd 23 november; testas som DD–DQ) |
 | 0.16.2 | BS, utsnittets format på mobilen (byggd 25 november; testas som DT) |
 | 0.16.3 | Rättelser efter granskningen av 0.16.2 (byggd 26 november) |
-| 0.16.4 | Rättelser efter ägarens test av 0.16.1 (DD–DQ) och 0.16.2 (DT) |
+| 0.16.4 | Rättelser efter ägarens test av 0.16.1 (DD–DJ), 0.16.2 (DT) och 0.14.4 (BÄ, BÖ, CA, CB) (byggd 27 november; testas som EE–EN) |
 | 0.17.0 | Skissa i 3D med användarskapad omgivning etapp 1 (CL–CV), formpaletten med ikoner, CE; se `docs/SKISSA-I-3D.md` |
 | 0.18.0 | Arbetsgången (CD, CC, BK) och ikonbaserat gränssnitt (BL) |
 | 0.19.0 | Bedömning med regelbok för befintliga analyser |
@@ -1100,9 +1167,9 @@ november):
 | 0.22.0 → | Geologi (etapp 0–4), bilagor (AM, AN) och resten; nya analyser omgång 2 |
 | ej bestämd | Omgivningen etapp 3–4 (CÅ–CÄ, biblioteket; fråga ägaren om det ska komma direkt efter 0.17.0), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY) |
 
-1. För in ägarens testresultat (DT för 0.16.2, DD–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de öppna
-   punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.4 (0.16.3 blev granskningens
-   rättelser). Kontrollen mot Hudiksvall *med omgivning* (CH) går att göra nu när B3 är rättad.
+1. För in ägarens testresultat (EE–EN för 0.16.4, DK–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de
+   öppna punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.5. Kontrollen mot Hudiksvall *med
+   omgivning* (CH) går att göra nu när B3 är rättad.
 2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
    inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid

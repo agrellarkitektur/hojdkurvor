@@ -123,22 +123,100 @@
    */
   function planmarke(v, indrag = 0.5) {
     const s = slag(v), f = moturs(v.fotavtryck || []);
-    if (!s || f.length !== 4) return [];
+    if (!s || f.length < 3) return [];
     const kort = (a, b) => {
       const d = sub(b, a), l = len(d);
       if (l < 3 * indrag) return [a, b];
       const e = mul(d, indrag / l);
       return [add(a, e), sub(b, e)];
     };
-    if (s === 'huvud') return [kort(f[0], f[2]), kort(f[1], f[3])];
-    if (s === 'skarmtak') { const l0 = len(sub(f[2], f[0])), l1 = len(sub(f[3], f[1])); return [l0 >= l1 ? kort(f[0], f[2]) : kort(f[1], f[3])]; }
-    // komplement: gavlarnas mitt, längs nocken om taket har fall, annars längs längsta sidan
     const ri = v.nockriktning != null && v.takform && v.takform !== 'platt' ? v.nockriktning * RAD : null;
     const sd = sidor(f);
     const langs = ri != null ? [Math.cos(ri), Math.sin(ri)] : sd.slice().sort((a, b) => b.l - a.l)[0].u;
+    // andra former än fyrhörningar (0.16.4, DG): linjerna i den omskrivna rektangeln längs nocken eller
+    // längsta sidan, klippta mot fotavtrycket
+    if (f.length !== 4) {
+      const n = [-langs[1], langs[0]], lu = f.map(q => dot(q, langs)), ln = f.map(q => dot(q, n));
+      const u0 = Math.min(...lu), u1 = Math.max(...lu), n0 = Math.min(...ln), n1 = Math.max(...ln);
+      const P = (a, b) => add(mul(langs, a), mul(n, b));
+      const linjer = s === 'huvud' ? [[P(u0, n0), P(u1, n1)], [P(u0, n1), P(u1, n0)]]
+        : s === 'skarmtak' ? [[P(u0, n0), P(u1, n1)]]
+        : [[P(u0, (n0 + n1) / 2), P(u1, (n0 + n1) / 2)]];
+      return linjer.flatMap(([a, b]) => klippLinje(a, norm(sub(b, a)), [f]))
+        .filter(([a, b]) => len(sub(b, a)) > 2 * indrag).map(([a, b]) => kort(a, b));
+    }
+    if (s === 'huvud') return [kort(f[0], f[2]), kort(f[1], f[3])];
+    if (s === 'skarmtak') { const l0 = len(sub(f[2], f[0])), l1 = len(sub(f[3], f[1])); return [l0 >= l1 ? kort(f[0], f[2]) : kort(f[1], f[3])]; }
+    // komplement: gavlarnas mitt, längs nocken om taket har fall, annars längs längsta sidan
     const gavlar = sd.slice().sort((a, b) => Math.abs(dot(a.u, langs)) - Math.abs(dot(b.u, langs))).slice(0, 2);
     const m = gavlar.map(x => mul(add(x.a, x.b), 0.5));
     return [kort(m[0], m[1])];
+  }
+  /** Delarna av linjen genom p i riktningen u som ligger inuti ringarna (jämn–udda). */
+  function klippLinje(p, u, ringar) {
+    const ts = [];
+    for (const r of ringar) for (let i = 0; i < r.length; i++) {
+      const a = r[i], b = r[(i + 1) % r.length], s = sub(b, a), q = u[0] * s[1] - u[1] * s[0];
+      if (Math.abs(q) < 1e-12) continue;
+      const w = sub(a, p), t = (w[0] * s[1] - w[1] * s[0]) / q, v = (w[0] * u[1] - w[1] * u[0]) / q;
+      if (v >= 0 && v < 1) ts.push(t);
+    }
+    ts.sort((a, b) => a - b);
+    const ut = [];
+    for (let i = 0; i + 1 < ts.length; i += 2) if (ts[i + 1] - ts[i] > 1e-6) ut.push([add(p, mul(u, ts[i])), add(p, mul(u, ts[i + 1]))]);
+    return ut;
+  }
+  /**
+   * Krysset över en byggnad som rivs (0.16.4, DG): två linjer genom mitten, 45° mot norr oavsett hur
+   * byggnaden är vriden, klippta mot ringarna och med indrag (meter) från kanten. Ger [[a, b], …].
+   */
+  function rivsKryss(ringar, indrag = 0.5) {
+    const yt = (ringar || []).filter(r => r && r.length >= 3);
+    if (!yt.length) return [];
+    // mitten: ytans tyngdpunkt (den yttre ringen)
+    const r0 = yt[0], A = area(r0);
+    let cx = 0, cy = 0;
+    for (let i = 0; i < r0.length; i++) { const a = r0[i], b = r0[(i + 1) % r0.length], k = a[0] * b[1] - b[0] * a[1]; cx += (a[0] + b[0]) * k; cy += (a[1] + b[1]) * k; }
+    const c = Math.abs(A) > 1e-9 ? [cx / (6 * A), cy / (6 * A)] : r0[0];
+    const ut = [];
+    for (const u of [norm([1, 1]), norm([1, -1])]) for (const [a, b] of klippLinje(c, u, yt)) {
+      const l = len(sub(b, a));
+      if (l <= 2 * indrag) continue;
+      const e = mul(u, indrag);
+      ut.push([add(a, e), sub(b, e)]);
+    }
+    return ut;
+  }
+  /**
+   * Dockar en tillbyggnad mot en befintlig fasad (0.16.4, DH): den sida i kroppen v som ligger närmast och
+   * nästan motriktad (inom maxVinkel grader) mot en sida i mal (fotavtryck) vrids parallell och flyttas ut i
+   * fasadlivet. maxAvst i meter. Ger { vrid (grader), c (vridpunkten), d: [dx, dy] } eller null. Ändrar inget.
+   */
+  function dockning(v, mal, { maxAvst = 1.5, maxVinkel = 12 } = {}) {
+    const sa = sidor(v.fotavtryck);
+    let bast = null;
+    for (const f of mal || []) {
+      if (!f || f.length < 3) continue;
+      for (const y of sidor(f)) for (const x of sa) {
+        const cs = -dot(x.u, y.u);
+        if (cs < Math.cos(maxVinkel * RAD)) continue;
+        const m = mul(add(x.a, x.b), 0.5), d = dot(sub(m, y.a), y.n);
+        if (Math.abs(d) > maxAvst) continue;
+        // sidorna ska överlappa längs fasaden
+        const ta = dot(sub(x.a, y.a), y.u), tb = dot(sub(x.b, y.a), y.u);
+        if (Math.min(Math.max(ta, tb), y.l) - Math.max(Math.min(ta, tb), 0) < 0.2) continue;
+        if (!bast || Math.abs(d) < Math.abs(bast.dd)) bast = { x, y, m, dd: d };
+      }
+    }
+    if (!bast) return null;
+    const { x, y, m } = bast;
+    // vinkeln som gör x motriktad y
+    let vr = (Math.atan2(-y.u[1], -y.u[0]) - Math.atan2(x.u[1], x.u[0])) / RAD;
+    while (vr > 180) vr -= 360;
+    while (vr <= -180) vr += 360;
+    // efter vridningen ligger m kvar; flytta m till fasadlivet
+    const dist = dot(sub(m, y.a), y.n);
+    return { vrid: Math.abs(vr) < 1e-7 ? 0 : vr, c: m, d: mul(y.n, -dist) };
   }
   /** Volymerna som 3D-vyn och analyserna räknar med: allt utom det som rivs, med taken utdragna (0.16.1). */
   const for3d = volymer => forAnalys(volymer).map(v => V3.utdragen(v));
@@ -585,6 +663,22 @@
     }
     return `FG ${v.golv < 0 ? '' : '+'}${hojdText(v.golv)}`;
   }
+  /**
+   * Vad en byggnad är, för koordinatlistan (0.16.4, DJ): "Ny huvudbyggnad", "Tillbyggnad huvudbyggnad",
+   * "Befintlig komplementbyggnad" … kroppar = byggnadens kroppar. En tillbyggnad utan eget tecken tar slaget
+   * från byggnaden den sitter mot.
+   */
+  function beskrivning(kroppar, volymer) {
+    const ORD = { huvud: 'huvudbyggnad', komplement: 'komplementbyggnad', skarmtak: 'skärmtak' };
+    const st = status(kroppar[0]);
+    const slagAv = lista => { for (const k of ['huvud', 'komplement', 'skarmtak']) if (lista.some(v => slag(v) === k)) return k; return ''; };
+    let s = slagAv(kroppar);
+    if (!s && st === 'tillbyggnad') s = slagAv(kroppar.flatMap(k => anliggande(k, volymer)).filter(v => status(v) !== 'tillbyggnad'));
+    const ord = ORD[s] || 'byggnad';
+    if (st === 'tillbyggnad') return `Tillbyggnad ${ord}`;
+    if (st === 'rivs') return `${ord[0].toUpperCase() + ord.slice(1)} som rivs`;
+    return `${STATUS[st]} ${ord}`;
+  }
   /** Kropparna som v ligger an mot. */
   function anliggande(v, volymer) {
     return (volymer || []).filter(B => B !== v && B.fotavtryck && fogsidor(v, [B]).size);
@@ -788,5 +882,6 @@
     entrePunkt, flyttaEntre, andra, nyRektangel, nyPolygon, franHus, satFotavtryck, satHorn, korsarSig, byaMedHus, satTakform, nockVal, satNock, flytta, vrid,
     tal, tolka, strackor, gransmatt, relativaMatt, fogsidor, anliggande, yttermattSidor, hojdText, fgText, bya,
     inuti, union, unionArea, horIhop, skal,
+    klippLinje, rivsKryss, dockning, mattMot, beskrivning,
   };
 }));

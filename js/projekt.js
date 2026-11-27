@@ -118,6 +118,8 @@
     for (const k of ['namn', 'kommun', 'fastighet', 'uppdrag', 'anteckning', 'ritadAv', 'ritningsnummer']) {
       if (k in ut.projekt && typeof ut.projekt[k] !== 'string') ut.projekt[k] = text(ut.projekt[k], 200);
     }
+    // situationsplanens ram flyttad av användaren (0.16.4): en punkt i SWEREF 99 TM
+    if ('ramCentrum' in ut.projekt && !(ut.projekt.ramCentrum == null || arPunkt(ut.projekt.ramCentrum))) delete ut.projekt.ramCentrum;
     // situationsplanens ledare (0.16.1): text och två punkter
     ut.inmatning.ledare = ut.inmatning.ledare.filter(l => arObjekt(l) && typeof l.text === 'string' && l.text && Array.isArray(l.pts) && l.pts.length >= 2 && l.pts.every(arPunkt))
       .map(l => Object.assign({}, l, { text: l.text.slice(0, 200), pts: l.pts.slice(0, 2) }));

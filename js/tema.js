@@ -68,12 +68,27 @@
     visa();
   }
 
+  /**
+   * Huvudmenyn som en hamburgare uppe till höger på mobilen (0.16.4, DT). Knappen syns bara i smal bredd (CSS);
+   * menyn fälls ut under menyraden och stängs vid tryck utanför, Escape eller ett val.
+   */
+  function kopplaMeny() {
+    const knapp = document.querySelector('.meny-knapp'), meny = document.getElementById('huvudmeny'), topp = document.querySelector('.toppmeny');
+    if (!knapp || !meny || !topp) return;
+    const oppna = pa => { topp.classList.toggle('meny-oppen', pa); knapp.setAttribute('aria-expanded', String(pa)); };
+    knapp.addEventListener('click', () => oppna(!topp.classList.contains('meny-oppen')));
+    document.addEventListener('pointerdown', e => { if (topp.classList.contains('meny-oppen') && !topp.contains(e.target) && !e.target.closest('.tema-meny')) oppna(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && topp.classList.contains('meny-oppen')) { oppna(false); knapp.focus(); } });
+    // ett val som öppnar en dialog eller byter sida stänger menyn
+    meny.addEventListener('click', e => { if (e.target.closest('a, [data-synpunkter], [data-stod], [data-mobilvy]')) oppna(false); });
+  }
+
   /** Undersidorna rullar i en egen ruta under menyraden, så att menyn inte flyttar sig när en rullist dyker upp. */
   function fokusRulla() {
     const r = document.querySelector('.rulla');
     if (r && !location.hash && getComputedStyle(r).overflowY === 'auto') r.focus({ preventScroll: true });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { kopplaValjare(); fokusRulla(); });
-  else { kopplaValjare(); fokusRulla(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { kopplaValjare(); kopplaMeny(); fokusRulla(); });
+  else { kopplaValjare(); kopplaMeny(); fokusRulla(); }
 }());

@@ -175,6 +175,19 @@
       return (tradMesh[niva][nyckel] = instanser(geometri(Trad3D.modell(nyckel, niva)), tradMat, Math.max(antal, im ? Math.ceil(im.instanceMatrix.count * 1.5) : antal)));
     };
     const allaTradMesh = () => Object.values(tradMesh.enkel).concat(Object.values(tradMesh.detaljerad));
+    // Se dolda (0.16.4, CB): dolda träd och hus visas utgråade och går att välja, så att de kan visas igen en och en
+    let seDolda = false;
+    const doldMat = new THREE.MeshBasicMaterial({ color: '#8c9196', transparent: true, opacity: 0.35, depthWrite: false });
+    const spokTrad = {};
+    const spokTradMesh = (art, antal) => {
+      const im = spokTrad[art];
+      if (im && im.instanceMatrix.count >= antal) return im;
+      if (im) { tradLager.remove(im); im.geometry.dispose(); im.dispose(); }
+      const ny = new THREE.InstancedMesh(geometri(Trad3D.modell(art, 'enkel')), doldMat, Math.max(antal, 16));
+      ny.count = 0; ny.castShadow = false; ny.receiveShadow = false; ny.frustumCulled = false; ny.renderOrder = 5;
+      tradLager.add(ny);
+      return (spokTrad[art] = ny);
+    };
     // detaljerade träd närmast kameran, enkla längre bort (mobilen orkar färre)
     const MAX_NARA = mobil ? 600 : 4000, NARA_MOBIL = 250;
     let tradPlats = null;
@@ -205,6 +218,17 @@
         im.count = raknare.get(im) || 0;
         im.instanceMatrix.needsUpdate = true;
         if (im.instanceColor) im.instanceColor.needsUpdate = true;
+      }
+      // de dolda som spöken när Se dolda är på
+      const spok = seDolda ? trad.filter(t => t.dolt) : [];
+      const perArt = new Map();
+      spok.forEach(t => { if (!perArt.has(t.art)) perArt.set(t.art, []); perArt.get(t.art).push(t); });
+      for (const art of new Set([...Object.keys(spokTrad), ...perArt.keys()])) {
+        const lista = perArt.get(art) || [];
+        if (!lista.length && !spokTrad[art]) continue;
+        const im = spokTradMesh(art, lista.length);
+        lista.forEach((t, n) => { m.compose(new THREE.Vector3(t.x, t.b, t.z), q.setFromAxisAngle(ax, t.vrid), new THREE.Vector3(t.kr, t.h, t.kr)); im.setMatrixAt(n, m); });
+        im.count = lista.length; im.instanceMatrix.needsUpdate = true;
       }
       tradPlats = kp.clone();
       skuggaOm();
@@ -1205,7 +1229,7 @@
       const ox = r.origin.x, oy = r.origin.y / f, oz = r.origin.z, dx = r.direction.x, dy = r.direction.y / f, dz = r.direction.z;
       let bast = null;
       trad.forEach((t, i) => {
-        if (t.dolt) return;
+        if (t.dolt && !seDolda) return;
         const R = Math.max(0.6, t.kr * 0.45), ex = ox - t.x, ez = oz - t.z;
         const a = dx * dx + dz * dz, b = 2 * (ex * dx + ez * dz), c = ex * ex + ez * ez - R * R;
         const kand = [];
@@ -1229,7 +1253,7 @@
     const markeraTrad = i => {
       if (tradMark) { tradMark.parent.remove(tradMark); tradMark.geometry.dispose(); tradMark = null; }
       markeratTrad = i == null || Array.isArray(i) ? null : i;
-      const lista = (Array.isArray(i) ? i : i == null ? [] : [i]).map(k => trad[k]).filter(t => t && !t.dolt);
+      const lista = (Array.isArray(i) ? i : i == null ? [] : [i]).map(k => trad[k]).filter(t => t && (!t.dolt || seDolda));
       if (!lista.length || !tradLager) return;
       const p = [];
       for (const t of lista) {
@@ -1243,6 +1267,16 @@
     };
     /** Döljer eller visar ett befintligt hus: objekten tas ur lagret, så att de inte syns, kastar skugga eller kan väljas. */
     const doldaHus = new Map();
+    /** Ett dolt hus som spöke (pa) i lagret, eller tillbaka ur lagret med sitt eget material (0.16.4, CB). */
+    const spokHus = (obj, pa) => obj.forEach(o => {
+      if (pa) {
+        if (!o.userData.doldVisning) { o.userData.doldVisning = { mat: o.material, skugga: o.castShadow }; if (o.isMesh) o.material = doldMat; o.castShadow = false; }
+        husLager.add(o);
+      } else {
+        if (o.userData.doldVisning) { o.material = o.userData.doldVisning.mat; o.castShadow = o.userData.doldVisning.skugga; delete o.userData.doldVisning; }
+        husLager.remove(o);
+      }
+    });
     const doljHus = (id, dolt) => {
       if (!husLager) return false;
       if (dolt) {
@@ -1251,15 +1285,23 @@
         if (!obj.length) return false;
         obj.forEach(o => husLager.remove(o));
         doldaHus.set(id, obj);
-        if (markeratHus === id) markeraHus(null);
+        if (seDolda) spokHus(obj, true);
+        if (markeratHus === id) markeraHus(seDolda ? id : null);
       } else {
         const obj = doldaHus.get(id);
         if (!obj) return false;
+        spokHus(obj, false);
         obj.forEach(o => husLager.add(o));
         doldaHus.delete(id);
       }
       skuggaOm();
       return true;
+    };
+    const satSeDolda = pa => {
+      seDolda = !!pa;
+      for (const obj of doldaHus.values()) spokHus(obj, seDolda);
+      if (!seDolda) { markeraTrad(null); if (markeratHus != null && doldaHus.has(markeratHus)) markeraHus(null); }
+      placeraTrad(); skuggaOm();
     };
     (data.doldaHus || []).forEach(id => doljHus(id, true));
 
@@ -1480,7 +1522,7 @@
       tradPaSkarm() {
         const b = el.getBoundingClientRect();
         return trad.map((t, i) => {
-          if (t.dolt) return null;
+          if (t.dolt && !seDolda) return null;
           const q = tillSkarm([t.x + cx, -t.z + cy, t.b + zmin + t.h * 0.6]);
           return q.syns ? { i, x: b.left + q.x, y: b.top + q.y } : null;
         }).filter(Boolean);
@@ -1490,11 +1532,15 @@
         if (!trad[i] || !t) return false;
         trad[i] = tradIScen(t);
         placeraTrad();
-        if (markeratTrad === i) markeraTrad(trad[i].dolt ? null : i);
+        if (markeratTrad === i) markeraTrad(trad[i].dolt && !seDolda ? null : i);
         return true;
       },
       /** Döljer (dolt = true) eller visar ett befintligt hus. */
       doljHus(id, dolt) { return doljHus(id, !!dolt); },
+      /** Se dolda (0.16.4): dolda träd och hus utgråade och valbara (true), eller borta (false). Utan argument: läget. */
+      seDolda(pa) { if (pa !== undefined) satSeDolda(pa); return seDolda; },
+      /** Om huset är dolt. */
+      husDolt(id) { return doldaHus.has(id); },
       /** Klickar på ett träd som om man klickade i vyn (för testerna): siktar mitt på kronan. */
       klickaTrad(i) {
         const t = trad[i];
@@ -1611,5 +1657,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.16.3' };
+  window.Vy3D = { visa, version: '0.16.4' };
 }());

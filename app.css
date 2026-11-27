@@ -116,6 +116,8 @@ code { font-family: var(--mono); font-size: .9em; background: var(--nav-on); pad
 .logga:hover .ring { stroke: var(--brand); }
 .logga .ring { transition: stroke .15s; }
 .huvudmeny { display: flex; flex-wrap: wrap; font-family: var(--mono); }
+/* hamburgaren (0.16.4, DT): bara i smal bredd */
+.meny-knapp { display: none; }
 .huvudmeny a, .huvudmeny .cell, .tema-knapp { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 124px; padding: 9px 16px; text-decoration: none; border-right: 1px solid var(--rule); color: var(--ink); }
 .huvudmeny a:hover, .tema-knapp:hover, .tema-val.oppen .tema-knapp { background: var(--nav-on); color: var(--ink); }
 .tema-val { position: relative; display: flex; }
@@ -649,7 +651,7 @@ body.vy3d-oppen { overflow: hidden; }
 .pv-sida input { max-width: 110px; }
 .pv-teckn { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .pv-t { display: inline-block; width: 18px; height: 10px; border: 1.5px solid var(--panel-ink); }
-.pv-t-ny { background: var(--pv-ny); border-width: 2px; }
+.pv-t-ny { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--panel-ink) 3px 4px); border-width: 2px; }
 .pv-t-tillbyggnad { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--panel-ink) 3px 4px); border-width: 2px; }
 .pv-t-befintlig { border-width: 1px; }
 .pv-t-rivs { border-style: dashed; border-width: 1px; }
@@ -700,7 +702,7 @@ body.vy3d-oppen { overflow: hidden; }
 .pv-hus { fill: var(--pv-hus); stroke: var(--pv-gra); stroke-width: 1; }
 .pv-hus.pv-hov { fill: color-mix(in srgb, var(--pv-hjalp) 30%, var(--pv-hus)); stroke: var(--pv-hjalp); stroke-width: 2; }
 .pv-kropp { stroke: var(--pv-ink); }
-.pv-ny { fill: var(--pv-ny); stroke-width: 2.4; }
+.pv-ny { fill: url(#pv-skraff); stroke-width: 2.4; }
 .pv-tillbyggnad { fill: url(#pv-skraff); stroke-width: 2.4; }
 .pv-befintlig { fill: var(--pv-papper); stroke-width: 1.2; }
 .pv-rivs { fill: none; stroke-width: 1.2; stroke-dasharray: 6 4; }
@@ -709,14 +711,19 @@ body.vy3d-oppen { overflow: hidden; }
 .pv-oppen { fill-opacity: .55; }
 .pv-oppen:not(.pv-vald) { stroke-dasharray: 8 3; }
 .pv-ram { fill: none; stroke: var(--pv-hjalp); stroke-width: 1.2; stroke-dasharray: 10 5; pointer-events: none; }
+.pv-ramgrepp { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: move; }
+.pv-ramdold { fill: color-mix(in srgb, var(--pv-gra) 30%, transparent); stroke: var(--pv-gra); stroke-width: .8; pointer-events: none; }
+.pv-rivskryss { stroke-width: 1.4; }
+.pv-forslag { stroke: var(--pv-hjalp); stroke-dasharray: 4 3; }
+.pv-grupp td { padding-top: 6px; font-family: var(--ui); font-weight: 600; color: var(--panel-ink); }
 .pv-drar { fill: var(--pv-hjalp); }
 .pv-skraff-bg { fill: var(--pv-papper); }
 .pv-skraff-linje { stroke: var(--pv-ink); stroke-width: 1; }
 .pv-huvudkryss { stroke: var(--pv-ink); stroke-width: 1; }
-.pv-etikett { fill: var(--pv-ink); letter-spacing: .04em; pointer-events: none; paint-order: stroke; stroke: var(--pv-papper); stroke-width: 3px; stroke-linejoin: round; }
-.pv-mattext, .pv-gmattext, .pv-koord { paint-order: stroke; stroke: var(--pv-papper); stroke-width: 3px; stroke-linejoin: round; }
+.pv-etikett { fill: var(--pv-ink); pointer-events: none; paint-order: stroke; stroke: var(--pv-papper); stroke-width: .22em; stroke-linejoin: round; }
+.pv-mattext, .pv-gmattext, .pv-koord { paint-order: stroke; stroke: var(--pv-papper); stroke-width: .22em; stroke-linejoin: round; }
 .pv-fet { font-weight: 600; }
-.pv-entre { fill: var(--pv-ink); }
+.pv-entre, .pv-etikettpil { fill: var(--pv-ink); }
 .pv-koord { fill: var(--pv-ink); pointer-events: none; }
 .pv-matt { stroke: var(--pv-ink); stroke-width: .8; fill: none; }
 .pv-tick { stroke-width: 1.6; }
@@ -750,6 +757,11 @@ body.planvy-oppen { overflow: hidden; }
 .mobil-matt { position: absolute; left: 50%; top: -24px; transform: translateX(-50%); font-family: var(--mono); font-size: 12px; color: var(--annot); white-space: nowrap; text-shadow: 0 0 3px var(--halo), 0 0 3px var(--halo); }
 .mobil-ram .hörn { pointer-events: auto; touch-action: none; }
 .mobil-ram .hörn::before { content: ''; position: absolute; inset: -14px; }
+.mobil-format-knapp { display: flex; justify-content: space-between; align-items: center; min-height: 40px; padding: 0 12px; border: 1px solid var(--seg-rule); background: transparent; color: var(--panel-ink); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; }
+.mobil-format-knapp b { color: var(--brand); }
+.mobil-format-andra::after { content: ' ▾'; }
+.mobil-format-knapp[aria-expanded="true"] .mobil-format-andra::after { content: ' ▴'; }
+.mobil-format[hidden] { display: none; }
 .mobil-format { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--seg-rule); }
 .mobil-format button { min-height: 40px; border: 0; background: transparent; color: var(--panel-ink); font-family: var(--mono); font-size: 13px; }
 .mobil-format button + button { border-left: 1px solid var(--seg-rule); }
@@ -785,6 +797,8 @@ body.mobilflode .kartyta { height: auto; flex: 1; }
 body.mobilflode #karta { height: 100%; }
 body.mobilflode .panel, body.mobilflode .lagerpanel, body.mobilflode .leaflet-control-zoom, body.mobilflode #ortho { display: none; }
 body.mobilflode .handtag-wrap { transform-origin: center; }
+/* tillbaka till mobilvyn från hela verktyget (0.16.4, DT) */
+.mobilvy-flyt { position: absolute; top: 10px; left: 58px; z-index: 1000; min-height: 40px; padding: 0 14px; border: 1px solid var(--panel-kant); background: var(--panel-bg); color: var(--panel-ink); font-family: var(--mono); font-size: 12px; letter-spacing: .08em; }
 .mobilvy-rad { margin-top: 10px; }
 
 /* ---------- Mobil ---------- */
@@ -798,14 +812,24 @@ body.mobilflode .handtag-wrap { transform-origin: center; }
   .panel-fot { max-height: none; padding: 16px 0 0; background: none; }
   .stegnav { margin: -22px -16px 18px; }
   .panel { order: 0; width: 100%; height: auto; overflow: visible; border-right: 0; padding: 22px 16px; }
-  .huvudmeny { width: 100%; }
-  .huvudmeny a, .huvudmeny .cell, .huvudmeny .stod-knapp, .tema-knapp { min-width: 0; padding: 8px 12px; flex: 1 1 auto; }
-  .tema-val { flex: 1 1 auto; }
+  /* huvudmenyn fälls ihop till en hamburgare uppe till höger (0.16.4, DT) */
+  .toppmeny { flex-wrap: nowrap; align-items: stretch; }
+  .logga { flex: 1 1 auto; min-width: 0; border-right: 0; padding: 10px 16px; }
+  .logga .ordbild { font-size: 20px; }
+  .meny-knapp { display: flex; flex-direction: column; justify-content: center; gap: 5px; flex: none; width: 56px; padding: 0 16px; border: 0; border-left: 1px solid var(--rule); background: none; cursor: pointer; }
+  .meny-knapp span { display: block; height: 2px; background: var(--ink); transition: transform .15s, opacity .15s; }
+  .meny-oppen .meny-knapp span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .meny-oppen .meny-knapp span:nth-child(2) { opacity: 0; }
+  .meny-oppen .meny-knapp span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .huvudmeny { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; flex-wrap: nowrap; background: var(--bg); background-image: var(--bg-bild); border-bottom: 1px solid var(--rule); box-shadow: 0 8px 18px rgba(0, 0, 0, .18); max-height: calc(100dvh - 60px); overflow-y: auto; }
+  .meny-oppen .huvudmeny { display: flex; }
+  .huvudmeny a, .huvudmeny .cell, .huvudmeny .stod-knapp, .tema-knapp { min-width: 0; padding: 14px 16px; border-right: 0; border-top: 1px solid var(--rule); flex: none; }
+  .tema-val { flex: none; }
   .tema-knapp { width: 100%; }
-  .tema-meny { left: auto; right: 0; }
+  .tema-val { flex-direction: column; }
+  .tema-meny { position: static; min-width: 0; border: 0; box-shadow: none; padding: 0 0 6px 16px; }
   .huvudmeny .blad { display: none; }
-  .huvudmeny .namn { font-size: 12px; }
-  .logga { flex-basis: 100%; border-right: 0; border-bottom: 1px solid var(--rule); padding: 10px 16px; }
+  .huvudmeny .namn { font-size: 13px; }
   .lagerpanel { width: 220px; }
   .artikel h1 { font-size: 42px; }
   .artikel .stor { font-size: 32px; }

@@ -176,5 +176,10 @@ const somDen = p => p;
   await assert.rejects(G.vatten(ll, somDen), /svarade 400/);
   assert.strictEqual(anrop.length, 1);
 
+  // 0.16.4 (DE): skydden klipps till utsnittet
+  const kl = G.klippRingar([[[-100, -100], [500, -100], [500, 500], [-100, 500]], [[900, 900], [950, 900], [950, 950]]], { xmin: 0, ymin: 0, xmax: 200, ymax: 100 });
+  assert.strictEqual(kl.length, 1, 'ringen utanför försvinner');
+  kl[0].forEach(p => assert(p[0] >= 0 && p[0] <= 200 && p[1] >= 0 && p[1] <= 100));
+
   console.log('geodata.test.js: allt godkänt');
 })().catch(e => { console.error(e); process.exit(1); });

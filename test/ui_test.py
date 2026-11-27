@@ -470,7 +470,7 @@ with sync_playwright() as p:
         fore = pg.evaluate('TERRANG_TEST.senaste().trad.length')
         pg.click('#trad-dolj'); pg.wait_for_timeout(300)
         assert not pg.locator('#vy3d-trad').is_visible() and pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore - 1, 'Dölj trädet tar bort det'
-        assert pg.locator('#vy3d-dolda').is_visible() and '(1)' in pg.inner_text('#vy3d-dolda'), 'Visa dolda (1)'
+        assert pg.locator('#vy3d-dolda').is_visible() and '(1)' in pg.inner_text('#vy3d-dolda'), 'Se dolda (1)'
         if hus3:
             pg.evaluate(f'{v3}.klickaHus({hus3[0]}, {hus3[1]})'); pg.wait_for_timeout(200)
             if pg.locator('#vy3d-tak').is_visible():
@@ -478,9 +478,20 @@ with sync_playwright() as p:
                 pg.click('#hus-dolj'); pg.wait_for_timeout(300)
                 assert pg.evaluate('TERRANG_TEST.senaste().byggnader.length') == nh - 1 and '(2)' in pg.inner_text('#vy3d-dolda'), 'Dölj huset'
                 assert pg.evaluate(f'{v3}.klickaHus({hus3[0]}, {hus3[1]})') is None or not pg.locator('#vy3d-tak').is_visible(), 'ett dolt hus går inte att välja'
-        pg.screenshot(path=f'{UT}/06q_3d_dolda.png')
+        # 0.16.4 (CB): Se dolda visar dem utgråade; de väljs och visas en och en
         pg.click('#vy3d-dolda'); pg.wait_for_timeout(300)
-        assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore and pg.locator('#vy3d-dolda').is_hidden(), 'Visa dolda visar dem igen'
+        assert pg.get_attribute('#vy3d-dolda', 'aria-pressed') == 'true' and pg.evaluate('TERRANG_TEST.vy3d.seDolda()') is True
+        pg.screenshot(path=f'{UT}/06q_3d_dolda.png')
+        assert pg.evaluate('TERRANG_TEST.vy3d.klickaTrad(0)'), 'ett dolt träd går att välja under Se dolda'
+        pg.wait_for_timeout(200)
+        assert pg.inner_text('#trad-dolj') == 'Visa trädet'
+        pg.click('#trad-dolj'); pg.wait_for_timeout(300)
+        assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore, 'Visa trädet'
+        if hus3 and pg.evaluate(f'{v3}.klickaHus({hus3[0]}, {hus3[1]})') is not None:
+            pg.wait_for_timeout(200)
+            assert pg.inner_text('#hus-dolj') == 'Visa huset'
+            pg.click('#hus-dolj'); pg.wait_for_timeout(300)
+        assert pg.locator('#vy3d-dolda').is_hidden() and pg.evaluate('TERRANG_TEST.vy3d.seDolda()') is False, 'inga dolda kvar: Se dolda slås av'
         sparat = pg.evaluate("JSON.parse(localStorage.getItem('terrang-tradval') || '{}')")
         assert any(v.get('art') == 'bjork' and not v.get('dolt') for v in sparat.values()), 'de andra ändringarna står kvar'
         # 0.12.0: lasso runt alla träd som syns, dölj dem, visa dem igen
@@ -507,7 +518,16 @@ with sync_playwright() as p:
             fore = pg.evaluate('TERRANG_TEST.senaste().trad.length')
             pg.click('#lasso-dolj'); pg.wait_for_timeout(300)
             assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore - pa_skarm and pg.locator('#vy3d-lassopanel').is_hidden(), 'Dölj träden'
+            # Se dolda och lassot runt de dolda: Visa dolda tar tillbaka dem (0.16.4, CB)
             pg.click('#vy3d-dolda'); pg.wait_for_timeout(300)
+            pg.click('#vy3d-lasso'); pg.wait_for_timeout(200)
+            pg.mouse.move(x0, y0); pg.mouse.down()
+            for px, py in [(x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h), (x0, y0 + 2)]:
+                pg.mouse.move(px, py, steps=12)
+            pg.mouse.up(); pg.wait_for_timeout(300)
+            print('  lasso, dolda:', pg.inner_text('#lasso-visa'))
+            assert pg.locator('#lasso-visa').is_visible()
+            pg.click('#lasso-visa'); pg.wait_for_timeout(300)
             assert pg.evaluate('TERRANG_TEST.senaste().trad.length') == fore, 'Visa dolda efter lassot'
         pg.evaluate("localStorage.removeItem('terrang-tradval'); localStorage.removeItem('terrang-husval')")
 

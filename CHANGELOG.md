@@ -3,6 +3,47 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.16.4 – 2026-11-27
+
+Rättelser efter ägarens test av 0.16.1 (DD–DQ), 0.16.2 (DT) och de öppna punkterna från 0.14.4 (BÄ, BÖ,
+CA, CB). DD och CA godkända.
+
+- **Situationsplanen som DXF (DF)**: filen blev 0 kB när höjdkurvorna var ikryssade. Utbredningen räknades
+  med `Math.min(...punkter)`, som sprängde stacken med hundratusentals kurvpunkter efter att spardialogen
+  redan skapat filen. Nu räknas den med en slinga, och DXF:en byggs före spardialogen.
+- **Ritningens ram (DF)**: ramen går att flytta i planvyn genom att dra i kanten; läget sparas i projektet
+  (`projekt.ramCentrum`). Det som ritningshuvudet, teckenförklaringen, koordinatlistan och upplysningen
+  täcker visas grått i ramen (`Situationsplan.rutor`).
+- **Nya byggnader skrafferas** som tillbyggnader (DF); teckenförklaringen har en rad för båda.
+- **Måtten (DG, DH)**: vinkelrätsymbol där ett mått möter tomtgränsen. Ett gränsmått kan dras till en
+  annan gräns (sparas som `mot` på måttet). En befintlig byggnad får bara yttermått på sidan där en
+  tillbyggnad sitter, utanför tillbyggnaden, och inga mått till tomtgräns. En tillbyggnad dockar mot en
+  befintlig fasad när den flyttas nära en eller får status Tillbyggnad (`Kropp.dockning`).
+- **Markeringen i plan (DG)**: polygoner får kryss, nock eller diagonal i den omskrivna rektangeln, klippta
+  mot fotavtrycket. Byggnader som rivs får ett stort kryss, 45° mot norr oavsett hur de är vridna.
+- **Texterna (DI)**: namnet i fetstil, FG och arean (nytt) mindre. Får texterna inte plats i byggnaden står
+  de utanför med en ledare in till fotavtrycket. Planvyn ritar texter och mått i ritningens storlek
+  (modellens mått), så att de ser ut som på PDF:en. Vridna texter i PDF:erna hamnade bredvid sin punkt
+  (jsPDF vrider inte förskjutningen för justeringen); nu räknas punkten fram själv, så måtten ligger tätt
+  intill sina linjer.
+- **Koordinatlistan (DJ)** grupperad per byggnad med en beskrivning (*Ny huvudbyggnad*, *Tillbyggnad
+  huvudbyggnad*, *Befintlig komplementbyggnad* …), också befintliga byggnader.
+- **Mobilen (DT)**: huvudmenyn är en hamburgare uppe till höger. Formatväljaren är ihopfälld och visar
+  valt format. Ett låst format behåller sina proportioner när ett hörn dras, och ett hörn släpps när två
+  fingrar nyper för att zooma. Kartans läge sparas, så att man kommer tillbaka dit efter en omladdning.
+  Från hela verktyget kommer man tillbaka till mobilvyn med en knapp på kartan och i menyn.
+- **Skydd (DE)**: skyddade områden klipps till utsnittet med 50 m marginal; ett stort område (Natura 2000 i
+  Vättern) gjorde kartan och planvyn sega.
+- **Info när man håller över kartan (BÖ)**: höjdkurvorna och laserpunkterna ritas på egna canvas, och låg en
+  av dem överst tog den musen från skydden, byggnaderna och de andra lagren. De ligger nu i ett eget lager
+  som inte tar musen, och höjdpunkterna ritas med kartans vanliga canvas. Infon säger om ett skyddat område
+  kommer från Naturvårdsverket eller OpenStreetMap och var strandskyddets vatten kommer ifrån.
+- **Se dolda (CB)**, förut Visa dolda: de dolda träden och husen visas utgråade i 3D-vyn och går att välja
+  ett och ett, eller med lassot, och visa igen.
+- **Skriv ut i skala (BÄ)**: utskriftsytan kan flyttas inom utsnittet genom att dra i den streckade ramen.
+  Koordinatsiffrorna står längs linjerna och centrerade på dem, linjerna är markerade med streck längs
+  ramen, och kryssen är svarta och tydligare.
+
 ## 0.16.3 – 2026-11-26
 
 Rättelser efter granskningen av 0.16.2 (26 november, `granskning-0.16.2.md` i claude.ai-projektet).

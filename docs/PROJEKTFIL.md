@@ -50,7 +50,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
 
   "projekt": { "id": "uuid", "namn": "Staren 2", "kommun": "Kinda",
                "fastighet": "", "uppdrag": "", "anteckning": "",
-               "ritadAv": "", "ritningsnummer": "" },   // ritningshuvudet (0.16.0)
+               "ritadAv": "", "ritningsnummer": "",   // ritningshuvudet (0.16.0)
+               "ramCentrum": null },                   // flyttad ram (0.16.4)
 
   "plats": {
     "crs": "EPSG:3006",                 // geometrin i inmatning och horisontpunkt
@@ -147,6 +148,9 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
 - `projekt.fastighet`, `uppdrag`, `ritadAv`, `ritningsnummer`: ritningshuvudet i
   situationsplanen (0.16.0; `ritadAv` och `ritningsnummer` är nya, `version` är
   oförändrad). Fylls i under *Situationsplan* i planvyn.
+- `projekt.ramCentrum` (0.16.4, valfri): situationsplanens ram när den är flyttad i
+  planvyn, som [E, N] i SWEREF 99 TM; `null` eller saknas = ramen ligger kring
+  byggnaderna. `version` är oförändrad.
 - `sektioner[]`: `a` → `b` är linjen, `vand` vänder blickriktningen.
 - `rattelser`: egna takformer (`terrang-takval`), dolda och rättade träd
   (`terrang-tradval`) och dolda hus (`terrang-husval`) som rör projektet: hus som

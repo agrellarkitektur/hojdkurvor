@@ -51,12 +51,28 @@
     return 5000;
   }
 
-  /** Kartfältet i zonkoordinater för en utskrift (för att hämta bakgrundskartan). */
-  function kartfalt(r, format, liggande, skala) {
+  /**
+   * Kartfältet i zonkoordinater för en utskrift (för att hämta bakgrundskartan). centrum (valfritt, 0.16.4, BÄ):
+   * punkten som hamnar mitt i kartfältet ovanför namnrutan; annars utsnittets mitt.
+   */
+  function kartfalt(r, format, liggande, skala, centrum) {
     const [PW, PH] = papper(format, liggande);
     const k = 1000 / skala, fw = PW - 2 * MARG, fh = PH - 2 * MARG;
-    const mx = (r.xmin + r.xmax) / 2, my = (r.ymin + r.ymax) / 2, cyOff = (fh - 34) / 2;
+    const [mx, my] = centrum || [(r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2], cyOff = (fh - 34) / 2;
     return { xmin: mx - fw / 2 / k, xmax: mx + fw / 2 / k, ymax: my + cyOff / k, ymin: my - (fh - cyOff) / k };
+  }
+
+  /**
+   * Var en text ska sättas (vänsterställd på baslinjen) för att hamna med ha/va i (x, y) när den är vriden
+   * vinkel grader (0.16.4): jsPDF vrider inte förskjutningen för align och baseline, så vridna texter hamnade
+   * bredvid sin punkt. Typsnitt och storlek ska vara satta.
+   */
+  function ankare(doc, s, x, y, pt, ha, va, vinkel) {
+    const ar = (vinkel || 0) * Math.PI / 180, dir = [Math.cos(ar), -Math.sin(ar)], upp = [-Math.sin(ar), -Math.cos(ar)];
+    const h = pt * 0.3528, w = doc.getTextWidth(s);
+    const dx = ha === 'center' ? -w / 2 : ha === 'right' ? -w : 0;
+    const dy = va === 'middle' ? -0.34 * h : va === 'top' ? -0.72 * h : va === 'bottom' ? 0.22 * h : 0;
+    return [x + dir[0] * dx + upp[0] * dy, y + dir[1] * dx + upp[1] * dy];
   }
 
   /** Ordbilden höjdkurvor.se med punkten i accentfärgen, som i menyraden. Typsnitt och storlek sätts av anroparen. */
@@ -101,7 +117,8 @@
     doc.setProperties({ title: `${opt.titel.projekt || 'Terrängunderlag'} 1:${skala}`, creator: 'Höjdkurvor' });
     const k = 1000 / skala;
     const fx0 = MARG, fy0 = MARG, fw = PW - 2 * MARG, fh = PH - 2 * MARG;
-    const mx = (r.xmin + r.xmax) / 2, my = (r.ymin + r.ymax) / 2;
+    // utskriftsytan kan flyttas inom utsnittet (0.16.4, BÄ): opt.centrum hamnar mitt i kartfältet
+    const [mx, my] = Array.isArray(opt.centrum) ? opt.centrum : [(r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2];
     const cx = fx0 + fw / 2, cy = fy0 + (fh - 34) / 2;      // centrera ovanför namnrutan
     const P = (x, y) => [cx + (x - mx) * k, cy - (y - my) * k];
     const L = (pts, stang) => {
@@ -112,11 +129,13 @@
     };
     const text = (s, x, y, pt, o = {}) => {
       doc.setFont(o.mono ? mono : font, o.mono ? 'normal' : (o.vikt || 'normal')); doc.setFontSize(pt);
-      doc.text(String(s), x, y, { align: o.ha || 'left', baseline: o.va || 'middle', angle: o.vinkel || 0 });
+      const [ax, ay] = ankare(doc, String(s), x, y, pt, o.ha || 'left', o.va || 'middle', o.vinkel || 0);
+      doc.text(String(s), ax, ay, { align: 'left', baseline: 'alphabetic', angle: o.vinkel || 0 });
     };
     const halo = (s, x, y, pt, o = {}) => {
       doc.setFont(o.mono ? mono : font, o.mono ? 'normal' : (o.vikt || 'normal')); doc.setFontSize(pt);
-      const opt2 = { align: o.ha || 'center', baseline: o.va || 'middle', angle: o.vinkel || 0 };
+      [x, y] = ankare(doc, String(s), x, y, pt, o.ha || 'center', o.va || 'middle', o.vinkel || 0);
+      const opt2 = { align: 'left', baseline: 'alphabetic', angle: o.vinkel || 0 };
       doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.7);
       doc.text(String(s), x, y, Object.assign({ renderingMode: 'stroke' }, opt2));
       doc.setTextColor(...(o.farg || F.blck));
@@ -364,17 +383,24 @@
     // koordinatkryss
     const steg = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(s => s * k >= 40) || 1000;
     if (g.rutnat !== false) {
-      doc.setDrawColor(...F.gra); doc.setLineWidth(0.12);
+      // svarta, tydligare kryss, streck längs ramen där linjerna går ut, och siffrorna vridna längs linjerna och
+      // centrerade på dem (0.16.4, BÄ): östvärdena lodrätt vid överkanten, nordvärdena vågrätt vid vänsterkanten
+      doc.setDrawColor(...F.blck); doc.setLineWidth(0.2);
       const xa = (x) => cx + (x - mx) * k, ya = (y) => cy - (y - my) * k;
       const xmin = mx - (cx - fx0) / k, xmax = mx + (fx0 + fw - cx) / k, ymax = my + (cy - fy0) / k, ymin = my - (fy0 + fh - cy) / k;
-      for (let x = Math.ceil(xmin / steg) * steg; x <= xmax; x += steg)
-        for (let y = Math.ceil(ymin / steg) * steg; y <= ymax; y += steg) {
-          doc.line(xa(x) - 1.5, ya(y), xa(x) + 1.5, ya(y)); doc.line(xa(x), ya(y) - 1.5, xa(x), ya(y) + 1.5);
-        }
+      const xs = [], ys = [];
+      for (let x = Math.ceil(xmin / steg) * steg; x <= xmax; x += steg) xs.push(x);
+      for (let y = Math.ceil(ymin / steg) * steg; y <= ymax; y += steg) ys.push(y);
+      for (const x of xs) for (const y of ys) {
+        if (xa(x) < fx0 + 3 || xa(x) > fx0 + fw - 3 || ya(y) < fy0 + 3 || ya(y) > fy0 + fh - 3) continue;
+        doc.line(xa(x) - 2, ya(y), xa(x) + 2, ya(y)); doc.line(xa(x), ya(y) - 2, xa(x), ya(y) + 2);
+      }
       doc.restoreGraphicsState();
-      doc.setTextColor(...F.gra);
-      for (let x = Math.ceil(xmin / steg) * steg; x <= xmax; x += steg) if (xa(x) > fx0 + 8 && xa(x) < fx0 + fw - 8) text(komma(x), xa(x), fy0 - 1.6, 5.5, { ha: 'center', va: 'bottom', mono: true });
-      for (let y = Math.ceil(ymin / steg) * steg; y <= ymax; y += steg) if (ya(y) > fy0 + 12 && ya(y) < fy0 + fh - 12) text(komma(y), fx0 - 1.6, ya(y), 5.5, { ha: 'center', va: 'bottom', vinkel: 90, mono: true });
+      doc.setDrawColor(...F.blck); doc.setLineWidth(0.25);
+      for (const x of xs) if (xa(x) > fx0 + 0.5 && xa(x) < fx0 + fw - 0.5) { doc.line(xa(x), fy0, xa(x), fy0 + 2.5); doc.line(xa(x), fy0 + fh, xa(x), fy0 + fh - 2.5); }
+      for (const y of ys) if (ya(y) > fy0 + 0.5 && ya(y) < fy0 + fh - 0.5) { doc.line(fx0, ya(y), fx0 + 2.5, ya(y)); doc.line(fx0 + fw, ya(y), fx0 + fw - 2.5, ya(y)); }
+      for (const x of xs) if (xa(x) > fx0 + 3 && xa(x) < fx0 + fw - 3) halo(komma(x), xa(x), fy0 + 3.4, 5.5, { ha: 'right', va: 'middle', vinkel: 90, mono: true });
+      for (const y of ys) if (ya(y) > fy0 + 14 && ya(y) < fy0 + fh - 3) halo(komma(y), fx0 + 3.4, ya(y), 5.5, { ha: 'left', va: 'middle', mono: true });
       doc.setTextColor(0, 0, 0);
     } else doc.restoreGraphicsState();
 

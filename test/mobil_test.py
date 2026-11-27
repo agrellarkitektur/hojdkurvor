@@ -40,22 +40,42 @@ with sync_playwright() as p:
         def ram():
             return pg.evaluate("(() => { const r = document.getElementById('mobil-ram').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()")
         r11 = ram()
+        # 0.16.4 (DT): formatväljaren är ihopfälld; knappen fäller ut den
+        assert pg.is_hidden('#mobil-format')
+        pg.tap('#mobil-format-knapp'); pg.wait_for_timeout(100)
         pg.tap('[data-format="2:1"]'); pg.wait_for_timeout(150)
+        assert pg.is_hidden('#mobil-format') and pg.inner_text('#mobil-format-namn') == '2:1'
         r21 = ram()
         print('   format 1:1', [round(v) for v in r11], '→ 2:1', [round(v) for v in r21], '|', pg.locator('#mobil-matt').inner_text())
         assert abs(r11[2] - r11[3]) < 2 and abs(r21[2] - 2 * r21[3]) < 2
-        cx, cy = r21[0] + r21[2] / 2, r21[1] + r21[3] / 2
-        hx, hy = r21[0] + r21[2], r21[1] + r21[3]
-        pg.evaluate(f"""(() => {{ const h = document.querySelector('.mobil-ram .hörn-so'), o = {{ bubbles: true, pointerId: 7, pointerType: 'touch', isPrimary: true }};
-          h.dispatchEvent(new PointerEvent('pointerdown', Object.assign({{ clientX: {hx}, clientY: {hy} }}, o)));
-          h.dispatchEvent(new PointerEvent('pointermove', Object.assign({{ clientX: {cx + 70}, clientY: {cy + 90} }}, o)));
-          h.dispatchEvent(new PointerEvent('pointerup', Object.assign({{ clientX: {cx + 70}, clientY: {cy + 90} }}, o))); }})()""")
-        pg.wait_for_timeout(150)
+        def dra(r, ddx, ddy):
+            cx, cy = r[0] + r[2] / 2, r[1] + r[3] / 2
+            hx, hy = r[0] + r[2], r[1] + r[3]
+            pg.evaluate(f"""(() => {{ const h = document.querySelector('.mobil-ram .hörn-so'), o = {{ bubbles: true, pointerId: 7, pointerType: 'touch', isPrimary: true }};
+              h.dispatchEvent(new PointerEvent('pointerdown', Object.assign({{ clientX: {hx}, clientY: {hy} }}, o)));
+              h.dispatchEvent(new PointerEvent('pointermove', Object.assign({{ clientX: {cx + ddx}, clientY: {cy + ddy} }}, o)));
+              h.dispatchEvent(new PointerEvent('pointerup', Object.assign({{ clientX: {cx + ddx}, clientY: {cy + ddy} }}, o))); }})()""")
+            pg.wait_for_timeout(150)
+            return cx, cy
+        # ett låst format behåller proportionerna när hörnet dras, bara storleken ändras
+        cx, cy = dra(r21, 70, 20)
+        rl = ram()
+        print('   låst 2:1 dragen:', [round(v) for v in rl])
+        assert abs(rl[2] - 2 * rl[3]) < 2 and abs(rl[2] - 140) < 2 and pg.get_attribute('[data-format="2:1"]', 'aria-checked') == 'true'
+        # fritt format: bredd och höjd var för sig
+        pg.tap('#mobil-format-knapp'); pg.wait_for_timeout(100); pg.tap('[data-format="fri"]'); pg.wait_for_timeout(150)
+        cx, cy = dra(ram(), 70, 90)
         rf = ram()
-        print('   dragen:', [round(v) for v in rf], '| valt:', pg.get_attribute('[data-format="fri"]', 'aria-checked'),
-              '| sparat:', pg.evaluate("localStorage.getItem('terrang-mobil-format')"))
+        print('   fritt dragen:', [round(v) for v in rf], '| sparat:', pg.evaluate("localStorage.getItem('terrang-mobil-format')"))
         assert abs(rf[2] - 140) < 2 and abs(rf[3] - 180) < 2 and pg.get_attribute('[data-format="fri"]', 'aria-checked') == 'true'
         assert abs(rf[0] + rf[2] / 2 - cx) < 2 and abs(rf[1] + rf[3] / 2 - cy) < 2
+        # hamburgaren (0.16.4, DT)
+        assert pg.is_hidden('#huvudmeny')
+        pg.tap('.meny-knapp'); pg.wait_for_timeout(150)
+        assert pg.is_visible('#huvudmeny') and pg.is_visible('#huvudmeny a[href="om.html"]')
+        pg.screenshot(path=f'{UT}/m1c_meny_{tema}.png')
+        pg.tap('.meny-knapp'); pg.wait_for_timeout(150)
+        assert pg.is_hidden('#huvudmeny')
         pg.screenshot(path=f'{UT}/m1b_format_{tema}.png')
         pg.tap('#mobil-markera-knapp'); pg.wait_for_timeout(600)
         print('   utsnittets sidor:', pg.evaluate("(() => { const x = +document.getElementById('xmax').value - +document.getElementById('xmin').value, y = +document.getElementById('ymax').value - +document.getElementById('ymin').value; return [x, y]; })()"))
@@ -67,7 +87,15 @@ with sync_playwright() as p:
         pg.tap('#mobil-hela-2'); pg.wait_for_timeout(600)
         print('   hela verktyget:', not pg.evaluate("document.body.classList.contains('mobilflode')"), '| utsnitt kvar:', pg.input_value('#xmin'))
         pg.screenshot(path=f'{UT}/m3_hela_{tema}.png')
-        pg.locator('#till-mobilvy').scroll_into_view_if_needed(); pg.tap('#till-mobilvy'); pg.wait_for_timeout(400)
+        # tillbaka med knappen på kartan (0.16.4, DT)
+        assert pg.is_visible('#mobilvy-flyt')
+        pg.tap('#mobilvy-flyt'); pg.wait_for_timeout(400)
         print('   tillbaka:', pg.evaluate("document.body.classList.contains('mobilflode')"), '| fel:', fel or 'inga')
+        assert pg.evaluate("document.body.classList.contains('mobilflode')") and not fel
+        # platsen kvar efter omladdning (0.16.4, DT): utan område står kartan där den var
+        pg.tap('#mobil-om'); pg.wait_for_timeout(300)
+        c0 = pg.evaluate("localStorage.getItem('terrang-mobil-vy')")
+        pg.reload(); pg.wait_for_timeout(1200)
+        print('   efter omladdning:', c0, pg.evaluate("localStorage.getItem('terrang-mobil-vy')"))
         ctx.close()
     b.close()

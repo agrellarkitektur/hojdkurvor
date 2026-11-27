@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.16.3';
+  const FILVERSION = '0.16.4';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -123,10 +123,15 @@
 
   // testkrok: skärmpunkt för en lat/lng (används av de automatiska testerna)
   window.__punkt = ll => { const p = karta.latLngToContainerPoint(ll), r = karta.getContainer().getBoundingClientRect(); return [r.left + p.x, r.top + p.y]; };
-  const kurvRitare = L.canvas({ padding: 0.5 });
-  // Egna canvas för laserpunkter och höjdpunkter skapas en gång. Skapades de vid varje Skapa
-  // lades en ny canvas ovanpå de andra varje gång och tog musen från ramen (AT).
-  const laserRitare = L.canvas({ padding: 0.3 }), hojdpunktRitare = L.canvas({ padding: 0.3 });
+  // Höjdkurvorna och laserpunkterna ritas på egna canvas i ett eget lager under resultaten, som inte tar musen
+  // (0.16.4, BÖ): en canvas tar alla mushändelser över hela kartan, och låg kurvornas canvas ovanpå de andra
+  // kom ingen info upp när man höll över skydd, byggnader och annat. Höjdpunkterna ritas med kartans vanliga
+  // canvas, eftersom de har info. Egna canvas skapas en gång; skapades de vid varje Skapa lades en ny canvas
+  // ovanpå de andra varje gång och tog musen från ramen (AT).
+  karta.createPane('ickeMusPane');
+  Object.assign(karta.getPane('ickeMusPane').style, { zIndex: 390, pointerEvents: 'none' });
+  const kurvRitare = L.canvas({ padding: 0.5, pane: 'ickeMusPane' });
+  const laserRitare = L.canvas({ padding: 0.3, pane: 'ickeMusPane' });
 
   const tillLatLng = (epsg) => {
     const f = T.omvandlare(epsg, 4326).forward;
@@ -2206,6 +2211,12 @@
       ]);
       senaste.lamningar = lam.status === 'fulfilled' ? lam.value : fel(lam.reason);
       senaste.natur = nat.status === 'fulfilled' ? nat.value : fel(nat.reason);
+      // klippta till utsnittet med 50 m marginal (0.16.4, DE): stora områden gjorde kartan och planvyn sega
+      if (Array.isArray(senaste.natur)) {
+        const ruta = { xmin: r.xmin - 50, ymin: r.ymin - 50, xmax: r.xmax + 50, ymax: r.ymax + 50 };
+        senaste.natur.forEach(o => { const n = o.ringar.reduce((s, x) => s + x.length, 0); o.ringar = Geodata.klippRingar(o.ringar, ruta); if (o.ringar.reduce((s, x) => s + x.length, 0) < n) o.klippt = true; });
+        for (let i = senaste.natur.length - 1; i >= 0; i--) if (!senaste.natur[i].ringar.length) senaste.natur.splice(i, 1);
+      }
       if (nat.status === 'fulfilled' && nat.value.reserv) {
         // Naturvårdsverket svarade inte: det som finns i OpenStreetMap visas i stället (0.14.4)
         const rv = nat.value.reserv;
@@ -3118,20 +3129,46 @@
    * Förhandsvy av utskriften (0.14.4): kartfältet på pappret som en streckad ram på kartan,
    * så länge utskriftsrutan är öppen. Det som ligger utanför ramen kommer inte med.
    */
-  let utskriftsram = null;
+  let utskriftsram = null, prFlytt = null;
+  /**
+   * Utskriftsytans mitt när den är flyttad (0.16.4, BÄ): gäller bara det utsnitt den flyttades i, och mitten
+   * ligger alltid inom utsnittet. null = utsnittets mitt.
+   */
+  function prCentrum() {
+    const s = state.senaste, f = prFlytt;
+    if (!s || !f || f.nyckel !== [s.r.xmin, s.r.ymin, s.r.xmax, s.r.ymax].join()) return null;
+    return [Math.min(s.r.xmax, Math.max(s.r.xmin, f.c[0])), Math.min(s.r.ymax, Math.max(s.r.ymin, f.c[1]))];
+  }
   function visaUtskriftsram(passa) {
     if (utskriftsram) { utskriftsram.remove(); utskriftsram = null; }
     const s = state.senaste;
     if (!s || $('lp-utskrift').hidden) return;
-    const f = Utskrift.kartfalt(s.r, $('pr-format').value, $('pr-orient').value === '1', +$('pr-skala').value);
+    const f = Utskrift.kartfalt(s.r, $('pr-format').value, $('pr-orient').value === '1', +$('pr-skala').value, prCentrum());
     const t = tillLatLng(s.epsg);
     const ram = [[f.xmin, f.ymin], [f.xmax, f.ymin], [f.xmax, f.ymax], [f.xmin, f.ymax]].map(t);
     // Utanför pappret tonas kartan ned, så att det som kommer med syns tydligt
     const M = 5000, utanfor = [[f.xmin - M, f.ymin - M], [f.xmax + M, f.ymin - M], [f.xmax + M, f.ymax + M], [f.xmin - M, f.ymax + M]].map(t);
     const linje = L.polygon(ram, { pane: 'ramPane', renderer: ramRitare, color: farg('annot'), weight: 2.5, dashArray: '8 6', fill: false, interactive: false });
+    // dra i ramen för att flytta utskriftsytan inom utsnittet (0.16.4, BÄ)
+    const grepp = L.polygon(ram, { pane: 'ramPane', renderer: ramRitare, color: '#000', opacity: 0, weight: 16, fill: false, interactive: true, bubblingMouseEvents: false });
+    grepp.on('mousedown', e => {
+      L.DomEvent.stop(e);
+      karta.dragging.disable();
+      const fran = franLatLng(s.epsg), p0 = fran([e.latlng.lat, e.latlng.lng]), c0 = prCentrum() || [(s.r.xmin + s.r.xmax) / 2, (s.r.ymin + s.r.ymax) / 2];
+      const nyckel = [s.r.xmin, s.r.ymin, s.r.xmax, s.r.ymax].join();
+      // musen följs på hela sidan: ramen ritas om under pekaren, och dess händelser bubblar inte till kartan
+      const flytta = ev => {
+        const ll = karta.mouseEventToLatLng(ev), p = fran([ll.lat, ll.lng]);
+        prFlytt = { nyckel, c: [c0[0] + p[0] - p0[0], c0[1] + p[1] - p0[1]] };
+        visaUtskriftsram();
+      };
+      const slut = () => { document.removeEventListener('mousemove', flytta); document.removeEventListener('mouseup', slut); karta.dragging.enable(); passar(); };
+      document.addEventListener('mousemove', flytta);
+      document.addEventListener('mouseup', slut);
+    });
     utskriftsram = L.featureGroup([
       L.polygon([utanfor, ram], { pane: 'ramPane', renderer: ramRitare, stroke: false, fillColor: '#000', fillOpacity: 0.35, interactive: false }),
-      linje,
+      linje, grepp,
     ]).addTo(karta);
     utskriftsram.linje = linje;
     if (passa) {
@@ -3145,8 +3182,9 @@
     const [W, H] = Utskrift.papper($('pr-format').value, $('pr-orient').value === '1');
     const sk = +$('pr-skala').value, bw = (s.r.xmax - s.r.xmin) * 1000 / sk, bh = (s.r.ymax - s.r.ymin) * 1000 / sk;
     const ryms = !(bw > W - 20 || bh > H - 56);
-    $('pr-passar').textContent = `Utsnittet blir ${fmt(bw)} × ${fmt(bh)} mm.` + (ryms ? ' Den streckade ramen på kartan visar vad som kommer med.' : ' Det får inte plats helt: bara det inom den streckade ramen på kartan kommer med.');
-    visaUtskriftsram(!ryms);
+    $('pr-passar').textContent = `Utsnittet blir ${fmt(bw)} × ${fmt(bh)} mm.` + (ryms ? ' Den streckade ramen på kartan visar vad som kommer med.' : ' Det får inte plats helt: bara det inom den streckade ramen på kartan kommer med.')
+      + ' Dra i ramen för att flytta utskriftsytan.';
+    visaUtskriftsram(!ryms && !prCentrum());
     const lm = state.bakgrund === 'lm';
     $('pr-bg-rad').hidden = !lm;
     $('pr-bg-info').textContent = lm
@@ -3174,7 +3212,7 @@
   async function utskriftsbakgrund(s, format, liggande, skala, lage) {
     const a = inloggning();
     if (!a) throw new Error('fyll i inloggningen till Lantmäteriet för att få med kartan.');
-    const falt = Utskrift.kartfalt(s.r, format, liggande, skala);
+    const falt = Utskrift.kartfalt(s.r, format, liggande, skala, prCentrum());
     const tillTM = s.epsg === 3006 ? ((x, y) => [x, y]) : (f => (x, y) => f([x, y]))(T.omvandlare(s.epsg, 3006).forward);
     const hörn = [[falt.xmin, falt.ymin], [falt.xmax, falt.ymin], [falt.xmax, falt.ymax], [falt.xmin, falt.ymax]].map(([x, y]) => tillTM(x, y));
     const tm = { xmin: Math.min(...hörn.map(p => p[0])) - 10, xmax: Math.max(...hörn.map(p => p[0])) + 10, ymin: Math.min(...hörn.map(p => p[1])) - 10, ymax: Math.max(...hörn.map(p => p[1])) + 10 };
@@ -3209,7 +3247,7 @@
       const sk = syns('skugga') && s.skuggor && s.skuggor[state.skuggaVal];
       const np = s.nollpunkt;
       const pdf = Utskrift.plan({
-        format, liggande, skala, utsnitt: s.r, fonter,
+        format, liggande, skala, utsnitt: s.r, fonter, centrum: prCentrum(),
         lager: {
           bakgrund,
           ortofoto: syns('ortofoto') ? s.ortofoto : null,
@@ -3261,10 +3299,10 @@
     img.src = b.url;
   }
   function visaHojdpunkter(hp, epsg) {
-    const t = tillLatLng(epsg), Z = (state.senaste && state.senaste.Z0) || 0, ritare = hojdpunktRitare;
+    const t = tillLatLng(epsg), Z = (state.senaste && state.senaste.Z0) || 0;
     const etiketter = hp.length <= 400;
     const grp = L.featureGroup(hp.map(p => {
-      const m = L.circleMarker(t([p.x, p.y]), { radius: 2.2, stroke: false, fillColor: farg('annot'), fillOpacity: 1, renderer: ritare });
+      const m = L.circleMarker(t([p.x, p.y]), { radius: 2.2, stroke: false, fillColor: farg('annot'), fillOpacity: 1 });
       m.bindTooltip(Platsanalys.hojdText(p.z, Z), etiketter ? { permanent: true, direction: 'right', className: 'hojd-etikett', offset: [3, 0] } : { direction: 'top' });
       return m;
     }));
@@ -3291,7 +3329,9 @@
     }
     if (Array.isArray(s.natur) && s.natur.length) {
       const stil = () => ({ color: farg('natur'), weight: 2, dashArray: '6 4', fillColor: farg('natur'), fillOpacity: 0.08 });
-      const pol = s.natur.flatMap(o => o.ringar.map(rg => L.polygon(rg.map(t), stil()).bindTooltip(esc(`${o.typ}${o.namn ? ': ' + o.namn : ''}${o.kalla === 'osm' ? ' (OpenStreetMap)' : ''}`), { sticky: true })));
+      // källan står i infon (0.16.4, BÖ): Naturvårdsverket eller OpenStreetMap
+      const pol = s.natur.flatMap(o => o.ringar.map(rg => L.polygon(rg.map(t), stil()).bindTooltip(esc(`${o.typ}${o.namn ? ': ' + o.namn : ''}`)
+        + `<br><small>${o.kalla === 'osm' ? 'OpenStreetMap, inte kontrollerat mot Naturvårdsregistret' : 'Naturvårdsverket'}${o.klippt ? ', klippt till utsnittet' : ''}</small>`, { sticky: true })));
       const grp = L.featureGroup(pol);
       visaResultatLager('natur', grp, () => pol.forEach(p => p.setStyle(stil())));
     }
@@ -3305,7 +3345,7 @@
     const stil = m => ({ color: farg('strand'), weight: m === 100 ? 2 : 1.5, dashArray: m === 100 ? null : '8 6', fill: false });
     const linjer = [];
     [[100, st.zoner.m100], [300, st.zoner.m300]].forEach(([m, lista]) => lista.forEach(p =>
-      linjer.push(Object.assign(L.polyline(p.map(t), stil(m)).bindTooltip(`${m} m från vatten med strandskydd (indikation)`, { sticky: true }), { meter: m }))));
+      linjer.push(Object.assign(L.polyline(p.map(t), stil(m)).bindTooltip(`${m} m från vatten med strandskydd (indikation)${st.kalla ? `<br><small>Vatten: ${esc(st.kalla)}</small>` : ''}`, { sticky: true }), { meter: m }))));
     visaResultatLager('strandskydd', L.featureGroup(linjer), () => linjer.forEach(l => l.setStyle(stil(l.meter))));
   }
 
@@ -3579,17 +3619,25 @@
     const data = {
       volymer: d.volymer, granser: und.granser, ytor: und.ytor, visa: d.visa, ledare: d.ledare || [],
       underlag: { kurvor: u.kurvor, trad: d.trad || u.trad, vagar: u.vagar, skydd: u.skydd },
-      kallor: [d.visa.vagar && u.vagar ? 'Vägar © OpenStreetMap-bidragsgivare (ODbL).' : '', d.visa.skydd && u.skydd ? 'Skydd: Naturvårdsverket, Riksantikvarieämbetet, strandskyddet är en indikation.' : '',
+      kallor: [d.visa.vagar && u.vagar ? 'Vägar © OpenStreetMap-bidragsgivare (ODbL).' : '',
+        d.visa.skydd && u.skydd ? `Skydd: ${(u.skydd.natur || []).some(o => o.kalla === 'osm') ? 'Naturvårdsverket och OpenStreetMap' : 'Naturvårdsverket'}, Riksantikvarieämbetet; strandskyddet är en indikation${u.skydd.strand && u.skydd.strand.kalla ? ` (vatten: ${u.skydd.strand.kalla})` : ''}.` : '',
         d.visa.kurvor && u.kurvor ? 'Höjdkurvor ur Lantmäteriets markhöjdmodell.' : ''].filter(Boolean).join(' ') || null,
       hus: und.hus.filter(b => !ersatta.has(String(b.id))),
       zonNamn: T.zon(state.epsg).namn, centrum: ram.centrum, format: ram.format, liggande: ram.liggande, skala: ram.skala,
       uppgifter: { fastighet: p.fastighet || $('projekt').value.trim(), kommun: state.kommun ? state.kommun.namn : p.kommun, uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer, datum: idag() },
     };
     if (typ === 'dxf') {
+      // DXF:en byggs före spardialogen (0.16.4, DF): ett fel efteråt lämnade en tom fil på disken
       const filnamn = `${namn}_situationsplan.dxf`;
+      let blob;
+      try { blob = new Blob([Situationsplan.dxf(data)], { type: 'application/dxf' }); } catch (e) {
+        console.error(e);
+        visaStatus('Situationsplanen kunde inte skapas som DXF: ' + e.message);
+        return;
+      }
       const mal = await valjFil(filnamn, 'application/dxf', 'DXF');
       if (mal === AVBRUTET) return;
-      await skrivFil(mal, new Blob([Situationsplan.dxf(data)], { type: 'application/dxf' }), filnamn);
+      await skrivFil(mal, blob, filnamn);
       return;
     }
     const filnamn = `${namn}_situationsplan_1-${ram.skala}_${ram.format.toUpperCase()}.pdf`;
@@ -3650,6 +3698,9 @@
       markhojd: markhojdVid, nyttId: () => Utbyte.nyttId(), andrad: skissFranPlan,
       ram: lager.las('localStorage', 'terrang-situationsplan') || null,
       ramAndrad: r => lager.spara('localStorage', 'terrang-situationsplan', r),
+      // ramen flyttad av användaren (0.16.4, DF), i projektet i SWEREF 99 TM
+      ramCentrum: state.proj && state.proj.d.projekt.ramCentrum ? tillZon(state.proj.d.projekt.ramCentrum) : null,
+      ramCentrumAndrad: c => { if (!state.proj) return; state.proj.d.projekt.ramCentrum = c ? franZon(c) : null; planeraSpara(); },
       uppgifter: () => { const p = state.proj ? state.proj.d.projekt : {}; return { fastighet: p.fastighet || $('projekt').value.trim(), uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer }; },
       satUppgifter: delar => { if (!state.proj) return; Object.assign(state.proj.d.projekt, delar); planeraSpara(); },
       situationsplan: (typ, d) => skapaSituationsplan(typ, d, { granser, hus, ytor: s && s.fastigheter ? s.fastigheter.ytor : [], underlag }),
@@ -3870,6 +3921,7 @@
         id: g.projekt.id, namn: $('projekt').value.trim(), kommun: state.kommun ? state.kommun.namn : (g.projekt.kommun || ''),
         fastighet: g.projekt.fastighet || '', uppdrag: g.projekt.uppdrag || '', anteckning: g.projekt.anteckning || '',
         ritadAv: g.projekt.ritadAv || '', ritningsnummer: g.projekt.ritningsnummer || '',
+        ramCentrum: g.projekt.ramCentrum || null,
       },
       plats: lasPlats(), val: lasVal(), inmatning: lasInmatning(g), underlag: g.underlag, historik: g.historik,
     };
@@ -4356,6 +4408,9 @@
     ['mobil-sok', 'mobil-blad'].forEach(id => { $(id).hidden = !pa; });
     $('mobil-ram').hidden = !pa || !!state.utsnitt;
     document.querySelector('.mobilvy-rad').hidden = pa || !mobilMQ.matches;
+    // vägen tillbaka syns också på kartan och i menyn (0.16.4, DT): länken längst ner i panelen var svår att hitta
+    $('mobilvy-flyt').hidden = pa || !mobilMQ.matches;
+    document.querySelectorAll('[data-mobilvy]').forEach(b => { b.hidden = pa || !mobilMQ.matches; });
     setTimeout(() => { karta.invalidateSize(); placeraRam(); }, 50);
     uppdateraMobil();
   }
@@ -4374,23 +4429,32 @@
    * bredd och höjd i bildpunkter. Ramen står mitt mellan sökrutan och bladet, och hörnen går att dra
    * (symmetriskt kring mitten), vilket gör formatet fritt. Valet sparas i webbläsaren.
    */
-  const mobilFormat = Object.assign({ format: '1:1', b: 240, h: 160 }, lager.las('localStorage', 'terrang-mobil-format') || {});
+  const mobilFormat = Object.assign({ format: '1:1', b: 240, h: 160, andel: 1, oppen: false }, lager.las('localStorage', 'terrang-mobil-format') || {});
+  if (!(mobilFormat.andel > 0.2 && mobilFormat.andel <= 1)) mobilFormat.andel = 1;
   /** Ytan som ramen får använda, i bildpunkter relativt kartytan. */
   function ramYta() {
     const k = $('mobil-ram').parentElement.getBoundingClientRect(), sok = $('mobil-sok').getBoundingClientRect(), blad = $('mobil-blad').getBoundingClientRect();
     const top = (sok.height ? sok.bottom - k.top : 0) + 34, bot = (blad.height ? blad.top - k.top : k.height) - 14;
     return { x0: 20, x1: k.width - 20, y0: top, y1: Math.max(top + 80, bot) };
   }
+  const kvotFor = f => { const [p, q] = f.split(':').map(Number); return p / q || 1; };
+  /** Största ramen för ett låst format. */
+  const maxFor = (y, kvot) => { const b = Math.min((y.x1 - y.x0) * 0.9, (y.y1 - y.y0) * 0.92 * kvot); return [b, b / kvot]; };
   function placeraRam() {
     const ram = $('mobil-ram');
+    // formatväljaren går att fälla ihop (0.16.4, DT); knappen visar valt format
+    $('mobil-format').hidden = !mobilFormat.oppen;
+    $('mobil-format-knapp').setAttribute('aria-expanded', String(!!mobilFormat.oppen));
+    $('mobil-format-namn').textContent = mobilFormat.format === 'fri' ? 'FRITT' : mobilFormat.format;
     if (ram.hidden) return;
     const y = ramYta(), bMax = y.x1 - y.x0, hMax = y.y1 - y.y0;
     let b, h;
     if (mobilFormat.format === 'fri') {
       b = Math.min(Math.max(mobilFormat.b, 60), bMax); h = Math.min(Math.max(mobilFormat.h, 60), hMax);
     } else {
-      const [p, q] = mobilFormat.format.split(':').map(Number), kvot = p / q || 1;
-      b = Math.min(bMax * 0.9, hMax * 0.92 * kvot); h = b / kvot;
+      // ett låst format behåller sina proportioner; hörnen ändrar bara storleken (0.16.4, DT)
+      const [mb, mh] = maxFor(y, kvotFor(mobilFormat.format));
+      b = mb * mobilFormat.andel; h = mh * mobilFormat.andel;
     }
     const cx = (y.x0 + y.x1) / 2, cy = (y.y0 + y.y1) / 2;
     Object.assign(ram.style, { left: `${cx - b / 2}px`, top: `${cy - h / 2}px`, width: `${b}px`, height: `${h}px`, right: 'auto', bottom: 'auto' });
@@ -4398,6 +4462,7 @@
     mobilMatt();
   }
   function sparaMobilFormat() { lager.spara('localStorage', 'terrang-mobil-format', mobilFormat); }
+  $('mobil-format-knapp').addEventListener('click', () => { mobilFormat.oppen = !mobilFormat.oppen; sparaMobilFormat(); placeraRam(); });
   $('mobil-format').addEventListener('click', e => {
     const k = e.target.closest('button[data-format]');
     if (!k) return;
@@ -4405,20 +4470,35 @@
       const r = $('mobil-ram').getBoundingClientRect();
       if (r.width) { mobilFormat.b = r.width; mobilFormat.h = r.height; }
     }
-    mobilFormat.format = k.dataset.format; sparaMobilFormat(); placeraRam();
+    if (k.dataset.format !== 'fri') mobilFormat.andel = 1;
+    mobilFormat.format = k.dataset.format; mobilFormat.oppen = false; sparaMobilFormat(); placeraRam();
   });
-  // Dra i ett hörn: bredd och höjd ändras lika mycket åt båda håll, så att mitten ligger still.
+  // Fler än ett finger på skärmen (nypa för att zooma): ett hörn som dras släpps och ramen blir som förut, så att
+  // formatet inte ändras av misstag (0.16.4, DT).
+  let flerFingrar = false, hornAvbryt = null;
+  document.addEventListener('touchstart', e => { if (e.touches.length > 1) { flerFingrar = true; if (hornAvbryt) hornAvbryt(); } }, { passive: true });
+  document.addEventListener('touchend', e => { if (!e.touches.length) flerFingrar = false; }, { passive: true });
+  // Dra i ett hörn: ramen ändras lika mycket åt båda håll, så att mitten ligger still. Fritt format ändrar bredd
+  // och höjd var för sig; ett låst format ändrar bara storleken.
   $('mobil-ram').querySelectorAll('.hörn').forEach(h => {
     h.addEventListener('pointerdown', e => {
       e.preventDefault(); e.stopPropagation();
+      if (flerFingrar || !e.isPrimary) return;
       try { h.setPointerCapture(e.pointerId); } catch (_) { /* pekaren kan sakna fångst */ }
       const r = $('mobil-ram').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const fore = Object.assign({}, mobilFormat);
       const flytta = ev => {
-        mobilFormat.format = 'fri';
-        mobilFormat.b = 2 * Math.abs(ev.clientX - cx); mobilFormat.h = 2 * Math.abs(ev.clientY - cy);
+        if (flerFingrar) return;
+        const dx = 2 * Math.abs(ev.clientX - cx), dy = 2 * Math.abs(ev.clientY - cy);
+        if (mobilFormat.format === 'fri') { mobilFormat.b = dx; mobilFormat.h = dy; }
+        else {
+          const kvot = kvotFor(mobilFormat.format), [mb] = maxFor(ramYta(), kvot);
+          mobilFormat.andel = Math.min(1, Math.max(0.25, Math.max(dx, dy * kvot) / mb));
+        }
         placeraRam();
       };
-      const slut = () => { h.removeEventListener('pointermove', flytta); sparaMobilFormat(); };
+      const slut = () => { h.removeEventListener('pointermove', flytta); hornAvbryt = null; if (!flerFingrar) sparaMobilFormat(); };
+      hornAvbryt = () => { h.removeEventListener('pointermove', flytta); Object.assign(mobilFormat, fore); placeraRam(); hornAvbryt = null; };
       h.addEventListener('pointermove', flytta);
       h.addEventListener('pointerup', slut, { once: true });
       h.addEventListener('pointercancel', slut, { once: true });
@@ -4434,6 +4514,12 @@
     $('mobil-matt').textContent = `ca ${fmt(Math.round(w / 10) * 10)} × ${fmt(Math.round(h / 10) * 10)} m`;
   }
   karta.on('move zoom', () => { if (document.body.classList.contains('mobilflode') && !state.utsnitt) mobilMatt(); });
+  // kartans läge i mobilvyn sparas, så att man kommer tillbaka dit efter en omladdning (0.16.4, DT)
+  karta.on('moveend', () => {
+    if (!document.body.classList.contains('mobilflode') || state.utsnitt) return;
+    const c = karta.getCenter();
+    lager.spara('localStorage', 'terrang-mobil-vy', { lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6), z: karta.getZoom() });
+  });
   $('mobil-markera-knapp').addEventListener('click', () => {
     const ram = $('mobil-ram').getBoundingClientRect(), k = karta.getContainer().getBoundingClientRect();
     const sv = karta.containerPointToLatLng([ram.left - k.left, ram.bottom - k.top]), no = karta.containerPointToLatLng([ram.right - k.left, ram.top - k.top]);
@@ -4444,7 +4530,10 @@
   });
   $('mobil-om').addEventListener('click', () => { rensaUtsnitt(); uppdateraMobil(); });
   [$('mobil-hela'), $('mobil-hela-2')].forEach(b => b.addEventListener('click', () => { lager.spara('localStorage', 'terrang-hela-verktyget', true); satMobil(false); }));
-  $('till-mobilvy').addEventListener('click', () => { lager.ta('localStorage', 'terrang-hela-verktyget'); satMobil(true); window.scrollTo(0, 0); });
+  const tillMobilvy = () => { lager.ta('localStorage', 'terrang-hela-verktyget'); satMobil(true); window.scrollTo(0, 0); };
+  $('till-mobilvy').addEventListener('click', tillMobilvy);
+  $('mobilvy-flyt').addEventListener('click', tillMobilvy);
+  document.querySelectorAll('[data-mobilvy]').forEach(b => b.addEventListener('click', tillMobilvy));
   $('mobil-kopiera').addEventListener('click', async () => {
     const ok = state.utsnitt && await kopieraText(koordinatText());
     $('mobil-hjalp').textContent = ok ? 'Koordinaterna är kopierade. Klistra in dem på datorn under Område, eller på sidan Beställ.' : 'Kunde inte kopiera.';
@@ -4705,6 +4794,7 @@
     $('tak-nock').value = decimal(e.nock);
     $('tak-vand').checked = !!e.vand;
     uppdateraTak(false);
+    $('hus-dolj').textContent = vy3d.husDolt(id) ? 'Visa huset' : 'Dölj huset';
     $('vy3d-tak').hidden = false;
   }
   /** Räknar om taket med valen i panelen; spara = valen sparas och taket byts i vyn. */
@@ -4799,10 +4889,17 @@
   }
   /** Husen som är dolda i 3D-vyn (id som i Byggnad.somVolymer). */
   const doldaHus3d = () => { const v = husval(); return [...hus3d].filter(([, b]) => b.id != null && v[String(b.id)] && v[String(b.id)].dolt).map(([id]) => id); };
+  /**
+   * Se dolda (0.16.4, CB; förut Visa dolda, som visade allt på en gång): dolda träd och hus visas utgråade och går
+   * att markera; Visa i panelen tar tillbaka det markerade.
+   */
   function uppdateraDoldaKnapp() {
-    const n = trad3d.filter(t => t.dolt).length + doldaHus3d().length;
-    $('vy3d-dolda').hidden = !vy3d || n === 0;
-    $('vy3d-dolda').textContent = `Visa dolda (${n})`;
+    const n = trad3d.filter(t => t.dolt).length + doldaHus3d().length, pa = !!(vy3d && vy3d.seDolda());
+    if (vy3d && pa && n === 0) vy3d.seDolda(false);
+    const pa2 = !!(vy3d && vy3d.seDolda());
+    $('vy3d-dolda').hidden = !vy3d || (n === 0 && !pa2);
+    $('vy3d-dolda').textContent = `Se dolda (${n})`;
+    $('vy3d-dolda').setAttribute('aria-pressed', String(pa2));
   }
   function stangTradpanel() {
     $('vy3d-trad').hidden = true; tradVal = null;
@@ -4820,6 +4917,7 @@
     const ra = t.ra || t;
     $('trad-hojd').placeholder = decimal(ra.hojd, 1); $('trad-krona').placeholder = decimal(ra.krona, 1);
     tradInfo(t);
+    $('trad-dolj').textContent = t.dolt ? 'Visa trädet' : 'Dölj trädet';
     $('vy3d-trad').hidden = false;
   }
   function tradInfo(t) {
@@ -4849,12 +4947,23 @@
   };
   ['trad-art', 'trad-hojd', 'trad-krona'].forEach(id => $(id).addEventListener('change', () => sparaTrad(tradFalt())));
   $('trad-aterstall').addEventListener('click', () => { ['trad-art', 'trad-hojd', 'trad-krona'].forEach(id => { $(id).value = ''; }); sparaTrad({}); });
-  $('trad-dolj').addEventListener('click', () => sparaTrad(Object.assign(tradFalt(), { dolt: true })));
+  $('trad-dolj').addEventListener('click', () => {
+    const t = tradVal != null && trad3d[tradVal];
+    if (t && t.dolt) { const i = tradVal; visaTradIgen([i]); stangTradpanel(); return; }
+    sparaTrad(Object.assign(tradFalt(), { dolt: true }));
+  });
   $('trad-stang').addEventListener('click', stangTradpanel);
   $('hus-dolj').addEventListener('click', () => {
     if (!husVal || !vy3d) return;
     const nyckel = husNyckel(husVal.b), id = husVal.id;
     if (!nyckel) { $('tak-info').textContent = 'Huset saknar id, så det går inte att dölja.'; return; }
+    if (vy3d.husDolt(id)) {
+      // ett dolt hus valt under Se dolda (0.16.4, CB): visa det igen
+      const hv = husval(); delete hv[nyckel];
+      lager.spara('localStorage', HUSVAL, hv);
+      stangTakpanel(); vy3d.doljHus(id, false); objektAndrat();
+      return;
+    }
     const v = husval(); v[nyckel] = { dolt: true };
     lager.spara('localStorage', HUSVAL, v);
     stangTakpanel();
@@ -4883,8 +4992,11 @@
     vy3d.markeraTrad(lassoTrad);
     const n = lassoTrad.length;
     $('lasso-info').textContent = (n ? `${n} träd markerade.` : 'Inga träd markerade.') + ' Shift-klicka på ett träd för att lägga till eller ta bort det.';
-    $('lasso-dolj').disabled = !n;
-    $('lasso-dolj').textContent = n ? `Dölj ${n} träd` : 'Dölj träden';
+    const nd = lassoTrad.filter(i => trad3d[i] && trad3d[i].dolt).length, nv = n - nd;
+    $('lasso-dolj').disabled = !nv;
+    $('lasso-dolj').textContent = nv ? `Dölj ${nv} träd` : 'Dölj träden';
+    $('lasso-visa').hidden = !nd;
+    $('lasso-visa').textContent = `Visa ${nd} dolda`;
   }
   /**
    * Shift-klick på ett träd i 3D-vyn (0.14.4): lägger till det i urvalet, eller tar bort det om
@@ -4907,7 +5019,7 @@
     if (lassoYta) lassoYta.remove();
     stangTradpanel(); stangTakpanel();
     lassoTrad = []; vy3d.markeraTrad(null);
-    $('lasso-dolj').disabled = true; $('lasso-dolj').textContent = 'Dölj träden';
+    $('lasso-dolj').disabled = true; $('lasso-dolj').textContent = 'Dölj träden'; $('lasso-visa').hidden = true;
     $('lasso-info').textContent = 'Dra en slinga runt träden som ska döljas, eller Shift-klicka på dem ett och ett.';
     $('vy3d-lassopanel').hidden = false;
     $('vy3d-lasso').setAttribute('aria-pressed', 'true');
@@ -4950,6 +5062,7 @@
   $('vy3d-lasso').addEventListener('click', () => { if (lassoYta) stangLasso(); else startaLasso(); });
   $('lasso-om').addEventListener('click', startaLasso);
   $('lasso-stang').addEventListener('click', stangLasso);
+  $('lasso-visa').addEventListener('click', () => { visaTradIgen(lassoTrad.slice()); stangLasso(); });
   $('lasso-dolj').addEventListener('click', () => {
     const s = state.senaste;
     if (!vy3d || !s || !lassoTrad.length) return;
@@ -4967,26 +5080,35 @@
     objektAndrat();
     stangLasso();
   });
-  /** Visar igen alla träd och hus som är dolda här (de andra ändringarna av träden står kvar). */
+  /** Se dolda (0.16.4, CB): växlar läget där de dolda syns utgråade och kan väljas. */
   $('vy3d-dolda').addEventListener('click', () => {
+    if (!vy3d) return;
+    const pa = !vy3d.seDolda();
+    vy3d.seDolda(pa);
+    stangTradpanel(); stangTakpanel();
+    if (!pa && lassoTrad.length) stangLasso();
+    uppdateraDoldaKnapp();
+    if (pa) $('vy3d-hjalp').textContent = 'De dolda träden och husen syns utgråade. Klicka på ett, eller ringa in flera med lassot, och välj Visa.';
+    else $('vy3d-hjalp').innerHTML = HJALP3D;
+  });
+  /** Visar igen träden i (index i trad3d) som är dolda (0.16.4, CB). */
+  function visaTradIgen(index) {
     const s = state.senaste;
     if (!vy3d || !s) return;
     const val = tradval();
-    trad3d.forEach((t, i) => {
-      if (!t.dolt) return;
+    for (const i of index) {
+      const t = trad3d[i];
+      if (!t || !t.dolt) continue;
       const orig = (s.tradAlla || s.trad)[i] || (t.ny ? t : null), e = Objektval.valFor(t, val);
-      if (!orig) return;
+      if (!orig) continue;
       delete e.dolt;
       Objektval.sattTrad(val, orig, e);
       trad3d[i] = Objektval.tillampaTrad([orig], val, { medDolda: true }).trad[0];
       vy3d.bytTrad(i, trad3d[i]);
-    });
+    }
     lager.spara('localStorage', TRADVAL, val);
-    const hv = husval();
-    for (const id of doldaHus3d()) { delete hv[String(hus3d.get(id).id)]; vy3d.doljHus(id, false); }
-    lager.spara('localStorage', HUSVAL, hv);
     objektAndrat();
-  });
+  }
 
   // ------------------------------------------------------------------
   // Modellera i 3D-vyn (0.10.0): volymer med mått, snäpp och länkar. Skissen går tillbaka till
@@ -5262,5 +5384,9 @@
   visaSteg(franLankProj ? 'plats' : (lager.las('sessionStorage', 'terrang-steg') || 'plats'));
   satMobil(mobilVald());
   sammanfatta();
-  startaProjekt(franLankProj);
+  startaProjekt(franLankProj).then(() => {
+    // mobilvyn utan område: tillbaka där kartan var förra gången (0.16.4, DT)
+    const v = lager.las('localStorage', 'terrang-mobil-vy');
+    if (document.body.classList.contains('mobilflode') && !state.utsnitt && v && isFinite(v.lat) && isFinite(v.lng) && isFinite(v.z)) karta.setView([v.lat, v.lng], v.z);
+  }, e => { console.error(e); throw e; });
 })();

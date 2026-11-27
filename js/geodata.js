@@ -163,6 +163,36 @@
     return [];
   }
 
+  /**
+   * Klipper ringar mot en ruta { xmin, ymin, xmax, ymax } (Sutherland–Hodgman, ring för ring) (0.16.4, DE).
+   * Ett stort skyddat område (Natura 2000 i Vättern) kom förut med hela sin kustlinje, och kartan, planvyn och
+   * situationsplanen blev sega. Ringar som hamnar helt utanför försvinner.
+   */
+  function klippRingar(rs, b) {
+    const ut = [];
+    for (const r of rs || []) {
+      if (!r || r.length < 3) continue;
+      let p = r;
+      for (const [inne, skar] of [
+        [q => q[0] >= b.xmin, (a, c) => [b.xmin, a[1] + (c[1] - a[1]) * (b.xmin - a[0]) / (c[0] - a[0])]],
+        [q => q[0] <= b.xmax, (a, c) => [b.xmax, a[1] + (c[1] - a[1]) * (b.xmax - a[0]) / (c[0] - a[0])]],
+        [q => q[1] >= b.ymin, (a, c) => [a[0] + (c[0] - a[0]) * (b.ymin - a[1]) / (c[1] - a[1]), b.ymin]],
+        [q => q[1] <= b.ymax, (a, c) => [a[0] + (c[0] - a[0]) * (b.ymax - a[1]) / (c[1] - a[1]), b.ymax]],
+      ]) {
+        if (!p.length) break;
+        const ny = [];
+        for (let i = 0; i < p.length; i++) {
+          const a = p[i], c = p[(i + 1) % p.length], ia = inne(a), ic = inne(c);
+          if (ia) ny.push(a);
+          if (ia !== ic) ny.push(skar(a, c));
+        }
+        p = ny;
+      }
+      if (p.length >= 3) ut.push(p);
+    }
+    return ut;
+  }
+
   /** Natura 2000-områdets typ (SPA, SCI, SAC) som direktiv i klartext. */
   function natura2000Typ(t) {
     const d = [/SPA/i.test(t) && 'fågeldirektivet', /SCI|SAC/i.test(t) && 'art- och habitatdirektivet'].filter(Boolean);
@@ -392,5 +422,5 @@
     naturOsm: 'Skyddad natur (reserv): © OpenStreetMap-bidragsgivare (ODbL).',
   };
 
-  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, TILLFALLIGT, hamta, medOmforsok, overpass, osmDelar, wfsUrl, natura2000Typ, ringar, skyddadNatur, skyddadNaturOsm, fogaRingar, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
+  return { TJANSTER, LAMNINGAR, OVERSVAMNING, KALLOR, TILLFALLIGT, hamta, medOmforsok, overpass, osmDelar, wfsUrl, natura2000Typ, ringar, klippRingar, skyddadNatur, skyddadNaturOsm, fogaRingar, lamningar, oversvamning, vatten, wmsBildUrl, wmsCanvas, tackning, egenskap };
 }));

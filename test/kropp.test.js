@@ -344,4 +344,31 @@ prov('0.16.1: markering i plan med indrag, takanslutning och utdraget tak i 3D',
   assert.strictEqual(w.takutdrag, undefined);
 });
 
+prov('0.16.4: markering på polygoner, rivningskryss mot norr, dockning och beskrivning', () => {
+  // L-formad huvudbyggnad: krysset finns och ligger inuti fotavtrycket
+  const L = [[0, 0], [10, 0], [10, 4], [4, 4], [4, 10], [0, 10]];
+  const m = K.planmarke({ fotavtryck: L, slag: 'huvud' }, 0.5);
+  assert(m.length >= 2, 'kryss på en polygon');
+  for (const [a, b] of m) { const c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; assert(K.inuti(L, c[0], c[1]), 'inuti'); }
+  assert.strictEqual(K.planmarke({ fotavtryck: L, slag: 'komplement' }, 0.5).length >= 1, true);
+  // rivs: linjerna är 45° mot rutnätet också när huset är vridet 30°
+  const v = 30 * Math.PI / 180, rot = p => [p[0] * Math.cos(v) - p[1] * Math.sin(v), p[0] * Math.sin(v) + p[1] * Math.cos(v)];
+  const kr = K.rivsKryss([[[0, 0], [12, 0], [12, 8], [0, 8]].map(rot)], 0.5);
+  assert.strictEqual(kr.length, 2);
+  kr.forEach(([a, b]) => { const r = Math.abs((b[1] - a[1]) / (b[0] - a[0])); assert(Math.abs(r - 1) < 1e-9, 'diagonal mot norr'); });
+  // dockning: en tillbyggnad 0,7 m från fasaden och vriden 3,8° hamnar i fasadlivet
+  const t = { fotavtryck: [[10.8, 0.1], [14, 0.3], [13.8, 3.3], [10.6, 3.1]] };
+  const d = K.dockning(t, [[[0, 0], [10, 0], [10, 6], [0, 6]]]);
+  assert(d && Math.abs(d.vrid + 3.814) < 0.01, 'vrids parallell');
+  const vridna = t.fotavtryck.map(p => { const c = Math.cos(d.vrid * Math.PI / 180), s = Math.sin(d.vrid * Math.PI / 180), q = [p[0] - d.c[0], p[1] - d.c[1]]; return [d.c[0] + q[0] * c - q[1] * s + d.d[0], d.c[1] + q[0] * s + q[1] * c + d.d[1]]; });
+  assert(Math.abs(Math.min(...vridna.map(p => p[0])) - 10) < 1e-6, 'sidan i fasadlivet');
+  assert.strictEqual(K.dockning(t, [[[0, 0], [5, 0], [5, 6], [0, 6]]]), null, 'för långt bort');
+  // beskrivningen i koordinatlistan
+  const hus = { id: 'h', status: 'befintlig', slag: 'huvud', fotavtryck: [[0, 0], [10, 0], [10, 6], [0, 6]] };
+  const till = { id: 't', status: 'tillbyggnad', fotavtryck: [[10, 0], [14, 0], [14, 4], [10, 4]] };
+  assert.strictEqual(K.beskrivning([hus], [hus, till]), 'Befintlig huvudbyggnad');
+  assert.strictEqual(K.beskrivning([till], [hus, till]), 'Tillbyggnad huvudbyggnad');
+  assert.strictEqual(K.beskrivning([{ status: 'ny', slag: 'komplement', fotavtryck: hus.fotavtryck }], []), 'Ny komplementbyggnad');
+});
+
 console.log(`${antal} prov gick igenom`);

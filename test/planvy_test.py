@@ -88,7 +88,8 @@ with sync_playwright() as p:
     rel = [x for x in pg.locator('.pv-mattext').all_text_contents()]
     print('   mått:', rel)
     assert '6,4' in rel, 'måttet mellan kropparna (6,4 m upp till husets hörn)'
-    assert '20,0' in rel and '12,0' in rel, 'yttermått på det befintliga'
+    # 0.16.4 (DH): det befintliga får bara yttermått på sidan där tillbyggnaden sitter (12 m), inte 20 m
+    assert '12,0' in rel and '20,0' not in rel, 'yttermått på det befintliga bara mot tillbyggnaden'
     gm = pg.locator('.pv-gmattext').all_text_contents()
     print('   till tomtgräns:', gm)
     assert len(gm) == 3, 'tre mått till tomtgräns'
