@@ -584,6 +584,74 @@
     k = 0;
     for (let q = 0; q < n; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; }
   }
+  /**
+   * Vattnet bakom en klippt strand (0.16.5, DX). En stor sjö kommer från OpenStreetMap som strandbitar
+   * utan ytan, så avståndsfältet räknade 100 m åt båda hållen, också ut i sjön. Bitarna förlängs ut
+   * över rutnätets kant och blir väggar; ytorna mellan dem färgas omväxlande land och vatten, med
+   * utsnittets mitt som land (där byggs det). Vattnet får avståndet 0. Går färgningen inte ihop (en bit
+   * som inte delar rutnätet i två) fylls inget, och stranden räknas som en linje som förut.
+   */
+  function fyllKlipptVatten(f, g, bitar, mitt) {
+    const { W, H, s, x0, y1 } = g, N = W * H;
+    const vagg = new Uint8Array(N);
+    const sattV = (x, y) => { const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s); if (i >= 0 && i < W && j >= 0 && j < H) vagg[j * W + i] = 1; };
+    const langd = (W + H) * s * 2;
+    const linje = (A, B) => { const l = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(l / (s / 2))); for (let t = 0; t <= n; t++) sattV(A[0] + (B[0] - A[0]) * t / n, A[1] + (B[1] - A[1]) * t / n); };
+    const forlang = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [b[0] + dx / l * langd, b[1] + dy / l * langd]; };
+    for (const p of bitar) {
+      if (p.length < 2) continue;
+      for (let a = 0; a + 1 < p.length; a++) linje(p[a], p[a + 1]);
+      linje(p[p.length - 1], forlang(p[p.length - 2], p[p.length - 1]));
+      linje(p[0], forlang(p[1], p[0]));
+    }
+    // ytorna mellan väggarna (4-grannar, så att en diagonal vägg håller tätt)
+    const etikett = new Int32Array(N).fill(-1), ko = new Int32Array(N);
+    let antal = 0;
+    for (let start = 0; start < N; start++) {
+      if (vagg[start] || etikett[start] >= 0) continue;
+      let h = 0, t = 0; ko[t++] = start; etikett[start] = antal;
+      while (h < t) {
+        const k = ko[h++], i = k % W, j = (k - i) / W;
+        const prova = q => { if (!vagg[q] && etikett[q] < 0) { etikett[q] = antal; ko[t++] = q; } };
+        if (i > 0) prova(k - 1); if (i + 1 < W) prova(k + 1); if (j > 0) prova(k - W); if (j + 1 < H) prova(k + W);
+      }
+      antal++;
+    }
+    if (antal < 2) return false;
+    // grannar över en vägg: väggrutor med exakt två ytor runt sig
+    const grannar = Array.from({ length: antal }, () => new Set());
+    for (let k = 0; k < N; k++) {
+      if (!vagg[k]) continue;
+      const i = k % W, j = (k - i) / W, runt = new Set();
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const ii = i + di, jj = j + dj;
+        if (ii >= 0 && ii < W && jj >= 0 && jj < H && etikett[jj * W + ii] >= 0) runt.add(etikett[jj * W + ii]);
+      }
+      if (runt.size === 2) { const [a, b] = runt; grannar[a].add(b); grannar[b].add(a); }
+    }
+    // utsnittets mitt är land; närmaste yta om mitten ligger på en vägg
+    let mi = Math.max(0, Math.min(W - 1, Math.round((mitt[0] - x0) / s))), mj = Math.max(0, Math.min(H - 1, Math.round((y1 - mitt[1]) / s)));
+    let land = etikett[mj * W + mi];
+    for (let rad = 1; land < 0 && rad < Math.max(W, H); rad++) {
+      for (let dj = -rad; dj <= rad && land < 0; dj++) for (let di = -rad; di <= rad && land < 0; di++) {
+        const ii = mi + di, jj = mj + dj;
+        if (ii >= 0 && ii < W && jj >= 0 && jj < H && etikett[jj * W + ii] >= 0) land = etikett[jj * W + ii];
+      }
+    }
+    if (land < 0) return false;
+    const farg = new Int8Array(antal).fill(-1);
+    farg[land] = 0;
+    const ko2 = [land];
+    while (ko2.length) {
+      const a = ko2.shift();
+      for (const b of grannar[a]) {
+        if (farg[b] < 0) { farg[b] = 1 - farg[a]; ko2.push(b); }
+        else if (farg[b] === farg[a]) return false;
+      }
+    }
+    for (let k = 0; k < N; k++) if (etikett[k] >= 0 && farg[etikett[k]] === 1) f[k] = 0;
+    return true;
+  }
   /** Linjerna 100 och 300 m från vattnet, ur ett avståndsfält över utsnittet + 300 m. */
   function strandZoner(r, vatten) {
     const M = 300, ex = { xmin: r.xmin - M, ymin: r.ymin - M, xmax: r.xmax + M, ymax: r.ymax + M };
@@ -592,6 +660,7 @@
     const W = Math.ceil(bx / s) + 1, H = Math.ceil(by / s) + 1, x0 = ex.xmin, y1 = ex.ymax;
     const f = new Float64Array(W * H).fill(1e20);   // 1e20 = inget vatten (Infinity ger NaN i edt1)
     const satt = (x, y) => { const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s); if (i >= 0 && i < W && j >= 0 && j < H) f[j * W + i] = 0; };
+    const klippta = [];
     for (const v of vatten) {
       const p = v.pts;
       // en del som inte är sluten (en strand som är klippt mot rutan, en bit av en relation) är en linje:
@@ -601,6 +670,7 @@
         const A = p[a], B = p[(a + 1) % p.length], l = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(l / (s / 2)));
         for (let t = 0; t <= n; t++) satt(A[0] + (B[0] - A[0]) * t / n, A[1] + (B[1] - A[1]) * t / n);
       }
+      if (v.yta && v.sluten === false) klippta.push(p);
       if (v.yta && v.sluten !== false && p.length > 2) {
         // fyll ytan rad för rad
         for (let j = 0; j < H; j++) {
@@ -617,6 +687,7 @@
         }
       }
     }
+    if (klippta.length) fyllKlipptVatten(f, { W, H, s, x0, y1 }, klippta, [(r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2]);
     // avståndsfältet: först kolumnerna, sedan raderna
     const n = Math.max(W, H), fi = new Float64Array(n), d = new Float64Array(n), vv = new Int32Array(n), zz = new Float64Array(n + 1);
     for (let i = 0; i < W; i++) {

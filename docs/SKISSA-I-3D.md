@@ -70,37 +70,48 @@ Allt som prototypen visar, i 3D-fönstret, med lägena **Visa** (titta, ta bilde
   fotavtrycken ger polygoner (`fotPolys`).
 - **Situationsplanen:** muren som dubbellinje, polygonen som kontur, skärmtak streckat.
 
-## Datamodellen (förslag till `js/volym3d.js`)
+## Datamodellen (byggd i 0.16.5)
 
-Utökar volymen i `inmatning.volymer`. Prototypens fältnamn inom parentes.
+Etapp 2 och 3 i granskningens etappordning (`granskning-0.16.2-C.md`) är gjorda i 0.16.5, utan att
+något syns i appen. **Ägarens beslut 28 november**: ta inte hänsyn till det som redan är ritat, gör det
+som är bäst för appen på lång sikt. Det gav:
 
-```jsonc
-{
-  "id": "uuid", "namn": "…", "status": "ny", "roll": "projekt",   // projekt | omgivning (roll)
-  "typ": "block",              // block | cylinder | sfar | mur | yta (typ); N-hörn = cylinder med n ≥ 3
-  "n": 0,                      // hörn på cylinder (0 = rund)
-  "centrum": [e, n], "vridning": 0,       // (x, z, r); prototypen har x österut och z söderut
-  "bredd": 20, "djup": 10,     // (b, d); diameter för cylinder och sfär
-  "golv": 32.8, "vagghojd": 6, // (golv, h); polygon: höjd över mark och tjocklek; sfär: synlig höjd
-  "sockel": null,              // null = automatisk
-  "takform": "sadel",          // platt | pulpet | sadel | mansard | pyramid | valv | kon | kupol (tak)
-  "takhojd": 4,                // (th); taklutningen räknas fram
-  "mansard": { "nedreLutning": 70, "nedreBredd": 1.0 },   // (ml, mb)
-  "gavlar": [                  // ände −x och +x (ea, eb)
-    { "form": "gavel", "lutning": 60, "start": 0, "gering": 0 }  // form gavel | tak | egen (typ); start = andel av takhöjden (k); gering i grader (g)
-  ],
-  "gard": { "husdjup": 12, "gavlar": { "1,1": { "x": false, "z": true } } },   // (gard.hd, gard.gavlar)
-  "punkter": [[e, n], …],      // mur och polygon (pts)
-  "tjocklek": 0.2, "topp": "mark",   // mur (t, topp: mark | rak)
-  "lutningsriktning": 0,       // polygon med pulpet (tr)
-  "vaningar": null,            // null = uppskattat ur höjden (vn)
-  "grupp": "g12", "last": false
-}
-```
+- **Parametrarna ligger i `primitiv`**, i kroppens lokala system kring mitten (`u`, `v`; `v` norrut vid
+  vridning 0). Då följer lokala punkter, ändar och gård med oförändrade när projektet räknas om mellan
+  zoner, och bara mitten och vridningen räknas om, som i dag. Fälten står i `docs/PROJEKTFIL.md`,
+  *Kropparna i Skissa i 3D*. Prototypens lokala `lz` (söderut) vänds i en funktion,
+  `Kroppgeo.tillProto`, så att resten av prototypens kod kan flyttas som den är (risk R10).
+- **`polygon` står kvar som egen basform** med dagens takformer (platt, pulpet, sadel, valm ur
+  `plan()`). Den behövs för fria fotavtryck: hus från Lantmäteriet, DXF och cad-apa. `prisma` läses
+  som ett block med sadel, valm eller pulpet (pulpettaket vrids ett halvt varv, eftersom prototypen har
+  högsidan på norrsidan). När 0.17.0 skriver nya kroppar kan prisman skrivas om till block i en migrering.
+- **`golv` är alltid RH 2000.** Ytan (skärmtak) har sin höjd över mark inräknad i golvet.
+- **Härledd geometri**: `Kroppgeo.harledd(v, { markH })` ger fotavtrycket som ringar med hål och en
+  sluten triangelmesh med utåtvända normaler, i zonen. `Volym3D.harledd` gör samma sak för alla
+  volymer, också dagens polygoner. `Kroppgeo.hojdVid` ger taket i en punkt ur meshen.
+- **Dagens fält skrivs fortfarande**: `Volym3D.uppdatera` sätter `fotavtryck`, `takform`, `taklutning` och
+  `nockriktning` ur parametrarna, så att analyserna, situationsplanen och cad-apa läser kroppen som förut.
+  Det som inte går att säga med dem (`Volym3D.nyForm`: halvvalm, mansard, valv, gård, mur, sfär …) ger
+  `plan() = null`, och `hojdVid`, `inutiVolym` och `topp` räknas ur meshen.
+- **Planvyn låter nya kroppar vara** (`Kropp.satHorn`, `satFotavtryck`, `satTakform`, `satNock`) tills
+  den lär sig dem (etapp 7).
+- **Tillbaka från cad-apa**: en kropp som inte är ändrad där behåller sina parametrar
+  (`Volym3D.behallForm`). Förut blev en cylinder en polygon med 32 hörn efter en tur dit och tillbaka.
+- **Projektfilen är version 2**, så att 0.16.4 och äldre inte plattar till nya kroppar.
+- **Unionen**: prototypen använde polygon-clipping. Appen har en egen union (`Kropp.union`) och bygger
+  vidare på den; inget nytt bibliotek.
 
-Äldre filer läses som förut: `takform: valm` blir sadel med båda ändarna `form: tak`. Höj
-`Projekt.VERSION` och skriv en migrering om formatet ändras så att äldre filer inte kan läsas.
-Utbytet med cad-apa behöver samma fält, eller en mesh (`docs/UTBYTE-CAD-APA.md`).
+Prövat i `test/kroppgeo.test.js`: volym och area mot räknade värden för alla basformer och takformer,
+sluten mesh och utåtvända normaler, taket i punkter (halvvalm, valm), riktningarna (gering, gårdens
+hörn, ytans lutning, murens punkter), marken (mur och sockel), att dagens prisma ger samma tak ur meshen
+som ur takfallens plan, projektfilen (fält, kontroll av tal, omräkning mellan zoner) och utbytet med
+cad-apa.
+
+**Kvar till 0.17.0** (etapp 4–8): analyserna (skuggor, sol på fasaderna, horisont, skyfall, BYA, DXF, IFC,
+platspaketet) ska läsa `harledd` i stället för fotavtrycket som en ring, så att gård, mur och sfär räknas
+rätt; 3D-vyn ska rita meshen; verktygen; planvyn och situationsplanen; riktig laserdata. Kända
+förenklingar i meshen: en gård med gavlar i hörnen har tak som överlappar i hörnet; en fri polygon med
+fall och ett inbuktat fotavtryck får taket som lyfta trianglar utan gavlar (som rutnätet i 3D-vyn i dag).
 
 ## Algoritmerna i prototypen (flytta, skriv inte om)
 

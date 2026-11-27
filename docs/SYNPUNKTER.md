@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **EN**.
+Senast använda nummer: **ER**.
 
 ## Inkorg
 
@@ -15,10 +15,6 @@ Senast använda nummer: **EN**.
 - **CF** Konkurrent: hojdkartan.se (C. Frid AB) läser in allt underlag dynamiskt utan att man anger inloggning till Lantmäteriet. Går det med licensvillkoren? *Bedömning: Markhöjdmodellen är en värdefull datamängd under CC BY 4.0 utan personuppgifter och får spridas fritt med källangivelse, också från egen server. Byggnad, Fastighetsindelning och Ortofoto räknar Lantmäteriet som personuppgifter, med egna villkor (prövning, lagring inom EU/EES) som måste läsas innan de visas fritt. Rätten till datan är inte rätt att låta andra använda ditt konto mot tjänsten: det kräver att data hämtas och lagras på egen server, eller besked från Lantmäteriet. Att vem som helst kan hämta datan är redan fallet: den är öppen. Fråga Lantmäteriet (geodatasupport@lm.se) innan något byggs. Hänger ihop med BÅ. Frågorna skickade 27 november: om höjddatan får hämtas med vårt systemkonto och lämnas vidare utan inloggning (och sparas tillfälligt på servern), medan användarens konto hämtar resten; vad som krävs för att visa fastighetsgränser, Byggnad och Ortofoto fritt; och om det går att rita egna modeller efter ögonmått ovanpå fotavtryck och ortofoto. Väntar på svar.*
 - **DR** Koordinatkryss med jämna intervaller, utritade i zip-filen och på situationsplanen.
 - **DS** Baskarteutdrag: många kommuner erbjuder gratis baskarteutdrag som PDF. Det vore fint om man kunde ladda upp en sådan PDF i sitt projekt, klicka i hur till exempel en kantstenslinje, ett staket eller en stödmur ser ut (tjocklek och färg), och få det som ett DXF-lager med rätt skala och placering.
-- **DU** Statusen under *Skapa*: en klocka som tickar eller liknande, så man ser att något händer. Väntar den på ett underlag för länge (till exempel OSM-vägarna, som hängde sig nyss) går den vidare och gör klart resten, och man kan försöka skapa det saknade igen.
-- **DV** Knappen för att uppdatera: förtydliga att man bara uppdaterar befintligt utsnitt när man klickar igen. Tooltipen säger att redan hämtat underlag inte hämtas om, men andra gången går det mycket fortare, och det syns inte i knappen.
-- **DW** Kopiera sammanfattning och logg som text: en knapp som kopierar statusen och loggen, så att man kan klistra in den här som felsökning.
-- **DX** Strandskydd (till BG): nu får jag strandskydd även med marktäcke urkryssat, men det dyker upp på båda sidor om strandlinjen, även inne i sjön. Det blir olyckligt.
 - **DY** Fler soldiagram för andra plushöjder än marknivå, så att man kan se hur det blir på en takterrass till exempel. Då kan man lägga till flera extra rader som skapar fler soldiagram i mappen, men bara marknivå syns i platsanalysen.
 - **DZ** Byta ut träd från ringar till andra symboler i exporterna direkt i Höjdkurvor-appen.
 - **EA** Exportera träd som block i DXF i stället för cirklar, så att man kan byta ut dem mot egna block.
@@ -29,6 +25,15 @@ Senast använda nummer: **EN**.
 ## Att testa
 
 Grupperat efter den version där testbehovet uppstod.
+
+### 0.16.5
+
+Svar på inkorgen 28 november (DU, DV, DW, DX). Synpunkterna står ordagrant under *Inarbetat ur inkorgen*.
+
+- **EO** Klockan under Skapa (efter DU): syns tiden och steget under mätaren medan underlaget skapas, och står det *väntar sedan … s* när ett steg tar lång tid? Hänger vägarna igen: blir resten klart efter cirka 40–80 s med en varning om vägarna, och kommer vägarna med när du väljer *Uppdatera underlag* lite senare?
+- **EP** Uppdatera (efter DV): skapa ett underlag och välj sedan samma knapp igen utan att ändra området. Säger den *Uppdatera underlag*, med raden om att det går fortare under, och är det tydligt nog?
+- **EQ** Kopiera status och logg (efter DW): välj länken under statusraden efter Skapa och klistra in här i chatten. Får du med status, sammanfattning och loggen med tider, och inget lösenord?
+- **ER** Strandskyddet vid en stor sjö (efter DX): gör en platsanalys med Skydd nära Vättern eller en annan stor sjö, med marktäcke urkryssat. Ligger 100- och 300-metersgränserna bara på land? Prova också ett utsnitt på en udde eller en ö.
 
 ### 0.16.4
 
@@ -130,6 +135,13 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 28 november 2026 → 0.16.5 (inkorgen, utan att röra testet av 0.16.4)
+
+- **DX** Strandskydd (till BG): nu får jag strandskydd även med marktäcke urkryssat, men det dyker upp på båda sidor om strandlinjen, även inne i sjön. Det blir olyckligt. *En stor sjö kommer från OpenStreetMap som strandbitar utan ytan, så avståndet räknades åt båda hållen. Nu räknas sidan med utsnittet som land, och vattnet får avståndet noll (ER).*
+- **DU** Statusen under *Skapa*: en klocka som tickar eller liknande, så man ser att något händer. Väntar den på ett underlag för länge (till exempel OSM-vägarna, som hängde sig nyss) går den vidare och gör klart resten, och man kan försöka skapa det saknade igen. *Vägarnas fråga till Overpass hade ingen tidsgräns och kunde hänga hur länge som helst; nu 40 s per server, sedan reservservern, och därefter en varning medan resten blir klart. Under mätaren tickar en klocka med steget som pågår och hur länge det har väntat. Det saknade skapas med Uppdatera, utan att det andra hämtas igen (EO).*
+- **DV** Knappen för att uppdatera: förtydliga att man bara uppdaterar befintligt utsnitt när man klickar igen. Tooltipen säger att redan hämtat underlag inte hämtas om, men andra gången går det mycket fortare, och det syns inte i knappen. *Knappen säger Uppdatera underlag andra gången för samma utsnitt, med en rad under om att det som redan är hämtat används igen (EP).*
+- **DW** Kopiera sammanfattning och logg som text: en knapp som kopierar statusen och loggen, så att man kan klistra in den här som felsökning. *Kopiera status och logg under statusraden efter Skapa: status, sammanfattning, steg med tider och fel i sidan, utan inloggningen (EQ).*
 
 ### 27 november 2026 → 0.16.4 (testet av 0.16.1, 0.16.2 och de öppna punkterna från 0.14.4)
 

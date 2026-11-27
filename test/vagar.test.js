@@ -125,4 +125,19 @@ assert.ok(med.bil[0].ringar[0].some(q => q[0] < 0.5), 'vägen går ut till kante
 const par = [{ slag: 'bil', pts: [[0, 40], [100, 40]], bredd: [5, 5] }, { slag: 'bil', pts: [[0, 49], [100, 49]], bredd: [5, 5] }];
 assert.strictEqual(V.ytor(par, r, { cell: 0.25, noder: { bil: [[50, 10]], gang: [] } }).bil.length, 2, 'parallella gator hålls isär');
 
-console.log('vagar: ok');
+// 0.16.5 (DU): en Overpass som aldrig svarar ger ett fel efter tidsgränsen, och reservservern provas
+(async () => {
+  globalThis.self = globalThis; self.TERRANG_OVERPASS_TID = 50; self.TERRANG_PAUSER = [1, 1];
+  const fraga = [];
+  globalThis.fetch = (url, o) => { fraga.push(url); return new Promise((_, nej) => o.signal.addEventListener('abort', () => nej(new Error('abort')))); };
+  const utsnitt = { xmin: 600000, ymin: 6400000, xmax: 600100, ymax: 6400100 };
+  await assert.rejects(V.hamta({ utsnitt, epsg: 3006 }), /svarade inte inom 0 s, inte heller reservservern/);
+  assert.strictEqual(fraga.length, 2, 'en fråga per server, inga nya försök mot en server som inte svarar');
+  // reservservern svarar
+  let n = 0;
+  globalThis.fetch = (url, o) => (++n === 1 ? new Promise((_, nej) => o.signal.addEventListener('abort', () => nej(new Error('abort'))))
+    : Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify({ elements: [] }) }));
+  const v = await V.hamta({ utsnitt, epsg: 3006 });
+  assert.strictEqual(v.antal, 0);
+  console.log('vagar: ok');
+})().catch(e => { console.error(e); process.exit(1); });

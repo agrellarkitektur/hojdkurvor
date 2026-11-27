@@ -141,22 +141,31 @@
     const pauser = (typeof self !== 'undefined' && self.TERRANG_PAUSER) || [2000, 5000];
     const servrar = (typeof self !== 'undefined' && self.TERRANG_OVERPASS) ? [self.TERRANG_OVERPASS] : [URL_STD, URL_RESERV];
     const TILLF = [429, 502, 503, 504];
-    let svar = null, natfel = false;
+    // Varje försök har en tidsgräns (0.16.5, DU): utan den kunde Skapa vänta hur länge som helst på vägarna.
+    const tid = (typeof self !== 'undefined' && self.TERRANG_OVERPASS_TID) || 40000;
+    let svar = null, natfel = false, tidsgrans = false, text = null;
     for (const url of servrar) {
-      svar = null; natfel = false;
+      svar = null; natfel = false; tidsgrans = false;
       for (let i = 0; ; i++) {
+        const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), tid);
         try {
-          svar = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(fraga) });
-        } catch (err) { natfel = true; break; }
+          svar = await fetch(url, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(fraga) });
+          text = svar.ok ? await svar.text() : null;
+        } catch (err) {
+          if (ctrl.signal.aborted) tidsgrans = true; else natfel = true;
+          svar = null;
+        } finally { clearTimeout(t); }
+        if (!svar) break;   // ingen ny fråga mot en server som inte svarar: reservservern i stället
         if (!TILLF.includes(svar.status) || i >= pauser.length) break;
         await new Promise(klar => setTimeout(klar, pauser[i]));
       }
       if (svar && !TILLF.includes(svar.status)) break;
     }
-    if (natfel && !svar) throw new Error('kunde inte nå OpenStreetMap (Overpass).');
+    if (!svar && tidsgrans) throw new Error(`OpenStreetMap (Overpass) svarade inte inom ${Math.round(tid / 1000)} s${servrar.length > 1 ? ', inte heller reservservern' : ''}. Uppdatera om en stund; det som redan är hämtat hämtas inte igen.`);
+    if (!svar) throw new Error('kunde inte nå OpenStreetMap (Overpass).');
     if (TILLF.includes(svar.status)) throw new Error(`OpenStreetMap är överbelastat just nu (svarade ${svar.status} vid ${pauser.length + 1} försök${servrar.length > 1 ? ', också på reservservern' : ''}). Försök igen om en stund.`);
     if (!svar.ok) throw new Error(`OpenStreetMap svarade ${svar.status}.`);
-    const d = await svar.json();
+    const d = JSON.parse(text);
     const linjer = tolka(d, tillZon, r, 0), alla = tolka(d, tillZon, r, Math.min(marg, 15));
     return { linjer, alla, antal: linjer.length };
   }

@@ -1,9 +1,21 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 27 november 2026, 0.16.4.
+överlämning; historiken finns i git. Senast: 28 november 2026, 0.16.5.
 
 ## Läget
+
+- **0.16.5** 28 november (grenen `v0.16.5`): **inkorgen utan att röra testet av 0.16.4** (ägaren hann inte
+  testa; beslut samma kväll) och **datamodellen för 0.17.0** under ytan. DX (strandskydd ute i sjön), DU
+  (vägarna hängde sig utan tidsgräns; klockan under Skapa), DV (knappen säger Uppdatera) och DW (Kopiera
+  status och logg); testas som EO–ER. Etapp 2 och 3 i granskningens etappordning: `js/kroppgeo.js`,
+  `Volym3D.nyStil/nyForm/harledd/behallForm`, `Projekt.rensaPrimitiv`, projektfilen version 2. **Ägarens
+  beslut 28 november**: ta inte hänsyn till det som redan är ritat (polygonerna), gör det som är bäst på
+  lång sikt. Se *0.16.5* nedan och *Datamodellen* i `docs/SKISSA-I-3D.md`. Körda: alla 25 enhetstester
+  (nya `kroppgeo.test.js`; utökade `platsanalys`, `vagar`, `projekt`), nya `skapalogg_test.py` i alla tre
+  teman, `ui_test.py`, `projekt_test.py`, `planvy_test.py` och `rattelser_test.py` i temat ritning.
+  **Inte provat**: riktiga Overpass-svar för en stor sjö (DX är prövat med påhittade strandbitar),
+  iPhone, kopieringen på iPhone (`navigator.clipboard` med reserv via en textruta).
 
 - **0.16.4** 27 november (grenen `v0.16.4`): **rättelser efter ägarens test 27 november** av 0.16.1 (DD–DJ),
   0.16.2 (DT) och de öppna punkterna från 0.14.4 (BÄ, BÖ, CA, CB). DD och CA godkända och strukna; resten
@@ -385,6 +397,41 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
   generellt bra ut.
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
+
+## 0.16.5
+
+- **Strandskyddet (DX)**: `Platsanalys.strandZoner` samlar vatten med `yta && sluten === false` (klippta
+  strandbitar ur `Geodata.vatten`; en sjö som är en enda väg räknas nu också som `yta`) och anropar
+  `fyllKlipptVatten`: bitarna förlängs ut över rutnätet och ritas som väggar, ytorna mellan dem märks med
+  4-grannar, grannar över en vägg (väggrutor med exakt två ytor runt sig) får olika färg, och ytan med
+  utsnittets mitt är land. Det andra blir vatten (avstånd 0). Går färgningen inte ihop görs inget. Fungerar
+  också för en sjö som går in och ut genom rutan flera gånger och för en udde mellan två sjöar (prov i
+  `platsanalys.test.js`). Ligger utsnittets mitt i vattnet blir det fel; det är inte hanterat.
+- **Vägarna (DU)**: `Vagar.hamta` har en tidsgräns per fråga (`TERRANG_OVERPASS_TID`, 40 s) och provar
+  reservservern efter en tidsgräns, utan nya försök mot samma server. Felet blir en varning i
+  `skapaVagar` som förut. Andra Overpass-frågor (`Geodata.overpass`) hade redan tidsgräns.
+- **Klockan och loggen (DU, DW)**: blocket *Klockan och loggen under Skapa* i `app.js`. `startaKlocka` i
+  lyssnaren på `#skapa`, `klockSteg(namn)` före varje steg (namnen ur `STEG_NAMN`, som nu har alla steg),
+  `stoppaKlocka` i `finally`. `visaStatus` skriver till loggen under Skapa; ett stegs namn skrivs först när
+  något händer i det (`vantande`), och *klart på* bara när steget tog minst 1 s eller skrev något.
+  `#status-klocka` uppdateras varje sekund och säger *väntar sedan N s* efter 15 s. `#kopiera-logg`
+  (`loggText`): version, webbläsare, området (mitt och storlek, ingen inloggning), status,
+  sammanfattningen, loggen och `felLogg`. Variablerna är `var`, eftersom `visaStatus` anropas tidigt.
+- **Uppdatera (DV)**: `sammanfatta` sätter knapptexten och `#skapa-hjalp` när hämtminnet gäller området.
+- **Kropparna**: se *Datamodellen (byggd i 0.16.5)* i `docs/SKISSA-I-3D.md`. Kortversion: `Kroppgeo`
+  (ren, UMD) har prototypens funktioner och `tillProto(v)` som vänder `v` till prototypens `lz`;
+  `harledd` ger `{ ringar, mesh: { pos, index, del }, golv, topp, sockel }` med normalerna utåt (stråle
+  per triangel, `orientera`). `Volym3D.uppdatera` går till `uppdateraNy` för nya kroppar (utom block med
+  raka gavlar, som behåller dagens rektangel så att hörnens ordning är densamma). `nyForm(v)` = det går
+  inte att säga med dagens fält; då är `plan` null, `takytor` null (3D-vyn ritar taket i rutnät ur
+  `hojdVid`) och `hojdVid`, `inutiVolym`, `topp` går till meshen (cache i en WeakMap). `Kropp.satHorn`,
+  `satFotavtryck` låter `nyForm` vara, `satTakform`, `satNock` låter `nyStil` vara. `Projekt.las`
+  rensar primitiven och räknar fotavtrycket för en ny kropp som saknar det. `laddaSkiss` använder
+  `Volym3D.behallForm`. `index.html` laddar `kroppgeo.js` före `volym3d.js`.
+- **Nästa för 0.17.0**: etapp 4, analyserna på `harledd` (skuggor och skyfall via `hojdVid` och ringarna
+  med hål, sol på fasaderna via meshens väggar, BYA och skal ur ringarna, DXF, IFC och platspaketet ur
+  meshen). Jämför mot dagens resultat för de fyra gamla takformerna; de ska bli lika (provet för prisma
+  i `kroppgeo.test.js` visar att taket redan är det).
 
 ## Rättelserna efter testet 27 november (0.16.4)
 
@@ -1159,6 +1206,7 @@ november):
 | 0.16.2 | BS, utsnittets format på mobilen (byggd 25 november; testas som DT) |
 | 0.16.3 | Rättelser efter granskningen av 0.16.2 (byggd 26 november) |
 | 0.16.4 | Rättelser efter ägarens test av 0.16.1 (DD–DJ), 0.16.2 (DT) och 0.14.4 (BÄ, BÖ, CA, CB) (byggd 27 november; testas som EE–EN) |
+| 0.16.5 | Inkorgen DU, DV, DW, DX och datamodellen för 0.17.0 under ytan (byggd 28 november; testas som EO–ER) |
 | 0.17.0 | Skissa i 3D med användarskapad omgivning etapp 1 (CL–CV), formpaletten med ikoner, CE; se `docs/SKISSA-I-3D.md` |
 | 0.18.0 | Arbetsgången (CD, CC, BK) och ikonbaserat gränssnitt (BL) |
 | 0.19.0 | Bedömning med regelbok för befintliga analyser |
@@ -1167,17 +1215,17 @@ november):
 | 0.22.0 → | Geologi (etapp 0–4), bilagor (AM, AN) och resten; nya analyser omgång 2 |
 | ej bestämd | Omgivningen etapp 3–4 (CÅ–CÄ, biblioteket; fråga ägaren om det ska komma direkt efter 0.17.0), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY) |
 
-1. För in ägarens testresultat (EE–EN för 0.16.4, DK–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de
-   öppna punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.5. Kontrollen mot Hudiksvall *med
+1. För in ägarens testresultat (EE–EN för 0.16.4, EO–ER för 0.16.5, DK–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de
+   öppna punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.6. Kontrollen mot Hudiksvall *med
    omgivning* (CH) går att göra nu när B3 är rättad.
 2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
    inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid
    Skapa, föreslå den fastighet som har störst del av utsnittet
    (`fi.fastigheter[0]`).
-4. 0.17.0 (Skissa i 3D): prototypen är färdig (beslut 25 november). Börja i `docs/SKISSA-I-3D.md`:
-   datamodellen, algoritmerna att flytta ur `docs/prototyper/skissa-i-3d.html` och det appen måste
-   lösa som prototypen hoppar över (terräng, riktig laserdata, yttre skal, analyser och export).
+4. 0.17.0 (Skissa i 3D): prototypen är färdig (beslut 25 november) och datamodellen och geometrin finns
+   sedan 0.16.5. Börja i `docs/SKISSA-I-3D.md`, *Datamodellen (byggd i 0.16.5)*: nästa är etapp 4
+   (analyserna på `harledd`), som också kan släppas som 0.16.x utan att något syns.
 
 ### Fastighetsnamn ur kartan (AX, byggt i 0.13.1)
 

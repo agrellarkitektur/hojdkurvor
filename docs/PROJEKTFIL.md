@@ -43,7 +43,7 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
 ```jsonc
 {
   "format": "hojdkurvor-projekt",
-  "version": 1,                         // formatets version, se Versioner
+  "version": 2,                         // formatets version, se Versioner
   "app": "0.13.0",                      // appen som sparade
   "skapad": "2026-11-18T08:00:00.000Z",
   "sparad": "2026-11-18T09:12:00.000Z", // när filen sparades (null i webbläsaren)
@@ -142,6 +142,37 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
   meter, hur långt taket dras ut längs nocken i 3D (bak = mot nockriktningens
   början), för takanslutningar. Det ändrar inte fotavtrycket. Ny nockriktning tar
   bort det. Båda behålls när skissen kommer tillbaka från cad-apa.
+- **Kropparna i Skissa i 3D** (från 0.16.5, version 2; appen skapar dem från 0.17.0). Parametrarna ligger
+  i `primitiv`, och allt lokalt i den räknas kring mitten (`x`, `y` i zonen, i filen SWEREF 99 TM) i
+  kroppens eget system: `u` längs `vrid` (grader moturs från öster), `v` 90° moturs från `u` (norrut vid
+  vridning 0). Lokala punkter, ändar och gård följer därför med oförändrade när volymen flyttas mellan
+  zoner; bara mitten och `vrid` räknas om (`flyttaVolym`).
+  - `typ`: `block`, `cylinder` (N-hörn med `n` 3–32, 0 = rund), `polygon` (fritt fotavtryck, dagens
+    takformer platt, pulpet, sadel och valm i `takform`), `yta` (polygon med tjocklek och höjd över mark,
+    till exempel skärmtak), `mur` (polylinje) och `sfar`. Dagens `prisma` läses som ett block med sadel,
+    valm eller pulpet (`Kroppgeo.tillProto`).
+  - `b`, `d`: bredd längs `u` och djup längs `v`; diametern för cylinder och sfär (`diam` i äldre filer).
+  - `tak`: `platt`, `pulpet`, `sadel`, `mansard`, `pyramid`, `valv` (block), `kon`, `kupol` (cylinder),
+    `pulpet` (yta). `th` = takhöjd i meter över takfoten; lutningen räknas fram. Pulpettaket är högt
+    på norrsidan (`+v`). `mansard: { nedreLutning, nedreBredd }`.
+  - `gavlar: [ände −u, ände +u]`, var och en `{ form: gavel | tak | egen, lutning, start, gering }`:
+    `tak` = som takfallen (valm), `egen` = `lutning` grader, `start` = var lutningen börjar som andel av
+    takhöjden (halvvalm), `gering` i grader: änden står `tan(gering) · v` längre ut, så positiv gering
+    ger en längre norrsida.
+  - `gard: { husdjup, gavlar: { "su,sv": { x, z } } }`: innergård med ett husdjup. Nyckeln är hörnets
+    tecken i `u` och `v` (`"1,1"` = hörnet vid `+u`, `+v`); `x: true` låter längan längs `u` gå igenom
+    med gavel, `z: true` längan längs `v`, ingen = gerat hörn.
+  - `pts`: lokala punkter `[u, v]` för polygon, yta och mur. `tjocklek` och `topp` (`mark` | `rak`) för
+    mur; `lutningsriktning` (grader från `u`) för ytans pulpettak.
+  - Utanför primitiven: `golv` (RH 2000; för ytan höjden över mark inräknad), `takfot` (vägghöjd, ytans
+    tjocklek, murens höjd), `sockel` (meter under golvet, `null` = till lägsta marken under kroppen
+    minus 0,5 m), `vaningar` (`null` = uppskattat), `roll` (`projekt` | `omgivning`), `grupp` (förenade
+    kroppar) och `last`.
+  - `fotavtryck`, `takform`, `taklutning` och `nockriktning` skrivs fortfarande, härledda ur
+    parametrarna (`Volym3D.uppdatera`), så att analyserna, situationsplanen och cad-apa läser kroppen
+    som förut. Det som inte går att säga med dem (halvvalm, mansard, valv, gård, mur …) räknas ur
+    meshen (`Volym3D.nyForm`, `Kroppgeo.harledd`). Saknas fotavtrycket i filen räknas det ur
+    parametrarna. Tal och val kontrolleras när filen läses (`Projekt.rensaPrimitiv`).
 - `ledare[]` (0.16.1): situationsplanens ledare med fritext, `pts` = [pilen,
   textens punkt] i SWEREF 99 TM. Högst 200 tecken. `version` är oförändrad; äldre
   filer får en tom lista.
@@ -186,6 +217,10 @@ det: höj `Projekt.VERSION` och lägg till `Projekt.MIGRERA[n]`, som gör en fil
 version n till n + 1. `Projekt.las` kör dem i tur och ordning. En fil från en nyare
 version ger *Filen är sparad i en nyare version av Höjdkurvor – ladda om sidan.*
 Nya fält som en äldre app kan strunta i kräver ingen ny version.
+
+- **Version 2** (0.16.5): fälten för Skissa i 3D (se *Kropparna i Skissa i 3D*). Inget i en fil i
+  version 1 ändras (`MIGRERA[1]` höjer bara numret), men 0.16.4 och äldre säger att en fil i version 2
+  är nyare i stället för att platta till de nya kropparna när de sparar.
 
 ## I webbläsaren
 

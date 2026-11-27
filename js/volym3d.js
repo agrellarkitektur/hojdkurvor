@@ -129,6 +129,8 @@
   function uppdatera(v) {
     const p = v.primitiv;
     if (!p) return v;
+    if (nyStil(p) && !(p.typ === 'block' && !p.gard && standardAnde((p.gavlar || [])[0]) && standardAnde((p.gavlar || [])[1]))) return uppdateraNy(v);
+    if (nyStil(p)) { v.fotavtryck = fotavtryck(p); const t = gammaltTak(v) || { takform: 'platt', taklutning: 0, nockriktning: null }; Object.assign(v, t); return v; }
     v.fotavtryck = fotavtryck(p);
     if (p.typ === 'block' || p.typ === 'cylinder') { v.takform = 'platt'; v.taklutning = 0; v.nockriktning = null; }
     else if (p.typ === 'prisma') {
@@ -168,6 +170,7 @@
   // ------------------------------------------------------------------
   /** Takfallens plan [a, b, c] (z = a·x + b·y + c); takets höjd är det lägsta av dem. null för platt tak. */
   function plan(v) {
+    if (nyForm(v)) return null;
     const bas = v.golv + v.takfot;
     if (!v.takform || v.takform === 'platt' || !(v.taklutning > 0)) return null;
     const t = Math.tan(v.taklutning * RAD), vinkel = (v.nockriktning != null ? v.nockriktning : langsida(v.fotavtryck)) * RAD;
@@ -184,6 +187,7 @@
   }
   /** Takets höjd (RH 2000) i (x, y). */
   function hojdVid(v, x, y, pl = plan(v)) {
+    if (nyForm(v)) { const z = KG().hojdVid(harledd(v), x, y); return z == null ? v.golv + v.takfot : z; }
     const bas = v.golv + v.takfot;
     if (!pl) return bas;
     let h = Infinity;
@@ -196,6 +200,7 @@
    * (3D-vyn ritar då taket i ett rutnät som förut).
    */
   function takytor(v) {
+    if (nyForm(v)) return null;
     const pl = plan(v);
     if (!pl) return null;
     const fot = moturs(v.fotavtryck);
@@ -235,6 +240,12 @@
   }
   /** Om punkten ligger inuti volymen (marginalen eps från ytorna). */
   function inutiVolym(v, x, y, z, eps = 0) {
+    if (nyForm(v)) {
+      const h = harledd(v);
+      if (z <= h.golv + eps || !h.ringar.some(pol => inuti(pol[0], x, y) && !pol.slice(1).some(r => inuti(r, x, y)))) return false;
+      const t = KG().hojdVid(h, x, y);
+      return t != null && z < t - eps;
+    }
     if (z <= v.golv + eps || !inuti(v.fotavtryck, x, y)) return false;
     if (eps && tillKant(v.fotavtryck, x, y) <= eps) return false;
     return z < hojdVid(v, x, y) - eps;
@@ -306,6 +317,7 @@
   // ------------------------------------------------------------------
   /** Takets högsta höjd (nocken) ungefär: största höjden i hörnen och längs nocken. */
   function topp(v) {
+    if (nyForm(v)) return harledd(v).topp;
     const pl = plan(v);
     if (!pl) return v.golv + v.takfot;
     let m = v.golv + v.takfot;
@@ -533,7 +545,109 @@
     return Object.assign({}, v, { fotavtryck: fot, nockriktning: v.nockriktning != null ? v.nockriktning : avrunda(ax.grader, 4), utdragen: true });
   }
 
+  // ------------------------------------------------------------------
+  // Den nya kroppen (förarbete till 0.17.0, från 0.16.5): Kroppgeo ger fotavtryck och mesh
+  // ------------------------------------------------------------------
+  const KG = () => (typeof Kroppgeo !== 'undefined' ? Kroppgeo : (typeof require === 'function' ? require('./kroppgeo.js') : null));
+  const NYA_TYPER = ['yta', 'mur', 'sfar'];
+  /** Om primitiven är skriven i den nya modellen (takform i primitiven, ändar, gård, n-hörn, mur, yta, sfär). */
+  const nyStil = p => !!p && (p.tak != null || NYA_TYPER.includes(p.typ) || !!p.gard || Array.isArray(p.gavlar) || !!p.n || p.mansard != null);
+  const standardAnde = e => !e || ((e.form || 'gavel') === 'gavel' && !(+e.gering));
+  const valmAnde = e => !!e && e.form === 'tak' && !(+e.start) && !(+e.gering);
+  /**
+   * Taket i dagens fält (takform, taklutning, nockriktning) för en ny kropp, om det går att säga så:
+   * platt, sadel och pulpet med raka gavlar och valm med båda ändarna som takfallen. Annars null, och
+   * kroppen räknas ur meshen (nyForm).
+   */
+  function gammaltTak(v) {
+    const p = v.primitiv;
+    if (!nyStil(p)) return { takform: v.takform, taklutning: v.taklutning, nockriktning: v.nockriktning };
+    if (p.typ === 'mur' || p.typ === 'sfar') return null;
+    const g = p.gavlar || [], vr = +p.vrid || 0, tak = p.tak || 'platt';
+    if (tak === 'platt' && !p.gard) return { takform: 'platt', taklutning: 0, nockriktning: null };
+    if (p.typ !== 'block' || p.gard) return null;
+    const lut = KG().lutning(KG().tillProto(v));
+    if (!(lut > 0)) return { takform: 'platt', taklutning: 0, nockriktning: null };
+    const nock = a => avrunda(((a % 360) + 360) % 360, 2);
+    if (tak === 'sadel' && standardAnde(g[0]) && standardAnde(g[1])) return { takform: 'sadel', taklutning: avrunda(lut, 4), nockriktning: nock(vr) };
+    if (tak === 'sadel' && valmAnde(g[0]) && valmAnde(g[1])) return { takform: 'valm', taklutning: avrunda(lut, 4), nockriktning: nock(vr) };
+    // prototypens pulpet är högt på den lokala norrsidan, plan() lägger högsidan mot nockriktningen − 90°
+    if (tak === 'pulpet' && standardAnde(g[0]) && standardAnde(g[1])) return { takform: 'pulpet', taklutning: avrunda(lut, 4), nockriktning: nock(vr + 180) };
+    return null;
+  }
+  /** Om kroppen bara går att räkna ur meshen: dagens fält (fotavtryck, takform …) räcker inte för den. */
+  const nyForm = v => !!(v && nyStil(v.primitiv) && (gammaltTak(v) === null || v.primitiv.gard || v.primitiv.typ === 'mur'));
+  const cache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+  /**
+   * Härledd geometri för alla volymer: { ringar, mesh, golv, topp } (se Kroppgeo.harledd). Volymer utan
+   * primitiv och polygoner får meshen ur fotavtrycket och dagens tak (takytor, annars rutnät).
+   */
+  function harledd(v, opt = {}) {
+    const nyckel = JSON.stringify([v.primitiv, v.golv, v.takfot, v.sockel, v.takform, v.taklutning, v.nockriktning, v.fotavtryck && v.fotavtryck.length, !!opt.markH]);
+    if (cache && !opt.markH) { const c = cache.get(v); if (c && c.nyckel === nyckel) return c.h; }
+    let h;
+    const p = v.primitiv;
+    if (p && p.typ !== 'polygon') h = KG().harledd(v, opt);
+    else h = harleddPolygon(v);
+    if (cache && !opt.markH) cache.set(v, { nyckel, h });
+    return h;
+  }
+  /** Fritt fotavtryck: väggar, botten och taket som i dag (exakta takytor för konvexa, annars lyfta trianglar). */
+  function harleddPolygon(v) {
+    const fot = moturs(v.fotavtryck || []), golv = +v.golv || 0, bas = golv + (+v.takfot || 0), pos = [], index = [], del = [];
+    if (fot.length < 3) return { typ: 'polygon', ringar: [], mesh: { pos, index, del }, golv, topp: bas };
+    const punkt = (x, y, z) => { pos.push(x, y, z); return pos.length / 3 - 1; };
+    const tri = KG().triangulera(fot);
+    for (const [a, b, c] of tri) { index.push(punkt(...fot[a], golv), punkt(...fot[c], golv), punkt(...fot[b], golv)); del.push('botten'); }
+    fot.forEach((q, i) => {
+      const r = fot[(i + 1) % fot.length], a = punkt(q[0], q[1], golv), b = punkt(r[0], r[1], golv), c = punkt(r[0], r[1], bas), d = punkt(q[0], q[1], bas);
+      index.push(a, b, c, a, c, d); del.push('vagg', 'vagg');
+    });
+    const t = takytor(v), pl = plan(v);
+    if (t) {
+      const o = pos.length / 3;
+      pos.push(...t.pos); t.index.forEach(i => index.push(i + o));
+      for (let i = 0; i < t.index.length / 3; i++) del.push('tak');
+      // takytor har gavlarna ovanför takfoten men inte locket under taket: ingen lucka, eftersom takfallen täcker fotavtrycket
+    } else for (const [a, b, c] of tri) { index.push(punkt(...fot[a], hojdVid(v, ...fot[a], pl)), punkt(...fot[b], hojdVid(v, ...fot[b], pl)), punkt(...fot[c], hojdVid(v, ...fot[c], pl))); del.push('tak'); }
+    let topp = bas;
+    for (let i = 2; i < pos.length; i += 3) topp = Math.max(topp, pos[i]);
+    return { typ: 'polygon', ringar: [[fot]], mesh: { pos, index, del }, golv, topp };
+  }
+  /** Ritar om dagens fält (fotavtryck, takform, taklutning, nockriktning) ur en ny primitiv. */
+  function uppdateraNy(v) {
+    const h = KG().harledd(v);
+    if (h.ringar.length && h.ringar[0][0].length >= 3) v.fotavtryck = h.ringar[0][0].map(q => [avrunda(q[0]), avrunda(q[1])]);
+    const t = gammaltTak(v) || { takform: 'platt', taklutning: 0, nockriktning: null };
+    v.takform = t.takform; v.taklutning = t.taklutning; v.nockriktning = t.nockriktning;
+    return v;
+  }
+
+  /**
+   * En volym tillbaka från cad-apa (Utbyte.lasSkiss ger bara dagens åtta fält). Är geometrin densamma som
+   * när den skickades behålls kroppens parametrar (primitiv, roll, sockel …), så att en cylinder inte blir en
+   * polygon med 32 hörn och en ny kropp inte förlorar gård och ändar. Är den ändrad i cad-apa blir den en
+   * polygon som förut. Ger volymen att använda.
+   */
+  const BEHALL = ['primitiv', 'roll', 'sockel', 'vaningar', 'grupp', 'last'];
+  function behallForm(ny, forra) {
+    if (!ny || !forra || !forra.primitiv || !Array.isArray(ny.fotavtryck) || !Array.isArray(forra.fotavtryck)) return ny;
+    const a = ny.fotavtryck, b = forra.fotavtryck, n = a.length;
+    if (n !== b.length || !n) return ny;
+    const nara = (p, q) => Math.abs(p[0] - q[0]) <= 0.01 && Math.abs(p[1] - q[1]) <= 0.01;
+    let samma = false;
+    for (let k = 0; k < n && !samma; k++) if (nara(a[0], b[k])) samma = a.every((p, i) => nara(p, b[(i + k) % n]));
+    const talLika = (x, y) => (x == null || x !== x) ? (y == null || y !== y) : Math.abs(x - (y == null ? NaN : y)) <= 0.01;
+    const vinkelLika = (x, y) => (x == null || y == null) ? x == y : Math.abs((((x - y) % 360) + 540) % 360 - 180) <= 0.01;   // eslint-disable-line eqeqeq
+    if (!samma || !talLika(ny.golv, forra.golv) || !talLika(ny.takfot, forra.takfot) || (ny.takform || 'platt') !== (forra.takform || 'platt')
+      || !talLika(ny.taklutning || 0, forra.taklutning || 0) || !vinkelLika(ny.nockriktning, forra.nockriktning)) return ny;
+    const ut = Object.assign({}, ny, { fotavtryck: forra.fotavtryck, nockriktning: forra.nockriktning });
+    for (const k of BEHALL) if (forra[k] !== undefined) ut[k] = JSON.parse(JSON.stringify(forra[k]));
+    return ut;
+  }
+
   return {
+    nyStil, nyForm, gammaltTak, harledd, behallForm,
     utdragen, nockAxel, harTakfall,
     TYPER, ny, franVolym, uppdatera, fotavtryck, mitt, plan, hojdVid, takytor, inutiVolym, topp,
     snapp, kontakter, komponent, lankade, vaxlaLank, flytta, vrid, underlag, synligaKanter, skarningar,

@@ -398,7 +398,8 @@
         : t.water === 'river' ? 'vattendrag' : ANLAGT.test(t.water || '') ? 'anlagt' : 'sjö';
       const linjer = e.type === 'way' ? [e.geometry] : (e.members || []).filter(m => m.geometry).map(m => m.geometry);
       if (e.type === 'way') {
-        for (const d of osmDelar(e.geometry)) ut.push({ typ, namn: t.name || '', yta: t.natural === 'water' && d.sluten, sluten: d.sluten, pts: d.pts.map(p => tillZon([p.lon, p.lat])) });
+        // en klippt bit av en sjö är en strand med vatten på ena sidan (yta, inte sluten; 0.16.5, DX)
+        for (const d of osmDelar(e.geometry)) ut.push({ typ, namn: t.name || '', yta: t.natural === 'water', sluten: d.sluten, pts: d.pts.map(p => tillZon([p.lon, p.lat])) });
         continue;
       }
       // En relation: vägarna fogas till ringar (0.16.3, B6). Det som inte går ihop (klippt mot rutan) är en

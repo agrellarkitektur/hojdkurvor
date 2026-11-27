@@ -15,7 +15,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const FORMAT = 'hojdkurvor-projekt';
-  const VERSION = 1;
+  const VERSION = 2;
   const ANDELSE = '.hojdkurvor';
   const RAD = Math.PI / 180;
   const MAX_HISTORIK = 200;
@@ -77,7 +77,47 @@
    * Migrering: MIGRERA[n](d) gör en fil i version n till version n + 1. Lägg till en funktion här
    * och höj VERSION när formatet ändras så att gamla filer inte längre kan läsas som de är.
    */
-  const MIGRERA = {};
+  const MIGRERA = {
+    // 0.16.5: kropparna kan ha fälten för Skissa i 3D (typ mur, yta, sfär, gård, ändar, takformer i primitiven,
+    // roll …). Inget i en fil från version 1 ändras, men en äldre app (0.16.4) som läser en fil i version 2
+    // skulle kunna platta till de nya kropparna när den sparar, så den får säga att filen är nyare.
+    1: d => Object.assign(d, { version: 2 }),
+  };
+
+  /**
+   * Kroppens parametrar (primitiv) i den form appen kan lita på (0.16.5): tal är ändliga tal, text och
+   * val är kända värden, listor har ett tak. Det okända tas bort. En primitiv utan typ eller mitt blir null,
+   * och volymen räknas då som ett fritt fotavtryck. Fälten för Skissa i 3D står i docs/PROJEKTFIL.md.
+   */
+  const PRIM_TYPER = ['block', 'cylinder', 'prisma', 'polygon', 'yta', 'mur', 'sfar'];
+  const PRIM_TAK = ['platt', 'pulpet', 'sadel', 'mansard', 'pyramid', 'valv', 'kon', 'kupol', 'valm'];
+  function rensaPrimitiv(p) {
+    if (!arObjekt(p) || !PRIM_TYPER.includes(p.typ)) return null;
+    const ok = v => typeof v === 'number' && isFinite(v);
+    if (!ok(p.x) || !ok(p.y) || Math.abs(p.x) > 1e8 || Math.abs(p.y) > 1e8) return null;
+    const ut = { typ: p.typ, x: p.x, y: p.y };
+    const tal = (k, a, b) => { if (ok(p[k])) ut[k] = Math.min(b, Math.max(a, p[k])); };
+    tal('vrid', -1e4, 1e4); tal('b', 0.01, 1e4); tal('d', 0.01, 1e4); tal('diam', 0.01, 1e4); tal('n', 0, 64); tal('th', 0, 500);
+    tal('nock0', -1e4, 1e4); tal('tjocklek', 0.01, 50); tal('lutningsriktning', -1e4, 1e4);
+    if (p.nock0 === null) ut.nock0 = null;
+    if (PRIM_TAK.includes(p.tak)) ut.tak = p.tak;
+    if (arObjekt(p.mansard)) ut.mansard = { nedreLutning: ok(p.mansard.nedreLutning) ? Math.min(89, Math.max(5, p.mansard.nedreLutning)) : 70, nedreBredd: ok(p.mansard.nedreBredd) ? Math.min(1e3, Math.max(0, p.mansard.nedreBredd)) : 1 };
+    if (Array.isArray(p.gavlar)) ut.gavlar = p.gavlar.slice(0, 2).map(e => (arObjekt(e) ? {
+      form: ['gavel', 'tak', 'egen'].includes(e.form) ? e.form : 'gavel', lutning: ok(e.lutning) ? Math.min(89.9, Math.max(5, e.lutning)) : 60,
+      start: ok(e.start) ? Math.min(1, Math.max(0, e.start)) : 0, gering: ok(e.gering) ? Math.min(60, Math.max(-60, e.gering)) : 0 } : { form: 'gavel', lutning: 60, start: 0, gering: 0 }));
+    if (arObjekt(p.gard)) {
+      const g = { husdjup: ok(p.gard.husdjup) ? Math.min(1e3, Math.max(1, p.gard.husdjup)) : 10, gavlar: {} };
+      if (arObjekt(p.gard.gavlar)) for (const [k, f] of Object.entries(p.gard.gavlar)) if (/^-?1,-?1$/.test(k) && arObjekt(f)) g.gavlar[k] = { x: f.x === true, z: f.z === true };
+      ut.gard = g;
+    }
+    if (Array.isArray(p.pts)) ut.pts = p.pts.filter(arPunkt).slice(0, 500).map(q => [q[0], q[1]]);
+    if (p.topp === 'rak' || p.topp === 'mark') ut.topp = p.topp;
+    if (Array.isArray(p.lankar)) ut.lankar = p.lankar.filter(x => typeof x === 'string').slice(0, 100).map(x => x.slice(0, 80));
+    else ut.lankar = [];
+    if (typeof p.golvAuto === 'boolean') ut.golvAuto = p.golvAuto;
+    ut.pa = typeof p.pa === 'string' ? p.pa.slice(0, 80) : null;
+    return ut;
+  }
 
   /** Läser en projektfil (objekt eller JSON-text): kontrollerar, migrerar och fyller i det som saknas. */
   function las(d) {
@@ -99,7 +139,15 @@
     }
     // det appen ritar måste gå att rita: volymer med fotavtryck och sektioner med två punkter
     ut.inmatning.forslag = ut.inmatning.forslag.filter(arObjekt);
-    ut.inmatning.volymer = ut.inmatning.volymer.filter(v => arObjekt(v) && Array.isArray(v.fotavtryck) && v.fotavtryck.length >= 3 && v.fotavtryck.every(arPunkt));
+    // En kropp i den nya modellen (mur, gård …) kan sakna fotavtryck i filen: det räknas ur parametrarna (0.16.5).
+    const V3 = typeof Volym3D !== 'undefined' ? Volym3D : null;
+    ut.inmatning.volymer = ut.inmatning.volymer.filter(arObjekt).map(v => {
+      if ('primitiv' in v) v.primitiv = rensaPrimitiv(v.primitiv);
+      if (!(Array.isArray(v.fotavtryck) && v.fotavtryck.length >= 3 && v.fotavtryck.every(arPunkt)) && v.primitiv && V3 && V3.nyStil(v.primitiv)) {
+        try { V3.uppdatera(v); } catch (e) { v.fotavtryck = null; }
+      }
+      return v;
+    }).filter(v => Array.isArray(v.fotavtryck) && v.fotavtryck.length >= 3 && v.fotavtryck.every(arPunkt));
     ut.inmatning.sektioner = ut.inmatning.sektioner.filter(s => arObjekt(s) && arPunkt(s.a) && arPunkt(s.b));
     // Tal ska vara tal och text ska vara text (0.16.3): appen skriver fälten i panelen, och en fil från
     // någon annan får inte kunna föra in något annat där. golv null = volymen står på marken.
@@ -113,6 +161,11 @@
       v.namn = text(v.namn, 60) || `Volym ${i + 1}`;
       if (v.id != null && typeof v.id !== 'string') v.id = text(v.id, 80) || undefined;
       if (v.takform != null && !TAKFORMER.includes(v.takform)) delete v.takform;
+      // fälten för Skissa i 3D (0.16.5, används från 0.17.0)
+      if ('roll' in v && v.roll !== 'projekt' && v.roll !== 'omgivning') delete v.roll;
+      for (const k of ['sockel', 'vaningar']) if (k in v && v[k] !== null) { v[k] = tal(v[k], null); if (v[k] != null) v[k] = Math.min(1e3, Math.max(0, v[k])); }
+      if ('grupp' in v) { v.grupp = v.grupp == null ? null : text(v.grupp, 80); if (v.grupp === '') v.grupp = null; }
+      if ('last' in v && typeof v.last !== 'boolean') v.last = false;
     });
     ut.inmatning.sektioner.forEach(s => { s.namn = text(s.namn, 40); });
     for (const k of ['namn', 'kommun', 'fastighet', 'uppdrag', 'anteckning', 'ritadAv', 'ritningsnummer']) {
@@ -371,7 +424,7 @@
   }
 
   return {
-    FORMAT, VERSION, ANDELSE, NyareVersion, MIGRERA,
+    FORMAT, VERSION, ANDELSE, NyareVersion, MIGRERA, rensaPrimitiv,
     nyttId, standard, nytt, las, bevara, stabil, innehall, logga, somKopia, sammanfatta, sammanfattningText,
     runda, vinkel, flyttaVolym, flyttaTradval, slaIhopTradval, utanfor, utanforText,
     packa, lasFil,

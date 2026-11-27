@@ -59,6 +59,15 @@ node test/kropp.test.js
 ```
 
 ```
+node test/kroppgeo.test.js
+```
+
+`kroppgeo.test.js` (0.16.5) prövar kropparna i den nya modellen (`js/kroppgeo.js`, förarbete till
+Skissa i 3D): volym och area för alla basformer och takformer, sluten mesh med utåtvända normaler,
+taket i punkter, riktningarna i det lokala systemet, mur och sockel mot marken, att dagens prisma ger
+samma tak ur meshen som ur takfallens plan, projektfilen och utbytet med cad-apa.
+
+```
 node test/fasadsol.test.js
 ```
 
@@ -170,11 +179,20 @@ python3 test/las_test.py test/ut ritning
 python3 test/rattelser_test.py test/ut ritning
 ```
 
+```
+python3 test/skapalogg_test.py test/ut ritning
+```
+
 `rattelser_test.py` (0.16.3) prövar rättelserna efter granskningen 26 november: panelen är inert
 och ramen saknar handtag under Skapa, och ett ändrat hörn låser inte upp Skapa (C1, C2); Tab når inte
 sidan bakom en öppen planvy (D6); två klick på Visa i 3D ger en vy (C17); en skiss från cad-apa
 stänger planvyn (C7, med `TERRANG_CADAPA` på samma ursprung); och efter omladdning och ett Skapa med
 fel lösenord finns det förra underlaget kvar, också efter nästa omladdning (C8).
+
+`skapalogg_test.py` (0.16.5) prövar klockan och loggen under Skapa: klockan tickar och visar steget
+(DU), vägarna från en Overpass som aldrig svarar (`TERRANG_OVERPASS_TID`) blir en varning efter
+tidsgränsen medan resten blir klart, *Kopiera status och logg* ger status, sammanfattning och logg utan
+lösenordet (DW), och knappen säger *Uppdatera* andra gången (DV).
 
 `las_test.py` (0.14.3) skapar underlag tre gånger för samma område: andra gången hämtas nästan
 inget från testservern, knappen säger *igen* och sammanfattningen har raden Hämtat. Ramen går att

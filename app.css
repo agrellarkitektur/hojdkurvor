@@ -351,6 +351,11 @@ h3.grupp { margin: 22px 0 6px; padding-top: 14px; border-top: 1px solid var(--ru
 .status p { margin: 12px 0 0; font-size: 13px; color: var(--muted); white-space: pre-line; }
 .status p.fel { color: var(--fel); background: var(--fel-bg); padding: 8px 10px; }
 .hjalp.fel { color: var(--fel); }
+.status p.status-klocka { margin-top: 8px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.status p.status-klocka.vantar { color: var(--ink); }
+.status p.status-kopiera { margin-top: 6px; }
+.status-kopiera .lank-knapp { font-size: 12px; padding: 2px 0; }
+.skapa-hjalp { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 .matare { height: 3px; background: var(--rule); margin-top: 14px; overflow: hidden; }
 #matare-fyll { height: 100%; width: 0; background: var(--brand); transition: width .3s; }
 .sammanfattning { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 16px 0; font-size: 13px; }

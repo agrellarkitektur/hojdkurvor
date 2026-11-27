@@ -341,6 +341,7 @@
   }
   /** Nytt fotavtryck (hörnlistan, ett draget hörn): kroppen blir en polygon. */
   function satFotavtryck(v, pts) {
+    if (V3.nyForm(v)) return v;
     const e = entrePunkt(v), lankar = v.primitiv ? (v.primitiv.lankar || []).slice() : [];
     const nock = v.nockriktning;
     v.fotavtryck = moturs(rensa(pts)).map(p => [avrunda(p[0]), avrunda(p[1])]);
@@ -358,6 +359,8 @@
    * kroppen en polygon.
    */
   function satHorn(v, pts) {
+    // kroppar i den nya modellen (gård, mur, sfär, nya takformer …) ändras i 3D-vyn från 0.17.0; planvyn låter dem vara
+    if (V3.nyForm(v)) return false;
     // ett hörn som dras över en annan sida ger ett fotavtryck som korsar sig självt: fel area och fel vända
     // fasader. Då ändras ingenting (0.16.3, granskningen 26 nov).
     if (korsarSig(pts)) return false;
@@ -377,6 +380,7 @@
   }
   /** Byter takform. Ett rätblock blir ett prisma när taket får fall, och tvärtom. */
   function satTakform(v, form) {
+    if (V3.nyStil(v.primitiv)) return v;   // taket på en ny kropp ändras i 3D-vyn (0.17.0)
     V3.franVolym(v);
     const p = v.primitiv;
     if (p.typ === 'block' && form !== 'platt') p.typ = 'prisma';
@@ -408,6 +412,7 @@
   }
   /** Sätter nockens riktning (grader). Ett prisma vrids om så att bredden går längs nocken. */
   function satNock(v, grader) {
+    if (V3.nyStil(v.primitiv)) return v;
     V3.franVolym(v);
     delete v.takutdrag;   // utdraget gäller nockens riktning (0.16.1)
     const p = v.primitiv;

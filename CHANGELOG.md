@@ -3,6 +3,36 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.16.5 – 2026-11-28
+
+Punkter ur inkorgen som inte rör testet av 0.16.4 (DU, DV, DW, DX), och den nya kroppen för Skissa i 3D
+under ytan (etapp 2 och 3 i granskningens etappordning för 0.17.0).
+
+- **Strandskyddet inne i sjön (DX)**: en stor sjö kommer från OpenStreetMap som strandbitar klippta mot
+  rutan, utan själva ytan, så 100- och 300-metersgränserna ritades på båda sidor om stranden, också ute i
+  sjön. Nu förlängs bitarna ut över rutnätets kant, ytorna mellan dem räknas omväxlande som land och
+  vatten med utsnittets mitt som land, och vattnet får avståndet noll (`fyllKlipptVatten` i
+  `platsanalys.js`). Går det inte ihop räknas stranden som en linje som förut. En klippt bit av en sjö som
+  är en enda väg räknas nu också som strand (`yta`).
+- **Vägarna hängde sig (DU)**: frågan till Overpass om vägarna hade ingen tidsgräns och kunde vänta hur
+  länge som helst. Nu 40 s per server, och sedan reservservern; svarar ingen blir det en varning och resten
+  av underlaget blir klart.
+- **Klockan under Skapa (DU)**: under mätaren tickar tiden och steget som pågår. Tar ett steg mer än 15 s
+  står det vilket steg som väntar och hur länge.
+- **Kopiera status och logg (DW)**: efter Skapa kopierar en länk status, sammanfattning, en logg över
+  stegen med tider och fel i sidan som text att klistra in vid felsökning. Inloggningen följer inte med.
+- **Uppdatera (DV)**: andra gången för samma utsnitt säger knappen *Uppdatera underlag* (eller *Uppdatera
+  underlag och platsanalys*), med en rad om att det som redan är hämtat används igen.
+- **Kropparna för Skissa i 3D** (inget syns i appen än): `js/kroppgeo.js` har geometrin ur prototypen
+  utan three.js: block, cylinder och N-hörn, yta, mur och sfär; platt, pulpet, sadel, brutet, pyramid,
+  valv, kon och kupol; ändar med valm, halvvalm, egen lutning och gering; innergård. Den ger fotavtrycket
+  med hål och en sluten mesh. `Volym3D` skriver dagens fält ur parametrarna och räknar det som inte går
+  att säga med dem ur meshen. Fälten står i `docs/PROJEKTFIL.md`.
+- **Projektfilen** är version 2, så att 0.16.4 och äldre säger att en fil är nyare i stället för att
+  platta till nya kroppar. Kroppens parametrar kontrolleras när filen läses (tal är tal, kända val).
+- **Tillbaka från cad-apa**: en kropp som inte är ändrad i cad-apa behåller sina parametrar; förut blev
+  en cylinder en polygon med 32 hörn efter en tur dit och tillbaka.
+
 ## 0.16.4 – 2026-11-27
 
 Rättelser efter ägarens test av 0.16.1 (DD–DQ), 0.16.2 (DT) och de öppna punkterna från 0.14.4 (BÄ, BÖ,

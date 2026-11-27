@@ -107,6 +107,26 @@ assert.strictEqual(P.strandKlass({ typ: 'anlagt', yta: true, pts: [[0, 0], [500,
       const st = P.strandskydd(tomt, [v], { zoner: true }), xs = m100(st);
       assert(xs.length && xs.every(x => Math.abs(x - 50) < 6), `${v.namn}: ${xs.join(', ')}`);
       assert(st.avstand > 130, `${v.namn}: ${st.avstand}`);
+      // 0.16.5 (DX): ingen 100-metersgräns ute i sjön (öster om stranden), varken för hela sjön eller den klippta
+      const iSjon = st.zoner.m100.flat().filter(p => p[0] > 200 && Math.abs(p[1]) < 250);
+      assert.strictEqual(iSjon.length, 0, `${v.namn}: 100 m ute i sjön: ${iSjon.slice(0, 3).join(' ')}`);
+    }
+    const tat = ls => ls.flatMap(l => l.flatMap((q, i) => i ? Array.from({ length: 20 }, (_, k) => [l[i - 1][0] + (q[0] - l[i - 1][0]) * k / 20, l[i - 1][1] + (q[1] - l[i - 1][1]) * k / 20]) : []));
+    // två strandbitar av samma sjö (in och ut genom rutan): vattnet ligger mellan dem, landet på båda sidor
+    {
+      const a = { typ: 'sjö', namn: 'Band', yta: true, sluten: false, pts: [[-800, 200], [800, 200]] };
+      const b = { typ: 'sjö', namn: 'Band', yta: true, sluten: false, pts: [[800, 500], [-800, 500]] };
+      const st = P.strandskydd({ xmin: -20, ymin: -20, xmax: 20, ymax: 20 }, [a, b], { zoner: true });
+      const ys = tat(st.zoner.m100).filter(p => Math.abs(p[0]) < 200).map(p => Math.round(p[1]));
+      assert(ys.length && ys.every(y => Math.abs(y - 100) < 6 || Math.abs(y - 600) < 6), 'bandet: ' + [...new Set(ys)].join(', '));
+    }
+    // utsnittet på en udde mellan två klippta stränder av olika sjöar
+    {
+      const v1 = { typ: 'sjö', namn: 'Väst', yta: true, sluten: false, pts: [[-150, -900], [-150, 900]] };
+      const v2 = { typ: 'sjö', namn: 'Öst', yta: true, sluten: false, pts: [[150, -900], [150, 900]] };
+      const st = P.strandskydd({ xmin: -10, ymin: -10, xmax: 10, ymax: 10 }, [v1, v2], { zoner: true });
+      const xs = tat(st.zoner.m100).filter(p => Math.abs(p[1]) < 200).map(p => Math.round(p[0]));
+      assert(xs.length && xs.every(x => Math.abs(Math.abs(x) - 50) < 6), 'udden: ' + [...new Set(xs)].join(', '));
     }
   }
   const t0 = Date.now(); P.strandskydd({ xmin: 0, ymin: 0, xmax: 2000, ymax: 2000 }, [{ typ: 'kust', pts: [[-200, -100], [2200, 2300]] }], { zoner: true });

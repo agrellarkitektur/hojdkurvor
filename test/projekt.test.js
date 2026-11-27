@@ -15,7 +15,7 @@ T.registreraZoner();
 (async () => {
   // --- nytt projekt
   const d = P.nytt({ namn: 'Staren 2', app: '0.13.0' });
-  assert.strictEqual(d.format, 'hojdkurvor-projekt'); assert.strictEqual(d.version, 1);
+  assert.strictEqual(d.format, 'hojdkurvor-projekt'); assert.strictEqual(d.version, 2);
   assert.ok(d.projekt.id); assert.strictEqual(d.inmatning.forslag.length, 1); assert.strictEqual(d.inmatning.forslag[0].namn, 'Basfall');
   assert.strictEqual(d.historik[0].handelse, 'Projektet skapat');
   assert.notStrictEqual(P.nytt().projekt.id, d.projekt.id);
@@ -27,10 +27,12 @@ T.registreraZoner();
   const minimal = P.las({ format: P.FORMAT, version: 1, projekt: { id: 'abc' } });
   assert.strictEqual(minimal.projekt.id, 'abc'); assert.deepStrictEqual(minimal.inmatning.volymer, []);
   assert.deepStrictEqual(minimal.plats.nollpunkt, { typ: 'auto' }); assert.strictEqual(minimal.inmatning.forslag.length, 1);
-  // migrering: en påhittad version 0 → 1 körs före läsningen
+  // version 1 (före 0.16.5) läses som den är och blir version 2
+  assert.strictEqual(minimal.version, 2);
+  // migrering: en påhittad version 0 → 1 körs före läsningen, och sedan 1 → 2
   P.MIGRERA[0] = x => Object.assign(x, { version: 1, projekt: { id: 'migrerad', namn: x.namn } });
   const mig = P.las({ format: P.FORMAT, version: 0, namn: 'Gammal' });
-  assert.strictEqual(mig.projekt.id, 'migrerad'); assert.strictEqual(mig.projekt.namn, 'Gammal'); assert.strictEqual(mig.version, 1);
+  assert.strictEqual(mig.projekt.id, 'migrerad'); assert.strictEqual(mig.projekt.namn, 'Gammal'); assert.strictEqual(mig.version, 2);
   assert.throws(() => P.las({ format: P.FORMAT }), /saknar version/);
   delete P.MIGRERA[0];
 

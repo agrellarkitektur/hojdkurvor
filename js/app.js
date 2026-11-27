@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.16.4';
+  const FILVERSION = '0.16.5';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -1163,8 +1163,12 @@
     const vad = ev.platsanalys ? 'underlag och platsanalys' : 'underlag';
     const igen = typeof Hamtminne !== 'undefined' && state.utsnitt && Hamtminne.galler({ r: state.utsnitt, epsg: state.epsg });
     const flik = (document.querySelector('.stegnav [aria-selected=true]') || {}).id;
-    $('skapa').textContent = !igen ? `Skapa ${vad} →` : flik === 'flik-skiss' ? 'Uppdatera analyserna →' : `Skapa ${vad} igen →`;
-    $('skapa').title = igen ? 'Det som redan är hämtat för området används igen.' : '';
+    // DV (0.16.5): andra gången uppdateras samma utsnitt, och det går mycket fortare; det ska synas i knappen
+    $('skapa').textContent = !igen ? `Skapa ${vad} →` : flik === 'flik-skiss' ? 'Uppdatera analyserna →' : `Uppdatera ${vad} →`;
+    $('skapa').title = igen ? 'Samma utsnitt: det som redan är hämtat hämtas inte igen, bara det du har ändrat räknas om.' : '';
+    const hj = $('skapa-hjalp');
+    hj.hidden = !igen || $('skapa').disabled;
+    hj.textContent = igen ? 'Samma utsnitt: det som redan är hämtat används igen, så det går fortare än första gången.' : '';
   }
   ['change', 'input'].forEach(t => $('steg-underlag').addEventListener(t, sammanfatta));
   ['change'].forEach(t => $('steg-analys').addEventListener(t, sammanfatta));
@@ -1243,7 +1247,84 @@
     const p = $('status-text');
     p.textContent = text;
     p.classList.toggle('fel', fel);
+    if (skapaKlocka && skapaKlocka.start) loggaSkapa((fel ? 'FEL: ' : '') + text);
   }
+
+  // Klockan och loggen under Skapa (0.16.5, DU och DW): klockan tickar så att man ser att något händer,
+  // och säger vilket steg som väntar när ett steg tar lång tid. Loggen kan kopieras som text.
+  // var, inte const: visaStatus kan anropas innan raden har körts
+  var skapaKlocka = { start: 0, steg: '', stegStart: 0, timer: 0 };
+  var skapaLogg = [];
+  const mmss = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  function loggaSkapa(text) {
+    if (!skapaKlocka.start) return;
+    // stegets namn skrivs först när något händer i det, så att steg som inte gör något inte fyller loggen
+    if (skapaKlocka.vantande) { const v = skapaKlocka.vantande; skapaKlocka.vantande = ''; loggaSkapa(`${v} …`); }
+    const rad = `${mmss(Date.now() - skapaKlocka.start)}  ${String(text).replace(/\s+/g, ' ').trim().slice(0, 300)}`;
+    if (skapaLogg[skapaLogg.length - 1] !== rad) skapaLogg.push(rad);
+    if (skapaLogg.length > 300) skapaLogg.splice(0, skapaLogg.length - 300);
+  }
+  function visaKlocka() {
+    const p = $('status-klocka');
+    if (!skapaKlocka.start) { p.hidden = true; return; }
+    const nu = Date.now(), iSteg = nu - skapaKlocka.stegStart, vantar = skapaKlocka.steg && iSteg > 15000;
+    p.hidden = false;
+    p.classList.toggle('vantar', !!vantar);
+    p.textContent = `${mmss(nu - skapaKlocka.start)}${skapaKlocka.steg ? ` · ${skapaKlocka.steg}${vantar ? `: väntar sedan ${Math.round(iSteg / 1000)} s` : ''}` : ''}`;
+  }
+  function startaKlocka() {
+    skapaLogg = [];
+    Object.assign(skapaKlocka, { start: Date.now(), steg: '', stegStart: Date.now(), vantande: '' });
+    loggaSkapa(`Skapa startar. Version ${VERSION}.`);
+    clearInterval(skapaKlocka.timer);
+    skapaKlocka.timer = setInterval(visaKlocka, 1000);
+    visaKlocka();
+    $('status-kopiera').hidden = true;
+  }
+  function klockSteg(namn) {
+    if (!skapaKlocka.start) return;
+    const tid = Date.now() - skapaKlocka.stegStart;
+    if (skapaKlocka.steg && (tid >= 1000 || !skapaKlocka.vantande)) loggaSkapa(`${skapaKlocka.steg} klart på ${mmss(tid)}.`);
+    skapaKlocka.steg = namn; skapaKlocka.stegStart = Date.now(); skapaKlocka.vantande = namn;
+    visaKlocka();
+  }
+  function stoppaKlocka(slut) {
+    if (!skapaKlocka.start) return;
+    klockSteg('');
+    skapaKlocka.vantande = '';
+    loggaSkapa(slut);
+    clearInterval(skapaKlocka.timer);
+    skapaKlocka.start = 0;
+    $('status-klocka').hidden = true;
+    $('status-kopiera').hidden = false;
+  }
+  /** Status, sammanfattning och logg som text att klistra in vid felsökning (DW). */
+  function loggText() {
+    const dl = $('sammanfattning'), rader = [];
+    dl.querySelectorAll('dt').forEach(dt => { const dd = dt.nextElementSibling; rader.push(`  ${dt.textContent}: ${dd ? dd.textContent : ''}`); });
+    return [
+      `Höjdkurvor ${VERSION}, ${new Date().toLocaleString('sv-SE')}`,
+      `Webbläsare: ${navigator.userAgent}`,
+      `Område: ${state.utsnitt ? T.latLonText(state.epsg, (state.utsnitt.xmin + state.utsnitt.xmax) / 2, (state.utsnitt.ymin + state.utsnitt.ymax) / 2) : 'inget'}${state.utsnitt ? `, ${fmt(state.utsnitt.xmax - state.utsnitt.xmin)} × ${fmt(state.utsnitt.ymax - state.utsnitt.ymin)} m, ${T.zon(state.epsg).namn}` : ''}`,
+      '', 'STATUS', $('status-text').textContent,
+      ...(rader.length ? ['', 'SAMMANFATTNING', ...rader] : []),
+      ...(skapaLogg.length ? ['', 'LOGG', ...skapaLogg] : []),
+      ...(felLogg.length ? ['', 'FEL I SIDAN', ...felLogg] : []),
+    ].join('\n');
+  }
+  $('kopiera-logg').addEventListener('click', async () => {
+    const k = $('kopiera-logg'), t = loggText();
+    let ok = false;
+    try { await navigator.clipboard.writeText(t); ok = true; } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = t; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.append(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+      ta.remove();
+    }
+    k.textContent = ok ? 'Kopierat. Klistra in det i ett mejl eller i chatten.' : 'Det gick inte att kopiera.';
+    setTimeout(() => { k.textContent = 'Kopiera status och logg'; }, 2500);
+  });
   function matare(p) {
     $('matare').hidden = p === null;
     $('matare-fyll').style.width = (p || 0) + '%';
@@ -2907,7 +2988,7 @@
    */
   const SKAPA_AVBRYTER = new Set([skapaTerrang, skapaLaser, visaKlart]);
   /** Stegen med namn i en varning, när de går fel (0.16.3). */
-  const STEG_NAMN = { skapaByggnader: 'Byggnaderna', stallVolymerPaMarken: 'Skissvolymerna', skapaAnalyser: 'Analyserna', skapaMarklager: 'Marklagren',
+  const STEG_NAMN = { skapaTerrang: 'Terrängen', skapaLaser: 'Laserdatan', visaKlart: 'Visningen', skapaByggnader: 'Byggnaderna', stallVolymerPaMarken: 'Skissvolymerna', skapaAnalyser: 'Analyserna', skapaMarklager: 'Marklagren',
     skapaSkissfiler: 'Skissfilerna', skapaSkydd: 'Skydd', skapaSektioner: 'Sektionerna', skapaFastigheter: 'Fastighetsindelningen', skapaMarktacke: 'Marktäcket',
     skapaStrandskydd: 'Strandskyddet', skapaOrtofoto: 'Ortofotot', skapaStompunkter: 'Stompunkterna', skapaVagar: 'Vägarna', skapaSol: 'Solen',
     skapaFasadsol: 'Sol på fasaderna', skapaLagerPdf: 'Lager-PDF:en', skapaBlad: 'Platsanalysbladet', skrivBildguide: 'Bildguiden',
@@ -2926,7 +3007,9 @@
     const projektId = aktivtProjekt();
     let felText = null;
     matare(0);
+    startaKlocka();
     try {
+      klockSteg('Planerar');
       if (!planeraSkapa(kor)) { matare(null); return; }
       // De lokala filernas vridning läses av Terrang.tillLokal under hela körningen och
       // nollställs i finally. Den är fortfarande en inställning i Terrang, inte ett argument.
@@ -2934,6 +3017,7 @@
       // det som redan är hämtat för samma område används igen (AY)
       if (typeof Hamtminne !== 'undefined') Hamtminne.borja({ r: kor.r, epsg: kor.epsg });
       for (const steg of SKAPA_STEG) {
+        klockSteg(STEG_NAMN[steg.name] || steg.name);
         // Höjddatan, terrängen, laserdatan och visningen avbryter körningen. Ett fel i något annat steg blir en
         // varning, så att resten av underlaget blir klart (0.16.3, C3).
         if (SKAPA_AVBRYTER.has(steg)) await steg(kor);
@@ -2942,6 +3026,7 @@
             if (e instanceof T.InloggningsFel) throw e;
             console.error(e);
             kor.varningar.push(`${STEG_NAMN[steg.name] || steg.name} gick inte att göra: ${(e && e.message) || e}`);
+            loggaSkapa(`VARNING: ${kor.varningar[kor.varningar.length - 1]}`);
           }
         }
         if (steg === skapaTerrang) { glomResultat(); kor.forraBorta = true; }
@@ -2953,6 +3038,8 @@
       else { console.error(err); felText = (err && err.message) || 'Något gick fel när underlaget skapades.'; visaStatus(felText, true); }
     } finally {
       if (typeof Hamtminne !== 'undefined') Hamtminne.sluta();
+      (kor.varningar || []).forEach(v => { if (!skapaLogg.some(r => r.includes(v.slice(0, 120)))) loggaSkapa(`Varning: ${v}`); });
+      stoppaKlocka(felText ? `Avbrutet: ${felText}` : `Klart${kor.varningar && kor.varningar.length ? ` med ${kor.varningar.length} varning${kor.varningar.length > 1 ? 'ar' : ''}` : ''}.`);
       knapp.disabled = false;
       sammanfatta();
       T.lokal.vrid = 0;
@@ -3444,7 +3531,8 @@
     // cad-apa; de behålls för kroppar med samma id
     const forra = new Map(state.volymer.map(v => [v.id, v]));
     state.volymer = sk.volymer.map(v => {
-      const n = Object.assign({}, v, { id: v.id || Utbyte.nyttId() }), f = forra.get(n.id);
+      // en kropp som inte är ändrad i cad-apa behåller sina parametrar (0.16.5)
+      const id = v.id || Utbyte.nyttId(), n = Volym3D.behallForm(Object.assign({}, v, { id }), forra.get(id)), f = forra.get(n.id);
       if (f) ['status', 'huvudbyggnad', 'kalla', 'matt', 'slag', 'takutdrag'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
       if (f && f.entre && n.entre == null && f.fotavtryck.length === n.fotavtryck.length) n.entre = f.entre;
       return n;
