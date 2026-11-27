@@ -398,6 +398,21 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
 
+## Ägarens svar 28 november (natt), inte byggda
+
+Svar på frågorna efter 0.16.5 (punkt 1–3; 4–10 väntar på svar):
+1. **Norrpilen**: sann nord på situationsplanen ("kanske lika bra med true north"). Pilen vrids med
+   meridiankonvergensen i planens mitt, i PDF och DXF och i planvyn.
+2. **Ägarens namn**: står Agrell Arkitektur på Om-sidan behöver namnet inte stå där. Ta bort det ur
+   `om.html` och `docs/LICENS.md`.
+3. **Beställ-sidan**: håll inne med de underlag och analyser som kräver prövning hos Lantmäteriet
+   (ortofoto, byggnader, fastighetsindelning). Ingen ändring.
+
+Kvar att fråga (4–10): skyfall på kropparna och nybyggnadskartan i versionsplanen; biblioteket direkt
+efter 0.17.0 eller efter 0.20.0; skärmtakets höjd i lutande terräng; källrad för användarmodeller i
+utskrifter; iPhone i 3D-vyn (ett finger snurrar i Visa, skissa bara på datorn); strandskyddet när
+utsnittets mitt ligger i vattnet; sorteringen av inkorgen (DR, DS, DY, DZ/EA/ED, EB, EC).
+
 ## 0.16.5
 
 - **Strandskyddet (DX)**: `Platsanalys.strandZoner` samlar vatten med `yta && sluten === false` (klippta
