@@ -378,6 +378,8 @@
     }
     return sedd;
   }
+  /** Om någon kropp i id:s grupp (kedjan) har låst placering, last (0.16.6). */
+  const komponentLast = (volymer, id) => { const per = new Map(volymer.map(v => [v.id, v])); return [...komponent(volymer, id)].some(x => per.get(x) && per.get(x).last === true); };
   /** Om a och b är direkt länkade. */
   const lankade = (a, b) => !!(a.primitiv && (a.primitiv.lankar || []).includes(b.id));
   /** Länkar ihop a och b, eller löser upp länken om de redan är länkade. Ger true om de är länkade efteråt. */
@@ -650,7 +652,7 @@
     nyStil, nyForm, gammaltTak, harledd, behallForm,
     utdragen, nockAxel, harTakfall,
     TYPER, ny, franVolym, uppdatera, fotavtryck, mitt, plan, hojdVid, takytor, inutiVolym, topp,
-    snapp, kontakter, komponent, lankade, vaxlaLank, flytta, vrid, underlag, synligaKanter, skarningar,
+    snapp, kontakter, komponent, komponentLast, lankade, vaxlaLank, flytta, vrid, underlag, synligaKanter, skarningar,
     tyngdpunkt, inuti, konvex, overlappar, langsida,
   };
 }));

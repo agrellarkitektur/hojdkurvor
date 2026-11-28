@@ -20,9 +20,13 @@ window.TERRANG_KONFIG = {
   // direkt. geodata.php släpper bara igenom de tjänsterna. Kräver PHP.
   geodataProxy: 'geodata.php',
 
-  // Adress till ritprogrammet cad-apa, för "Fortsätt rita i cad-apa".
+  // Adress till ritprogrammet cad-apa, för "Rita i cad-apa".
   // Skissen tas bara emot från samma ursprung som adressen.
   cadApaUrl: 'https://cad-apa.danaid.cloud/',
+
+  // Knapparna som skickar platsen till cad-apa (Rita i cad-apa, Fortsätt rita i
+  // cad-apa, Spara platsfil). Dolda tills cad-apa är i beta (0.16.6).
+  visaCadApa: false,
 
   // ENDAST FÖR INTRANÄT eller annan miljö som bara betrodda användare når.
   // Fyller i inloggningen till Lantmäteriet åt alla som öppnar sidan.

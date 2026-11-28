@@ -552,6 +552,7 @@
    * Sjöns yta räknas bara när ringen är hel (en bit av en stor sjö i OSM är inte sluten).
    */
   function strandKlass(v) {
+    if (v.inre) return { skydd: true, skal: '' };   // en ö i en sjö (0.16.6): stranden hör till sjön
     if (v.typ === 'bäck') return { skydd: false, skal: 'bäck, troligen högst 2 m bred' };
     if (v.typ === 'anlagt') return { skydd: false, skal: 'anlagt vatten, strandskydd bara om det fanns före juli 1975' };
     if (v.typ === 'sjö' && v.yta && v.sluten !== false && v.pts.length > 2) {
@@ -590,8 +591,9 @@
    * över rutnätets kant och blir väggar; ytorna mellan dem färgas omväxlande land och vatten, med
    * utsnittets mitt som land (där byggs det). Vattnet får avståndet 0. Går färgningen inte ihop (en bit
    * som inte delar rutnätet i två) fylls inget, och stranden räknas som en linje som förut.
+   * Sedan 0.16.6 färgas ett vatten i taget (bitarna har samma id), med vattnets hela ringar (öar) som väggar.
    */
-  function fyllKlipptVatten(f, g, bitar, mitt) {
+  function fyllKlipptVatten(f, g, bitar, mitt, ringar = []) {
     const { W, H, s, x0, y1 } = g, N = W * H;
     const vagg = new Uint8Array(N);
     const sattV = (x, y) => { const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s); if (i >= 0 && i < W && j >= 0 && j < H) vagg[j * W + i] = 1; };
@@ -604,6 +606,8 @@
       linje(p[p.length - 1], forlang(p[p.length - 2], p[p.length - 1]));
       linje(p[0], forlang(p[1], p[0]));
     }
+    // hela ringar i samma vatten (öar, 0.16.6) är också väggar
+    for (const p of ringar) for (let a = 0; a < p.length; a++) linje(p[a], p[(a + 1) % p.length]);
     // ytorna mellan väggarna (4-grannar, så att en diagonal vägg håller tätt)
     const etikett = new Int32Array(N).fill(-1), ko = new Int32Array(N);
     let antal = 0;
@@ -660,8 +664,8 @@
     const W = Math.ceil(bx / s) + 1, H = Math.ceil(by / s) + 1, x0 = ex.xmin, y1 = ex.ymax;
     const f = new Float64Array(W * H).fill(1e20);   // 1e20 = inget vatten (Infinity ger NaN i edt1)
     const satt = (x, y) => { const i = Math.round((x - x0) / s), j = Math.round((y1 - y) / s); if (i >= 0 && i < W && j >= 0 && j < H) f[j * W + i] = 0; };
-    const klippta = [];
-    for (const v of vatten) {
+    const klippta = new Map(), ytor = new Map();
+    vatten.forEach((v, nr) => {
       const p = v.pts;
       // en del som inte är sluten (en strand som är klippt mot rutan, en bit av en relation) är en linje:
       // sträckan tillbaka till första punkten är ingen strand (0.16.3, B6)
@@ -670,24 +674,33 @@
         const A = p[a], B = p[(a + 1) % p.length], l = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(l / (s / 2)));
         for (let t = 0; t <= n; t++) satt(A[0] + (B[0] - A[0]) * t / n, A[1] + (B[1] - A[1]) * t / n);
       }
-      if (v.yta && v.sluten === false) klippta.push(p);
-      if (v.yta && v.sluten !== false && p.length > 2) {
-        // fyll ytan rad för rad
-        for (let j = 0; j < H; j++) {
-          const y = y1 - j * s, xs = [];
-          for (let a = 0; a < p.length; a++) {
-            const A = p[a], B = p[(a + 1) % p.length];
-            if ((A[1] > y) !== (B[1] > y)) xs.push(A[0] + (y - A[1]) * (B[0] - A[0]) / (B[1] - A[1]));
-          }
-          xs.sort((a, b) => a - b);
-          for (let k = 0; k + 1 < xs.length; k += 2) {
-            const i0 = Math.max(0, Math.ceil((xs[k] - x0) / s)), i1 = Math.min(W - 1, Math.floor((xs[k + 1] - x0) / s));
-            for (let i = i0; i <= i1; i++) f[j * W + i] = 0;
-          }
+      // per vatten (0.16.6, BG): ett vatten i taget, så att två vatten som möts inte gör färgningen omöjlig
+      const id = v.id != null ? String(v.id) : (v.yta && v.sluten === false ? '#' : '#' + nr);   // utan id: bitarna tillsammans, som förut
+      if (v.yta && v.sluten === false) { if (!klippta.has(id)) klippta.set(id, []); klippta.get(id).push(p); }
+      if (v.yta && v.sluten !== false && p.length > 2) { if (!ytor.has(id)) ytor.set(id, []); ytor.get(id).push(p); }
+    });
+    const mitt = [(r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2];
+    let fel = 0;
+    // ett klippt vatten färgas med sina hela ringar (öar) som väggar; går det inte fylls ringarna som förut
+    for (const [id, bitar] of klippta) {
+      if (fyllKlipptVatten(f, { W, H, s, x0, y1 }, bitar, mitt, ytor.get(id) || [])) ytor.delete(id); else fel++;
+    }
+    // fyll ytorna rad för rad, jämnt–udda över vattnets alla ringar, så att öarna blir land (0.16.6)
+    for (const ringar of ytor.values()) {
+      for (let j = 0; j < H; j++) {
+        const y = y1 - j * s, xs = [];
+        for (const p of ringar) for (let a = 0; a < p.length; a++) {
+          const A = p[a], B = p[(a + 1) % p.length];
+          if ((A[1] > y) !== (B[1] > y)) xs.push(A[0] + (y - A[1]) * (B[0] - A[0]) / (B[1] - A[1]));
+        }
+        xs.sort((a, b) => a - b);
+        for (let k = 0; k + 1 < xs.length; k += 2) {
+          const i0 = Math.max(0, Math.ceil((xs[k] - x0) / s)), i1 = Math.min(W - 1, Math.floor((xs[k + 1] - x0) / s));
+          for (let i = i0; i <= i1; i++) f[j * W + i] = 0;
         }
       }
     }
-    if (klippta.length) fyllKlipptVatten(f, { W, H, s, x0, y1 }, klippta, [(r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2]);
+
     // avståndsfältet: först kolumnerna, sedan raderna
     const n = Math.max(W, H), fi = new Float64Array(n), d = new Float64Array(n), vv = new Int32Array(n), zz = new Float64Array(n + 1);
     for (let i = 0; i < W; i++) {
@@ -703,7 +716,7 @@
     }
     const g = { W, H, s, x0, y1, z };
     const linjer = niva => T().kurvorForNiva(g, niva).map(l => T().forenkla(l.pts, s / 2)).filter(p => p.length >= 2);
-    return { m100: linjer(100), m300: linjer(300) };
+    return { m100: linjer(100), m300: linjer(300), ofyllda: fel };
   }
   /** DXF med strandskyddets linjer och vattnet som räknas. */
   function dxfStrandskydd(s, vatten, r, dx, dy) {

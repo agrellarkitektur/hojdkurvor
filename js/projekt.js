@@ -166,6 +166,8 @@
       for (const k of ['sockel', 'vaningar']) if (k in v && v[k] !== null) { v[k] = tal(v[k], null); if (v[k] != null) v[k] = Math.min(1e3, Math.max(0, v[k])); }
       if ('grupp' in v) { v.grupp = v.grupp == null ? null : text(v.grupp, 80); if (v.grupp === '') v.grupp = null; }
       if ('last' in v && typeof v.last !== 'boolean') v.last = false;
+      // låst form (0.16.6): storleken ligger fast, men byggnaden går att flytta
+      if ('lastForm' in v && typeof v.lastForm !== 'boolean') v.lastForm = false;
     });
     ut.inmatning.sektioner.forEach(s => { s.namn = text(s.namn, 40); });
     for (const k of ['namn', 'kommun', 'fastighet', 'uppdrag', 'anteckning', 'ritadAv', 'ritningsnummer']) {

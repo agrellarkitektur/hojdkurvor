@@ -129,6 +129,27 @@ assert.strictEqual(P.strandKlass({ typ: 'anlagt', yta: true, pts: [[0, 0], [500,
       assert(xs.length && xs.every(x => Math.abs(Math.abs(x) - 50) < 6), 'udden: ' + [...new Set(xs)].join(', '));
     }
   }
+  // 0.16.6 (BG): ett vatten i taget. Två sjöar i OpenStreetMap som delar en gräns (en vik ritad för sig, en
+  // reglerad del av sjön): vatten på båda sidor om den gemensamma linjen. Färgades alla bitar tillsammans blev
+  // den bortre sjön "land" och fick 100- och 300-metersgränser ute i vattnet.
+  {
+    const tat = ls => ls.flatMap(l => l.flatMap((q, i) => i ? Array.from({ length: 20 }, (_, k) => [l[i - 1][0] + (q[0] - l[i - 1][0]) * k / 20, l[i - 1][1] + (q[1] - l[i - 1][1]) * k / 20]) : []));
+    const A1 = { id: 'way/1', typ: 'sjö', namn: 'Viken', yta: true, sluten: false, pts: [[0, -900], [0, 900]] };
+    const A2 = { id: 'way/1', typ: 'sjö', namn: 'Viken', yta: true, sluten: false, pts: [[120, 900], [120, -900]] };
+    const B = { id: 'relation/2', typ: 'sjö', namn: 'Sjön', yta: true, sluten: false, pts: [[120, -900], [120, 900]] };
+    // en ö i Sjön (inre ring)
+    const o = { id: 'relation/2', typ: 'sjö', yta: true, inre: true, pts: [[300, -30], [330, -30], [330, 30], [300, 30]] };
+    const st = P.strandskydd({ xmin: -200, ymin: -10, xmax: 100, ymax: 10 }, [A1, A2, B, o], { zoner: true });
+    assert.strictEqual(st.zoner.ofyllda, 0);
+    const pts = tat(st.zoner.m100);
+    // ute i Sjön, utom kring ön, finns ingen 100-metersgräns
+    const iSjon = pts.filter(p => p[0] > 140 && p[0] < 290 && Math.abs(p[1]) < 250);
+    assert.strictEqual(iSjon.length, 0, 'ute i sjön: ' + iSjon.slice(0, 3).map(p => p.map(Math.round)).join(' '));
+    // på land: 100 m från Viken
+    const xs = pts.filter(p => Math.abs(p[1]) < 250 && p[0] < -10).map(p => Math.round(p[0]));
+    assert(xs.length && xs.every(x => Math.abs(x + 100) < 6), 'stranden: ' + [...new Set(xs)].join(', '));
+    assert.strictEqual(P.strandKlass(o).skydd, true);
+  }
   const t0 = Date.now(); P.strandskydd({ xmin: 0, ymin: 0, xmax: 2000, ymax: 2000 }, [{ typ: 'kust', pts: [[-200, -100], [2200, 2300]] }], { zoner: true });
   assert(Date.now() - t0 < 3000, 'zonerna för 2 × 2 km tar under 3 s');
 }

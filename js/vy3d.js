@@ -1022,7 +1022,8 @@
         overlagg.append(knapp); ikoner.push({ el: knapp, punkt: k.punkt });
       }
       const v = valdId && perId(valdId);
-      if (v) {
+      // en kropp med låst placering (0.16.6, planvyns Lås placering) har inget handtag att vrida med
+      if (v && !V3.komponentLast(volymer, v.id)) {
         // handtaget utanför volymen, framför den sett från kameran
         const p = v.primitiv, r = Math.max(...v.fotavtryck.map(q => Math.hypot(q[0] - p.x, q[1] - p.y))) + 1.5;
         const fram = toppvy ? [0, -1] : (() => { const d = new THREE.Vector3(); kamera.getWorldDirection(d); const l = Math.hypot(d.x, d.z) || 1; return [-d.x / l, d.z / l]; })();
@@ -1069,6 +1070,7 @@
       const t = traffA(e.clientX, e.clientY, skiss.children, 'volym');
       if (!t) return false;
       if (valdId !== t.id) { valdId = t.id; senasteSnapp = null; ritaSkiss(); bygOverlagg(); meddelaSkiss('val'); }
+      if (V3.komponentLast(volymer, t.id)) return true;   // låst placering: markeras men flyttas inte (0.16.6)
       el.setPointerCapture(e.pointerId);
       const q0 = iPlan(e.clientX, e.clientY, t.punkt.y);
       skissDrag = { typ: 'flytta', id: t.id, y: t.punkt.y, varld: t.punkt.clone(), fran: q0, ned: [e.clientX, e.clientY], start: ogonblick(t.id), flyttat: false, pekare: e.pointerId };
@@ -1657,5 +1659,5 @@
     };
   }
   /** version: ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  window.Vy3D = { visa, version: '0.16.5' };
+  window.Vy3D = { visa, version: '0.16.6' };
 }());

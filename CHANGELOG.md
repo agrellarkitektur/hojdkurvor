@@ -3,6 +3,45 @@
 Versionsnumret står i `js/version.js` och visas i felrapporten och i
 platsanalysbladet. En kortare version av listan finns under Ändringar på `om.html`.
 
+## 0.16.6 – 2026-11-28
+
+Svar på de äldre testpunkterna (BG, BN–BR, BT–BV, AÄ). BT och BU godkända; BR, BV, AÄ och CK strukna tills
+vidare. Dessutom ägarens beslut samma natt om norrpilen och namnet på Om-sidan.
+
+- **Strandskyddet (BG)**: strandlinjen som avstånden räknas från visas nu tillsammans med 100- och
+  300-metersgränserna, på kartan (med källan i infon), i planvyn och på situationsplanen. Gränserna kunde
+  fortfarande hamna ute i en sjö när två vatten i OpenStreetMap möts (en vik eller en å som är ritad för sig):
+  då gick det inte att avgöra vilken sida som är vatten, och båda räknades som land. Nu avgörs det för ett
+  vatten i taget, och öar i en sjö är land. Går det ändå inte står det en varning.
+- **Väntan på OpenStreetMap (BG)**: reservservern frågas när huvudservern inte har svarat på 12 s, och det
+  första svaret gäller. Förut frågades den först efter tre försök med 40 s tidsgräns, så strandskyddet kunde
+  ta över en minut.
+- **Flytta och Rotera (BN)** i Rita i plan: Flytta (M) med baspunkt och målpunkt som snäpper, så att ett hörn
+  kan flyttas exakt till en annan punkt; avstånd, @dx;dy eller E;N går att skriva. Rotera (O) med
+  rotationspunkt, referenslinje och mållinje (eller punkter, eller en skriven vinkel).
+- **Smartmenyn (BN)**: ett klick på ett hörn, en sida, en byggnad, ett träd, ett hus eller en gräns ger en meny
+  bredvid klicket med det som går att göra där: Flytta härifrån, Rotera kring hörnet, Mått till tomtgräns
+  härifrån, Yttermått på sidan, Entré här, Kopiera, låsen, Dölj huset, trädets höjd och krona …
+- **Lås form och Lås placering (BN)**: med låst form flyttar ett hörn hela byggnaden med samma storlek; med låst
+  placering går byggnaden inte att flytta, vrida, ändra eller ta bort (inte heller flytta eller vrida i
+  3D-vyn). Låsen sparas i projektet (`lastForm`, `last`).
+- **Texterna (BN, BQ)**: en byggnads text går att dra, inne i byggnaden eller utanför, där den får en ledare in
+  till mitten. Ledaren kan pekas om. Texter utanför byggnaden håller sig borta från måtten.
+- **Egna mått (BN, BO)**: mått till tomtgräns från valda hörn och yttermått på valda sidor, utöver de
+  automatiska.
+- **Måtten i rader (BQ)**: yttermått och mått mellan byggnader på samma sida samlas på en rad utanför
+  byggnaden, och det som spänner över dem (husets hela längd) på raden utanför.
+- **Hörnens nummer (BQ)** går att dra dit de inte är i vägen; långt från hörnet får de en tunn linje dit.
+- **Träd och hus i planvyn (BP, CE)**: ändra trädens höjd och krona, dölj träd och hus, och Se dolda visar dem
+  utgråade så att de kan visas igen.
+- **cad-apa (BV, AÄ)**: knapparna som skickar platsen till cad-apa är dolda tills cad-apa är i beta
+  (`visaCadApa` i `config.js`). En skiss sparad från cad-apa går fortfarande att importera.
+- **Norrpilen** på situationsplanen visar sann nord, vriden med meridiankonvergensen i planens mitt, i PDF:en,
+  DXF:en (lagret `SITPLAN_NORRPIL`) och planvyn.
+- **Om-sidan**: Agrell Arkitektur står som den som driver Höjdkurvor, utan ägarens namn.
+- **Testpunkterna** i `docs/SYNPUNKTER.md` är uppdelade i *Måste testas före nästa version* och *Bra att
+  testa vid tillfälle*.
+
 ## 0.16.5 – 2026-11-28
 
 Punkter ur inkorgen som inte rör testet av 0.16.4 (DU, DV, DW, DX), och den nya kroppen för Skissa i 3D

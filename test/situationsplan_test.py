@@ -91,6 +91,7 @@ with sync_playwright() as p:
     print('2) markerad:', pg.locator('path.pv-kropp').count(), pg.locator('path.pv-kropp.pv-oppen').count())
     assert pg.locator('path.pv-kropp.pv-oppen').count() == 2, 'kropparna i den markerade byggnaden syns var för sig'
     pg.screenshot(path=f'{UT}/situationsplan_2_markerad_{TEMA}.png')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)   # stänger smartmenyn (0.16.6)
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
     assert pg.locator('path.pv-kropp').count() == 1
 

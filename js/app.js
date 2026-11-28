@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   /** Versionen den här filen hör till. Ska vara samma som i version.js (test/version.test.js kontrollerar). */
-  const FILVERSION = '0.16.5';
+  const FILVERSION = '0.16.6';
   const VERSION = window.HOJDKURVOR ? window.HOJDKURVOR.version : FILVERSION;
   /**
    * Säger till när webbläsaren eller webbhotellet har gamla filer kvar, så att sidan blandar versioner.
@@ -2448,6 +2448,10 @@
       if (n.objekt && Math.abs(n.avstand - st.avstand) < 15) st.objekt = Object.assign({}, st.objekt, { namn: n.objekt.namn });
     }
     st.kalla = mt.length && osm.v ? 'Lantmäteriets marktäcke och OpenStreetMap' : mt.length ? 'Lantmäteriets marktäcke' : 'OpenStreetMap';
+    // strandlinjen som räknas, för kartan och planvyn (0.16.6, BG): vattnet med strandskydd, med källan
+    st.linjer = mt.map(v => [v, 'lm']).concat((osm.v || []).map(v => [v, 'osm'])).filter(([v]) => Platsanalys.strandKlass(v).skydd && v.pts && v.pts.length >= 2)
+      .map(([v, k]) => ({ pts: v.pts.map(p => [Math.round(p[0] * 100) / 100, Math.round(p[1] * 100) / 100]), sluten: !!(v.yta && v.sluten !== false && v.pts.length > 2), kalla: k, namn: v.namn || '' }));
+    if (st.zoner && st.zoner.ofyllda) varningar.push(`Strandskydd: för ${st.zoner.ofyllda === 1 ? 'ett vatten' : st.zoner.ofyllda + ' vatten'} gick det inte att avgöra vilken sida av stranden som är vatten, så gränserna kan ligga på båda sidor där. Strandlinjen visas på kartan.`);
     senaste.strand = st; senaste.vatten = vatten;
     if (osm.fel) varningar.push(`Strandskydd: OpenStreetMap svarade inte (${osm.fel}). Bara marktäckets vatten är med; bäckar saknas.`);
     if (st.zoner || vatten.length) {
@@ -3427,10 +3431,17 @@
 
   /** Linjerna 100 m (heldragen) och 300 m (streckad) från vattnet med strandskydd (0.13.5). */
   function visaStrandskydd(st) {
-    if (!st || !st.zoner) { visaResultatLager('strandskydd', null); return; }
+    if (!st || (!st.zoner && !(st.linjer && st.linjer.length))) { visaResultatLager('strandskydd', null); return; }
     const t = tillLatLng(state.epsg);
-    const stil = m => ({ color: farg('strand'), weight: m === 100 ? 2 : 1.5, dashArray: m === 100 ? null : '8 6', fill: false });
+    const stil = m => (m === 'vatten' ? { color: farg('strandlinje'), weight: 2.5, opacity: 0.9, fill: false } : { color: farg('strand'), weight: m === 100 ? 2 : 1.5, dashArray: m === 100 ? null : '8 6', fill: false });
     const linjer = [];
+    // strandlinjen som avstånden räknas från (0.16.6, BG), så att det syns vad OpenStreetMap har för vatten
+    for (const l of st.linjer || []) {
+      const pts = l.pts.map(t);
+      if (l.sluten) pts.push(pts[0]);
+      linjer.push(Object.assign(L.polyline(pts, stil('vatten')).bindTooltip(`Strandlinje${l.namn ? ': ' + esc(l.namn) : ''}<br><small>${l.kalla === 'osm' ? 'OpenStreetMap' : 'Lantmäteriets marktäcke'}; strandskyddet räknas härifrån</small>`, { sticky: true }), { meter: 'vatten' }));
+    }
+    if (st.zoner) 
     [[100, st.zoner.m100], [300, st.zoner.m300]].forEach(([m, lista]) => lista.forEach(p =>
       linjer.push(Object.assign(L.polyline(p.map(t), stil(m)).bindTooltip(`${m} m från vatten med strandskydd (indikation)${st.kalla ? `<br><small>Vatten: ${esc(st.kalla)}</small>` : ''}`, { sticky: true }), { meter: m }))));
     visaResultatLager('strandskydd', L.featureGroup(linjer), () => linjer.forEach(l => l.setStyle(stil(l.meter))));
@@ -3533,7 +3544,7 @@
     state.volymer = sk.volymer.map(v => {
       // en kropp som inte är ändrad i cad-apa behåller sina parametrar (0.16.5)
       const id = v.id || Utbyte.nyttId(), n = Volym3D.behallForm(Object.assign({}, v, { id }), forra.get(id)), f = forra.get(n.id);
-      if (f) ['status', 'huvudbyggnad', 'kalla', 'matt', 'slag', 'takutdrag'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
+      if (f) ['status', 'huvudbyggnad', 'kalla', 'matt', 'slag', 'takutdrag', 'last', 'lastForm'].forEach(k => { if (n[k] == null && f[k] != null) n[k] = f[k]; });
       if (f && f.entre && n.entre == null && f.fotavtryck.length === n.fotavtryck.length) n.entre = f.entre;
       return n;
     });
@@ -3632,6 +3643,8 @@
   // cad-apa
   // ------------------------------------------------------------------
   const CADAPA = window.TERRANG_CADAPA || KONF.cadApaUrl || 'https://cad-apa.danaid.cloud/';   // TERRANG_CADAPA: testkrok
+  // Knapparna till cad-apa är dolda tills cad-apa är i beta (0.16.6, BV/AÄ). Testerna ser dem (TERRANG_CADAPA).
+  if (KONF.visaCadApa || window.TERRANG_CADAPA) document.querySelectorAll('[data-cadapa]').forEach(el => { el.hidden = false; });
   function platspaket() {
     const s = state.senaste, r = state.utsnitt;
     const np = lasNollpunkt();
@@ -3712,6 +3725,8 @@
         d.visa.kurvor && u.kurvor ? 'Höjdkurvor ur Lantmäteriets markhöjdmodell.' : ''].filter(Boolean).join(' ') || null,
       hus: und.hus.filter(b => !ersatta.has(String(b.id))),
       zonNamn: T.zon(state.epsg).namn, centrum: ram.centrum, format: ram.format, liggande: ram.liggande, skala: ram.skala,
+      // norrpilen visar sann nord i planens mitt (0.16.6, ägarens beslut 28 november)
+      sannNord: (() => { try { const [lat, lon] = tillLatLng(state.epsg)(ram.centrum); return -konvergens(state.epsg, lat, lon); } catch (e) { return null; } })(),
       uppgifter: { fastighet: p.fastighet || $('projekt').value.trim(), kommun: state.kommun ? state.kommun.namn : p.kommun, uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer, datum: idag() },
     };
     if (typ === 'dxf') {
@@ -3763,7 +3778,8 @@
     if (!state.utsnitt) { visaStatus('Rita ett utsnitt under 01 Plats först.'); return; }
     volymerIZon();
     const s = state.senaste && state.senaste.epsg === state.epsg ? state.senaste : null;
-    const hus = s && s.byggnaderAlla ? Objektval.tillampaHus(s.byggnaderAlla, husval()).byggnader : (s && s.byggnader) || [];
+    // också de dolda husen (dolt: true), som planvyn visar utgråade med Se dolda (0.16.6, BP)
+    const hv = husval(), hus = s && s.byggnaderAlla ? Objektval.tillampaHus(s.byggnaderAlla, hv, { medDolda: true }).byggnader : (s && s.byggnader) || [];
     const granser = s && s.fastigheter ? s.fastigheter.granser : [];
     const saknas = [!granser.length && 'fastighetsgränser', !hus.length && 'byggnader'].filter(Boolean);
     planAndrad = false;
@@ -3781,8 +3797,10 @@
     planvy = Planvy.oppna($('planvy'), {
       volymer: state.volymer, granser,
       ytor: s && s.fastigheter ? s.fastigheter.ytor : [],
-      hus: hus.map(b => ({ id: b.id, fotavtryck: b.fotavtryck, hal: b.hal || [], mark: b.mark, hojd: b.hojd, huvudbyggnad: !!b.huvud, namn: Byggnad.beteckning(b) || 'Befintlig byggnad' })),
-      utsnitt: state.utsnitt, zonNamn: T.zon(state.epsg).namn,
+      hus: hus.map(b => ({ id: b.id, fotavtryck: b.fotavtryck, hal: b.hal || [], mark: b.mark, hojd: b.hojd, huvudbyggnad: !!b.huvud, namn: Byggnad.beteckning(b) || 'Befintlig byggnad',
+        dolt: !!(b.id != null && hv[String(b.id)] && hv[String(b.id)].dolt) })),
+      husAndrat: s && s.byggnaderAlla ? husIPlan : null,
+      utsnitt: state.utsnitt, zonNamn: T.zon(state.epsg).namn, sannNord: -utsnittsMitt().konvergens,
       markhojd: markhojdVid, nyttId: () => Utbyte.nyttId(), andrad: skissFranPlan,
       ram: lager.las('localStorage', 'terrang-situationsplan') || null,
       ramAndrad: r => lager.spara('localStorage', 'terrang-situationsplan', r),
@@ -3791,7 +3809,7 @@
       ramCentrumAndrad: c => { if (!state.proj) return; state.proj.d.projekt.ramCentrum = c ? franZon(c) : null; planeraSpara(); },
       uppgifter: () => { const p = state.proj ? state.proj.d.projekt : {}; return { fastighet: p.fastighet || $('projekt').value.trim(), uppdrag: p.uppdrag, ritadAv: p.ritadAv, ritningsnummer: p.ritningsnummer }; },
       satUppgifter: delar => { if (!state.proj) return; Object.assign(state.proj.d.projekt, delar); planeraSpara(); },
-      situationsplan: (typ, d) => skapaSituationsplan(typ, d, { granser, hus, ytor: s && s.fastigheter ? s.fastigheter.ytor : [], underlag }),
+      situationsplan: (typ, d) => skapaSituationsplan(typ, d, { granser, hus: hus.filter(b => !(b.id != null && husval()[String(b.id)] && husval()[String(b.id)].dolt)), ytor: s && s.fastigheter ? s.fastigheter.ytor : [], underlag }),
       underlag,
       visa: lager.las('localStorage', 'terrang-planvy-visa') || null,
       visaAndrad: v => lager.spara('localStorage', 'terrang-planvy-visa', v),
@@ -4947,9 +4965,11 @@
     return Objektval.tillampaTrad(s.tradAlla || [], tradval(), { medDolda: true }).trad;
   }
   /** Ett träd tillagt, dolt, visat eller borttaget i planvyn (0.16.1). Ger den nya listan. */
-  function tradIPlan({ typ, t, x, y }) {
+  function tradIPlan({ typ, t, x, y, e }) {
     const val = tradval();
     if (typ === 'ny') Objektval.nyttTrad(val, Math.round(x * 10) / 10, Math.round(y * 10) / 10);
+    // höjd och krona ändrade i planvyns smartmeny (0.16.6, BP)
+    else if (typ === 'andra') Objektval.sattTrad(val, t, Object.assign(Objektval.valFor(t, val), e || {}));
     else if (typ === 'bort') Objektval.sattTrad(val, t, {}, { taBort: true });
     else if (typ === 'dolj') Objektval.sattTrad(val, t, Object.assign(Objektval.valFor(t, val), { dolt: true }));
     else if (typ === 'visa') { const e = Objektval.valFor(t, val); delete e.dolt; Objektval.sattTrad(val, t, e); }
@@ -4958,6 +4978,17 @@
     if (s && !s.tradAlla) s.tradAlla = [];
     objektAndrat(); planeraSpara();
     return tradForPlan();
+  }
+  /** Ett hus dolt eller visat i planvyn (0.16.6, BP), som Dölj huset i 3D-vyn. */
+  function husIPlan({ typ, id }) {
+    if (id == null) return false;
+    const v = husval();
+    if (typ === 'dolj') v[String(id)] = { dolt: true }; else delete v[String(id)];
+    lager.spara('localStorage', HUSVAL, v);
+    // 3D-vyn bakom planvyn följer med
+    if (vy3d) for (const [id3, b] of hus3d) if (b.id != null && String(b.id) === String(id)) vy3d.doljHus(id3, typ === 'dolj');
+    objektAndrat(); planeraSpara();
+    return true;
   }
   /** Efter en ändring: träd och hus i state.senaste och på kartan. */
   function objektAndrat() {

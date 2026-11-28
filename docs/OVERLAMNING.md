@@ -1,9 +1,22 @@
 # Överlämning
 
 Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
-överlämning; historiken finns i git. Senast: 28 november 2026, 0.16.5.
+överlämning; historiken finns i git. Senast: 28 november 2026, 0.16.6.
 
 ## Läget
+
+- **0.16.6** 28 november (grenen `v0.16.6`): **svar på de äldre testpunkterna** (BG, BN–BR, BT–BV, AÄ) och
+  ägarens beslut samma natt (norrpilen, namnet på Om-sidan). BT och BU godkända; BR, BV, AÄ och CK strukna
+  tills vidare. Byggt: strandlinjen och ett vatten i taget i strandskyddet, reservservern för Overpass efter
+  12 s (BG); Flytta, Rotera, smartmenyn, låsen, texter och hörnnummer att dra, egna mått och måtten i rader
+  (BN, BO, BQ); träd och hus i planvyn med Se dolda (BP, CE); knapparna till cad-apa dolda (`visaCadApa`);
+  norrpilen mot sann nord. Testpunkterna är nu uppdelade i *Måste testas före nästa version* och *Bra att
+  testa vid tillfälle* (ägarens önskan). Se *0.16.6* nedan. Körda: alla 25 enhetstester (utökade
+  `situationsplan`, `platsanalys`, `geodata`), nya `smartmeny_test.py` i alla tre teman, `planverktyg_test.py`,
+  `planvy_test.py`, `situationsplan_test.py`, `rattelser_test.py`, `projekt_test.py`, `skapalogg_test.py`,
+  `las_test.py`, `resultat_test.py`, `fastighetsnamn_test.py`, `fasadsol_test.py`, `mobil_test.py` och
+  `ui_test.py` i temat ritning. **Inte provat**: riktiga Overpass-svar (sjöar som möts, öar), iPhone,
+  AutoCAD (norrpilen i DXF:en), smartmenyn på en pekskärm.
 
 - **0.16.5** 28 november (grenen `v0.16.5`): **inkorgen utan att röra testet av 0.16.4** (ägaren hann inte
   testa; beslut samma kväll) och **datamodellen för 0.17.0** under ytan. DX (strandskydd ute i sjön), DU
@@ -398,13 +411,13 @@ Läget när en session slutar, så att nästa kan ta vid. Skrivs om vid varje
 - **0.8.1** godkänd på Windows 27 oktober. iPhone (två fingrar i 3D) är
   fortfarande inte testad.
 
-## Ägarens svar 28 november (natt), inte byggda
+## Ägarens svar 28 november (natt)
 
-Svar på frågorna efter 0.16.5 (punkt 1–3; 4–10 väntar på svar):
-1. **Norrpilen**: sann nord på situationsplanen ("kanske lika bra med true north"). Pilen vrids med
-   meridiankonvergensen i planens mitt, i PDF och DXF och i planvyn.
-2. **Ägarens namn**: står Agrell Arkitektur på Om-sidan behöver namnet inte stå där. Ta bort det ur
-   `om.html` och `docs/LICENS.md`.
+Svar på frågorna efter 0.16.5 (punkt 1–3; 4–10 väntar på svar). 1 och 2 byggda i 0.16.6:
+1. **Norrpilen**: sann nord på situationsplanen. Byggd: `opt.sannNord` (grader medurs från rutnätets nord,
+   = −konvergensen i ramens mitt) i `Situationsplan.pdf` och `dxf` (lagret `SITPLAN_NORRPIL`) och i planvyn
+   (utsnittets mitt).
+2. **Ägarens namn**: borta ur `om.html` och `docs/LICENS.md`.
 3. **Beställ-sidan**: håll inne med de underlag och analyser som kräver prövning hos Lantmäteriet
    (ortofoto, byggnader, fastighetsindelning). Ingen ändring.
 
@@ -412,6 +425,53 @@ Kvar att fråga (4–10): skyfall på kropparna och nybyggnadskartan i versionsp
 efter 0.17.0 eller efter 0.20.0; skärmtakets höjd i lutande terräng; källrad för användarmodeller i
 utskrifter; iPhone i 3D-vyn (ett finger snurrar i Visa, skissa bara på datorn); strandskyddet när
 utsnittets mitt ligger i vattnet; sorteringen av inkorgen (DR, DS, DY, DZ/EA/ED, EB, EC).
+
+## 0.16.6
+
+- **Strandskyddet (BG)**: `Geodata.vatten` ger varje vatten ett `id` (`way/…`, `relation/…`, kusten `kust`) och
+  relationens inre ringar `inre: true` (öar; `strandKlass` ger dem skydd, så att de hör till sjön).
+  `Platsanalys.strandZoner` färgar ett vatten i taget (`fyllKlipptVatten` per id, med vattnets hela ringar
+  som väggar) och fyller hela ytor jämnt–udda över vattnets alla ringar. Vatten utan id (marktäcket, gamla
+  prov) färgas tillsammans som förut. `zoner.ofyllda` räknar vatten som inte gick att färga; appen varnar.
+  `st.linjer` (vattnet med skydd, med källan `osm` eller `lm`) ritas på kartan (`--strandlinje` i alla tre
+  teman), i planvyn (`pv-u-strandlinje`) och på situationsplanen (lagret STRAND). **Orsaken till BG** är
+  inte säker (testmiljön når inte Overpass): troligast två vatten som möts (färgningen gick inte ihop och
+  då fylldes inget), eller utsnittets mitt i vattnet (inte hanterat).
+- **Overpass (BG)**: `Geodata.overpass` frågar reservservern när huvudservern inte har svarat på 12 s
+  (`TERRANG_OVERPASS_PARALLELL`), och det första svaret gäller; huvudserverns fråga avbryts då
+  (`hamta(…, { avbryt })`, felet `avbruten` prövas inte igen). Ett fel i frågan (400) går inte till reserven.
+  `Vagar.hamta` har sin egen logik och är oförändrad.
+- **Måtten i rader (BQ)**: `Situationsplan.raderna` (sist i `matt`): yttermått och mått mellan byggnader med
+  samma riktning, i byggnader som ligger an (union–find med `Kropp.fogsidor`) och som följer på varandra
+  längs sidan, får `bas` (ut till den yttersta) och `rad` (0, 1 … efter längd: det som spänner över andra
+  längre ut). `mattAvst(m, mm)` = off eller bas + (4 + 5 · rad) mm; planvyn och ritningen använder den.
+  Måtten räknas före etiketterna; `mattHinder` ger deras linjer, och `etikettText(…, hinder)` provar tre
+  avstånd och åtta riktningar och håller textrutan borta från dem (`rutaAvst`).
+- **Anteckningarna** (kroppens `matt`, samma ägare och enhet som måtten): `gh|<hörn>` { horn, mot } (eget
+  gränsmått, `gransVinkelratt`), `ys|<sida>` { sida, off } (eget yttermått; måtten har `egen: true`, och
+  *Ta bort* i stället för *Dölj*), `et|<k>` { t, pil } (etikettens text och ledarens pil relativt etikettens
+  mitt; `etikettText` ger `grupper` med `text`, `pil`, `bas`), `nr|<ring>.<hörn>` { d } (hörnnumret;
+  `nrPunkt`, `nrLinje`). Egna mått läggs på den stängda enheten (skalet); för en byggnad av flera kroppar
+  syns de när den inte är markerad (`visaSkalet`). `visaDolda` behåller andra fält än `dold`.
+- **Planvyn**: verktygen `flytta` (M) och `rotera` (O) med `S.op` = { typ, k, steg: valj | bas | mal |
+  centrum | ref, bas, c, ref, hov, forRef }; `riktningVid` (ett hörn är en punkt, en mittpunkt eller linje
+  är linjen), `opVinkel` (mellan två linjer ±90°), `ritaOp` (spöket och gummibandet). Smartmenyn
+  (`.planvy-smart`, `kontextVid`, `menyFor`, `oppnaMeny`) öppnas vid pointerup utan rörelse (`drag.typ
+  'klick'`, eller ett flytta/grepp-drag som inte flyttades); Esc stänger den först. `etDrag` och `nrDrag`
+  drar texter och nummer (en text inne i en byggnad som inte är markerad tar byggnaden). `S.pilVal`: nästa
+  klick sätter ledarens pil. En bokstav i en tom inmatningsrad är ett kortkommando.
+- **Låsen**: `last` (placering; fanns i datamodellen från prototypen) och `lastForm` på kroppen.
+  `gruppLast` (kedjan) stoppar drag, Flytta/Rotera, Vrid, mått som flyttar, Delete och dockning; med låst
+  form blir ett hörndrag ett flyttdrag och sidlängderna är avstängda. 3D-vyn: `Volym3D.komponentLast` stoppar
+  flytt och vridhandtaget. `Projekt.las` kontrollerar `lastForm`; `laddaSkiss` behåller båda.
+- **Träd och hus (BP)**: planvyn får alla hus med `dolt` och `husAndrat` (`husIPlan` i app.js: `HUSVAL`,
+  3D-vyn följer med); `tradIPlan` tar `typ: 'andra'` med `e` (höjd, krona). `S.seDolda` (knappen *Se dolda*)
+  ritar dolda hus (`pv-husdolt`) och träd.
+- **cad-apa**: `[data-cadapa]` (Rita i cad-apa, Fortsätt rita i cad-apa, Spara platsfil) är dolda om inte
+  `visaCadApa` i `config.js` eller testkroken `TERRANG_CADAPA` är satt (så att `ui_test.py` når dem).
+- **Testerna**: `las_test.py` väntade sig *igen* i Skapa-knappen; sedan 0.16.5 står det *Uppdatera*
+  (rättat). `planverktyg_test.py` och `situationsplan_test.py` trycker Esc en gång till, eftersom den första
+  stänger smartmenyn.
 
 ## 0.16.5
 
@@ -1222,6 +1282,7 @@ november):
 | 0.16.3 | Rättelser efter granskningen av 0.16.2 (byggd 26 november) |
 | 0.16.4 | Rättelser efter ägarens test av 0.16.1 (DD–DJ), 0.16.2 (DT) och 0.14.4 (BÄ, BÖ, CA, CB) (byggd 27 november; testas som EE–EN) |
 | 0.16.5 | Inkorgen DU, DV, DW, DX och datamodellen för 0.17.0 under ytan (byggd 28 november; testas som EO–ER) |
+| 0.16.6 | Svar på de äldre testpunkterna (BG, BN–BR, BT–BV, AÄ): planvyns verktyg, smartmenyn, låsen, strandskyddet (byggd 28 november; testas som ES–EÅ) |
 | 0.17.0 | Skissa i 3D med användarskapad omgivning etapp 1 (CL–CV), formpaletten med ikoner, CE; se `docs/SKISSA-I-3D.md` |
 | 0.18.0 | Arbetsgången (CD, CC, BK) och ikonbaserat gränssnitt (BL) |
 | 0.19.0 | Bedömning med regelbok för befintliga analyser |
@@ -1230,9 +1291,11 @@ november):
 | 0.22.0 → | Geologi (etapp 0–4), bilagor (AM, AN) och resten; nya analyser omgång 2 |
 | ej bestämd | Omgivningen etapp 3–4 (CÅ–CÄ, biblioteket; fråga ägaren om det ska komma direkt efter 0.17.0), pagoda, STRÅNG och reflexer i sol på fasaderna (CW–CY) |
 
-1. För in ägarens testresultat (EE–EN för 0.16.4, EO–ER för 0.16.5, DK–DQ för 0.16.1, CÖ–DC för 0.16.0, CG–CK för 0.15.0 och de
-   öppna punkterna under *Att testa* för 0.14.x). Rättelser blir 0.16.6. Kontrollen mot Hudiksvall *med
-   omgivning* (CH) går att göra nu när B3 är rättad.
+1. För in ägarens testresultat. Testpunkterna står under två rubriker i `docs/SYNPUNKTER.md` (ägarens
+   önskan 28 november): *Måste testas före nästa version* (ES–EZ för 0.16.6, EO, EG, DB, CÖ, CG) och *Bra
+   att testa vid tillfälle* (resten). Nya testpunkter sorteras dit när de skrivs: det som kan ge fel underlag
+   eller som nästa version bygger på är *Måste*, bekvämlighet, utseende och mobilen är *Bra*. Rättelser
+   blir 0.16.7.
 2. Projektuppgifterna för ritningshuvudet fylls i i planvyn (0.16.0); `anteckning` har fortfarande
    inget fält.
 3. Tillägg till AX att fråga om: är fältet tomt och Fastigheter ikryssat vid

@@ -7,7 +7,7 @@ går att hänvisa till. Nya punkter får nästa lediga nummer och läggs i
 den version där de ska byggas. En punkt som är klar stryks och nämns i
 CHANGELOG.md; numret används inte igen.
 
-Senast använda nummer: **ER**.
+Senast använda nummer: **EÅ**.
 
 ## Inkorg
 
@@ -22,18 +22,47 @@ Senast använda nummer: **ER**.
 - **EC** Uppdatera sektionsfunktionen så att den faktiskt ritar ut byggnader och träd i och framför snittet. Möjlighet att välja sektionens siktdjup grafiskt i planen?
 - **ED** Möjlighet att importera träd i Revit och ArchiCAD. Dels som plansymboler (cirkel eller trädsymbol som i DXF-symbolen), men också som 3D-objekt där varje objekt har en ankarpunkt i centrum vid mark och möjlighet att automatiskt byta ut 3D-objekten mot Enscape-proxies (eller andra proxies). Behövs importplugin för respektive program då?
 
-## Att testa
+## Måste testas före nästa version
 
-Grupperat efter den version där testbehovet uppstod.
+Det som kan ge fel underlag eller filer, och det som nästa version (0.17.0, Skissa i 3D) bygger vidare på:
+planvyns verktyg, smartmenyn, låsen och situationsplanen. Det mesta annat är bekvämlighet och kan vänta
+tills tjänsten har använts mer; det står under *Bra att testa vid tillfälle*. En punkt kan flyttas mellan
+rubrikerna när det visar sig att den behövs (eller inte).
+
+### 0.16.6
+
+Svar på de äldre testpunkterna 28 november (BG, BN–BR, BT–BV, AÄ). Synpunkterna står ordagrant under *Inarbetat ur inkorgen*.
+
+- **ES** Strandskyddet (efter BG, ersätter ER): gör en platsanalys med Skydd vid en sjö, med Marktäcke urkryssat, gärna där en å rinner ut eller där sjön har en vik eller en ö. Syns strandlinjen (heldragen, mörkare blå) tillsammans med 100- och 300-metersgränserna, på kartan och i planvyn? Ligger gränserna bara på land, inte ute i sjön? Prova också Vättern eller en annan stor sjö. Går det fortare än 70 s när OpenStreetMap är segt (reservservern frågas nu efter 12 s)? Står det en varning om ett vatten där sidan inte gick att avgöra?
+- **ET** Flytta och Rotera (efter BN): markera en byggnad och välj *Flytta* (M). Klicka ett hörn som baspunkt och ett hörn på en annan byggnad eller en gränspunkt som mål: hamnar hörnet exakt där? Prova att skriva `5` och `@3;4` i raden. Välj *Rotera* (O): rotationspunkt i ett hörn, referenslinje på en sida och mållinje på en tomtgräns. Blir sidan parallell med gränsen? Prova med punkter i stället för linjer, och att skriva en vinkel. Ångra.
+- **EU** Smartmenyn (efter BN): klicka (utan att dra) på ett hörn, en sida, mitt i en byggnad, ett träd, ett grått hus och en tomtgräns. Kommer menyn upp bredvid klicket med rätt verktyg (Flytta härifrån, Rotera kring hörnet, Mått till tomtgräns härifrån, Yttermått på sidan, Entré här, Kopiera, låsen …)? Stör den när du bara vill markera eller dra? Saknas något verktyg?
+- **EV** Låsen (efter BN): välj *Lås form* på en byggnad och dra i ett hörn: flyttas hela byggnaden med samma storlek? Välj *Lås placering*: går det inte att flytta, vrida, ändra hörn eller ta bort den, i planvyn och i 3D-vyn? Ligger låsen kvar efter omladdning och i projektfilen?
+- **EW** Texterna (efter BN och BQ): dra texten för en liten tillbyggnad till en bättre plats, utanför byggnaden. Följer ledaren med, pekande på mitten? Klicka på texten och välj *Välj vart ledaren pekar*, klicka på en punkt. Dra i pilen. Markera en byggnad och dra dess text inne i den. Stämmer allt på PDF:en och i DXF:en, och tar *Tillbaka till sin plats* tillbaka texten?
+- **EX** Egna mått (efter BO): klicka på ett hörn och välj *Mått till tomtgräns härifrån*, och på en sida och välj *Yttermått på sidan*. Kommer måtten där du vill ha dem? Dölj ett automatiskt mått och ta bort ett eget (klicka på siffran).
+- **EY** Måtten i rader (efter BQ): rita en tillbyggnad mot ett befintligt hus som i bilden 28 november. Står måtten mellan byggnaderna och tillbyggnadens yttermått på en rad utanför tillbyggnaden, och husets hela längd på raden utanför den? Hamnar tillbyggnadens text utanför måtten? Välj *Numrerade hörn och koordinatlista* och dra ett nummer som ligger i vägen: står det kvar där, med en tunn linje till hörnet, också på PDF:en?
+- **EZ** Träd och hus i planvyn (efter BP): klicka på ett träd och ändra höjd och krona, dölj ett, och klicka på ett grått hus och välj *Dölj huset*. Välj *Se dolda*: syns de utgråade, och går de att visa igen? Stämmer det med 3D-vyn och skuggorna efter Skapa?
+
+### Äldre
+
+- **EO** Klockan under Skapa (efter DU, 0.16.5): syns tiden och steget under mätaren medan underlaget skapas, och står det *väntar sedan … s* när ett steg tar lång tid? Hänger vägarna igen: blir resten klart efter cirka 40–80 s med en varning om vägarna, och kommer vägarna med när du väljer *Uppdatera underlag* lite senare?
+- **EG** Situationsplanen som DXF (efter DF, 0.16.4): skapa DXF med Höjdkurvor ikryssat och öppna den i AutoCAD. Kryssa i *Ritningens ram*: syns ritningshuvudet, teckenförklaringen och upplysningen som grå rutor i ramen, och går ramen att flytta genom att dra i kanten? Ligger den kvar efter omladdning, och tar *Ramen kring byggnaderna* tillbaka den? Är nya byggnader skrafferade på PDF:en och i planvyn?
+- **DB** Situationsplanen som PDF (0.16.0): fyll i åtgärd, ritad av och ritningsnummer under *Situationsplan*, välj A3 1:400 och A4 1:500. Visar ramen rätt utsnitt? Är PDF:en användbar som situationsplan till bygglov: linjer, texter, FG, entré, kryss, mått, teckenförklaring, upplysningstexten och ritningshuvudet? Saknas något jämfört med SKR:s checklista? Skriv ut i 100 % och mät skalstocken.
+- **CÖ** Yttre skal (0.16.0): rita två kroppar i vinkel (till exempel 12 × 8 och 4 × 14 som går in i varandra) med samma status. Syns de som en byggnad, utan linjen mellan dem och utan överlappet, i planvyn, på kartan och i 3D-vyn? Klicka i byggnaden: syns kropparna var för sig och går de att ändra? Avmarkera: blir det en byggnad igen? Prova också en tillbyggnad mot ett befintligt hus (ska ritas för sig, med fogen). Stämmer BYA?
+- **CG** Sol på fasaderna, grundflödet (0.15.0): rita en eller flera byggnader under 04 Skiss (eller *Befintlig* ur ett hus), kryssa i *Skapa platsanalysblad* med kapitlet SOL och *Sol på fasaderna*, och skapa. Står *Sol på fasaderna* i sammanfattningen, och finns `fasadsol/…_sol_pa_fasader.pdf` och `…_fasader.csv` i zip-filen? Är bladen begripliga (staplar och tabell, timme × dag, värsta dygnet)? Stämmer väderstrecken med kartan?
+
+## Bra att testa vid tillfälle
+
+Bekvämlighet, utseende, mobilen och sådant som inte ger fel underlag. Grupperat efter den version där
+testbehovet uppstod.
+
+### 0.16.6
+
+- **EÅ** cad-apa (efter BV och AÄ): finns det några knappar kvar som skickar dig till cad-apa (*Rita i cad-apa*, *Fortsätt rita i cad-apa*, *Spara platsfil för cad-apa*)? De ska vara dolda tills cad-apa är i beta. En skiss sparad från cad-apa går fortfarande att importera.
 
 ### 0.16.5
 
-Svar på inkorgen 28 november (DU, DV, DW, DX). Synpunkterna står ordagrant under *Inarbetat ur inkorgen*.
-
-- **EO** Klockan under Skapa (efter DU): syns tiden och steget under mätaren medan underlaget skapas, och står det *väntar sedan … s* när ett steg tar lång tid? Hänger vägarna igen: blir resten klart efter cirka 40–80 s med en varning om vägarna, och kommer vägarna med när du väljer *Uppdatera underlag* lite senare?
 - **EP** Uppdatera (efter DV): skapa ett underlag och välj sedan samma knapp igen utan att ändra området. Säger den *Uppdatera underlag*, med raden om att det går fortare under, och är det tydligt nog?
 - **EQ** Kopiera status och logg (efter DW): välj länken under statusraden efter Skapa och klistra in här i chatten. Får du med status, sammanfattning och loggen med tider, och inget lösenord?
-- **ER** Strandskyddet vid en stor sjö (efter DX): gör en platsanalys med Skydd nära Vättern eller en annan stor sjö, med marktäcke urkryssat. Ligger 100- och 300-metersgränserna bara på land? Prova också ett utsnitt på en udde eller en ö.
 
 ### 0.16.4
 
@@ -41,7 +70,6 @@ Svar på testet 27 november (DD–DJ, DT, BÄ, BÖ, CA, CB). Synpunkterna står 
 
 - **EE** Mobilen (efter DT): på iPhone, öppna menyn med hamburgaren uppe till höger och stäng den. Är formatväljaren ihopfälld, och visar knappen valt format? Välj 3:2 och dra i ett hörn: blir ramen större och mindre men behåller 3:2? Nyp för att zooma med ett finger nära ett hörn: står formatet kvar? Ladda om utan att markera: kommer kartan tillbaka dit du var? Välj *Hela verktyget*: finns *Mobilvyn* på kartan och i menyn, och tar den dig tillbaka?
 - **EF** Skydd vid en stor sjö (efter DE): gör en platsanalys med Skydd vid Vättern. Går det fortare nu när de skyddade områdena klipps till utsnittet (50 m utanför), och syns det i infon att området är klippt?
-- **EG** Situationsplanen (efter DF): skapa DXF med Höjdkurvor ikryssat och öppna den i AutoCAD. Kryssa i *Ritningens ram*: syns ritningshuvudet, teckenförklaringen och upplysningen som grå rutor i ramen, och går ramen att flytta genom att dra i kanten? Ligger den kvar efter omladdning, och tar *Ramen kring byggnaderna* tillbaka den? Är nya byggnader skrafferade på PDF:en och i planvyn?
 - **EH** Måtten och tecknen (efter DG): syns vinkelrätsymbolen där gränsmåtten möter gränsen? Dra ett gränsmått till en annan gräns: följer måttet med, och ligger det kvar efter omladdning? Rita en polygon och välj huvudbyggnad, komplementbyggnad och skärmtak: får den sitt tecken? Sätt en vriden byggnad till Rivs: är krysset 45° mot norr?
 - **EI** Befintlig och tillbyggnad (efter DH): ta in ett befintligt hus och rita en tillbyggnad strax bredvid det, vriden lite. Dockar den mot fasaden när du släpper den, eller när du sätter status Tillbyggnad? Har det befintliga huset bara yttermåttet på sidan mot tillbyggnaden, och inga gränsmått?
 - **EJ** Texterna (efter DI): ligger måtten tätt intill sina linjer på PDF:en? Har texterna i planvyn samma storlek mot byggnaderna som på PDF:en när du zoomar? Rita en liten tillbyggnad: står texten utanför med en ledare? Är *BYGGNAD 1* i fetstil och FG och arean mindre?
@@ -64,22 +92,14 @@ Svar på testet 23 november (BG och synpunkterna på situationsplanen och sol p�
 
 ### 0.16.0
 
-Situationsplanen (etapp 3 i `plan-skiss-situationsplan.md`) och byggnader av flera kroppar som ett yttre skal.
-
-- **CÖ** Yttre skal: rita två kroppar i vinkel (till exempel 12 × 8 och 4 × 14 som går in i varandra) med samma status. Syns de som en byggnad, utan linjen mellan dem och utan överlappet, i planvyn, på kartan och i 3D-vyn? Klicka i byggnaden: syns kropparna var för sig och går de att ändra? Avmarkera: blir det en byggnad igen? Prova också en tillbyggnad mot ett befintligt hus (ska ritas för sig, med fogen). Stämmer BYA?
 - **DA** Måtten på en sammansatt byggnad: hamnar yttermåtten runt hela byggnaden och gränsmåtten på rätt hörn? Ändra ett yttermått och ett gränsmått. Dölj ett mått (klicka, *Dölj*) och ta tillbaka det (*Visa dolda mått*). Dra ett yttermått längre ut. Ligger det kvar efter omladdning?
-- **DB** Situationsplanen som PDF: fyll i åtgärd, ritad av och ritningsnummer under *Situationsplan*, välj A3 1:400 och A4 1:500. Visar ramen rätt utsnitt? Är PDF:en användbar som situationsplan till bygglov: linjer, texter, FG, entré, kryss, mått, teckenförklaring, upplysningstexten och ritningshuvudet? Saknas något jämfört med SKR:s checklista? Skriv ut i 100 % och mät skalstocken.
 - **DC** Situationsplanen som DXF i Archicad (eller AutoCAD): hamnar den rätt i arbetszonen, och är lagren och texthöjderna användbara?
 
 ### 0.15.0
 
-Sol på fasaderna, efter `overlamning-solanalys.md` i claude.ai-projektet, på byggnadskropparna från 0.14.0.
-
-- **CG** Grundflödet: rita en eller flera byggnader under 04 Skiss (eller *Befintlig* ur ett hus), kryssa i *Skapa platsanalysblad* med kapitlet SOL och *Sol på fasaderna*, och skapa. Står *Sol på fasaderna* i sammanfattningen, och finns `fasadsol/…_sol_pa_fasader.pdf` och `…_fasader.csv` i zip-filen? Är bladen begripliga (staplar och tabell, timme × dag, värsta dygnet)? Stämmer väderstrecken med kartan?
 - **CH** Kontroll mot Hudiksvall: rita ungefär de två kontorsblocken från underlaget på rätt plats, med omgivningen, och skapa med 21/3–21/9 och kl. 8–17. Hamnar det stora blockets samtidiga toppar nära underlagets 806 (öster), 831 (söder) och 850 (väster) W/m²? Summorna blir högre än i underlaget, eftersom himlen är klar varje dag. Stämmer skuggningen mellan blocken ungefär (det mindre blockets södersida)?
 - **CI** Period och tid: välj April, September och Hela dygnet. Ändras bladen och 3D-färgerna, och ligger valen kvar efter omladdning och i projektfilen?
 - **CJ** 3D-vyn: *Sol på fasader* bland valen (Summa och Timtopp, med skala). Är färgerna lätta att läsa mot den grå skissen, i alla tre teman? Ändra en byggnad i 3D-vyn eller planvyn: försvinner färgerna tills du skapar igen?
-- **CK** Platsen till cad-apa har fältet `fasadsol` (topparna per fasad och horisonten). cad-apa läser det inte än; prova bara att *Rita i cad-apa* fungerar som förut.
 
 ### 0.14.3
 
@@ -90,27 +110,11 @@ Rättelser efter testet 20 november av AJ–AÅ.
 - **BY** Ramen (efter AT): skapa några utsnitt efter varandra i samma fönster, med Punktmoln ikryssat. Går det fortfarande att dra i ramen? (Lassot ändrades igen i 0.14.4, se CB.)
 - **BZ** Lås och hämta inte igen (AY): välj *Lås området*. Försvinner handtagen och krysset, och flyttas området inte när du drar i kartan? Skapa, skissa en byggnad under 04 Skiss och välj *Uppdatera analyserna*: går det fort, och säger sammanfattningen att allt fanns? Ladda om sidan: är området fortfarande låst (underlaget i minnet är borta efter omladdning, så nästa Skapa hämtar igen)? Lås upp med samma knapp. Räcker det här, eller ska Skapa delas i Hämta underlag och Skapa analys på var sin flik som i AY?
 
-### 0.14.1
-
-- **BT** Nya adressen: öppna <https://hojdkurvor.se/>, <https://höjdkurvor.se/>, <https://www.hojdkurvor.se/> och <https://hojdkurvor.danaid.cloud/>. Hamnar alla på hojdkurvor.se med giltigt lås? Öppna en äldre projektlänk (`…danaid.cloud/#p=…`): kommer området och valen fram på den nya adressen? Skicka en synpunkt från appen.
-- **BU** Loggan höjdkurvor.se: ryms den i menyraden på datorn och på iPhone, i alla tre teman? Skapa en ritning, en skuggstudie och ett platsanalysblad och titta på loggan i ritningshuvudet.
-- **BV** cad-apa (när cad-apa har fått den nya adressen): *Rita i cad-apa* från hojdkurvor.se, skicka tillbaka en skiss, och *Fortsätt rita i cad-apa*.
-
-### 0.14.0
-
-- **BN** *Rita i plan* på en riktig tomt (Windows, Chrome), skapad med Fastighetsgränser och Befintliga byggnader: blir ritriktningen rätt från början? Rita en rektangel med klick och med `12,6x9`, en polygon med klick och med inmatningsraden (`6`, `6<90`, `@3;4`). Fäster snäppet där du väntar dig, och är det lätt att se vad det fäster mot? Ortho (F8) och Snäpp (F3)? Flytta med ett hörn mot en gräns eller ett hus, dra i hörnen, vrid, kopiera, ångra.
-- **BO** Måtten jämfört med en egen situationsplan: tre mått mot två gränser (två från långsidan, ett från kortsidan), yttermåtten och måttet mellan tillbyggnad och hus (som i skissen med 0,3). Väljer appen rätt gränser och sidor, och hamnar texterna läsbart? Ändra ett gränsmått och ett yttermått genom att klicka på siffran. *FG lika bef*.
-- **BP** Ta in ett befintligt hus (Befintlig), gör det till huvudbyggnad, lägg till en tillbyggnad och ett förråd som ska rivas. Byt till 3D (knappen *3D*) och tillbaka (*Plan*): samma byggnader, utan det som rivs? Välj *Skapa* igen: är huset borta ur Byggnader och skuggorna, och är det rivna borta ur skuggorna?
-- **BQ** **På iPhone**: öppnas planvyn och går den att läsa (panelen under ritningen)? Ritandet är tänkt för datorn.
-- **BR** Saknas något för att kunna använda planen som grund för en situationsplan (etapp 3, 0.16.0): text, linjer, symboler, skala?
-
-### 0.13.5
-
-- **BG** (23 november: med Marktäcke fungerar det; OpenStreetMap svarade 502 efter tre försök. Ändrat, testas som DD.) Strandskydd på en riktig plats nära en sjö (vid havet godkänt 20 november): kommer strandskyddet med, utan *signal is aborted without reason*? Syns lagret *Strandskydd (indikation)* med en heldragen linje 100 m och en streckad 300 m från vattnet, och stämmer de ungefär med kartan? Prova med och utan Marktäcke ikryssat. Står det rätt sjö i texten? Prova också nära en liten damm eller bäck: säger texten att den saknar strandskydd enligt reglerna från 2025?
-
-### 0.13.1
-
-- **AÄ** (20 november: skissen kan inte skickas tillbaka från cad-apa än; det arbetas på där. Analyserna och vad skissen behöver står i `docs/UTBYTE-CAD-APA.md`.) cad-apa på nya adressen: på <https://hojdkurvor.danaid.cloud/>, välj *Rita i cad-apa*. Öppnas <https://cad-apa.danaid.cloud/> med platsen? Skicka tillbaka en skiss från cad-apa: dyker volymerna upp i 04 Skiss? Prova också *Fortsätt rita i cad-apa* under resultatet.
+Klart vid testet 28 november (strukna, se CHANGELOG.md under 0.16.6): BT (nya adressen) och BU (loggan)
+godkända. BR struken tills vidare (ägaren återkommer med önskemål). BV, AÄ och CK strukna tills cad-apa är i
+beta; knapparna till cad-apa är dolda så länge. BG ledde till ändringar (ES, som ersätter ER). BN, BO, BP och
+BQ godkända med nya önskemål, byggda och testas som ET–EZ; CE (markera och dölja träd och hus i planvyn) är
+gjord med EZ.
 
 Klart vid testet 27 november (strukna, se CHANGELOG.md under 0.16.4): DD (strandskydd ur OpenStreetMap) och
 CA (terrängsektioner utan kryssruta) godkända. DT, DE–DJ, BÄ, BÖ och CB ledde till ändringar, testas som EE–EN.
@@ -135,6 +139,18 @@ bara det enklare flödet (markera, skicka till datorn, beställ), inte 3D-vyn.
 ## Inarbetat ur inkorgen
 
 Det som lämnades i inkorgen och byggdes direkt, så som det lämnades. Testas under *Att testa*.
+
+### 28 november 2026 → 0.16.6 (svar på de äldre testpunkterna)
+
+- **BG** Med marktäcke urkryssat fick man vänta på strandskyddet i 70 sekunder eller något för en sjö. Men nu står det att strandskyddet kommer från OpenStreetMap i kartan. Strandskydd syns fortfarande inne i en sjö. Vore bra om man såg OSMs strandlinje också tillsammans med strandskyddet. *Strandlinjen som avstånden räknas från visas på kartan, i planvyn och på situationsplanen. Varje vatten färgas för sig, så att två vatten som möts (en vik, en å) inte längre gör att vattnet räknas som land; öar i en sjö är land. Reservservern för OpenStreetMap frågas efter 12 s i stället för efter tre försök med 40 s tidsgräns. Testas som ES.*
+- **BN** ok! Lägg till flytta-verktyg så att man kan klicka på en hörnpunkt (exempelvis) och flytta den punkten till en annan punkt. Lägg till rotera-verktyg där man också kan välja rotationspunkt, referenslinje och mållinje. Man ska kunna dra i texter inne/utanför byggnader och själv välja placering på dem med automatisk ledare. Man ska kunna välja vart ledaren pekar på om man inte vill att det är i mitten. Man ska kunna välja vilka hörn som en byggnad måttsäts till fastighetsgränd från (nu kan man bara dölja). Enkelklick på en punkt eller linje kan ta upp en smartpalett som i cad-apa (kolla gärna deras repo https://github.com/agrellarkitektur/cad-apa) med kontextbaserade verktyg (just flytta/rotera/måttsätt till fastighetsgräns osv). Man ska kunna låsa både form och placering på en byggnad, vid låst form så blir standardbeteendet att man flyttar den med samma storlek om man drar i en hörnpunkt. Med låst placering så går den inte ens flytta. *Flytta (M) och Rotera (O), smartmenyn vid ett klick, texter och ledare att dra, Mått till tomtgräns härifrån, Lås form och Lås placering. Testas som ET, EU, EV, EW och EX.*
+- **BO** Ok! Men som BN, man måste kunna välja mer individuellt när det automatiska inte blir helt perfekt. *Egna gränsmått från valda hörn och egna yttermått på valda sidor, ur smartmenyn (EX).*
+- **BP** Man ska markera träd och byggnader i "rita i plan" och ändra dem på samma sätt som i 3D-fönstret (dölja, ändra form/storlek, ersätta när den funktionen finns med sen). Det ska vara en 2D-representation av skissläget i 3D som vi har utrett separat med samma funktioner. *Träd (höjd, krona, dölj) och hus (dölj, ta in som befintlig) i smartmenyn, och Se dolda. Ersätt kommer med 0.17.0 (EZ).*
+- **BQ** Se bifogad bild. Det funkar bra men mått sättningarna krockar rätt mycket. Man kan egentligen samla alla på en rad utanför byggnaden så blir det mer plats på ritningen vid byggnaden. Som du ser vill man kunna flytta "littera"-texter fritt om de råkar hamna i vägen. *Måtten på samma sida samlas i en kedja utanför byggnaden, och det som spänner över dem på raden utanför; texter utanför byggnaden håller sig borta från måtten; hörnens nummer går att dra (EY).*
+- **BR** Återkommer med önskemål vid behov, stryk punkten så länge. *Struken.*
+- **BT**, **BU** Ok. *Strukna.*
+- **BV**, **AÄ** Stryk de här punkterna så länge så tar vi integration mot cad-apa när cad-apa är lite mer moget. Vi kan ta bort "fortsätt rita i cad-apa"-knappen ur gränssnittet så länge så att vi inte skickar folk vidare till en tjänst som inte ens är i beta. *Strukna, och CK med dem. Alla knappar som skickar till cad-apa är dolda (`visaCadApa` i `config.js`); importen av en sparad skiss finns kvar (EÅ).*
+- Dela upp testsynpunkterna i två kategorier under varsin huvudrubrik: det som måste testas inför nästa version och det som är bra att testa vid tillfälle. Många av felen är quality of life och kan vänta. *Gjort: Måste testas före nästa version och Bra att testa vid tillfälle.*
 
 ### 28 november 2026 → 0.16.5 (inkorgen, utan att röra testet av 0.16.4)
 
@@ -230,7 +246,7 @@ Versionsplanen 24 november: omgivningen är en del av skissverktyget i 3D-fönst
 november), med formpaletten med ikoner från början, och CE. Hela planen, datamodellen och
 algoritmerna står i `docs/SKISSA-I-3D.md`.
 
-- **CE** Markera och dölja träd och byggnader även i planvyn, inte bara i 3D-vyn.
+- Ersätt ett hus också i planvyn (BP, 28 november): samma verktyg som i 3D-vyn. Markera och dölja träd och hus i planvyn (CE) kom i 0.16.6.
 
 Från utredningen 22 november 2026. Det viktigaste är att det känns intuitivt och inte omständligt att
 modellera omgivningen och egna byggnader; det väger tyngre än funktionsbredd. Ingen server krävs i den
@@ -314,5 +330,7 @@ AO (punkt och radie sparas i projektet) är klar och struken. Kvar, i planens or
 - **AQ** Samlings-DXF med *inlänkade* filer (xref) och ortofotot som bild: 0.12.0 gör en samlad DXF med allt kopierat in. Länkar och bilder kräver DXF 2000 (handtag, OBJECTS, IMAGEDEF) och måste provas i Archicad först.
 
 ### Avvaktar
+
+- **CK** (0.15.0) Platsen till cad-apa har fältet `fasadsol`; prova att *Rita i cad-apa* fungerar som förut. Avvaktar tills cad-apa är i beta och knapparna visas igen (28 november).
 
 - **AC** Befintliga byggnader i fler format än IFC. IFC kom i 0.8.0; OBJ eller glTF vore nästa om något program behöver det.

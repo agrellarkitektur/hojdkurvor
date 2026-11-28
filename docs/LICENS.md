@@ -68,7 +68,7 @@ Familjen Grotesk och IBM Plex Mono, båda SIL OFL. Ingen risk; de bäddas in i P
 - **Formella texter** skriver **Agrell Arkitektur AB**: copyrightraden i licenshuvudet (`Copyright (C) 2026 Agrell Arkitektur AB`), `CLA.md`, avtal, `THIRD-PARTY.md` och licensbeslutets juridiska delar.
 - **Synliga texter** skriver **Agrell Arkitektur**, utan AB: appens sidor, Om-sidan, sidfoten, menyer och marknadsföring.
 - I CLA:t är avtalsparten *Agrell Arkitektur AB, Sweden, represented by its authorised signatory (firmatecknare)*. Ägarens namn behövs inte.
-- Status: Höjdkurvor har AB i CLA.md, THIRD-PARTY.md och här sedan 19 november; copyrightraderna i källfilerna har AB från versionen efter 0.13.2. cad-apa (0.12.5.4) har kvar `Carl August Agrell / Agrell Arkitektur` och en CLA-part som enskild näringsidkare, och behöver samma ändring i en cad-apa-session.
+- Status: Höjdkurvor har AB i CLA.md, THIRD-PARTY.md och här sedan 19 november; copyrightraderna i källfilerna har AB från versionen efter 0.13.2. cad-apa (0.12.5.4) har kvar ägarens namn före `/ Agrell Arkitektur` i copyrightraden och en CLA-part som enskild näringsidkare, och behöver samma ändring i en cad-apa-session.
 
 ## Varumärke
 

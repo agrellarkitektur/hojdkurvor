@@ -7,14 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Höjdkurvor – kartan</title>
   <meta name="description" content="Höjdkurvor, markmodell, punktmoln och annat projekteringsunderlag ur Lantmäteriets öppna data, för Archicad, Revit och AutoCAD.">
-  <script src="js/version.js?v=0.16.5"></script>
-  <script src="js/kalla.js?v=0.16.5" defer></script>
-  <script src="js/tema.js?v=0.16.5"></script>
-  <script src="js/synpunkter.js?v=0.16.5" defer></script>
-  <script src="js/stod.js?v=0.16.5" defer></script>
+  <script src="js/version.js?v=0.16.6"></script>
+  <script src="js/kalla.js?v=0.16.6" defer></script>
+  <script src="js/tema.js?v=0.16.6"></script>
+  <script src="js/synpunkter.js?v=0.16.6" defer></script>
+  <script src="js/stod.js?v=0.16.6" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.16.5">
-  <link rel="stylesheet" href="app.css?v=0.16.5">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=0.16.6">
+  <link rel="stylesheet" href="app.css?v=0.16.6">
 </head>
 <body class="kartsida">
   <header class="toppmeny">
@@ -431,14 +431,14 @@
 
         <!-- 04 SKISS -->
         <section class="steg-panel" id="steg-skiss" role="tabpanel" aria-labelledby="flik-skiss" hidden>
-          <p class="ingress">Rita byggnader på tomten i plan, med mått mot fastighetsgränserna, eller skissa i cad-apa och skicka tillbaka. Byggnaderna räknas med i skuggstudien, skyfallet och horisonten, och fasaderna får sol på fasaderna.</p>
+          <p class="ingress">Rita byggnader på tomten i plan, med mått mot fastighetsgränserna, eller importera dem ur en DXF. Byggnaderna räknas med i skuggstudien, skyfallet och horisonten, och fasaderna får sol på fasaderna.</p>
           <div class="knapprad">
             <button type="button" class="knapp" id="skiss-plan">Rita i plan</button>
-            <button type="button" class="knapp" id="skiss-cadapa">Rita i cad-apa</button>
+            <button type="button" class="knapp" id="skiss-cadapa" data-cadapa hidden>Rita i cad-apa</button>
             <button type="button" class="knapp" id="skiss-importera">Importera fil</button>
             <input type="file" id="skiss-fil" accept=".json,.dxf,.hojdkurvor,application/json" class="dold" tabindex="-1" aria-hidden="true">
           </div>
-          <p class="hjalp" id="skiss-status" aria-live="polite">Skiss från cad-apa (.json) eller slutna polylinjer i DXF.</p>
+          <p class="hjalp" id="skiss-status" aria-live="polite">Slutna polylinjer i DXF, eller en skiss sparad från cad-apa (.json).</p>
           <div id="skiss-dxf" hidden>
             <fieldset class="val">
               <legend>Koordinater i DXF-filen</legend>
@@ -472,10 +472,10 @@
           <button type="button" class="knapp steg" id="visa-3d">Förhandsvisa i 3D</button>
           <div class="knapprad resultat-knappar">
             <button type="button" class="knapp steg nasta" id="ladda-ner">Ladda ner zip</button>
-            <button type="button" class="knapp steg" id="till-cadapa">Fortsätt rita i cad-apa</button>
+            <button type="button" class="knapp steg" id="till-cadapa" data-cadapa hidden>Fortsätt rita i cad-apa</button>
           </div>
           <details class="resultat-detaljer"><summary>Sammanfattning</summary><dl class="sammanfattning" id="sammanfattning"></dl></details>
-          <p class="lokalt">Spara filerna lokalt, inte i molnet. <a href="instruktioner.html#datan">Varför?</a> · <button type="button" class="lank-knapp" id="spara-platsfil">Spara platsfil för cad-apa</button></p>
+          <p class="lokalt">Spara filerna lokalt, inte i molnet. <a href="instruktioner.html#datan">Varför?</a><span data-cadapa hidden> · <button type="button" class="lank-knapp" id="spara-platsfil">Spara platsfil för cad-apa</button></span></p>
         </div>
         <p class="fot-lankar"><button type="button" class="lank-knapp" data-synpunkter>Skicka synpunkter</button> · <button type="button" class="lank-knapp" id="felrapport">Rapportera ett fel</button> · <a data-kalla href="https://github.com/agrellarkitektur/hojdkurvor" target="_blank" rel="noopener">Källkoden</a></p>
       </div>
@@ -561,42 +561,42 @@
     </aside>
   </div>
 
-  <script src="config.js?v=0.16.5"></script>
-  <script src="vendor/leaflet/leaflet.js?v=0.16.5"></script>
-  <script src="vendor/proj4.js?v=0.16.5"></script>
-  <script src="vendor/geotiff.js?v=0.16.5"></script>
-  <script src="vendor/jszip.min.js?v=0.16.5"></script>
-  <script src="js/karna.js?v=0.16.5"></script>
-  <script src="js/dxf.js?v=0.16.5"></script>
-  <script src="js/sol.js?v=0.16.5"></script>
-  <script src="js/laser.js?v=0.16.5"></script>
-  <script src="js/ortofoto.js?v=0.16.5"></script>
-  <script src="js/kommunfil.js?v=0.16.5"></script>
-  <script src="js/marktacke.js?v=0.16.5"></script>
-  <script src="js/byggnad.js?v=0.16.5"></script>
-  <script src="js/ifc.js?v=0.16.5"></script>
-  <script src="js/fastighet.js?v=0.16.5"></script>
-  <script src="js/stompunkt.js?v=0.16.5"></script>
-  <script src="js/analys.js?v=0.16.5"></script>
-  <script src="js/vagar.js?v=0.16.5"></script>
-  <script src="js/platsanalys.js?v=0.16.5"></script>
-  <script src="js/geodata.js?v=0.16.5"></script>
-  <script src="js/trad3d.js?v=0.16.5"></script>
-  <script src="js/objektval.js?v=0.16.5"></script>
-  <script src="js/kroppgeo.js?v=0.16.5"></script>
-  <script src="js/volym3d.js?v=0.16.5"></script>
-  <script src="js/kropp.js?v=0.16.5"></script>
-  <script src="js/fasadsol.js?v=0.16.5"></script>
-  <script src="js/situationsplan.js?v=0.16.5"></script>
-  <script src="js/planvy.js?v=0.16.5"></script>
-  <script src="js/projekt.js?v=0.16.5"></script>
-  <script src="js/resultat.js?v=0.16.5"></script>
-  <script src="js/hamtminne.js?v=0.16.5"></script>
-  <script src="js/utbyte.js?v=0.16.5"></script>
-  <script src="js/topowebb.js?v=0.16.5"></script>
-  <script src="js/utskrift.js?v=0.16.5"></script>
-  <script src="js/platsanalysblad.js?v=0.16.5"></script>
-  <script src="js/fasadsolblad.js?v=0.16.5"></script>
-  <script src="js/app.js?v=0.16.5"></script>
+  <script src="config.js?v=0.16.6"></script>
+  <script src="vendor/leaflet/leaflet.js?v=0.16.6"></script>
+  <script src="vendor/proj4.js?v=0.16.6"></script>
+  <script src="vendor/geotiff.js?v=0.16.6"></script>
+  <script src="vendor/jszip.min.js?v=0.16.6"></script>
+  <script src="js/karna.js?v=0.16.6"></script>
+  <script src="js/dxf.js?v=0.16.6"></script>
+  <script src="js/sol.js?v=0.16.6"></script>
+  <script src="js/laser.js?v=0.16.6"></script>
+  <script src="js/ortofoto.js?v=0.16.6"></script>
+  <script src="js/kommunfil.js?v=0.16.6"></script>
+  <script src="js/marktacke.js?v=0.16.6"></script>
+  <script src="js/byggnad.js?v=0.16.6"></script>
+  <script src="js/ifc.js?v=0.16.6"></script>
+  <script src="js/fastighet.js?v=0.16.6"></script>
+  <script src="js/stompunkt.js?v=0.16.6"></script>
+  <script src="js/analys.js?v=0.16.6"></script>
+  <script src="js/vagar.js?v=0.16.6"></script>
+  <script src="js/platsanalys.js?v=0.16.6"></script>
+  <script src="js/geodata.js?v=0.16.6"></script>
+  <script src="js/trad3d.js?v=0.16.6"></script>
+  <script src="js/objektval.js?v=0.16.6"></script>
+  <script src="js/kroppgeo.js?v=0.16.6"></script>
+  <script src="js/volym3d.js?v=0.16.6"></script>
+  <script src="js/kropp.js?v=0.16.6"></script>
+  <script src="js/fasadsol.js?v=0.16.6"></script>
+  <script src="js/situationsplan.js?v=0.16.6"></script>
+  <script src="js/planvy.js?v=0.16.6"></script>
+  <script src="js/projekt.js?v=0.16.6"></script>
+  <script src="js/resultat.js?v=0.16.6"></script>
+  <script src="js/hamtminne.js?v=0.16.6"></script>
+  <script src="js/utbyte.js?v=0.16.6"></script>
+  <script src="js/topowebb.js?v=0.16.6"></script>
+  <script src="js/utskrift.js?v=0.16.6"></script>
+  <script src="js/platsanalysblad.js?v=0.16.6"></script>
+  <script src="js/fasadsolblad.js?v=0.16.6"></script>
+  <script src="js/app.js?v=0.16.6"></script>
 </body>
 </html>

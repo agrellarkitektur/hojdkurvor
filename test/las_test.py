@@ -6,7 +6,7 @@ Gränssnittstest för låset och hämtminnet (0.14.3, AY och AT) mot testservern
     python3 test/las_test.py <utkatalog> [tema]
 
 Skapar underlag två gånger för samma område: andra gången ska inget hämtas från testservern och
-knappen säga *igen*. Ramen ska gå att dra efter flera Skapa (AT). Låset: handtagen och krysset
+knappen säga *Uppdatera* (0.16.5, förut *igen*). Ramen ska gå att dra efter flera Skapa (AT). Låset: handtagen och krysset
 försvinner, ramen går inte att dra, Rita är avstängd, och låset finns kvar efter omladdning.
 Lassot i 3D-vyn släcks när vyn rörs (AU).
 """
@@ -89,7 +89,8 @@ with sync_playwright() as p:
     forsta = len(anrop)
     knapp2 = pg.inner_text('#skapa').lower()
     print('  knappen före och efter:', knapp1, '|', knapp2)
-    assert 'igen' not in knapp1 and 'igen' in knapp2, 'knappen säger igen när underlaget finns'
+    # sedan 0.16.5 (DV) säger knappen Uppdatera i stället för igen
+    assert 'uppdatera' not in knapp1 and 'uppdatera' in knapp2, 'knappen säger Uppdatera när underlaget finns'
 
     # --- andra Skapa: inget hämtas från testservern
     anrop.clear()
@@ -110,7 +111,7 @@ with sync_playwright() as p:
     efter = utsnitt(pg)
     print('  dra i ramen efter tre Skapa:', fore['ymax'], '→', efter['ymax'])
     assert efter['ymax'] != fore['ymax'] and int(efter['ymax']) - int(efter['ymin']) == int(fore['ymax']) - int(fore['ymin']), 'ramen flyttas'
-    assert 'igen' not in pg.inner_text('#skapa').lower(), 'nytt område: inte igen'
+    assert 'uppdatera' not in pg.inner_text('#skapa').lower(), 'nytt område: inte Uppdatera'
 
     # --- låset
     pg.click('#las-omrade')

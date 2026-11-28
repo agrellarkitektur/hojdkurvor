@@ -19,6 +19,9 @@
  * Kroppens fält matt (valfritt, 0.16.0): { "<enhet>|<mått>": { dold: true } | { off: meter } }. Enheten är
  * kropparnas id i bokstavsordning med +, måttet t.ex. g0 (första gränsmåttet), y|90|0 (yttermått, normalens
  * riktning och ordning) eller r|<annan enhet>|0. Fältet ligger på enhetens första kropp (i bokstavsordning).
+ * Sedan 0.16.6 också: gh|<hörn> { horn, mot } (ett eget gränsmått från hörnet i skalet), ys|<sida> { sida, off }
+ * (ett eget yttermått), et|<k> { t: [dx, dy], pil: [dx, dy] } (etikettens text och ledarens pil, relativt
+ * etikettens mitt) och nr|<ring>.<hörn> { d: [dx, dy] } (hörnets nummer flyttat).
  *
  * Kräver Kropp (och Utskrift, Dxf för pdf och dxf).
  */
@@ -100,6 +103,7 @@
     const enh = opt.enheter || enheter(volymer, opt);
     const per = new Map((volymer || []).map(v => [v.id, v]));
     const annot = (e, nyckel) => { const v = per.get(e.agare), a = v && v.matt && v.matt[`${e.id}|${nyckel}`]; return a || {}; };
+    const egna = (e, prefix) => egnaFor(volymer, e, prefix);
     const ut = [];
     const pseudo = enh.map(e => ({ id: e.id, fotavtryck: e.yttre, e }));
     const gm = new Map();
@@ -124,6 +128,15 @@
         ut.push({ typ: 'grans', nyckel, agare: p.e.agare, enhet: p.e.id, kroppar: p.e.kroppar, fran: x.fran, till, d, text: mattText(d), off: null, dold: !!a.dold, mot,
           andra: { flytta: norm(sub(x.fran, till)), kroppar: p.e.kroppar } });
       });
+      // egna gränsmått från valda hörn (0.16.6, BN/BO): gh|<hörn> = { horn, mot }
+      for (const [nyckel, a] of egna(p.e, 'gh|')) {
+        const c = p.fotavtryck[a.horn];
+        if (!c) continue;
+        const r = gransVinkelratt(c, gpts, a.mot);
+        if (!r) continue;
+        ut.push({ typ: 'grans', nyckel, agare: p.e.agare, enhet: p.e.id, kroppar: p.e.kroppar, fran: c, till: r.till, d: r.d, text: mattText(r.d), off: null, dold: false, mot: r.mot, egen: true,
+          andra: { flytta: norm(sub(c, r.till)), kroppar: p.e.kroppar } });
+      }
     });
     const tillb = pseudo.filter(q => q.e.status === 'tillbyggnad');
     if (visa.ytter) pseudo.forEach(p => {
@@ -141,6 +154,14 @@
         if (befintlig) for (const q of tillb) if (Kr.fogsidor(q, [p]).size) for (const r of q.fotavtryck) bas = Math.max(bas, dot(sub(r, s.a), s.n));
         ut.push({ typ: 'sida', nyckel, agare: p.e.agare, enhet: p.e.id, kroppar: p.e.kroppar, fran: s.a, till: s.b, n: s.n, d: s.l, text: mattText(s.l), off: a.off != null ? a.off : null, bas, dold: !!a.dold, andra });
       });
+      // egna yttermått på valda sidor (0.16.6): ys|<sida> = { sida, off }
+      const auto = new Set(sidorna);
+      for (const [nyckel, a] of egna(p.e, 'ys|')) {
+        const s = sd.find(x => x.i === a.sida);
+        if (!s || auto.has(s.i)) continue;
+        const andra = p.e.kroppar.length === 1 ? { kropp: p.e.kroppar[0], i: s.i } : sidaIKropp(p.e, s);
+        ut.push({ typ: 'sida', nyckel, agare: p.e.agare, enhet: p.e.id, kroppar: p.e.kroppar, fran: s.a, till: s.b, n: s.n, d: s.l, text: mattText(s.l), off: a.off != null ? a.off : null, bas: 0, dold: false, egen: true, andra });
+      }
     });
     if (visa.relativa) {
       const lista = pseudo.filter(q => q.e.status !== 'rivs');
@@ -153,7 +174,76 @@
           andra: { flytta: norm(sub(r.ande, r.fast)), kroppar: e.kroppar } });
       });
     }
+    raderna(ut.filter(m => (m.typ === 'sida' || m.typ === 'relativ') && !m.dold), pseudo);
     return ut;
+  }
+  /**
+   * Måtten på samma sida samlas i rader utanför byggnaden (0.16.6, BQ): yttermått och mått mellan byggnader
+   * som har samma riktning, hör till byggnader som ligger an mot varandra och följer på varandra längs sidan
+   * ritas på en gemensam linje utanför det yttersta av dem (en måttkedja). Ett mått som spänner över andra
+   * (yttermåttet för hela huset) hamnar på raden utanför. Sätter bas (meter från måttets början ut till
+   * kedjans linje) och rad (0, 1 …); ritningen lägger raderna 4 mm + 5 mm per rad utanför. Flyttade mått
+   * (off) behåller sitt läge.
+   */
+  function raderna(lista, pseudo) {
+    const Kr = K();
+    // byggnader som ligger an mot varandra hör ihop
+    const rot = new Map(pseudo.map(p => [p.e.id, p.e.id]));
+    const hitta = x => { while (rot.get(x) !== x) x = rot.get(x); return x; };
+    for (let i = 0; i < pseudo.length; i++) for (let j = i + 1; j < pseudo.length; j++) {
+      if (Kr.fogsidor(pseudo[i], [pseudo[j]]).size) rot.set(hitta(pseudo[i].e.id), hitta(pseudo[j].e.id));
+    }
+    const grupper = [];
+    for (const m of lista) {
+      const u = [m.n[1], -m.n[0]], a = dot(m.fran, u), b = dot(m.till, u);
+      const x = { m, lo: Math.min(a, b), hi: Math.max(a, b), niva: dot(m.fran, m.n) + (m.bas || 0), kl: hitta(m.enhet) };
+      const g = grupper.find(q => q.kl === x.kl && dot(q.n, m.n) > 0.9999);
+      if (g) g.lista.push(x); else grupper.push({ kl: x.kl, n: m.n, lista: [x] });
+    }
+    for (const g of grupper) {
+      // delgrupper längs sidan: mått som överlappar eller möts
+      const l = g.lista.slice().sort((p, q) => p.lo - q.lo), delar = [];
+      for (const x of l) { const d = delar[delar.length - 1]; if (d && x.lo <= d.hi + 0.05) { d.lista.push(x); d.hi = Math.max(d.hi, x.hi); } else delar.push({ hi: x.hi, lista: [x] }); }
+      for (const d of delar) {
+        const niva = Math.max(...d.lista.map(x => x.niva)), lagda = [];
+        d.lista.sort((p, q) => (p.hi - p.lo) - (q.hi - q.lo));
+        for (const x of d.lista) {
+          let rad = 0;
+          for (const y of lagda) if (Math.min(x.hi, y.hi) - Math.max(x.lo, y.lo) > 0.02) rad = Math.max(rad, y.rad + 1);
+          x.rad = rad; lagda.push(x);
+          x.m.bas = niva - dot(x.m.fran, x.m.n);
+          x.m.rad = rad;
+        }
+      }
+    }
+  }
+  /** Avståndet ut till en måttrad, i meter: bas + 4 mm + 5 mm per rad (0.16.6). */
+  const mattAvst = (m, mm) => (m.off != null ? m.off : (m.bas || 0) + (4 + 5 * (m.rad || 0)) * mm);
+  /** Kroppens egna anteckningar för enheten som börjar på prefix: [[nyckel, värde]]. */
+  function egnaFor(volymer, e, prefix) {
+    const v = (volymer || []).find(x => x.id === e.agare);
+    if (!v || !v.matt) return [];
+    const ut = [], f = e.id + '|' + prefix;
+    for (const [k, a] of Object.entries(v.matt)) if (k.startsWith(f) && a && typeof a === 'object') ut.push([k.slice(e.id.length + 1), a]);
+    return ut;
+  }
+  /**
+   * Ett vinkelrätt mått från hörnet c till närmaste gränssträcka (eller till sträckan mot = [gräns, sträcka]).
+   * Ger { till, d, mot } eller null.
+   */
+  function gransVinkelratt(c, gpts, mot) {
+    let bast = null;
+    const prova = (gi, si) => {
+      const g = gpts[gi], s0 = g && g[si], s1 = g && g[si + 1];
+      if (!s0 || !s1) return;
+      const e = sub(s1, s0), l2 = dot(e, e), t = l2 ? dot(sub(c, s0), e) / l2 : -1;
+      if (t < -0.01 || t > 1.01) return;
+      const f = add(s0, mul(e, t)), d = len(sub(f, c));
+      if (d > 0.05 && d < 150 && (!bast || d < bast.d)) bast = { till: f, d, mot: [gi, si] };
+    };
+    if (Array.isArray(mot)) prova(mot[0], mot[1]);
+    if (!bast) gpts.forEach((g, gi) => { for (let si = 0; si + 1 < g.length; si++) prova(gi, si); });
+    return bast;
   }
   /** Sätter (eller tar bort) en anteckning för ett mått på kroppen som äger det. Ändrar volymen. */
   function satAnnot(volymer, m, varde) {
@@ -168,7 +258,7 @@
   function visaDolda(volymer) {
     for (const v of volymer || []) {
       if (!v.matt) continue;
-      for (const [k, a] of Object.entries(v.matt)) if (a && a.dold) delete v.matt[k];
+      for (const [k, a] of Object.entries(v.matt)) if (a && a.dold) { if (Object.keys(a).length > 1) { const b = Object.assign({}, a); delete b.dold; v.matt[k] = b; } else delete v.matt[k]; }
       if (!Object.keys(v.matt).length) delete v.matt;
     }
   }
@@ -183,52 +273,99 @@
    * enh: alla enheter (för att hålla texten borta från de andra byggnaderna).
    * Ger { texter: [{ p, text, h (mm), vinkel, fet, halo, ha }], rutor: [{ p, vinkel, b, h }] (m), ledare: [ledarGeometri] }.
    */
-  function etikettText(e, volymer, mm, marken, enh) {
-    const Kr = K(), ut = { texter: [], rutor: [], ledare: [] }, RH = 3.0;
+  function etikettText(e, volymer, mm, marken, enh, hinder) {
+    const Kr = K(), ut = { texter: [], rutor: [], ledare: [], grupper: [] }, RH = 3.0;
     const bredd = r => r.text.length * r.h * 0.58 * mm;
-    for (const et of etiketter(e, volymer)) {
+    const per = new Map((volymer || []).map(v => [v.id, v]));
+    const agare = per.get(e.agare), annot = k => (agare && agare.matt && agare.matt[`${e.id}|et|${k}`]) || {};
+    const arPunkt = p => Array.isArray(p) && p.length === 2 && p.every(x => typeof x === 'number' && isFinite(x));
+    etiketter(e, volymer).forEach((et, k) => {
       const rad = et.rader.filter(r => r.text);
-      if (!rad.length) continue;
+      if (!rad.length) return;
       const u = [Math.cos(et.vinkel), Math.sin(et.vinkel)], nn = [-u[1], u[0]];
+      const a = annot(k), gi = ut.grupper.length;
+      const grupp = { k, nyckel: 'et|' + k, agare: e.agare, enhet: e.id, bas: et.p, text: null, pil: null, flyttad: arPunkt(a.t), pilVald: arPunkt(a.pil) };
+      ut.grupper.push(grupp);
+      // flyttad av användaren (0.16.6, BN): texten där den släpptes, med ledare om den står utanför byggnaden
+      // eller om pilen är vald; annars i byggnadens riktning
+      if (grupp.flyttad) {
+        const q = add(et.p, a.t), inne = e.ringar.some(r => Kr.inuti(r, q[0], q[1])) && !grupp.pilVald;
+        grupp.text = q;
+        if (inne) {
+          const y0 = (rad.length - 1) / 2 * RH * mm;
+          rad.forEach((r, i) => {
+            const p = add(q, mul(nn, y0 - i * RH * mm));
+            ut.texter.push({ p, text: r.text, h: r.h, vinkel: et.vinkel, fet: r.fet, halo: false, ha: 'center', g: gi });
+            ut.rutor.push({ p, vinkel: et.vinkel, b: bredd(r) + 1.6 * mm, h: r.h * 1.5 * mm });
+          });
+          return;
+        }
+        const pil = add(et.p, grupp.pilVald ? a.pil : [0, 0]);
+        grupp.pil = pil;
+        ledareMedText(ut, rad, pil, q, mm, gi, bredd, RH);
+        return;
+      }
       const passar = rad.every(r => bredd(r) < et.bredd - 1.2 * mm) && et.djup >= (rad.length * RH + 0.6) * mm;
-      if (passar) {
+      if (passar && !grupp.pilVald) {
         const y0 = (rad.length - 1) / 2 * RH * mm;
         // en nock genom etikettens mitt: texten flyttas till sidan av den (0.16.1)
         const skift = sidanOmNock(et.p, nn, (marken || []).filter(m => m[0] === 'NOCK').map(m => m[1]), (rad.length * RH * mm) / 2 + 0.6 * mm);
+        grupp.text = add(et.p, skift);
         rad.forEach((r, i) => {
           const p = add(add(et.p, skift), mul(nn, y0 - i * RH * mm));
-          ut.texter.push({ p, text: r.text, h: r.h, vinkel: et.vinkel, fet: r.fet, halo: false, ha: 'center' });
+          ut.texter.push({ p, text: r.text, h: r.h, vinkel: et.vinkel, fet: r.fet, halo: false, ha: 'center', g: gi });
           ut.rutor.push({ p, vinkel: et.vinkel, b: bredd(r) + 1.6 * mm, h: r.h * 1.5 * mm });
         });
-        continue;
+        return;
       }
-      // utanför byggnaden, med en ledare (0.16.4, DI)
-      const c = et.p, andra = (enh || []).filter(x => x !== e && x.status !== 'rivs');
+      // utanför byggnaden, med en ledare (0.16.4, DI); bort från andra byggnader och från måtten (0.16.6, BQ)
+      const c = et.p, andra = (enh || []).filter(x => x !== e && x.status !== 'rivs'), pil = add(c, grupp.pilVald ? a.pil : [0, 0]);
+      const tb = Math.max(...rad.map(bredd)), th = rad.length * RH * mm;
       let bast = null;
-      for (let k = 0; k < 8; k++) {
-        const a = (45 + k * 45) * RAD, d = [Math.cos(a), Math.sin(a)];
+      for (const ut2 of [6, 14, 24]) for (let k2 = 0; k2 < 8; k2++) {
+        const vk = (45 + k2 * 45) * RAD, d = [Math.cos(vk), Math.sin(vk)];
         const R = Math.max(0, ...e.yttre.map(q => dot(sub(q, c), d)));
-        const q = add(c, mul(d, R + 6 * mm));
-        const tb = Math.max(...rad.map(bredd)), mitt = add(q, [(d[0] >= 0 ? 1 : -1) * (tb / 2 + 3 * mm), 0]);
+        const q = add(c, mul(d, R + ut2 * mm));
+        const mitt = add(q, [(d[0] >= 0 ? 1 : -1) * (tb / 2 + 3 * mm), 0]);
         let poang = 1e9;
         for (const o of andra) {
           for (const r of o.ringar) if (Kr.inuti(r, mitt[0], mitt[1]) || Kr.inuti(r, q[0], q[1])) poang = -1e9;
           for (const p of o.yttre) poang = Math.min(poang, len(sub(p, mitt)));
         }
+        // textens ruta mot måttlinjerna: avståndet från rutan, negativt när en linje går genom den
+        for (const [a2, b2] of hinder || []) poang = Math.min(poang, rutaAvst(mitt, tb / 2 + 1.5 * mm, th / 2 + 1 * mm, a2, b2) + 2 * mm);
         if (Kr.inuti(e.yttre, mitt[0], mitt[1])) poang -= 1e6;
-        poang += d[1] * 0.02 + d[0] * 0.01;   // hellre uppåt och åt höger när det är lika
-        if (!bast || poang > bast.poang) bast = { q, poang };
+        poang += d[1] * 0.02 + d[0] * 0.01 - ut2 * mm * 0.05;   // hellre nära, uppåt och åt höger när det är lika
+        if (!bast || poang > bast.poang + 1e-9) bast = { q, poang };
       }
-      const g = ledarGeometri({ pts: [c, bast.q], text: 'x' }, mm);
-      ut.ledare.push(g);
-      const y0 = (rad.length - 1) / 2 * RH * mm, sgn = g.ha === 'left' ? 1 : -1;
-      rad.forEach((r, i) => {
-        const p = add(g.textP, [0, y0 - i * RH * mm]);
-        ut.texter.push({ p, text: r.text, h: r.h, vinkel: 0, fet: r.fet, halo: true, ha: g.ha });
-        ut.rutor.push({ p: add(p, [sgn * bredd(r) / 2, 0]), vinkel: 0, b: bredd(r) + 1.6 * mm, h: r.h * 1.5 * mm });
-      });
-    }
+      grupp.text = bast.q; grupp.pil = pil;
+      ledareMedText(ut, rad, pil, bast.q, mm, gi, bredd, RH);
+    });
     return ut;
+  }
+  /** Ledaren från pil till q och texterna efter den (0.16.4, utbrutet 0.16.6). */
+  function ledareMedText(ut, rad, pil, q, mm, gi, bredd, RH) {
+    const g = ledarGeometri({ pts: [pil, q], text: 'x' }, mm);
+    if (!g) return;
+    g.g = gi;
+    ut.ledare.push(g);
+    const y0 = (rad.length - 1) / 2 * RH * mm, sgn = g.ha === 'left' ? 1 : -1;
+    rad.forEach((r, i) => {
+      const p = add(g.textP, [0, y0 - i * RH * mm]);
+      ut.texter.push({ p, text: r.text, h: r.h, vinkel: 0, fet: r.fet, halo: true, ha: g.ha, g: gi });
+      ut.rutor.push({ p: add(p, [sgn * bredd(r) / 2, 0]), vinkel: 0, b: bredd(r) + 1.6 * mm, h: r.h * 1.5 * mm });
+    });
+  }
+  /** Avståndet från en axelparallell ruta (mitt c, halva bredden hb, halva höjden hh) till sträckan a–b; negativt om den går igenom. */
+  function rutaAvst(c, hb, hh, a, b) {
+    let bast = Infinity;
+    const N = Math.min(200, Math.ceil(len(sub(b, a)) / Math.max(0.05, Math.min(hb, hh) / 2)) + 1);
+    for (let i = 0; i <= N; i++) {
+      const p = add(a, mul(sub(b, a), i / N)), dx = Math.abs(p[0] - c[0]) - hb, dy = Math.abs(p[1] - c[1]) - hh;
+      const d = dx <= 0 && dy <= 0 ? Math.max(dx, dy) : Math.hypot(Math.max(dx, 0), Math.max(dy, 0));
+      bast = Math.min(bast, d);
+    }
+    return bast;
   }
   /** Etiketterna för en enhet: [{ p, vinkel (rad, läsbar), rader: [{ text, fet, h (mm) }], bredd (m, sidans längd), djup (m) }]. */
   function etiketter(e, volymer) {
@@ -336,6 +473,9 @@
     underlag(R, data.underlag || {}, visa, mm, linje, text);
     // befintliga hus från Lantmäteriet
     for (const h of data.hus || []) if (h.fotavtryck && h.fotavtryck.length >= 3) R.ytor.push({ lager: 'LMHUS', ringar: [h.fotavtryck], fyll: 'lmhus', kant: 0.18 });
+    // måtten räknas före etiketterna, så att texterna utanför byggnaderna kan hålla sig borta från dem (0.16.6)
+    const alla = visa.matt !== false ? matt(vol, data.granser, { visa, enheter: enh }).filter(m => !m.dold) : [];
+    const hinder = mattHinder(alla, mm);
     // byggnaderna
     for (const e of enh) {
       const lager = e.status.toUpperCase();
@@ -355,7 +495,7 @@
       }
       // rivs: ett stort kryss mot norr, oavsett hur byggnaden är vriden (0.16.4, DG)
       if (e.status === 'rivs') for (const l of Kr.rivsKryss(e.ringar, 1.5 * mm)) marken.push(['RIVSKRYSS', l]);
-      const et = etikettText(e, vol, mm, marken, enh);
+      const et = etikettText(e, vol, mm, marken, enh, hinder);
       et.texter.forEach(t => text('ETIKETT', t.p, t.text, t.h, t));
       et.ledare.forEach(g => { linje('ETIKETTLEDARE', g.linje, 0.18); R.pilar.push({ lager: 'ETIKETTLEDARE', pts: g.pil }); });
       const rutor = et.rutor;
@@ -382,14 +522,17 @@
     // numrerade hörn och en koordinatlista (0.16.1): nya byggnader först, sedan tillbyggnader
     if (visa.koordlista) for (const h of numreradeHorn(enh, vol)) {
       R.koordlista.push({ nr: h.nr, x: h.p[0], y: h.p[1], grupp: h.grupp });
-      text('KOORDNR', add(h.p, mul(h.ut, 2.6 * mm)), String(h.nr), 2.0, { fet: true, halo: true });
+      const q = nrPunkt(h, mm);
+      text('KOORDNR', q, String(h.nr), 2.0, { fet: true, halo: true });
+      // flyttat nummer (0.16.6, BQ): en tunn linje till hörnet
+      const l = nrLinje(h, q, mm);
+      if (l) linje('KOORDNR', l, 0.13);
     }
     // fastighetsgränser och beteckningar ovanpå byggnaderna, så att ingen byggnad skymmer en gräns (0.16.1)
     for (const gr of data.granser || []) { const pts = gr.pts || gr; if (pts.length >= 2) linje('GRANS', pts, 0.35, { streck: 'grans' }); }
     for (const y of data.ytor || []) if (y.ankare && y.etikett) text('FASTIGHET', y.ankare, y.etikett, 3.2, { halo: true });
     // måtten
-    if (visa.matt !== false) for (const m of matt(vol, data.granser, { visa })) {
-      if (m.dold) continue;
+    for (const m of alla) {
       if (m.typ === 'grans') {
         const d = norm(sub(m.till, m.fran)), n = perp(d), tk = mul(norm(add(d, n)), 0.9 * mm);
         linje('MATT', [m.fran, m.till], 0.13);
@@ -399,7 +542,7 @@
         linje('MATT', [add(m.till, a), add(add(m.till, a), b), add(m.till, b)], 0.13);
         text('MATTEXT', add(mul(add(m.fran, m.till), 0.5), mul(n, 1.4 * mm)), m.text, 2.2, { vinkel: lasbar(Math.atan2(d[1], d[0])), halo: true });
       } else {
-        const off = m.off != null ? m.off : (m.bas || 0) + 4 * mm, u = norm(sub(m.till, m.fran)), n = m.n;
+        const off = mattAvst(m, mm), u = norm(sub(m.till, m.fran)), n = m.n;
         const a2 = add(m.fran, mul(n, off)), b2 = add(m.till, mul(n, off)), tk = mul(norm(add(u, n)), 0.9 * mm);
         linje('MATT', [add(m.fran, mul(n, 0.8 * mm)), add(m.fran, mul(n, off + 1.2 * mm))], 0.13);
         linje('MATT', [add(m.till, mul(n, 0.8 * mm)), add(m.till, mul(n, off + 1.2 * mm))], 0.13);
@@ -449,6 +592,26 @@
       textP: add(hylla, [(hoger ? 1 : -1) * 0.8 * mm, 0]), ha: hoger ? 'left' : 'right',
     };
   }
+  /** Måttens linjer och textrutor som sträckor, för att hålla etiketterna borta från dem (0.16.6). */
+  function mattHinder(lista, mm) {
+    const ut = [];
+    for (const m of lista) {
+      if (m.typ === 'grans') { ut.push([m.fran, m.till]); continue; }
+      const off = mattAvst(m, mm), a2 = add(m.fran, mul(m.n, off)), b2 = add(m.till, mul(m.n, off)), t2 = mul(m.n, 2.6 * mm);
+      ut.push([a2, b2], [add(a2, t2), add(b2, t2)]);
+    }
+    return ut;
+  }
+  /** Hörnnumrets läge: utanför hörnet, eller där användaren har dragit det (0.16.6). */
+  const nrPunkt = (h, mm) => add(add(h.p, mul(h.ut, 2.6 * mm)), h.d || [0, 0]);
+  /** En tunn linje från ett flyttat nummer till hörnet, när numret står mer än 3 mm från sin plats. */
+  function nrLinje(h, q, mm) {
+    if (!h.d || len(h.d) < 3 * mm) return null;
+    const d = sub(h.p, q), l = len(d);
+    if (l < 3 * mm) return null;
+    const u = mul(d, 1 / l);
+    return [add(q, mul(u, 1.6 * mm)), sub(h.p, mul(u, 0.5 * mm))];
+  }
   /**
    * Hörnen att numrera i koordinatlistan (0.16.1): nya byggnader först, sedan tillbyggnader, varje ring medurs
    * från det nordvästligaste hörnet. enh = enheter(…) eller volymerna. Ger [{ nr, p, ut (riktning från mitten) }].
@@ -456,12 +619,18 @@
   function numreradeHorn(enh, volymer) {
     if (enh.length && enh[0].fotavtryck) { volymer = volymer || enh; enh = enheter(enh); }
     volymer = volymer || enh.flatMap(e => e.volymer);
-    const ut = [];
+    const ut = [], per = new Map(volymer.map(v => [v.id, v]));
     // grupperade per byggnad med en beskrivning (0.16.4, DJ): nya, tillbyggnader och sist befintliga
     for (const st of ['ny', 'tillbyggnad', 'befintlig']) for (const e of enh.filter(x => x.status === st)) {
       const c = tyngd(e.yttre), namn = e.volymer.map(v => v.namn).filter(Boolean).sort()[0];
       const grupp = K().beskrivning(e.volymer, volymer) + (namn ? ` (${namn})` : '');
-      for (const r of e.ringar) for (const q of hornOrdning(r)) ut.push({ nr: ut.length + 1, p: q, ut: norm(sub(q, c)), grupp });
+      const v = per.get(e.agare);
+      e.ringar.forEach((r, ri) => hornOrdning(r).forEach((q, k) => {
+        // numret kan dras till en annan plats (0.16.6, BQ): nr|<ring>.<hörn> = { d: [dx, dy] }
+        const nyckel = `nr|${ri}.${k}`, a = v && v.matt && v.matt[`${e.id}|${nyckel}`];
+        const d = a && Array.isArray(a.d) && a.d.length === 2 && a.d.every(x => typeof x === 'number' && isFinite(x)) ? a.d : null;
+        ut.push({ nr: ut.length + 1, p: q, ut: norm(sub(q, c)), grupp, agare: e.agare, enhet: e.id, nyckel, d });
+      }));
     }
     return ut;
   }
@@ -533,6 +702,8 @@
         for (const p of s.strand.zoner.m100 || []) linje('STRAND', p, 0.3, { farg: 'strand' });
         for (const p of s.strand.zoner.m300 || []) linje('STRAND', p, 0.25, { streck: 'strand', farg: 'strand' });
       }
+      // strandlinjen som avstånden räknas från (0.16.6, BG)
+      if (s.strand && Array.isArray(s.strand.linjer)) for (const l of s.strand.linjer) if (l.pts && l.pts.length >= 2) linje('STRAND', l.pts, 0.35, { sluten: !!l.sluten, farg: 'strand' });
       for (const o of Array.isArray(s.natur) ? s.natur : []) for (const r of o.ringar || []) {
         linje('NATUR', r.concat([r[0]]), 0.3, { streck: 'natur', farg: 'natur' });
       }
@@ -675,11 +846,14 @@
   /** Ramen runt planen (0.16.4 utbruten ur pdf): norrpil, ritningshuvud, teckenförklaring, koordinatlista, upplysning, skalstock. */
   function rama(doc, skrift, font, opt, R, rm, skala, format) {
     const [, PH] = rm.papper, f = rm.falt, k = rm.k;
-    // norrpil (rutnätets nord)
-    const nx = f.x + f.w - 12, ny = f.y + 18;
+    // norrpil: sann nord, vriden med meridiankonvergensen i planens mitt (0.16.6; förut rutnätets nord).
+    // opt.sannNord = vinkeln i grader medurs från rutnätets nord.
+    const nx = f.x + f.w - 12, ny = f.y + 18, a = (opt.sannNord || 0) * RAD, c0 = [nx, ny - 4];
+    const R2 = (x, y) => { const dx = x - c0[0], dy = y - c0[1]; return [c0[0] + dx * Math.cos(a) - dy * Math.sin(a), c0[1] + dx * Math.sin(a) + dy * Math.cos(a)]; };
+    const [t1, v1, m1, h1, n1] = [R2(nx, ny - 10), R2(nx - 3.2, ny + 2), R2(nx, ny), R2(nx + 3.2, ny + 2), R2(nx, ny - 13.6)];
     doc.setFillColor(...FARG.blck); doc.setDrawColor(...FARG.blck); doc.setLineWidth(0.25);
-    doc.triangle(nx, ny - 10, nx - 3.2, ny + 2, nx, ny, 'F'); doc.triangle(nx, ny - 10, nx + 3.2, ny + 2, nx, ny, 'S');
-    skrift('N', nx, ny - 12.5, 0, { pt: 10, fet: true, ha: 'center' });
+    doc.triangle(t1[0], t1[1], v1[0], v1[1], m1[0], m1[1], 'F'); doc.triangle(t1[0], t1[1], h1[0], h1[1], m1[0], m1[1], 'S');
+    skrift('N', n1[0], n1[1] + 1.1, 0, { pt: 10, fet: true, ha: 'center' });
 
     // ritningshuvudet nere till höger, teckenförklaringen ovanför
     const bw = Math.min(118, f.w * 0.45), bx = f.x + f.w - bw;
@@ -689,7 +863,7 @@
     const upp = [
       'Fastighetsgränser och byggnader ur Lantmäteriets fastighetsindelning och byggnadsskikt (© Lantmäteriet, CC BY 4.0).',
       'Gränserna är inte juridiskt säkerställda. Kontrollera med kommunen vilket kartunderlag som krävs.',
-      `Hörnkoordinater i ${opt.zonNamn || 'arbetszonen'}, höjder i RH 2000. FG = färdigt golv. Mått i meter.`,
+      `Hörnkoordinater i ${opt.zonNamn || 'arbetszonen'}, höjder i RH 2000. FG = färdigt golv. Mått i meter.${opt.sannNord != null ? ' Norrpilen visar sann nord.' : ''}`,
     ].concat(opt.kallor ? [opt.kallor] : []);
     doc.setFont(font, 'normal'); doc.setFontSize(6.2);
     const uw = Math.max(60, f.w - bw - 12), rader = upp.flatMap(s => doc.splitTextToSize(s, uw - 4));
@@ -876,6 +1050,7 @@
       // 0.16.1
       SITPLAN_KOMPLEMENT: 7, SITPLAN_SKARMTAK: 7, SITPLAN_KOORDINATLISTA: 5, SITPLAN_LEDARE: 7, SITPLAN_HOJDKURVA: 34, SITPLAN_HOJDKURVA_TEXT: 34,
       SITPLAN_VAG: 8, SITPLAN_TRAD: 3, SITPLAN_STRANDSKYDD: 5, SITPLAN_SKYDDAD_NATUR: 3, SITPLAN_LAMNING: 6,
+      SITPLAN_NORRPIL: 7,
     };
     const NAMN = { GRANS: 'SITPLAN_FASTIGHETSGRANS', FASTIGHET: 'SITPLAN_FASTIGHETSBETECKNING', LMHUS: 'SITPLAN_BYGGNAD_LM', NY: 'SITPLAN_NY', TILLBYGGNAD: 'SITPLAN_TILLBYGGNAD',
       SKRAFF: 'SITPLAN_SKRAFFERING', BEFINTLIG: 'SITPLAN_BEFINTLIG', RIVS: 'SITPLAN_RIVS', RIVSKRYSS: 'SITPLAN_RIVS', ETIKETTLEDARE: 'SITPLAN_TEXT', KRYSS: 'SITPLAN_HUVUDBYGGNAD', ENTRE: 'SITPLAN_ENTRE', MATT: 'SITPLAN_MATT',
@@ -896,6 +1071,15 @@
       if (!ext) ext = { xmin: p[0], ymin: p[1], xmax: p[0], ymax: p[1] };
       else { if (p[0] < ext.xmin) ext.xmin = p[0]; if (p[0] > ext.xmax) ext.xmax = p[0]; if (p[1] < ext.ymin) ext.ymin = p[1]; if (p[1] > ext.ymax) ext.ymax = p[1]; }
     }
+    // norrpilen, sann nord (0.16.6): ovanför planens högra hörn, vriden med meridiankonvergensen
+    if (opt.sannNord != null && ext) {
+      const a = opt.sannNord * RAD, c = [ext.xmax + 6 * mm, ext.ymax + 12 * mm];
+      const P2 = (x, y) => [c[0] + (x * Math.cos(a) + y * Math.sin(a)) * mm, c[1] + (-x * Math.sin(a) + y * Math.cos(a)) * mm];
+      obj.push({ typ: 'pl', lager: 'SITPLAN_NORRPIL', pts: [P2(0, 6), P2(-3.2, -6), P2(0, -4), P2(3.2, -6)], sluten: true });
+      obj.push({ typ: 'pl', lager: 'SITPLAN_NORRPIL', pts: [P2(0, 6), P2(-3.2, -6), P2(0, -4)], sluten: true });
+      const n = P2(0, 9.5);
+      obj.push({ typ: 'text', lager: 'SITPLAN_NORRPIL', x: n[0], y: n[1], h: 3 * mm, text: 'N', vinkel: 0, centrerad: true });
+    }
     // koordinatlistan som text till höger om planen (0.16.1)
     if (R.koordlista.length && ext) {
       const h = 2.0 * mm, x = ext.xmax + 10 * mm;
@@ -910,5 +1094,5 @@
     return D.skriv(LAGER, obj, { ext });
   }
 
-  return { enheter, enhetFor, matt, satAnnot, visaDolda, sidaIKropp, etiketter, skraffering, klippLinje, utanforRutor, hornOrdning, numreradeHorn, ledarGeometri, sidanOmNock, ritning, ram, rutor, mitt, pdf, dxf, mattText, etikettText, FORMAT };
+  return { enheter, enhetFor, matt, satAnnot, visaDolda, sidaIKropp, etiketter, skraffering, klippLinje, utanforRutor, hornOrdning, numreradeHorn, ledarGeometri, sidanOmNock, ritning, mattAvst, mattHinder, nrPunkt, nrLinje, gransVinkelratt, ram, rutor, mitt, pdf, dxf, mattText, etikettText, FORMAT };
 }));

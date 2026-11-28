@@ -70,14 +70,19 @@
    * Svarar den inte inom `tid` ms räknas det likadant (0.13.5; förut kom felet "signal is aborted without reason").
    * Ett sådant fel prövas inte via proxyn (meddelandet börjar med "svarade").
    */
-  async function hamta(url, typ = 'json', { tid = 25000, metod = 'GET', kropp = null } = {}) {
+  async function hamta(url, typ = 'json', { tid = 25000, metod = 'GET', kropp = null, avbryt = null } = {}) {
     const forsok = u => medOmforsok(async () => {
+      // avbryt (0.16.6): en AbortSignal utifrån, när svaret inte längre behövs (reservservern svarade först)
+      if (avbryt && avbryt.aborted) throw Object.assign(new Error('avbruten'), { avbruten: true });
       const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), tid);
+      const avbrott = () => ctrl.abort();
+      if (avbryt) avbryt.addEventListener('abort', avbrott);
       try {
         let svar;
         try {
           svar = await fetch(u, { signal: ctrl.signal, method: metod, body: kropp, headers: kropp ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined });
         } catch (e) {
+          if (avbryt && avbryt.aborted) throw Object.assign(new Error('avbruten'), { avbruten: true });
           if (ctrl.signal.aborted) throw Object.assign(new Error(`svarade inte inom ${Math.round(tid / 1000)} s`), { tidsgrans: true });
           throw e;
         }
@@ -90,13 +95,13 @@
           if (/^\s*</.test(text)) throw new Error('svarade med ett fel i stället för data' + (fel ? `: ${fel[1].trim()}` : '') + '. Försök igen senare.');
           throw e;
         }
-      } finally { clearTimeout(t); }
+      } finally { clearTimeout(t); if (avbryt) avbryt.removeEventListener('abort', avbrott); }
     });
     try {
       return await forsok(url);
     } catch (e) {
       const p = proxyUrl();
-      if (!p || metod !== 'GET' || (e && e.message && e.message.startsWith('svarade'))) throw e;
+      if (!p || metod !== 'GET' || (e && (e.avbruten || (e.message && e.message.startsWith('svarade'))))) throw e;
       // Felet säger att frågan gick via servern, så att det går att se var det stoppade (0.14.4)
       try { return await forsok(`${p}?u=${encodeURIComponent(url)}`); } catch (e2) {
         if (e2 && e2.message && !/via servern/.test(e2.message)) e2.message += ' via servern';
@@ -104,21 +109,42 @@
       }
     }
   }
+  /** Hur länge huvudservern får svara ensam innan reservservern också frågas (ms). Testkrok: TERRANG_OVERPASS_PARALLELL. */
+  const parallell = () => ((typeof self !== 'undefined' && self.TERRANG_OVERPASS_PARALLELL) || 12000);
   /**
    * Overpass-fråga (POST) mot huvudservern och, om den fortfarande svarar med ett tillfälligt fel
    * eller inte svarar alls efter tre försök, mot reservservern (0.16.1, BG). Felet från huvudservern
-   * står kvar om också reserven faller.
+   * står kvar om också reserven faller. Sedan 0.16.6 frågas reservservern också när huvudservern inte
+   * har svarat på 12 s, och det första svaret gäller: förut kunde det ta flera minuter (tre försök med
+   * 40 s tidsgräns) innan reserven ens frågades (BG, 70 s för strandskyddet).
    */
   async function overpass(q, tid = 40000) {
-    const kropp = 'data=' + encodeURIComponent(q);
-    try { return await hamta(adress('overpass'), 'json', { metod: 'POST', kropp, tid }); } catch (e) {
-      const reserv = adress('overpassReserv');
-      if (!reserv || reserv === adress('overpass') || !(TILLFALLIGT.includes(e.status) || e.tidsgrans || e instanceof TypeError)) throw e;
-      try { return await hamta(reserv, 'json', { metod: 'POST', kropp, tid }); } catch (e2) {
-        e.message += `; reservservern ${e2 && e2.message ? e2.message : 'svarade inte'}`;
-        throw e;
-      }
-    }
+    const kropp = 'data=' + encodeURIComponent(q), reserv = adress('overpassReserv');
+    if (!reserv || reserv === adress('overpass')) return hamta(adress('overpass'), 'json', { metod: 'POST', kropp, tid });
+    const stopp = new AbortController();
+    const huvud = hamta(adress('overpass'), 'json', { metod: 'POST', kropp, tid, avbryt: stopp.signal });
+    return new Promise((resolve, reject) => {
+      let klar = false, startad = false, fel1 = null, fel2 = null;
+      const avsluta = () => {
+        if (klar) return;
+        klar = true;
+        fel1.message += `; reservservern ${fel2 && fel2.message ? fel2.message : 'svarade inte'}`;
+        reject(fel1);
+      };
+      const fragaReserv = () => {
+        if (startad || klar) return;
+        startad = true;
+        hamta(reserv, 'json', { metod: 'POST', kropp, tid }).then(v => { if (!klar) { klar = true; clearTimeout(t); stopp.abort(); resolve(v); } }, e => { fel2 = e || new Error('okänt fel'); if (fel1) avsluta(); });
+      };
+      const t = setTimeout(fragaReserv, parallell());
+      huvud.then(v => { if (!klar) { klar = true; clearTimeout(t); resolve(v); } }, e => {
+        fel1 = e || new Error('okänt fel');
+        clearTimeout(t);
+        const tillfalligt = TILLFALLIGT.includes(e && e.status) || (e && e.tidsgrans) || e instanceof TypeError;
+        if (!startad && !tillfalligt) { klar = true; reject(e); return; }   // ett fel i frågan prövas inte mot reserven
+        if (!startad) fragaReserv(); else if (fel2) avsluta();
+      });
+    });
   }
   /**
    * Linjerna i en geometri ur `out geom(ruta)`: noder utanför rutan kommer som null, så linjen
@@ -382,7 +408,7 @@
   const ANLAGT = /^(basin|wastewater|reservoir_covered)$/;
   /**
    * Sjöar, vattendrag och hav från OpenStreetMap inom rutan (WGS 84-ruta).
-   * Ger [{ typ, namn, yta, sluten, pts (zon) }]; typ är sjö, vattendrag, bäck, kanal, kust eller anlagt.
+   * Ger [{ id, typ, namn, yta, sluten, inre, pts (zon) }]; typ är sjö, vattendrag, bäck, kanal, kust eller anlagt.
    * Overpass får 40 s (0.13.5) och försöks igen vid överbelastning och tidsgräns.
    */
   async function vatten(llRuta, tillZon) {
@@ -396,20 +422,25 @@
       const t = e.tags || {};
       const typ = t.natural === 'coastline' ? 'kust' : t.waterway ? (t.waterway === 'stream' ? 'bäck' : t.waterway === 'canal' ? 'kanal' : 'vattendrag')
         : t.water === 'river' ? 'vattendrag' : ANLAGT.test(t.water || '') ? 'anlagt' : 'sjö';
-      const linjer = e.type === 'way' ? [e.geometry] : (e.members || []).filter(m => m.geometry).map(m => m.geometry);
+      // Varje vatten har ett id (0.16.6, BG): strandskyddet avgör vilken sida som är vatten för ett vatten i taget,
+      // så att två vatten som möts (en å som rinner ut i en sjö) inte gör det omöjligt. Kusten är en enda.
+      const id = typ === 'kust' ? 'kust' : `${e.type}/${e.id}`;
       if (e.type === 'way') {
         // en klippt bit av en sjö är en strand med vatten på ena sidan (yta, inte sluten; 0.16.5, DX)
-        for (const d of osmDelar(e.geometry)) ut.push({ typ, namn: t.name || '', yta: t.natural === 'water', sluten: d.sluten, pts: d.pts.map(p => tillZon([p.lon, p.lat])) });
+        for (const d of osmDelar(e.geometry)) ut.push({ id, typ, namn: t.name || '', yta: t.natural === 'water', sluten: d.sluten, pts: d.pts.map(p => tillZon([p.lon, p.lat])) });
         continue;
       }
       // En relation: vägarna fogas till ringar (0.16.3, B6). Det som inte går ihop (klippt mot rutan) är en
-      // strandlinje, inte en yta som går tillbaka till sin första punkt.
-      const delar = linjer.flatMap(g => osmDelar(g)), lika = (a, b) => Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
-      const hela = delar.filter(d => d.sluten).map(d => d.pts.map(p => [p.lon, p.lat]));
-      const fogade = fogaRingar(delar.filter(d => !d.sluten).map(d => d.pts.map(p => [p.lon, p.lat])));
-      for (const r of hela.concat(fogade)) {
-        const sluten = r.length >= 4 && lika(r[0], r[r.length - 1]);
-        ut.push({ typ, namn: t.name || '', yta: true, sluten, pts: (sluten ? r.slice(0, -1) : r).map(p => tillZon(p)) });
+      // strandlinje, inte en yta som går tillbaka till sin första punkt. Inre ringar är öar (inre: true, 0.16.6).
+      const lika = (a, b) => Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+      for (const roll of ['outer', 'inner']) {
+        const delar = (e.members || []).filter(m => m.geometry && (roll === 'inner') === (m.role === 'inner')).flatMap(m => osmDelar(m.geometry));
+        const hela = delar.filter(d => d.sluten).map(d => d.pts.map(p => [p.lon, p.lat]));
+        const fogade = fogaRingar(delar.filter(d => !d.sluten).map(d => d.pts.map(p => [p.lon, p.lat])));
+        for (const r of hela.concat(fogade)) {
+          const sluten = r.length >= 4 && lika(r[0], r[r.length - 1]);
+          ut.push(Object.assign({ id, typ, namn: t.name || '', yta: true, sluten, pts: (sluten ? r.slice(0, -1) : r).map(p => tillZon(p)) }, roll === 'inner' ? { inre: true } : {}));
+        }
       }
     }
     return ut;

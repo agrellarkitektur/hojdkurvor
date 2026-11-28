@@ -81,7 +81,7 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
                    "golv": 112.5, "takfot": 6, "takform": "sadel", "taklutning": 27,
                    "nockriktning": null, "primitiv": { … },
                    "status": "ny", "huvudbyggnad": false, "kalla": null, "entre": { "sida": 0, "t": 0.5 },
-                   "matt": { "<enhet>|y|90|0": { "dold": true } },   // valfritt (0.16.0)
+                   "matt": { "<enhet>|y|90|0": { "dold": true } },   // valfritt (0.16.0); från 0.16.6 också gh|, ys|, et| och nr| (se js/situationsplan.js)
                    "slag": "huvud", "takutdrag": [0, 1.2] } ],       // valfria (0.16.1)
     "sektioner": [ { "id": "uuid", "namn": "A", "a": [x, y], "b": [x, y], "vand": false } ],
     "rattelser": { "tak": { "objektidentitet": { … } }, "trad": { "x,y": { … } }, "hus": { "objektidentitet": { … } } },
@@ -167,7 +167,8 @@ Lantmäteriets objektidentitet (hus) eller läget (träd) och användarens egna 
   - Utanför primitiven: `golv` (RH 2000; för ytan höjden över mark inräknad), `takfot` (vägghöjd, ytans
     tjocklek, murens höjd), `sockel` (meter under golvet, `null` = till lägsta marken under kroppen
     minus 0,5 m), `vaningar` (`null` = uppskattat), `roll` (`projekt` | `omgivning`), `grupp` (förenade
-    kroppar) och `last`.
+    kroppar), `last` (låst placering: går inte att flytta, vrida, ändra eller ta bort) och `lastForm`
+    (0.16.6, låst form: storleken ligger fast, ett hörn flyttar hela kroppen). Båda saknas = false.
   - `fotavtryck`, `takform`, `taklutning` och `nockriktning` skrivs fortfarande, härledda ur
     parametrarna (`Volym3D.uppdatera`), så att analyserna, situationsplanen och cad-apa läser kroppen
     som förut. Det som inte går att säga med dem (halvvalm, mansard, valv, gård, mur …) räknas ur

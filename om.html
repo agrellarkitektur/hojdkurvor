@@ -7,13 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Om – Höjdkurvor</title>
   <meta name="description" content="Höjdkurvor gör Lantmäteriets öppna geodata till underlag som går att rita på. En gratis betatjänst från Agrell Arkitektur.">
-  <script src="js/version.js?v=0.16.5"></script>
-  <script src="js/kalla.js?v=0.16.5" defer></script>
-  <script src="js/tema.js?v=0.16.5"></script>
-  <script src="js/synpunkter.js?v=0.16.5" defer></script>
-  <script src="js/stod.js?v=0.16.5" defer></script>
+  <script src="js/version.js?v=0.16.6"></script>
+  <script src="js/kalla.js?v=0.16.6" defer></script>
+  <script src="js/tema.js?v=0.16.6"></script>
+  <script src="js/synpunkter.js?v=0.16.6" defer></script>
+  <script src="js/stod.js?v=0.16.6" defer></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="app.css?v=0.16.5">
+  <link rel="stylesheet" href="app.css?v=0.16.6">
 </head>
 <body class="sida">
   <header class="toppmeny">
@@ -73,7 +73,7 @@
         </section>
         <section>
           <h2>Vem står bakom</h2>
-          <p>Höjdkurvor utvecklas och drivs av arkitekt Carl August Agrell genom Agrell Arkitektur. Det började som ett eget verktyg för att få in terrängen i Archicad utan omvägar, och delas nu med alla som har samma behov.</p>
+          <p>Höjdkurvor utvecklas och drivs av arkitektkontoret Agrell Arkitektur. Det började som ett eget verktyg för att få in terrängen i Archicad utan omvägar, och delas nu med alla som har samma behov.</p>
           <p>Tjänsten är gratis och fri från reklam. Den är Agrell Arkitekturs sätt att bidra, och att visa hur vi arbetar. Vill du hellre att vi tar fram underlaget åt dig går det att <a href="bestall.html">beställa</a>, men det behövs aldrig. <a href="https://agrellarkitektur.se">Läs mer om Agrell Arkitektur</a></p>
         </section>
         <section>
@@ -121,6 +121,7 @@
       <section id="andringar" style="padding-top: 40px; border-top: 1px solid var(--rule)">
         <h2>Ändringar</h2>
         <dl class="par bred">
+          <dt>0.16.6 · 28 nov 2026</dt><dd>Rita i plan har fått Flytta och Rotera som i CAD, och en smartmeny när du klickar på ett hörn, en sida, en byggnad, ett träd eller ett hus. Byggnader kan låsas i form eller placering. Texterna och hörnens nummer går att dra, texter utanför byggnaden får en ledare, och du väljer själv mått till tomtgräns och yttermått. Måtten på samma sida samlas på en rad utanför byggnaden. Träd och hus kan döljas och ändras i planen. Strandskyddet visar strandlinjen det räknas från, hamnar inte längre ute i sjöar där två vatten möts, och väntar kortare på OpenStreetMap. Norrpilen på situationsplanen visar sann nord. Knapparna till cad-apa är dolda tills cad-apa är i beta.</dd>
           <dt>0.16.5 · 28 nov 2026</dt><dd>Strandskyddet ritas inte längre ute i stora sjöar. Under Skapa tickar en klocka med steget som pågår, och vägar som inte kommer fram hoppas över efter en stund så att resten blir klart. Efteråt kan status och logg kopieras som text vid felsökning. Andra gången för samma område säger knappen Uppdatera. Under ytan: den nya byggnadskroppen för Skissa i 3D.</dd>
           <dt>0.16.4 · 27 nov 2026</dt><dd>Rättelser efter testet. Situationsplanen som DXF blev tom när höjdkurvorna var med. Ramen går att flytta i Rita i plan, och det som ritningshuvudet täcker syns i den. Nya byggnader skrafferas, rivna får ett kryss mot norr och polygoner får sitt tecken. Måtten har vinkelrätsymbol mot tomtgränsen och kan dras till en annan gräns; befintliga byggnader får bara mått mot tillbyggnaden, och en tillbyggnad dockar mot fasaden. Texterna har namnet i fetstil, FG och arean mindre, och står utanför med en ledare när de inte får plats. Koordinatlistan är grupperad per byggnad. På mobilen är menyn en hamburgare och formatväljaren går att fälla ihop. Se dolda i 3D-vyn visar dolda träd och hus utgråade, så att de kan visas ett och ett. Utskriften i skala går att flytta inom utsnittet.</dd>
           <dt>0.16.3 · 26 nov 2026</dt><dd>Rättelser. Sol på fasaderna räknade grannarnas och omgivningens skugga spegelvänt sedan 0.15.0; resultat med skuggande grannar bör göras om. Byggnadsarean på situationsplanen räknar Lantmäteriets hus på fastigheten som befintliga. Mått till tomtgräns slutar på gränsen också när den bryter. Medan underlaget skapas ligger panelen och området stilla, och går Skapa fel finns det förra underlaget kvar. En projektfil från någon annan kan inte längre köra kod. byggnader.csv vrids som de andra filerna, och strandskyddet ritas rätt kring stora sjöar.</dd>

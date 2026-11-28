@@ -251,6 +251,18 @@ ett eget träd som läggs till och tas bort, *Fastighet* ur kartan, *Anslut take
 som PDF (`planverktyg.pdf`, med koordinatlistan, ledaren och höjdkurvorna) och att ledaren och valen
 ligger kvar efter omladdning. Skärmbild `planverktyg_1_<tema>.png`.
 
+```
+python3 test/smartmeny_test.py test/ut ritning
+```
+
+`smartmeny_test.py` (0.16.6, gränssnitt) prövar att knapparna till cad-apa är dolda, och i planvyn:
+måtten i rader (en tillbyggnad mot ett befintligt hus), smartmenyn på en byggnad, ett hörn och en sida,
+*Flytta* (hörnet hamnar exakt på målet, och `@4;0`), *Rotera* (referens och mål som linjer), *Lås form*
+och *Lås placering*, en text som dras ut ur byggnaden och vart ledaren pekar, ett hörnnummer som dras,
+ett eget gränsmått, ett hus som döljs och visas med *Se dolda*, trädets krona ur smartmenyn,
+situationsplanen som PDF (`smartmeny.pdf`) och att låsen och texterna ligger kvar efter omladdning.
+Skärmbilder `smartmeny_1_<tema>.png` (med smartmenyn) och `smartmeny_2_<tema>.png`.
+
 Enhetstestet för sol på fasaderna (`node test/fasadsol.test.js`, 0.15.0) prövar klar himmel mot
 överslaget 2 april i Hudiksvall, väderstreck och himlens andel, fasadpunkterna (area, gavlar,
 under marken, fogen mellan två byggnader), skuggning från en annan byggnad, från den egna

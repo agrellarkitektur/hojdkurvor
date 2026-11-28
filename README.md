@@ -8,7 +8,8 @@ befintliga byggnader, fastighetsgränser, marktäcke, stompunkter och vägar
 PDF med lutning, skyfall och skydd och risker (lutning och skyfall också som JPEG med
 världsfil och PDF i vektor), och en samlad DXF med alla DXF-underlag. Skissade volymer kan prövas på
 platsen, också ritas direkt i 3D-vyn, och platsen kan skickas vidare till ritprogrammet
-[cad-apa](https://cad-apa.danaid.cloud/) ([källkod](https://github.com/agrellarkitektur/cad-apa)). Det man matar in sparas som ett
+[cad-apa](https://cad-apa.danaid.cloud/) ([källkod](https://github.com/agrellarkitektur/cad-apa)); knapparna
+dit är dolda tills cad-apa är i beta (`visaCadApa`). Det man matar in sparas som ett
 projekt i webbläsaren och kan sparas som projektfil (`.hojdkurvor`, se `docs/PROJEKTFIL.md`).
 
 Live: <https://hojdkurvor.se/>. höjdkurvor.se, www-adresserna och den tidigare
@@ -94,6 +95,7 @@ Internt heter temana `ritning`, `lugn` och `mork`.
   Riksantikvarieämbetet eller Myndigheten för civilt försvar direkt. Standard
   `geodata.php`.
 - `cadApaUrl` – adress till cad-apa. Standard `https://cad-apa.danaid.cloud/`.
+- `visaCadApa` – visar knapparna som skickar platsen till cad-apa (*Rita i cad-apa*, *Fortsätt rita i cad-apa*, *Spara platsfil för cad-apa*). `false` sedan 0.16.6, tills cad-apa är i beta.
   Skissen tillbaka tas bara emot från samma ursprung.
 - `inloggning` – endast för intranät: förifylld inloggning till Lantmäteriet
   för alla som öppnar sidan. Använd organisationens systemkonto.
@@ -194,7 +196,7 @@ Vanlig JavaScript utan byggsteg. Varje fil lägger ett globalt objekt på `windo
 - `js/volym3d.js` (`Volym3D`) – volymerna att modellera i 3D: primitiver, takytor, snäpp, kontakter, länkar och konturer; laddas med sidan (takytorna används också i skissens DXF); från 0.16.5 också kropparna i den nya modellen (`nyStil`, `nyForm`, `harledd`, `behallForm`)
 - `js/kroppgeo.js` (`Kroppgeo`, 0.16.5) – geometrin för kropparna i Skissa i 3D, flyttad ur prototypen: basformer, takformer, ändar, gård, mur, yta och sfär som fotavtryck med hål och sluten mesh (förarbete till 0.17.0, ren geometri, testas i Node)
 - `js/kropp.js` (`Kropp`, 0.14.0) – byggnadskropparna: status, huvudbyggnad, källa och entré ovanpå volymerna, inmatningsraden, mått till tomtgräns, yttermått, mått mellan kroppar, FG-text och BYA (från 0.16.3 med Lantmäteriets hus på fastigheten, `byaMedHus`); från 0.16.0 union och yttre skal; från 0.16.4 markering på polygoner, `rivsKryss`, `dockning` och `beskrivning` (ren geometri, testas i Node)
-- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan; från 0.16.0 byggnaderna som yttre skal, dolda och flyttade mått, ramen och panelen *Situationsplan*; från 0.16.1 underlaget (ortofoto, höjdkurvor, träd, vägar, skydd), verktygen Vrid mot, Ledare, Träd och Fastighet, koordinatlistan och takanslutningen; från 0.16.4 texter och mått i ritningens storlek, ramen att flytta med det som ritningshuvudet täcker, gränsmått att dra till en annan gräns och dockning av tillbyggnader
+- `js/planvy.js` (`Planvy`, 0.14.0) – planvyn *Rita i plan*: SVG-vyn, verktygen, snäpp, panelen och hörnlistan; från 0.16.0 byggnaderna som yttre skal, dolda och flyttade mått, ramen och panelen *Situationsplan*; från 0.16.1 underlaget (ortofoto, höjdkurvor, träd, vägar, skydd), verktygen Vrid mot, Ledare, Träd och Fastighet, koordinatlistan och takanslutningen; från 0.16.4 texter och mått i ritningens storlek, ramen att flytta med det som ritningshuvudet täcker, gränsmått att dra till en annan gräns och dockning av tillbyggnader; från 0.16.6 verktygen Flytta och Rotera, smartmenyn, Lås form och Lås placering, texter och hörnnummer att dra, egna mått, träd och hus att ändra och dölja, och Se dolda
 - `js/situationsplan.js` (`Situationsplan`, 0.16.0) – situationsplanen: byggnaderna som yttre skal (enheter), måtten på skalet och hur de ändras, etiketter, skraffering, från 0.16.1 underlag, ledare och koordinatlista; från 0.16.4 etiketter utanför med ledare (`etikettText`), rivningskryss, grupperad koordinatlista och rutorna som ritningshuvudet täcker (`rutor`), och planen som vektor-PDF (A3/A4, 1:400/1:500, ritningshuvud, teckenförklaring) och DXF med ett lager per innehåll (ren, testas i Node)
 - `js/fasadsol.js` (`Fasadsol`, 0.15.0) – sol på fasaderna: fasadpunkter på byggnadskropparna, horisonten framför varje punkt (egen kropp, andra kroppar, omgivningen), klar himmel (ESRA) och Hay–Davies, summa, lokal och samtidig topp, timme × dag och värsta dygnet (ren beräkning, testas i Node, tänkt att kunna tas till cad-apa)
 - `js/fasadsolblad.js` (`Fasadsolblad`, 0.15.0) – sol på fasaderna som A3-PDF (från 0.16.1 en översikt med 3D från två håll, nyckelplan och ett kort per numrerad fasad; staplar och tabell, timme × dag, värsta dygnet) och CSV
@@ -258,6 +260,7 @@ webbkarta Nedladdning, raster. Platsanalysens kapitel Skydd kräver ingen inlogg
 - Platsanalysen: klimat (snölast, vind, växtzon) och buller från vägar. Visas
   som KOMMER i panelen tills datakällorna är kontrollerade.
 - Avvaktar: schakt och fyll, solkarta, OBJ/GeoTIFF, IFC för terrängen och skissen, exempelprojekt.
+- Avvaktar: knapparna till cad-apa (Rita i cad-apa, Fortsätt rita i cad-apa) tills cad-apa är i beta (beslut 28 november 2026).
 - Planerat (se `docs/SYNPUNKTER.md` och `docs/SKISSA-I-3D.md`): Skissa i 3D med basformer, takformer och
   användarskapad omgivning med *Ersätt* på ett hus och val mellan standardhus och egna (0.17.0), förslag och sparade vyer i projektet, utkragning per våning
   och verkligt väder (SMHI STRÅNG) i sol på fasaderna, eget bildunderlag som överlagring (projektfilens bilagor), skissvolymer ur

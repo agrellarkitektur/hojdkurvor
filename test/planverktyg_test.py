@@ -147,6 +147,7 @@ with sync_playwright() as p:
     ut = [v.get('takutdrag') for v in kroppar()]
     print('9) takutdrag:', ut)
     assert ut[1] and ut[1][0] > 0
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)   # stänger smartmenyn (0.16.6)
     pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
     pg.check('[data-visa=trad]') if not pg.is_checked('[data-visa=trad]') else None
     pg.wait_for_timeout(200)

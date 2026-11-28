@@ -25,8 +25,16 @@
  *     ledare, ledareAndrad(ledare)  (valfria, 0.16.1) ledare med fritext [{ id, pts: [pil, text], text }]
  *     tradAndrat({ typ: 'ny'|'dolj'|'visa'|'bort', t, x, y }) (valfri, 0.16.1) ger den nya trädlistan
  *     fastighetVid(x, y)  (valfri, 0.16.1) Promise med fastigheterna i punkten [{ beteckning }]
+ *     sannNord           (valfri, 0.16.6) sann nord i grader medurs från rutnätets nord, för norrpilen
  *     ytor               (valfri, 0.16.3) fastigheterna med ringar, för BYA med Lantmäteriets hus på fastigheten
+ *     husAndrat({ typ: 'dolj'|'visa', id }) (valfri, 0.16.6) döljer eller visar ett hus från Lantmäteriet; hus med
+ *                        dolt: true syns bara med Se dolda
+ *     tradAndrat         kan sedan 0.16.6 också få { typ: 'andra', t, e: { hojd, krona } } och { typ: 'flytta', t, x, y }
  *   }) → { stang(), volymer() }
+ *
+ * Sedan 0.16.6 (BN–BQ): verktygen Flytta (M) och Rotera (O), smartmenyn vid ett klick på ett hörn, en sida, en
+ * byggnad, ett träd, ett hus eller en gräns, etiketter och hörnnummer som går att dra, egna gränsmått och
+ * yttermått, låst form (lastForm) och låst placering (last) på kroppen.
  *
  * Kräver Kropp, Volym3D och Situationsplan. Kroppar med samma status som går in i varandra ritas som ett
  * yttre skal (0.16.0); först när en av dem markeras syns de var för sig.
@@ -67,13 +75,17 @@
     ['riktn', 'Riktning', 'D', 'Ritriktning efter en gräns eller fasad'],
     ['entre', 'Entré', 'E', 'Lägg entrépilen på en fasad'],
     ['lm', 'Befintlig', 'L', 'Ta in en byggnad från Lantmäteriet'],
+    ['flytta', 'Flytta', 'M', 'Flytta en byggnad från en punkt till en annan'],
+    ['rotera', 'Rotera', 'O', 'Rotera kring en punkt, från en referenslinje till en mållinje'],
     ['vridmot', 'Vrid mot', 'A', 'Vrid en byggnad så att en sida blir parallell med en annan linje'],
     ['ledare', 'Ledare', 'T', 'Ledare med fritext'],
     ['trad', 'Träd', 'G', 'Lägg till, dölj eller ta bort träd'],
     ['fast', 'Fastighet', 'F', 'Hämta fastighetsbeteckningen ur kartan'],
   ];
   const PROMPT = {
-    valj: 'Klicka på en byggnad. Dra för att flytta (ett hörn snäpper). Klicka på ett mått för att ändra det.',
+    valj: 'Klicka på en byggnad, ett hörn, en sida, ett träd eller ett hus för smartmenyn. Dra för att flytta (ett hörn snäpper). Dra i texter och nummer för att flytta dem.',
+    flytta: s => (!s.op || s.op.steg === 'valj' ? 'Flytta: klicka på byggnaden.' : s.op.steg === 'bas' ? 'Klicka baspunkten (ett hörn snäpper).' : 'Klicka målpunkten, eller skriv avstånd, @dx;dy eller E;N. Esc avbryter.'),
+    rotera: s => (!s.op || s.op.steg === 'valj' ? 'Rotera: klicka på byggnaden.' : s.op.steg === 'centrum' ? 'Klicka rotationspunkten.' : s.op.steg === 'ref' ? 'Klicka referenslinjen (en sida eller gräns) eller en punkt. Eller skriv vinkeln i grader moturs.' : 'Klicka mållinjen eller en punkt. Eller skriv vinkeln. Esc avbryter.'),
     rekt: s => (s.ritar.length ? 'Klicka motstående hörn eller skriv bredd x djup (12,6x9).' : 'Rektangel: klicka första hörnet eller skriv E;N.'),
     poly: s => (s.ritar.length ? 'Klicka nästa hörn eller skriv längd, längd<vinkel eller @dx;dy. Enter stänger.' : 'Polygon: klicka första hörnet eller skriv E;N.'),
     riktn: 'Klicka på en tomtgräns, en fasad eller ett hus. Ortho och vinklar följer den.',
@@ -98,20 +110,24 @@
       ram: Object.assign({ format: 'a3', liggande: true, skala: 400 }, opt.ram || {}),
       ramCentrum: Array.isArray(opt.ramCentrum) && opt.ramCentrum.length === 2 && opt.ramCentrum.every(isFinite) ? opt.ramCentrum.slice() : null, ramRutor: [],
       angra: [], gorom: [],
+      op: null, seDolda: false, pilVal: null,
     };
     S.volymer.forEach(v => { if (v.golv == null) v.golv = NaN; });
     const granser = (opt.granser || []).map(g => (g.pts || g)).filter(p => p && p.length >= 2);
     const allaHus = (opt.hus || []).filter(b => b.fotavtryck && b.fotavtryck.length >= 3);
+    const last = v => !!(v && v.last), lastForm = v => !!(v && (v.last || v.lastForm));
+    /** Om någon kropp i gruppen (kedjan) har låst placering (0.16.6). */
+    const gruppLast = id => [...V.komponent(S.volymer, id)].some(x => last(S.volymer.find(v => v.id === x)));
 
     rot.innerHTML = `
       <div class="planvy-huvud">
         <h2 id="planvy-rubrik">Rita i plan</h2>
         <div class="planvy-verktyg" role="toolbar" aria-label="Verktyg">${VERKTYG.map(([id, namn, kort, tips]) =>
           `<button type="button" class="knapp liten" data-verktyg="${id}" aria-pressed="false" title="${esc(tips)} (${kort})">${esc(namn)}</button>`).join('')}</div>
-        <div class="planvy-verktyg"><button type="button" class="knapp liten" data-pv="matt" aria-pressed="true" title="Visa eller dölj alla mått, också på ritningen">Mått</button><button type="button" class="knapp liten" data-pv="ortho" aria-pressed="true" title="Bara längs ritriktningen (F8)">Ortho</button><button type="button" class="knapp liten" data-pv="snapp" aria-pressed="true" title="Snäpp mot hörn, mittpunkter och linjer (F3)">Snäpp</button><button type="button" class="knapp liten" data-pv="angra" title="Ctrl+Z" disabled>Ångra</button><button type="button" class="knapp liten" data-pv="gorom" title="Ctrl+Y" disabled>Gör om</button><button type="button" class="knapp liten" data-pv="passa" title="Växlar mellan hela utsnittet och byggnaderna">Passa</button>${opt.till3d ? '<button type="button" class="knapp liten" data-pv="3d">3D</button>' : ''}<button type="button" class="knapp liten" data-pv="stang">Stäng</button></div>
+        <div class="planvy-verktyg"><button type="button" class="knapp liten" data-pv="matt" aria-pressed="true" title="Visa eller dölj alla mått, också på ritningen">Mått</button><button type="button" class="knapp liten" data-pv="ortho" aria-pressed="true" title="Bara längs ritriktningen (F8)">Ortho</button><button type="button" class="knapp liten" data-pv="snapp" aria-pressed="true" title="Snäpp mot hörn, mittpunkter och linjer (F3)">Snäpp</button><button type="button" class="knapp liten" data-pv="angra" title="Ctrl+Z" disabled>Ångra</button><button type="button" class="knapp liten" data-pv="gorom" title="Ctrl+Y" disabled>Gör om</button><button type="button" class="knapp liten" data-pv="passa" title="Växlar mellan hela utsnittet och byggnaderna">Passa</button><button type="button" class="knapp liten" data-pv="sedolda" aria-pressed="false" title="Visa dolda hus och träd utgråade, så att de går att visa igen">Se dolda</button>${opt.till3d ? '<button type="button" class="knapp liten" data-pv="3d">3D</button>' : ''}<button type="button" class="knapp liten" data-pv="stang">Stäng</button></div>
       </div>
       <div class="planvy-kropp">
-        <div class="planvy-yta"><svg class="planvy-svg" aria-label="Planvy"><g class="pv-under"></g><g class="pv-dyn"></g></svg><input class="planvy-textin" hidden autocomplete="off" aria-label="Ledarens text" placeholder="Text, Enter"><input class="planvy-mattin" hidden autocomplete="off" inputmode="decimal" aria-label="Nytt mått"><button type="button" class="planvy-mattdolj knapp liten" hidden title="Dölj måttet på planen">Dölj</button><div class="planvy-besked" aria-live="polite"></div></div>
+        <div class="planvy-yta"><svg class="planvy-svg" aria-label="Planvy"><g class="pv-under"></g><g class="pv-dyn"></g></svg><input class="planvy-textin" hidden autocomplete="off" aria-label="Ledarens text" placeholder="Text, Enter"><input class="planvy-mattin" hidden autocomplete="off" inputmode="decimal" aria-label="Nytt mått"><button type="button" class="planvy-mattdolj knapp liten" hidden title="Dölj måttet på planen">Dölj</button><div class="planvy-besked" aria-live="polite"></div><div class="planvy-smart" role="menu" hidden></div></div>
         <aside class="planvy-panel" aria-label="Byggnadskroppar"></aside>
       </div>
       <div class="planvy-fot">
@@ -120,7 +136,7 @@
         <span class="planvy-status"></span>
       </div>`;
     const $ = s => rot.querySelector(s);
-    const svg = $('.planvy-svg'), under = $('.pv-under'), dyn = $('.pv-dyn'), textin = $('.planvy-textin'), yta = $('.planvy-yta'), panel = $('.planvy-panel'), kommando = $('.planvy-kommando'), mattin = $('.planvy-mattin'), mattdolj = $('.planvy-mattdolj');
+    const smart = $('.planvy-smart'), svg = $('.planvy-svg'), under = $('.pv-under'), dyn = $('.pv-dyn'), textin = $('.planvy-textin'), yta = $('.planvy-yta'), panel = $('.planvy-panel'), kommando = $('.planvy-kommando'), mattin = $('.planvy-mattin'), mattdolj = $('.planvy-mattdolj');
     let W = 800, H = 600;
 
     // ------------------------------------------------------------------
@@ -195,7 +211,8 @@
     // Snäpp
     // ------------------------------------------------------------------
     const ersatta = () => Kr.ersatta(S.volymer);
-    const synligaHus = () => { const e = ersatta(); return allaHus.filter(b => !e.has(String(b.id))); };
+    const synligaHus = () => { const e = ersatta(); return allaHus.filter(b => !e.has(String(b.id)) && !b.dolt); };
+    const doldaHus = () => { const e = ersatta(); return allaHus.filter(b => !e.has(String(b.id)) && b.dolt); };
     /** Alla linjer att snäppa mot: { a, b, typ, k (kroppens id), i (sidans index), hus }. */
     function kanter(utom) {
       const ut = [];
@@ -249,7 +266,7 @@
     // ------------------------------------------------------------------
     // Måtten
     // ------------------------------------------------------------------
-    let senasteMatt = [], mattDrag = null, ledarDrag = null;
+    let senasteMatt = [], mattDrag = null, ledarDrag = null, senasteEtiketter = [], senasteNr = [], etDrag = null, nrDrag = null;
     const ordning = { rivs: 0, befintlig: 1, tillbyggnad: 2, ny: 3 };
     /** Måttlinje längs a–b, förskjuten off meter åt n, i ritningens mått (0.16.4). */
     function mattlinje(a, b, n, off, str, data, extra = '') {
@@ -265,11 +282,15 @@
      * markerade byggnaden. Dolda mått ritas inte; flyttade har sin förskjutning i meter. Sedan 0.16.4 i
      * ritningens mått, med vinkelrätsymbol mot gränsen, och ett gränsmått kan dras till en annan gräns.
      */
-    function ritaMatt(enh) {
+    /** Måtten räknas före byggnaderna, så att etiketterna kan hålla sig borta från dem (0.16.6). */
+    function raknaMatt(enh) {
+      senasteMatt = S.visa.matt === false ? [] : SP().matt(S.volymer, granser, { enheter: enh, visa: S.visa });
+      return SP().mattHinder(senasteMatt.filter(m => !m.dold), MM());
+    }
+    function ritaMatt() {
       let o = '';
-      if (S.visa.matt === false) { senasteMatt = []; return o; }
+      if (S.visa.matt === false) return o;
       const mm = MM();
-      senasteMatt = SP().matt(S.volymer, granser, { enheter: enh, visa: S.visa });
       senasteMatt.forEach((m, i) => {
         if (m.dold) return;
         const drar = mattDrag && mattDrag.i === i ? ' pv-drar' : '';
@@ -283,7 +304,7 @@
           o += text(add(mul(add(m.fran, till), 0.5), mul(n, 1.4 * mm)), f ? matt(dl) : m.text, pxmm(2.2), 'pv-gmattext' + drar, Math.atan2(d[1], d[0]), 'middle', `data-matt="${i}"`);
         } else {
           const off = mattDrag && mattDrag.i === i ? mattDrag.off : m.off;
-          o += mattlinje(m.fran, m.till, m.n, off != null ? off : (m.bas || 0) + 4 * mm, m.text, `data-matt="${i}"`, drar);
+          o += mattlinje(m.fran, m.till, m.n, off != null ? off : SP().mattAvst(m, mm), m.text, `data-matt="${i}"`, drar);
         }
       });
       return o;
@@ -321,12 +342,15 @@
           o += `<path class="pv-u-strand" d="${(sk.strand.zoner.m100 || []).map(p => vag(p)).join('')}" ${NS}/>`;
           o += `<path class="pv-u-strand pv-u-strand300" d="${(sk.strand.zoner.m300 || []).map(p => vag(p)).join('')}" ${NS}/>`;
         }
+        // strandlinjen som avstånden räknas från (0.16.6, BG)
+        if (sk.strand && Array.isArray(sk.strand.linjer) && sk.strand.linjer.length) o += `<path class="pv-u-strandlinje" d="${sk.strand.linjer.map(l => vag(l.pts, l.sluten)).join('')}" ${NS}/>`;
         if (Array.isArray(sk.natur)) o += `<path class="pv-u-natur" d="${sk.natur.flatMap(n => (n.ringar || []).map(r => vag(r, true))).join('')}" ${NS}/>`;
         if (Array.isArray(sk.lamningar)) sk.lamningar.filter(l => l.x != null).forEach(l => { o += `<circle class="pv-u-lamning" cx="${(l.x - O[0]).toFixed(2)}" cy="${(l.y - O[1]).toFixed(2)}" r="1.2" ${NS}><title>${esc(l.klass || 'Lämning')}</title></circle>`; });
       }
-      if (v.trad || S.verktyg === 'trad') {
+      if (v.trad || S.verktyg === 'trad' || S.seDolda) {
         for (const t of S.trad) {
-          if (t.dolt && S.verktyg !== 'trad') continue;
+          if (t.dolt && S.verktyg !== 'trad' && !S.seDolda) continue;
+          if (!t.dolt && !v.trad && S.verktyg !== 'trad') continue;
           o += `<circle class="pv-u-trad${t.dolt ? ' pv-u-dolt' : ''}${t.ny ? ' pv-u-egen' : ''}" cx="${(t.x - O[0]).toFixed(2)}" cy="${(t.y - O[1]).toFixed(2)}" r="${Math.max(0.5, t.krona / 2).toFixed(2)}" ${NS}/>`;
         }
       }
@@ -361,7 +385,7 @@
      * En byggnad (0.16.0): kroppar med samma status som går in i varandra ritas som ett yttre skal. Är en av
      * dem markerad ritas skalets kroppar var för sig (enh har då en enhet per kropp, oppen = true).
      */
-    function ritaEnhet(e, alla) {
+    function ritaEnhet(e, alla, hinder) {
       const st = e.status, sel = e.kroppar.includes(S.vald);
       const d = e.ringar.map(r => 'M' + r.map(P).join(' L') + ' Z').join(' ');
       let o = `<path class="pv-kropp pv-${st}${sel ? ' pv-vald' : ''}${e.oppen ? ' pv-oppen' : ''}" fill-rule="evenodd" d="${d}" data-k="${esc(e.kroppar[0])}"/>`;
@@ -383,10 +407,13 @@
       // texterna som på ritningen (0.16.4, DI): namnet i fetstil, FG och arean mindre, i ritningens storlek;
       // får de inte plats står de utanför med en ledare
       const bak = st === 'tillbyggnad' || st === 'ny' || marken.length;
-      const et = SP().etikettText(e, S.volymer, mm, marken, alla);
-      et.ledare.forEach(g => { o += `<polyline class="pv-ledare" fill="none" points="${g.linje.map(P).join(' ')}"/>` + poly(g.pil, 'pv-etikettpil'); });
+      const et = SP().etikettText(e, S.volymer, mm, marken, alla, hinder);
+      // texterna och ledarens pil går att dra (0.16.6, BN); index i senasteEtiketter
+      const g0 = senasteEtiketter.length;
+      senasteEtiketter.push(...et.grupper);
+      et.ledare.forEach(g => { o += `<polyline class="pv-ledare" fill="none" points="${g.linje.map(P).join(' ')}"/>` + poly(g.pil, 'pv-etikettpil', g.g != null ? `data-etikettpil="${g0 + g.g}"` : ''); });
       if (bak) et.rutor.forEach(r => { o += textbakM(r.p, r.b, r.h, r.vinkel); });
-      et.texter.forEach(t => { o += text(t.p, t.text, pxmm(t.h), 'pv-etikett' + (t.fet ? ' pv-fet' : ''), t.vinkel, t.ha === 'left' ? 'start' : t.ha === 'right' ? 'end' : 'middle'); });
+      et.texter.forEach(t => { o += text(t.p, t.text, pxmm(t.h), 'pv-etikett' + (t.fet ? ' pv-fet' : '') + (etDrag && etDrag.gi === g0 + t.g ? ' pv-drar' : ''), t.vinkel, t.ha === 'left' ? 'start' : t.ha === 'right' ? 'end' : 'middle', t.g != null ? `data-etikett="${g0 + t.g}"` : ''); });
       if (S.visa.koord && !S.visa.koordlista && st !== 'befintlig') {
         const c = tyngd(e.yttre);
         e.ringar.forEach(r => r.forEach(q => {
@@ -404,15 +431,23 @@
       const r = opt.utsnitt;
       if (r) o += poly([[r.xmin, r.ymin], [r.xmax, r.ymin], [r.xmax, r.ymax], [r.xmin, r.ymax]], 'pv-utsnitt');
       synligaHus().forEach(h => { o += poly(h.fotavtryck, 'pv-hus' + (S.hovHus === h ? ' pv-hov' : ''), ''); });
+      // dolda hus utgråade med Se dolda (0.16.6, BP)
+      if (S.seDolda) doldaHus().forEach(h => { o += poly(h.fotavtryck, 'pv-hus pv-husdolt' + (S.hovHus === h ? ' pv-hov' : ''), ''); });
       const enh = SP().enheter(S.volymer, { oppen: S.vald }).sort((a, b) => ordning[a.status] - ordning[b.status] || (a.kroppar.includes(S.vald) - b.kroppar.includes(S.vald)));
-      enh.forEach(e => { o += ritaEnhet(e, enh); });
+      const hinder = raknaMatt(enh);
+      senasteEtiketter = [];
+      enh.forEach(e => { o += ritaEnhet(e, enh, hinder); });
       // gränserna ovanpå byggnaderna, så att ingen byggnad skymmer dem (0.16.1)
       granser.forEach(g => { o += `<polyline class="pv-grans" points="${g.map(P).join(' ')}"/>`; });
       if (S.vy.z > 2) granser.forEach(g => g.forEach(q => { const s = w2s(q); if (s[0] > -5 && s[0] < W + 5 && s[1] > -5 && s[1] < H + 5) o += `<circle class="pv-granspunkt" cx="${s[0].toFixed(1)}" cy="${s[1].toFixed(1)}" r="2.2"/>`; }));
-      if (S.visa.koordlista) SP().numreradeHorn(S.volymer).forEach(h => {
-        o += text(add(h.p, mul(h.ut, 2.6 * MM())), String(h.nr), pxmm(2.0), 'pv-koordnr');
+      // hörnens nummer går att dra (0.16.6, BQ)
+      senasteNr = S.visa.koordlista ? SP().numreradeHorn(S.volymer) : [];
+      senasteNr.forEach((h, i) => {
+        const q = SP().nrPunkt(h, MM()), l = SP().nrLinje(h, q, MM());
+        if (l) o += linje(l[0], l[1], 'pv-nrlinje');
+        o += text(q, String(h.nr), pxmm(2.0), 'pv-koordnr' + (nrDrag && nrDrag.i === i ? ' pv-drar' : ''), 0, 'middle', `data-nr="${i}"`);
       });
-      o += ritaMatt(enh);
+      o += ritaMatt();
       o += ritaLedare();
       if (S.visa.ram && S.ram) {
         // det som ritningshuvudet, teckenförklaringen och upplysningen täcker (0.16.4, DF)
@@ -423,7 +458,9 @@
         o += poly(ramHorn(), 'pv-ramgrepp', 'data-ramgrepp="1"');
       }
       const k = vald();
-      if (k && S.verktyg === 'valj') k.fotavtryck.forEach((p, i) => { const s = w2s(p); o += `<rect class="pv-grepp" data-grepp="${i}" x="${(s[0] - 5).toFixed(1)}" y="${(s[1] - 5).toFixed(1)}" width="10" height="10"/>`; });
+      // inga grepp på en kropp med låst placering (0.16.6)
+      if (k && S.verktyg === 'valj' && !last(k)) k.fotavtryck.forEach((p, i) => { const s = w2s(p); o += `<rect class="pv-grepp${lastForm(k) ? ' pv-grepp-last' : ''}" data-grepp="${i}" x="${(s[0] - 5).toFixed(1)}" y="${(s[1] - 5).toFixed(1)}" width="10" height="10"/>`; });
+      if (k && last(k)) { const c = w2s(tyngd(k.fotavtryck)); o += `<text class="pv-lasikon" x="${c[0].toFixed(1)}" y="${(c[1] + 22).toFixed(1)}" text-anchor="middle">låst</text>`; }
       // pågående ritning
       if (S.verktyg === 'rekt' && S.ritar.length === 1) {
         o += poly(rektFran(S.ritar[0], S.markor), 'pv-gummi');
@@ -435,6 +472,7 @@
         const sista = S.ritar[S.ritar.length - 1], d = sub(S.markor, sista), l = len(d);
         if (l > 0.01) { const a = ((Math.atan2(d[1], d[0]) / RAD - S.riktning) % 360 + 360) % 360; o += text(add(S.markor, [px(12), px(-12)]), `${fmt(l, 2)} m  ${fmt(a, 1)}°`, 11, 'pv-hjalptext', 0, 'start'); }
       }
+      o += ritaOp();
       if (S.hovKant) o += linje(S.hovKant.a, S.hovKant.b, 'pv-hovkant');
       if (S.traff) {
         const s = w2s(S.traff.p), q = 6, t = S.traff.typ;
@@ -446,7 +484,8 @@
       // ritriktningen och norrpilen
       const [ax, ay] = axlar(), bx = 34, by = H - 34, L = 26;
       o += `<g class="pv-ucs"><path d="M${bx},${by} L${bx + ax[0] * L},${by - ax[1] * L} M${bx},${by} L${bx + ay[0] * L},${by - ay[1] * L}"/><text x="${bx + ax[0] * (L + 9)}" y="${by - ax[1] * (L + 9) + 4}" text-anchor="middle">x</text><text x="${bx + ay[0] * (L + 9)}" y="${by - ay[1] * (L + 9) + 4}" text-anchor="middle">y</text><text x="${bx + 6}" y="${by + 20}">${fmt(S.riktning, 1)}°</text></g>`;
-      o += `<g class="pv-norr" transform="translate(${W - 30},40)"><path d="M0,-16 L7,8 L0,3 L-7,8z"/><text x="0" y="24" text-anchor="middle">N</text></g>`;
+      // sann nord (0.16.6): vriden med meridiankonvergensen
+      o += `<g class="pv-norr" transform="translate(${W - 30},40) rotate(${(opt.sannNord || 0).toFixed(3)})"><title>Sann nord</title><path d="M0,-16 L7,8 L0,3 L-7,8z"/><text x="0" y="24" text-anchor="middle" transform="rotate(${(-(opt.sannNord || 0)).toFixed(3)} 0 20)">N</text></g>`;
       dyn.innerHTML = o;
     }
     /** Ledarna (0.16.1): linje, pil och text; texten och pilen går att dra, texten att klicka på. */
@@ -463,6 +502,114 @@
       if (S.verktyg === 'ledare' && S.ritar.length === 1) o += `<polyline class="pv-gummi" fill="none" points="${[S.ritar[0], S.markor].map(P).join(' ')}"/>`;
       return o;
     }
+    // ------------------------------------------------------------------
+    // Flytta och Rotera (0.16.6, BN): som i CAD, baspunkt och mål, rotationspunkt, referens och mål
+    // ------------------------------------------------------------------
+    const rot2 = (p, c, a) => { const co = Math.cos(a), si = Math.sin(a), d = sub(p, c); return [c[0] + d[0] * co - d[1] * si, c[1] + d[0] * si + d[1] * co]; };
+    /** Vinkeln (rad) från rotationspunkten mot det som pekas ut: ett hörn, annars en linje, annars markören. */
+    function riktningVid(sx, sy, c) {
+      const sn = hittaSnapp(sx, sy, null, S.op && S.op.typ === 'rotera' && S.op.steg === 'mal' ? opGrupp() : null);
+      // ett hörn är en punkt (riktningen från rotationspunkten); en mittpunkt eller en linje är linjen
+      if (sn && len(sub(sn.p, c)) > 0.01 && sn.typ === 'hörn') return { a: Math.atan2(sn.p[1] - c[1], sn.p[0] - c[0]), linje: false, p: sn.p, traff: sn };
+      const k = narmasteKant(sx, sy, x => !(S.op && S.op.steg === 'mal' && x.typ === 'kropp' && opGrupp().has(x.k)), 10);
+      if (k) return { a: Math.atan2(k.b[1] - k.a[1], k.b[0] - k.a[0]), linje: true, kant: k };
+      const w = s2w(sx, sy);
+      return len(sub(w, c)) > 1e-6 ? { a: Math.atan2(w[1] - c[1], w[0] - c[0]), linje: false, p: w } : null;
+    }
+    /** Vridningen (grader moturs) från referensen till målet; mellan två linjer den minsta (±90°). */
+    function opVinkel(ref, mal) {
+      let d = (mal.a - ref.a) / RAD;
+      if (ref.linje || mal.linje) { while (d > 90) d -= 180; while (d <= -90) d += 180; } else { while (d > 180) d -= 360; while (d <= -180) d += 360; }
+      return d;
+    }
+    const opGrupp = () => (S.op && S.op.k ? V.komponent(S.volymer, S.op.k) : new Set());
+    /** Spöket av det som flyttas eller roteras, och gummibandet. */
+    function ritaOp() {
+      const op = S.op;
+      if (!op || op.steg === 'valj') return '';
+      const g = opGrupp(), vol = S.volymer.filter(v => g.has(v.id));
+      let o = '', f = null;
+      if (op.typ === 'flytta' && op.steg === 'mal') {
+        const d = sub(S.markor, op.bas);
+        f = p => add(p, d);
+        o += linje(op.bas, S.markor, 'pv-opband');
+        o += text(add(S.markor, [px(12), px(-12)]), `${fmt(len(d), 2)} m`, 11, 'pv-hjalptext', 0, 'start');
+      }
+      if (op.typ === 'rotera') {
+        const c = op.c;
+        if (c) o += `<circle class="pv-opcentrum" cx="${w2s(c)[0].toFixed(1)}" cy="${w2s(c)[1].toFixed(1)}" r="5"/>`;
+        if (op.steg === 'ref' && c) o += linje(c, S.markor, 'pv-opband');
+        if (op.steg === 'mal' && c) {
+          const ri = op.hov, ref = op.ref;
+          const L = Math.max(px(80), 4), u = [Math.cos(ref.a), Math.sin(ref.a)];
+          o += linje(c, add(c, mul(u, L)), 'pv-opref');
+          if (ri) {
+            const d = opVinkel(ref, ri), a = d * RAD;
+            f = p => rot2(p, c, a);
+            o += linje(c, add(c, mul([Math.cos(ref.a + a), Math.sin(ref.a + a)], L)), 'pv-opband');
+            o += text(add(S.markor, [px(12), px(-12)]), `${fmt(d, 2)}°`, 11, 'pv-hjalptext', 0, 'start');
+          }
+        }
+      }
+      if (f) vol.forEach(v => { o += poly(v.fotavtryck.map(f), 'pv-spoke'); });
+      return o;
+    }
+    function startaOp(typ, k, forval = {}) {
+      if (k && gruppLast(k)) { besked('Byggnaden har låst placering. Lås upp den i smartmenyn eller panelen först.'); return; }
+      const op = { typ, k: k || null, steg: k ? (typ === 'flytta' ? 'bas' : 'centrum') : 'valj' };
+      Object.assign(op, forval);
+      if (k) S.vald = k;
+      if (satVerktyg(typ, true) === false) return;
+      S.op = op;
+      allt();
+    }
+    /** Ett klick i Flytta eller Rotera. */
+    function klickOp(sx, sy) {
+      const op = S.op, w = s2w(sx, sy);
+      if (!op) return;
+      if (op.steg === 'valj') {
+        const t = kroppVid(w);
+        if (!t) { besked('Klicka på en byggnad.'); return; }
+        if (gruppLast(t.id)) { besked('Byggnaden har låst placering.'); return; }
+        S.vald = t.id; op.k = t.id; op.steg = op.typ === 'flytta' ? 'bas' : 'centrum'; allt(); return;
+      }
+      if (op.typ === 'flytta') {
+        if (op.steg === 'bas') { op.bas = plocka(sx, sy, null); op.steg = 'mal'; S.markor = op.bas; allt(); return; }
+        slutFlytta(plocka(sx, sy, op.bas, opGrupp()));
+        return;
+      }
+      if (op.steg === 'centrum') {
+        op.c = plocka(sx, sy, null); S.markor = op.c;
+        // referensen redan vald ur smartmenyn (en sida)
+        if (op.forRef) { op.ref = op.forRef; op.steg = 'mal'; op.hov = null; } else op.steg = 'ref';
+        allt(); return;
+      }
+      const ri = riktningVid(sx, sy, op.c);
+      if (!ri) return;
+      if (op.steg === 'ref') { op.ref = ri; op.steg = 'mal'; op.hov = null; allt(); return; }
+      slutRotera(opVinkel(op.ref, ri), ri.linje ? (ri.kant.typ === 'gräns' ? 'gränsen' : 'linjen') : 'punkten');
+    }
+    function slutFlytta(mal) {
+      const op = S.op, d = sub(mal, op.bas);
+      if (len(d) > 1e-6) {
+        andra(() => {
+          Kr.flytta(S.volymer, op.k, d[0], d[1]);
+          const k = S.volymer.find(v => v.id === op.k);
+          if (k && dockaTillbyggnad(k)) setTimeout(() => besked('Tillbyggnaden är dockad mot fasaden.'), 0);
+        });
+        besked(`Flyttad ${fmt(len(d), 3)} m.`);
+      }
+      S.op = null; satVerktyg('valj');
+    }
+    function slutRotera(grader, mot) {
+      const op = S.op;
+      if (Math.abs(grader) > 1e-6) andra(() => Kr.vrid(S.volymer, op.k, Math.round(grader * 1e4) / 1e4, op.c));
+      besked(`Roterad ${fmt(grader, 2)}°${mot ? ' mot ' + mot : ''}.`);
+      S.op = null; satVerktyg('valj');
+    }
+    /** Kroppen under punkten (den översta). */
+    const kroppVid = w => S.volymer.slice().sort((a, b) => ordning[Kr.status(b)] - ordning[Kr.status(a)]).find(v => inuti(v.fotavtryck, w[0], w[1])) || null;
+
     const rektMatt = (a, b) => { const [ax, ay] = axlar(), d = sub(b, a); return [Math.abs(dot(d, ax)), Math.abs(dot(d, ay))]; };
     function rektFran(a, b) { const [ax, ay] = axlar(), d = sub(b, a), lx = dot(d, ax), ly = dot(d, ay); return [a, add(a, mul(ax, lx)), add(add(a, mul(ax, lx)), mul(ay, ly)), add(a, mul(ay, ly))]; }
 
@@ -491,6 +638,8 @@
             <p class="pv-not">Taket dras ut längs nocken in i kroppen bredvid, så att taken möts. Fotavtrycket i plan ändras inte.</p></fieldset>` : ''}
           <div class="pv-harlett" data-harlett></div>
           <div class="pv-knappar">
+            <button type="button" class="knapp liten" data-a="flytta" title="Baspunkt och målpunkt (M)"${last(k) ? ' disabled' : ''}>Flytta</button>
+            <button type="button" class="knapp liten" data-a="rotera" title="Rotationspunkt, referens och mål (O)"${last(k) ? ' disabled' : ''}>Rotera</button>
             <button type="button" class="knapp liten" data-a="folj" title="Vrid så att närmaste sida följer ritriktningen">Följ ritriktning</button>
             <button type="button" class="knapp liten" data-a="vrid">Vrid…</button>
             <button type="button" class="knapp liten" data-a="vridmot" title="Klicka på en sida i byggnaden och sedan på en linje (A)">Vrid mot linje</button>
@@ -499,6 +648,8 @@
             <button type="button" class="knapp liten" data-a="tabort">Ta bort</button>
             <button type="button" class="knapp liten" data-a="avmarkera">Klar</button>
           </div>
+          <div class="pv-knappar pv-las"><button type="button" class="knapp liten" data-a="lasform" aria-pressed="${!!k.lastForm}"${k.last ? ' disabled' : ''} title="Storleken och formen ligger fast; ett hörn flyttar hela byggnaden">Lås form</button><button type="button" class="knapp liten" data-a="lasplats" aria-pressed="${!!k.last}" title="Byggnaden går inte att flytta, vrida, ändra eller ta bort">Lås placering</button></div>
+          ${k.last ? '<p class="pv-not">Placeringen är låst. Namn, status, golv och tak går fortfarande att ändra.</p>' : k.lastForm ? '<p class="pv-not">Formen är låst: ett hörn eller en ny koordinat flyttar hela byggnaden.</p>' : ''}
         </section>
         <section><h3>Hörn och sidor</h3><table class="pv-horn" data-horn></table>
           <p class="pv-not">${Kr.arRektangel(k.fotavtryck) ? 'Rektangel: en ny koordinat flyttar hela kroppen, en ny sidlängd flyttar motstående sida.' : 'En ny koordinat flyttar hörnet, en ny sidlängd flyttar nästa hörn.'} Koordinaterna är i ${esc(opt.zonNamn || 'zonen')}.</p></section>`;
@@ -547,8 +698,9 @@
       if (!hb || hb.contains(document.activeElement)) return;
       let o = '<tr><th></th><th>E</th><th>N</th></tr>';
       f.forEach((q, i) => {
-        o += `<tr><td class="pv-nr">${i + 1}</td><td><input data-h="${i}" data-c="0" inputmode="decimal" value="${fmt(q[0], 3)}"></td><td><input data-h="${i}" data-c="1" inputmode="decimal" value="${fmt(q[1], 3)}"></td></tr>`;
-        o += `<tr class="pv-sida"><td></td><td colspan="2"><label>sida ${i + 1}–${(i + 1) % n + 1} <input data-sida="${i}" inputmode="decimal" value="${fmt(len(sub(f[(i + 1) % n], q)), 3)}"> m</label></td></tr>`;
+        const av = last(k) ? ' disabled' : '', avForm = lastForm(k) ? ' disabled' : '';
+        o += `<tr><td class="pv-nr">${i + 1}</td><td><input data-h="${i}" data-c="0" inputmode="decimal" value="${fmt(q[0], 3)}"${av}></td><td><input data-h="${i}" data-c="1" inputmode="decimal" value="${fmt(q[1], 3)}"${av}></td></tr>`;
+        o += `<tr class="pv-sida"><td></td><td colspan="2"><label>sida ${i + 1}–${(i + 1) % n + 1} <input data-sida="${i}" inputmode="decimal" value="${fmt(len(sub(f[(i + 1) % n], q)), 3)}"${avForm}> m</label></td></tr>`;
       });
       hb.innerHTML = o;
     }
@@ -591,7 +743,7 @@
         andra(() => {
           const p = k.fotavtryck.map(q => q.slice()), d = [0, 0];
           d[c] = x - p[i][c];
-          if (Kr.arRektangel(p)) Kr.flytta(S.volymer, k.id, d[0], d[1]);
+          if (Kr.arRektangel(p) || lastForm(k)) Kr.flytta(S.volymer, k.id, d[0], d[1]);
           else { p[i] = add(p[i], d); if (Kr.satHorn(k, p) === false) besked('Hörnet kan inte ligga där: sidorna skulle korsa varandra.'); }
         });
         return;
@@ -630,15 +782,11 @@
         besked(r && (r.utdrag[0] || r.utdrag[1]) ? `Taket draget ${[r.utdrag[0], r.utdrag[1]].filter(x => x).map(x => fmt(x, 2) + ' m').join(' och ')} in i kroppen bredvid. Se resultatet i 3D.` : 'Ingen gavel ligger an mot en annan kropp, eller taket når inte in i den.');
       }
       else if (a === 'vridmot') { satVerktyg('vridmot'); }
-      else if (a === 'kopiera') andra(() => {
-        const c = kopia(k), [ax] = axlar(), sd = Kr.sidor(k.fotavtryck), bredd = Math.max(...sd.map(s => Math.abs(dot(s.u, ax)) * s.l)) || 5;
-        c.id = opt.nyttId(); c.namn = (k.namn || 'Byggnad') + ' (kopia)'; c.kalla = null;
-        if (c.status === 'befintlig' || c.status === 'rivs') c.status = 'ny';
-        if (c.golv == null) c.golv = NaN;
-        if (c.primitiv) c.primitiv.lankar = [];
-        V.flytta(c, ax[0] * (bredd + 2), ax[1] * (bredd + 2));
-        S.volymer.push(c); S.vald = c.id;
-      });
+      else if (a === 'kopiera') kopieraKropp(k);
+      else if (a === 'lasform') andra(() => { if (k.lastForm) delete k.lastForm; else k.lastForm = true; });
+      else if (a === 'lasplats') andra(() => { if (k.last) delete k.last; else k.last = true; });
+      else if (a === 'flytta' || a === 'rotera') startaOp(a, k.id);
+      else if (['folj', 'vrid', 'vridmot', 'tabort'].includes(a) && gruppLast(k.id)) besked('Byggnaden har låst placering. Lås upp den först.');
       else if (a === 'folj') andra(() => {
         const sd = Kr.sidor(k.fotavtryck).sort((x, y) => y.l - x.l)[0];
         if (!sd) return;
@@ -665,7 +813,7 @@
      * Ger true om den flyttades.
      */
     function dockaTillbyggnad(k) {
-      if (!k || Kr.status(k) !== 'tillbyggnad') return false;
+      if (!k || Kr.status(k) !== 'tillbyggnad' || gruppLast(k.id)) return false;
       const egen = V.komponent(S.volymer, k.id);
       const mal = S.volymer.filter(v => !egen.has(v.id) && Kr.status(v) === 'befintlig').map(v => v.fotavtryck).concat(synligaHus().map(h => h.fotavtryck));
       const r = Kr.dockning(k, mal, { maxAvst: Math.max(0.6, px(24)) });
@@ -674,9 +822,23 @@
       Kr.flytta(S.volymer, k.id, r.d[0], r.d[1]);
       return true;
     }
+    /** En kopia bredvid, med ny status om originalet är befintligt (0.14.0; utbrutet 0.16.6). Kopian är olåst. */
+    function kopieraKropp(k) {
+      andra(() => {
+        const c = kopia(k), [ax] = axlar(), sd = Kr.sidor(k.fotavtryck), bredd = Math.max(...sd.map(s => Math.abs(dot(s.u, ax)) * s.l)) || 5;
+        c.id = opt.nyttId(); c.namn = (k.namn || 'Byggnad') + ' (kopia)'; c.kalla = null;
+        delete c.last; delete c.lastForm; delete c.matt;
+        if (c.status === 'befintlig' || c.status === 'rivs') c.status = 'ny';
+        if (c.golv == null) c.golv = NaN;
+        if (c.primitiv) c.primitiv.lankar = [];
+        V.flytta(c, ax[0] * (bredd + 2), ax[1] * (bredd + 2));
+        S.volymer.push(c); S.vald = c.id;
+      });
+    }
     function taBort() {
       const k = vald();
       if (!k) return;
+      if (last(k)) { besked('Byggnaden har låst placering och tas inte bort. Lås upp den först.'); return; }
       andra(() => {
         S.volymer = S.volymer.filter(v => v.id !== k.id);
         S.volymer.forEach(v => { if (v.primitiv && v.primitiv.lankar) v.primitiv.lankar = v.primitiv.lankar.filter(x => x !== k.id); });
@@ -725,10 +887,189 @@
     // Mus och pekare
     // ------------------------------------------------------------------
     let drag = null, mellanslag = false, ramDrag = null;
+    const avrundaP = p => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000];
+    /** Börjar dra kroppen k (och de länkade) med greppet i punkten grepp. */
+    function borjaFlytta(e, k, grepp, sx, sy, kontext) {
+      const grupp = V.komponent(S.volymer, k);
+      drag = { typ: 'flytta', k, grepp, fore: ogonblick(), flyttad: false, grupp, sx, sy, kontext,
+        orig: new Map(S.volymer.filter(v => grupp.has(v.id)).map(v => [v.id, JSON.stringify(kopia(v))])) };
+      svg.setPointerCapture(e.pointerId);
+    }
+    /**
+     * Det som ligger under markören, för smartmenyn (0.16.6, BN): ett hörn eller en sida i en byggnad (den
+     * markerade först), en byggnad, ett träd, ett hus från Lantmäteriet eller en fastighetsgräns.
+     */
+    function kontextVid(sx, sy) {
+      const w = s2w(sx, sy);
+      const kroppar = S.volymer.slice().sort((a, b) => ((b.id === S.vald) - (a.id === S.vald)) || ordning[Kr.status(b)] - ordning[Kr.status(a)]);
+      for (const v of kroppar) for (let i = 0; i < v.fotavtryck.length; i++) {
+        const q = w2s(v.fotavtryck[i]);
+        if (Math.hypot(q[0] - sx, q[1] - sy) < 9) return { typ: 'horn', k: v.id, i, p: v.fotavtryck[i].slice() };
+      }
+      const kant = narmasteKant(sx, sy, x => x.typ === 'kropp', 6);
+      if (kant) return { typ: 'sida', k: kant.k, i: kant.i, a: kant.a, b: kant.b, t: kant.t, p: add(kant.a, mul(sub(kant.b, kant.a), kant.t)) };
+      const v = kroppVid(w);
+      if (v) return { typ: 'kropp', k: v.id, p: w };
+      if (S.visa.trad || S.seDolda) { const tr = tradVid(sx, sy); if (tr && (!tr.dolt || S.seDolda)) return { typ: 'trad', t: tr, p: [tr.x, tr.y] }; }
+      const h = synligaHus().concat(S.seDolda ? doldaHus() : []).find(b => inuti(b.fotavtryck, w[0], w[1]));
+      if (h) return { typ: 'hus', h, p: w };
+      const g = narmasteKant(sx, sy, x => x.typ === 'gräns', 6);
+      if (g) return { typ: 'grans', kant: g, p: w };
+      return null;
+    }
+
+    // ------------------------------------------------------------------
+    // Smartmenyn (0.16.6, BN): ett klick på ett hörn, en sida, en byggnad, ett träd, ett hus eller en gräns
+    // visar verktygen för just det, bredvid klicket (som smartmenyn i cad-apa)
+    // ------------------------------------------------------------------
+    let meny = null;
+    function stangMeny() { if (!smart.hidden) { smart.hidden = true; smart.innerHTML = ''; } meny = null; }
+    function oppnaMeny(kx, sx, sy) {
+      const m = kx && menyFor(kx);
+      if (!m || !m.lista.length) { stangMeny(); return; }
+      meny = m;
+      smart.innerHTML = `<div class="pv-sm-rubrik">${esc(m.titel)}</div>${m.falt || ''}<div class="pv-sm-knappar">${m.lista.map((b, i) =>
+        `<button type="button" class="knapp liten" data-sm="${i}"${b.av ? ' disabled' : ''}${b.tryckt != null ? ` aria-pressed="${!!b.tryckt}"` : ''}${b.tips ? ` title="${esc(b.tips)}"` : ''}>${esc(b.text)}</button>`).join('')}</div>${m.not ? `<p class="pv-sm-not">${esc(m.not)}</p>` : ''}`;
+      smart.hidden = false;
+      const bw = smart.offsetWidth || 220, bh = smart.offsetHeight || 80;
+      let x = sx + 16, y = sy + 12;
+      if (x + bw > W - 6) x = Math.max(6, sx - bw - 16);
+      if (y + bh > H - 6) y = Math.max(6, H - bh - 6);
+      smart.style.left = x + 'px'; smart.style.top = y + 'px';
+    }
+    smart.addEventListener('click', e => {
+      const b = e.target.closest('[data-sm]');
+      if (!b || !meny) return;
+      const f = meny.lista[+b.dataset.sm];
+      stangMeny();
+      if (f && f.fn) f.fn();
+    });
+    smart.addEventListener('change', e => { if (meny && meny.andrat) meny.andrat(e.target); });
+    smart.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') stangMeny(); if (e.key === 'Enter' && e.target.matches('input') && meny && meny.andrat) { meny.andrat(e.target); stangMeny(); } });
+    /** Den stängda enheten (skalet) som kroppen hör till. */
+    const skalFor = id => SP().enheter(S.volymer).find(e => e.kroppar.includes(id)) || null;
+    const nara = (a, b, tol = 0.002) => len(sub(a, b)) < tol;
+    /** Smartmenyns innehåll: { titel, lista: [{ text, fn, av, tryckt, tips }], falt, andrat, not }. */
+    function menyFor(kx) {
+      const k = kx.k ? S.volymer.find(v => v.id === kx.k) : null, ut = { titel: '', lista: [] }, L = ut.lista;
+      const lastP = k && gruppLast(k.id), st = k && Kr.status(k);
+      if (kx.typ === 'horn' && k) {
+        ut.titel = `Hörn ${kx.i + 1} · ${k.namn || 'Byggnad'}`;
+        L.push({ text: 'Flytta härifrån', av: lastP, tips: 'Hörnet är baspunkten; klicka sedan målpunkten', fn: () => { startaOp('flytta', k.id, { steg: 'mal', bas: kx.p }); S.markor = kx.p; } });
+        L.push({ text: 'Rotera kring hörnet', av: lastP, tips: 'Hörnet är rotationspunkten; klicka sedan referens och mål', fn: () => startaOp('rotera', k.id, { steg: 'ref', c: kx.p }) });
+        const e = skalFor(k.id);
+        if (e && granser.length && (e.status === 'ny' || e.status === 'tillbyggnad')) {
+          const hi = e.yttre.findIndex(q => nara(q, kx.p));
+          const finns = hi >= 0 && SP().matt(S.volymer, granser, { visa: S.visa }).some(m => m.typ === 'grans' && m.enhet === e.id && !m.dold && nara(m.fran, kx.p));
+          const egen = hi >= 0 && annotFor({ agare: e.agare, enhet: e.id, nyckel: `gh|${hi}` }).horn != null;
+          if (egen) L.push({ text: 'Ta bort måttet till gräns', fn: () => andra(() => SP().satAnnot(S.volymer, { agare: e.agare, enhet: e.id, nyckel: `gh|${hi}` }, null)) });
+          else L.push({ text: 'Mått till tomtgräns härifrån', av: hi < 0 || finns, tips: hi < 0 ? 'Hörnet ligger inne i byggnaden' : finns ? 'Hörnet har redan ett mått till gräns' : 'Vinkelrätt mot närmaste gräns; dra måttet till en annan gräns om det behövs',
+            fn: () => { andra(() => SP().satAnnot(S.volymer, { agare: e.agare, enhet: e.id, nyckel: `gh|${hi}` }, { horn: hi })); visaSkalet(e); } });
+        }
+        return ut;
+      }
+      if (kx.typ === 'sida' && k) {
+        const n = k.fotavtryck.length;
+        ut.titel = `Sida ${kx.i + 1}–${(kx.i + 1) % n + 1} · ${k.namn || 'Byggnad'}`;
+        const e = skalFor(k.id);
+        if (e && st !== 'rivs') {
+          const mitt = mul(add(kx.a, kx.b), 0.5), sd = Kr.sidor(e.yttre).find(x => Math.abs(dot(sub(mitt, x.a), x.n)) < 0.003 && dot(sub(mitt, x.a), x.u) > -0.003 && dot(sub(mitt, x.a), x.u) < x.l + 0.003);
+          if (sd) {
+            const m = SP().matt(S.volymer, granser, { visa: Object.assign({}, S.visa, { ytter: true }) }).find(x => x.typ === 'sida' && x.enhet === e.id && nara(x.fran, sd.a) && nara(x.till, sd.b));
+            const ref = m ? { agare: m.agare, enhet: m.enhet, nyckel: m.nyckel } : { agare: e.agare, enhet: e.id, nyckel: `ys|${sd.i}` };
+            if (m && m.egen) L.push({ text: 'Ta bort yttermåttet', fn: () => andra(() => SP().satAnnot(S.volymer, ref, null)) });
+            else if (m && !m.dold) L.push({ text: 'Dölj yttermåttet', fn: () => andra(() => SP().satAnnot(S.volymer, ref, Object.assign({}, annotFor(ref), { dold: true }))) });
+            else if (m && m.dold) L.push({ text: 'Visa yttermåttet', fn: () => andra(() => { const a = Object.assign({}, annotFor(ref)); delete a.dold; SP().satAnnot(S.volymer, ref, Object.keys(a).length ? a : null); }) });
+            else L.push({ text: 'Yttermått på sidan', fn: () => { andra(() => SP().satAnnot(S.volymer, ref, { sida: sd.i })); visaSkalet(e); } });
+          }
+        }
+        L.push({ text: 'Rotera, sidan som referens', av: lastP, tips: 'Klicka rotationspunkten och sedan mållinjen', fn: () => startaOp('rotera', k.id, { steg: 'centrum', forRef: { a: Math.atan2(kx.b[1] - kx.a[1], kx.b[0] - kx.a[0]), linje: true } }) });
+        L.push({ text: 'Vrid mot linje', av: lastP, tips: 'Vrider byggnaden så att sidan blir parallell med en linje du klickar på', fn: () => { satVerktyg('vridmot'); S.vm = { k: k.id, u: norm(sub(kx.b, kx.a)), p: kx.p }; S.vald = k.id; allt(); } });
+        if (st !== 'rivs') L.push({ text: 'Entré här', fn: () => andra(() => { k.entre = { sida: kx.i, t: Math.round(kx.t * 1000) / 1000 }; }) });
+        L.push({ text: 'Ritriktning efter sidan', fn: () => satRiktning(kx.a, kx.b, 'fasaden') });
+        return ut;
+      }
+      if (kx.typ === 'kropp' && k) {
+        ut.titel = `${k.namn || 'Byggnad'} · ${Kr.STATUS[st]}`;
+        L.push({ text: 'Flytta', av: lastP, tips: 'Baspunkt och målpunkt (M)', fn: () => startaOp('flytta', k.id) });
+        L.push({ text: 'Rotera', av: lastP, tips: 'Rotationspunkt, referens och mål (O)', fn: () => startaOp('rotera', k.id) });
+        L.push({ text: 'Kopiera', fn: () => kopieraKropp(k) });
+        L.push({ text: 'Lås form', tryckt: !!k.lastForm, av: !!k.last, tips: 'Storleken och formen ligger fast; ett hörn flyttar hela byggnaden', fn: () => andra(() => { if (k.lastForm) delete k.lastForm; else k.lastForm = true; }) });
+        L.push({ text: 'Lås placering', tryckt: !!k.last, tips: 'Byggnaden går inte att flytta, vrida eller ändra', fn: () => andra(() => { if (k.last) delete k.last; else k.last = true; }) });
+        L.push({ text: 'Ta bort', av: last(k), fn: () => taBort() });
+        if (last(k)) ut.not = 'Placeringen är låst.';
+        else if (lastForm(k)) ut.not = 'Formen är låst: ett hörn flyttar hela byggnaden.';
+        return ut;
+      }
+      if (kx.typ === 'trad' && opt.tradAndrat) {
+        const t = kx.t;
+        ut.titel = (t.ny ? 'Eget träd' : 'Träd ur laserdatan') + (t.dolt ? ' (dolt)' : '');
+        ut.falt = `<div class="pv-sm-falt"><label>Höjd, m <input data-tf="hojd" inputmode="decimal" value="${decimal(t.hojd, 1)}"></label><label>Krona, m <input data-tf="krona" inputmode="decimal" value="${decimal(t.krona, 1)}"></label></div>`;
+        ut.andrat = el => {
+          const x = tal(el.value);
+          if (!(x > 0) || !el.dataset.tf) return;
+          tradAndra({ typ: 'andra', t, e: { [el.dataset.tf]: x } }, 'Trädet är ändrat.');
+        };
+        L.push({ text: t.dolt ? 'Visa trädet' : 'Dölj trädet', fn: () => tradAndra({ typ: t.dolt ? 'visa' : 'dolj', t }, t.dolt ? 'Trädet visas igen.' : 'Trädet är dolt. Se dolda visar det utgrått.') });
+        if (t.ny) L.push({ text: 'Ta bort trädet', fn: () => tradAndra({ typ: 'bort', t }, 'Trädet är borttaget.') });
+        ut.not = 'Höjd och krona gäller också i 3D-vyn och skuggorna.';
+        return ut;
+      }
+      if (kx.typ === 'hus') {
+        const h = kx.h;
+        ut.titel = (h.namn || 'Befintlig byggnad') + (h.dolt ? ' (dolt)' : '');
+        if (!h.dolt) L.push({ text: 'Ta in som befintlig', tips: 'Blir en byggnadskropp som går att ändra, med status Befintlig', fn: () => franHus(h) });
+        if (opt.husAndrat && h.id != null) L.push({ text: h.dolt ? 'Visa huset' : 'Dölj huset', tips: 'Som Dölj huset i 3D-vyn: borta ur skuggorna, filerna och platsen till cad-apa', fn: () => {
+          const pa = !h.dolt;
+          if (opt.husAndrat({ typ: pa ? 'dolj' : 'visa', id: String(h.id) }) === false) return;
+          h.dolt = pa; allt();
+          besked(pa ? 'Huset är dolt. Se dolda visar det utgrått.' : 'Huset visas igen.');
+        } });
+        return ut;
+      }
+      if (kx.typ === 'grans') {
+        ut.titel = 'Fastighetsgräns';
+        L.push({ text: 'Ritriktning efter gränsen', fn: () => satRiktning(kx.kant.a, kx.kant.b, 'gränsen') });
+        return ut;
+      }
+      if (kx.typ === 'etikett') {
+        const g = kx.g, a = annotFor(g);
+        ut.titel = 'Text';
+        L.push({ text: 'Välj vart ledaren pekar', tips: 'Klicka sedan på punkten', fn: () => { S.pilVal = g; besked('Klicka där ledaren ska peka.'); $('.planvy-prompt').textContent = 'Klicka där ledaren ska peka. Esc avbryter.'; } });
+        if (a.pil) L.push({ text: 'Ledaren till mitten', fn: () => andra(() => { const b = Object.assign({}, a); delete b.pil; SP().satAnnot(S.volymer, g, Object.keys(b).length ? b : null); }) });
+        if (a.t || a.pil) L.push({ text: 'Tillbaka till sin plats', fn: () => andra(() => SP().satAnnot(S.volymer, g, null)) });
+        ut.not = 'Dra i texten för att flytta den. Utanför byggnaden får den en ledare.';
+        return ut;
+      }
+      if (kx.typ === 'nr') {
+        const h = kx.h;
+        ut.titel = `Hörn nummer ${h.nr}`;
+        if (h.d) L.push({ text: 'Tillbaka till hörnet', fn: () => andra(() => SP().satAnnot(S.volymer, h, null)) });
+        ut.not = 'Dra i numret för att flytta det.';
+        return ut;
+      }
+      return null;
+    }
+    /** En byggnad av flera kroppar visar sina mått som en helhet när den inte är markerad. */
+    function visaSkalet(e) { if (e.kroppar.length > 1) { S.vald = null; allt(); besked('Måttet syns på byggnaden när ingen av kropparna är markerad.'); } }
+    function satRiktning(a, b, vad) {
+      let v = Math.atan2(b[1] - a[1], b[0] - a[0]) / RAD;
+      while (v > 45) v -= 90;
+      while (v <= -45) v += 90;
+      S.riktning = Math.round(v * 1e4) / 1e4;
+      besked(`Ritriktning ${fmt(S.riktning, 2)}° efter ${vad}.`);
+      rita();
+    }
+    function tradAndra(arg, text) {
+      const ny = opt.tradAndrat(arg);
+      if (Array.isArray(ny)) S.trad = ny;
+      byggUnderlag(); rita();
+      if (text) besked(text);
+    }
     const evPunkt = e => { const r = svg.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     const borjaPan = (e, sx, sy) => { drag = { typ: 'pan', sx, sy, cx: S.vy.cx, cy: S.vy.cy, flyttad: false }; svg.setPointerCapture(e.pointerId); };
     svg.addEventListener('pointerdown', e => {
-      dolj();
+      dolj(); stangMeny();
       const [sx, sy] = evPunkt(e);
       if (e.button === 1 || e.button === 2 || (e.button === 0 && mellanslag)) { e.preventDefault(); borjaPan(e, sx, sy); return; }
       if (e.button !== 0) return;
@@ -740,12 +1081,46 @@
         svg.setPointerCapture(e.pointerId);
         return;
       }
+      // vart en etiketts ledare pekar (0.16.6, BN): nästa klick
+      if (S.pilVal) {
+        const g = S.pilVal, p = plocka(sx, sy, null), a = Object.assign({}, annotFor(g));
+        S.pilVal = null;
+        andra(() => {
+          a.pil = avrundaP(sub(p, g.bas));
+          if (!a.t) a.t = avrundaP(sub(g.text || g.bas, g.bas));
+          SP().satAnnot(S.volymer, g, a);
+        });
+        besked('Ledaren pekar dit. Dra i pilen för att flytta den igen.');
+        prompt();
+        return;
+      }
       if (t.dataset && (t.dataset.ledare != null || t.dataset.ledarpil != null) && (S.verktyg === 'valj' || S.verktyg === 'ledare') && !S.ritar.length) {
         e.preventDefault();
         const i = +(t.dataset.ledare != null ? t.dataset.ledare : t.dataset.ledarpil), l = S.ledare[i];
         ledarDrag = { i, del: t.dataset.ledare != null ? 1 : 0, pts: l.pts.map(q => q.slice()), sx, sy, flyttad: false, ruta: t.getBoundingClientRect() };
         svg.setPointerCapture(e.pointerId);
         return;
+      }
+      // etiketterna och hörnens nummer (0.16.6, BN och BQ). En text inne i en byggnad som inte är markerad tar
+      // byggnaden, så att den fortfarande går att klicka på och dra i mitten.
+      if (S.verktyg === 'valj' && t.dataset && (t.dataset.etikett != null || t.dataset.etikettpil != null)) {
+        const gi = +(t.dataset.etikett != null ? t.dataset.etikett : t.dataset.etikettpil), g = senasteEtiketter[gi];
+        const egenMarkerad = g && S.vald != null && g.enhet.split('+').includes(S.vald);
+        if (g && (g.pil || egenMarkerad || t.dataset.etikettpil != null)) {
+          e.preventDefault();
+          etDrag = { gi, g, del: t.dataset.etikett != null ? 'text' : 'pil', start: w, sx, sy, flyttad: false, fore: ogonblick(), text0: (g.text || g.bas).slice(), pil0: (g.pil || g.bas).slice() };
+          svg.setPointerCapture(e.pointerId);
+          return;
+        }
+      }
+      if (S.verktyg === 'valj' && t.dataset && t.dataset.nr != null) {
+        const i = +t.dataset.nr, h = senasteNr[i];
+        if (h) {
+          e.preventDefault();
+          nrDrag = { i, h, start: w, sx, sy, flyttad: false, fore: ogonblick(), d0: (h.d || [0, 0]).slice() };
+          svg.setPointerCapture(e.pointerId);
+          return;
+        }
       }
       if (t.dataset && t.dataset.matt != null) {
         e.preventDefault();
@@ -754,23 +1129,28 @@
         svg.setPointerCapture(e.pointerId);
         return;
       }
+      if (S.verktyg === 'flytta' || S.verktyg === 'rotera') { klickOp(sx, sy); return; }
       if (S.verktyg === 'valj') {
         const k = vald();
+        // ett hörn på den markerade: dra hörnet (låst form: hela byggnaden), klick ger smartmenyn
         if (t.dataset && t.dataset.grepp != null && k) {
-          drag = { typ: 'grepp', i: +t.dataset.grepp, k: k.id, fore: ogonblick(), orig: k.fotavtryck.map(q => q.slice()) };
+          const i = +t.dataset.grepp, kx = { typ: 'horn', k: k.id, i, p: k.fotavtryck[i].slice() };
+          if (lastForm(k)) { borjaFlytta(e, k.id, kx.p, sx, sy, kx); return; }
+          drag = { typ: 'grepp', i, k: k.id, fore: ogonblick(), orig: k.fotavtryck.map(q => q.slice()), sx, sy, flyttad: false, kontext: kx };
           svg.setPointerCapture(e.pointerId); return;
         }
-        const traff = S.volymer.slice().sort((a, b) => ordning[Kr.status(b)] - ordning[Kr.status(a)]).find(v => inuti(v.fotavtryck, w[0], w[1]));
-        if (traff) {
-          S.vald = traff.id;
+        const kx = kontextVid(sx, sy);
+        if (kx && kx.k) {
+          S.vald = kx.k;
+          if (gruppLast(kx.k)) { drag = { typ: 'klick', kontext: kx, sx, sy }; svg.setPointerCapture(e.pointerId); allt(); return; }
           // greppet: ett hörn inom 12 px, annars punkten
-          let grepp = w;
-          for (const q of traff.fotavtryck) { const s = w2s(q); if (Math.hypot(s[0] - sx, s[1] - sy) < 12) { grepp = q.slice(); break; } }
-          const grupp = V.komponent(S.volymer, traff.id);
-          drag = { typ: 'flytta', k: traff.id, grepp, fore: ogonblick(), flyttad: false, grupp,
-            orig: new Map(S.volymer.filter(v => grupp.has(v.id)).map(v => [v.id, JSON.stringify(kopia(v))])) };
-          svg.setPointerCapture(e.pointerId); allt(); return;
+          const traff = S.volymer.find(v => v.id === kx.k);
+          let grepp = kx.typ === 'horn' ? kx.p : w;
+          if (kx.typ !== 'horn') for (const q of traff.fotavtryck) { const s2 = w2s(q); if (Math.hypot(s2[0] - sx, s2[1] - sy) < 12) { grepp = q.slice(); break; } }
+          borjaFlytta(e, kx.k, grepp, sx, sy, kx);
+          allt(); return;
         }
+        if (kx) { drag = { typ: 'klick', kontext: kx, sx, sy }; svg.setPointerCapture(e.pointerId); return; }
         S.vald = null; borjaPan(e, sx, sy); allt(); return;
       }
       if (S.verktyg === 'rekt') {
@@ -804,6 +1184,7 @@
         if (!S.vm) {
           const k2 = narmasteKant(sx, sy, x => x.typ === 'kropp', 16);
           if (!k2) { besked('Klicka på en sida i en byggnad.'); return; }
+          if (gruppLast(k2.k)) { besked('Byggnaden har låst placering.'); return; }
           S.vm = { k: k2.k, u: norm(sub(k2.b, k2.a)), p: add(k2.a, mul(sub(k2.b, k2.a), k2.t)) };
           S.vald = k2.k; S.hovKant = null; allt(); return;
         }
@@ -859,6 +1240,20 @@
       const [sx, sy] = evPunkt(e);
       if (ramDrag) { S.ramCentrum = [ramDrag.c0[0] + (sx - ramDrag.sx) / S.vy.z, ramDrag.c0[1] - (sy - ramDrag.sy) / S.vy.z]; rita(); return; }
       if (mattDrag) { if (mattDrag.kan) dragMatt(sx, sy); return; }
+      if (etDrag || nrDrag) {
+        const d0 = etDrag || nrDrag;
+        if (Math.hypot(sx - d0.sx, sy - d0.sy) > 3) d0.flyttad = true;
+        if (!d0.flyttad) return;
+        const dw = sub(s2w(sx, sy), d0.start);
+        if (etDrag) {
+          const g = etDrag.g, a = Object.assign({}, annotFor(g));
+          if (etDrag.del === 'text') a.t = avrundaP(sub(add(etDrag.text0, dw), g.bas));
+          else { a.pil = avrundaP(sub(plocka(sx, sy, null), g.bas)); if (!a.t) a.t = avrundaP(sub(etDrag.text0, g.bas)); }
+          SP().satAnnot(S.volymer, g, a);
+        } else SP().satAnnot(S.volymer, nrDrag.h, { d: avrundaP(add(nrDrag.d0, dw)) });
+        rita();
+        return;
+      }
       if (ledarDrag) {
         if (Math.hypot(sx - ledarDrag.sx, sy - ledarDrag.sy) > 3) ledarDrag.flyttad = true;
         if (ledarDrag.flyttad) { ledarDrag.pts[ledarDrag.del] = plocka(sx, sy, null); rita(); }
@@ -882,7 +1277,10 @@
         }
         return;
       }
+      if (drag && drag.typ === 'klick') return;
       if (drag && drag.typ === 'grepp') {
+        if (!drag.flyttad && Math.hypot(sx - drag.sx, sy - drag.sy) <= 3) return;
+        drag.flyttad = true;
         const k = S.volymer.find(v => v.id === drag.k), p = plocka(sx, sy, null, new Set([k.id])), o = drag.orig;
         if (Kr.arRektangel(o) && !e.altKey) {
           const mot = o[(drag.i + 2) % 4], ax = norm(sub(o[1], o[0])), ay = perp(ax), d = sub(p, mot), lx = dot(d, ax), ly = dot(d, ay);
@@ -895,13 +1293,27 @@
         return;
       }
       const bas = S.verktyg === 'poly' ? S.ritar[S.ritar.length - 1] : null;
-      if (S.verktyg === 'rekt' || S.verktyg === 'poly' || S.verktyg === 'ledare') S.markor = plocka(sx, sy, S.verktyg === 'ledare' ? (S.ritar[0] || null) : bas);
-      else { S.markor = s2w(sx, sy); S.traff = null; }
       S.hovKant = null; S.hovHus = null;
+      const op = S.op;
+      if (S.pilVal) S.markor = plocka(sx, sy, null);
+      else if (op && op.steg !== 'valj' && (op.typ === 'flytta' || op.typ === 'rotera')) {
+        if (op.typ === 'flytta') S.markor = op.steg === 'mal' ? plocka(sx, sy, op.bas, opGrupp()) : plocka(sx, sy, null);
+        else if (op.steg === 'centrum') S.markor = plocka(sx, sy, null);
+        else {
+          const ri = riktningVid(sx, sy, op.c);
+          S.markor = ri && ri.p ? ri.p : s2w(sx, sy);
+          S.traff = ri && ri.traff ? ri.traff : null;
+          S.hovKant = ri && ri.kant ? ri.kant : null;
+          if (op.steg === 'mal') op.hov = ri;
+        }
+      }
+      else if (S.verktyg === 'rekt' || S.verktyg === 'poly' || S.verktyg === 'ledare') S.markor = plocka(sx, sy, S.verktyg === 'ledare' ? (S.ritar[0] || null) : bas);
+      else { S.markor = s2w(sx, sy); S.traff = null; }
       if (S.verktyg === 'riktn') S.hovKant = narmasteKant(sx, sy, () => true);
       if (S.verktyg === 'entre') S.hovKant = narmasteKant(sx, sy, x => x.typ === 'kropp', 16);
       if (S.verktyg === 'vridmot') S.hovKant = S.vm ? narmasteKant(sx, sy, x => !(x.typ === 'kropp' && V.komponent(S.volymer, S.vm.k).has(x.k))) : narmasteKant(sx, sy, x => x.typ === 'kropp', 16);
       if (S.verktyg === 'lm') S.hovHus = synligaHus().find(b => inuti(b.fotavtryck, S.markor[0], S.markor[1])) || null;
+      if (S.verktyg === 'valj' && !S.pilVal) { const kx = kontextVid(sx, sy); svg.style.cursor = kx ? (kx.typ === 'horn' ? 'crosshair' : 'pointer') : ''; }
       status(S.markor);
       rita();
     });
@@ -925,15 +1337,23 @@
           // gränsmåttet släppt på en annan gräns (0.16.4, DG)
           if (d.forslag) andra(() => SP().satAnnot(S.volymer, m, Object.assign({}, annotFor(m), { mot: d.forslag.mot })));
           else { besked('Släpp måttet på en gräns som hörnet kan mätas vinkelrätt mot.'); rita(); }
-        } else if (d.flyttad && m) andra(() => SP().satAnnot(S.volymer, m, Object.assign({}, { off: Math.round(d.off * 100) / 100 })));
+        } else if (d.flyttad && m) andra(() => SP().satAnnot(S.volymer, m, Object.assign({}, annotFor(m), { off: Math.round(d.off * 100) / 100 })));
         else { rita(); setTimeout(() => oppnaMatt(d.i, d.ruta), 0); }
+        return;
+      }
+      if (etDrag || nrDrag) {
+        const d = etDrag || nrDrag, ar = !!etDrag;
+        etDrag = null; nrDrag = null;
+        if (d.flyttad) { S.angra.push(d.fore); if (S.angra.length > 100) S.angra.shift(); S.gorom = []; meddela(); allt(); }
+        else { rita(); oppnaMeny(ar ? { typ: 'etikett', g: d.g } : { typ: 'nr', h: d.h }, d.sx, d.sy); }
         return;
       }
       if (!drag) return;
       const d = drag;
       drag = null;
+      if (d.typ === 'klick') { allt(); oppnaMeny(d.kontext, d.sx, d.sy); return; }
       if (d.typ === 'flytta' || d.typ === 'grepp') {
-        if (d.typ === 'flytta' && !d.flyttad) { allt(); return; }
+        if (!d.flyttad) { allt(); if (d.kontext) oppnaMeny(d.kontext, d.sx, d.sy); return; }
         if (d.typ === 'flytta') { const k = S.volymer.find(v => v.id === d.k); if (k && dockaTillbyggnad(k)) besked('Tillbyggnaden är dockad mot fasaden.'); }
         S.angra.push(d.fore); if (S.angra.length > 100) S.angra.shift(); S.gorom = [];
         S.traff = null;
@@ -995,6 +1415,7 @@
       mattin.style.left = x + 'px'; mattin.style.top = y + 'px';
       mattdolj.style.left = (x + 84) + 'px'; mattdolj.style.top = y + 'px';
       mattin.value = fmt(m.d, 3); mattin.readOnly = !m.andra;
+      mattdolj.textContent = m.egen ? 'Ta bort' : 'Dölj';
       mattin.title = m.andra ? 'Skriv ett nytt mått och tryck Enter' : 'Markera byggnaden för att ändra den här sidan';
       mattin.focus(); mattin.select();
     }
@@ -1015,11 +1436,13 @@
       if (!m.andra) { besked('Den här sidan går inte att ändra som en helhet. Markera byggnaden och ändra kropparna var för sig.'); return; }
       if (m.andra.flytta) {
         if (x < 0) return;
+        if (m.andra.kroppar.some(id => gruppLast(id))) { besked('Byggnaden har låst placering.'); return; }
         const u = m.andra.flytta, d = x - m.d;
         andra(() => flyttaKroppar(m.andra.kroppar, u[0] * d, u[1] * d));
         if (m.typ === 'grans') besked(`Flyttad ${fmt(d, 3)} m vinkelrätt mot gränsen.`);
       } else if (m.andra.kropp && x > 0.1) {
         const k = S.volymer.find(v => v.id === m.andra.kropp);
+        if (lastForm(k)) { besked('Byggnaden har låst form.'); return; }
         if (k) andra(() => satSida(k, m.andra.i, (m.andra.l != null ? m.andra.l : m.d) + (x - m.d)));
       }
     });
@@ -1028,7 +1451,8 @@
       const m = senasteMatt[mattIndex];
       dolj();
       if (!m) return;
-      andra(() => SP().satAnnot(S.volymer, m, { dold: true }));
+      if (m.egen) { andra(() => SP().satAnnot(S.volymer, m, null)); besked('Måttet är borttaget.'); return; }
+      andra(() => SP().satAnnot(S.volymer, m, Object.assign({}, annotFor(m), { dold: true })));
       besked('Måttet är dolt. Visa det igen med Visa dolda mått i panelen.');
     });
     /** Dra ett yttermått eller ett mått mellan byggnader längre ut eller in (0.16.0). */
@@ -1072,6 +1496,11 @@
     kommando.addEventListener('keydown', e => {
       e.stopPropagation();
       if (e.key === 'Escape') { avbryt(); kommando.value = ''; kommando.blur(); return; }
+      // en bokstav i en tom rad är ett kortkommando (0.16.6): M, O … gäller direkt efter en inskriven rektangel
+      if (!kommando.value && !e.ctrlKey && !e.metaKey && !e.altKey && /^[a-zåäö]$/i.test(e.key) && !(S.verktyg === 'poly' && /^[sc]$/i.test(e.key))) {
+        const v = VERKTYG.find(x => x[2].toLowerCase() === e.key.toLowerCase());
+        if (v) { e.preventDefault(); satVerktyg(v[0]); kommando.blur(); return; }
+      }
       if (e.key !== 'Enter') return;
       const s = kommando.value.trim();
       kommando.value = '';
@@ -1095,7 +1524,19 @@
         if (r && r.typ === 'punkt') { const d = sub(r.p, S.ritar[0]); klarRekt(S.ritar[0], ax, ay, dot(d, ax), dot(d, ay)); return; }
         besked('Skriv bredd x djup, till exempel 12,6x9.'); return;
       }
+      // Flytta: avstånd i markörens riktning, @dx;dy eller E;N; Rotera: vinkeln i grader moturs (0.16.6)
+      if (S.verktyg === 'flytta' && S.op && S.op.steg === 'mal') {
+        const q = Kr.tolka(s, { bas: S.op.bas, axel: S.riktning, mot: markorRiktning(S.op.bas) });
+        if (q && q.typ === 'punkt') { slutFlytta(q.p); return; }
+        besked('Skriv ett avstånd (5), @dx;dy eller E;N.'); return;
+      }
+      if (S.verktyg === 'rotera' && S.op && (S.op.steg === 'ref' || S.op.steg === 'mal')) {
+        const x = tal(s);
+        if (isFinite(x)) { slutRotera(x, null); return; }
+        besked('Skriv vinkeln i grader, moturs (negativ medurs).'); return;
+      }
       if (S.verktyg === 'valj' && vald() && s) {
+        if (gruppLast(S.vald)) { besked('Byggnaden har låst placering.'); return; }
         const f = Kr.tolka(s.startsWith('@') ? s : '@' + s, { bas: [0, 0], axel: S.riktning });
         if (f && f.typ === 'punkt') { andra(() => Kr.flytta(S.volymer, S.vald, f.p[0], f.p[1])); besked('Flyttad.'); return; }
         besked('Med en byggnad vald flyttar @dx;dy den längs ritriktningen.'); return;
@@ -1107,9 +1548,18 @@
     // Verktyg, tangenter och knappar
     // ------------------------------------------------------------------
     function avbryt() { S.ritar = []; S.traff = null; rita(); prompt(); }
-    function satVerktyg(t) {
+    function satVerktyg(t, behallOp) {
       const tradFore = S.verktyg === 'trad';
-      S.verktyg = t; S.ritar = []; S.hovKant = null; S.hovHus = null; S.traff = null; S.vm = null;
+      S.verktyg = t; S.ritar = []; S.hovKant = null; S.hovHus = null; S.traff = null; S.vm = null; S.pilVal = null;
+      stangMeny();
+      // Flytta och Rotera (0.16.6): med en byggnad markerad börjar de på baspunkten eller rotationspunkten
+      if (!behallOp) {
+        S.op = null;
+        if (t === 'flytta' || t === 'rotera') {
+          const k = vald() && !gruppLast(S.vald) ? S.vald : null;
+          S.op = { typ: t, k, steg: k ? (t === 'flytta' ? 'bas' : 'centrum') : 'valj' };
+        }
+      }
       if (tradFore !== (t === 'trad')) byggUnderlag();
       rot.querySelectorAll('[data-verktyg]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.verktyg === t)));
       yta.dataset.verktyg = t;
@@ -1140,6 +1590,7 @@
       else if (a === 'angra') angra();
       else if (a === 'gorom') gorOm();
       else if (a === 'passa') { S.passadUtsnitt = !S.passadUtsnitt; passa(!S.passadUtsnitt); rita(); }
+      else if (a === 'sedolda') { S.seDolda = !S.seDolda; vaxlaKnapp('sedolda', S.seDolda); byggUnderlag(); rita(); besked(S.seDolda ? 'Dolda hus och träd visas utgråade. Klicka på ett för att visa det igen.' : 'Dolda hus och träd syns inte.'); }
       else if (a === 'stang') stang();
       else if (a === '3d' && opt.till3d) { stang(); opt.till3d(); }
     });
@@ -1153,10 +1604,15 @@
       if (e.key === 'F3') { e.preventDefault(); vaxla('snapp'); return; }
       if (skriver) return;
       if (e.key === ' ') { mellanslag = true; e.preventDefault(); return; }
-      if (e.key === 'Escape') { if (S.ritar.length || S.vm) { S.vm = null; avbryt(); } else if (S.verktyg !== 'valj') satVerktyg('valj'); else if (S.vald) { S.vald = null; allt(); } else stang(); e.preventDefault(); return; }
+      if (e.key === 'Escape') {
+        if (!smart.hidden) stangMeny();
+        else if (S.pilVal) { S.pilVal = null; prompt(); rita(); }
+        else if (S.ritar.length || S.vm) { S.vm = null; avbryt(); } else if (S.verktyg !== 'valj') satVerktyg('valj'); else if (S.vald) { S.vald = null; allt(); } else stang();
+        e.preventDefault(); return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && vald()) { e.preventDefault(); taBort(); return; }
       if (e.key === 'Enter' && S.verktyg === 'poly' && S.ritar.length >= 3) { e.preventDefault(); klarPoly(); return; }
-      const v = { v: 'valj', r: 'rekt', p: 'poly', d: 'riktn', e: 'entre', l: 'lm', a: 'vridmot', t: 'ledare', g: 'trad', f: 'fast' }[e.key.toLowerCase()];
+      const v = { v: 'valj', r: 'rekt', p: 'poly', d: 'riktn', e: 'entre', l: 'lm', m: 'flytta', o: 'rotera', a: 'vridmot', t: 'ledare', g: 'trad', f: 'fast' }[e.key.toLowerCase()];
       if (!ctrl && !e.altKey && v) { satVerktyg(v); e.preventDefault(); return; }
       if (!ctrl && /^[0-9@.,\-<]$/.test(e.key)) kommando.focus();
     }
@@ -1206,7 +1662,7 @@
       stang,
       volymer: () => S.volymer.map(kopia),
       /** För testerna: tillståndet och vyns omräkning. */
-      _test: { S, w2s, s2w, rita, byggUnderlag },
+      _test: { S, w2s, s2w, rita, byggUnderlag, hus: allaHus, meny: () => meny },
     };
   }
 

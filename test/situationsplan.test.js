@@ -216,4 +216,71 @@ prov('0.16.4: texter utanför små byggnader, gränsmått mot en annan gräns, b
   assert(d.length > 1e6 && d.endsWith('EOF\r\n'));
 });
 
+prov('0.16.6: måtten i rader, egna gränsmått och yttermått, texter och nummer som dragits', () => {
+  // ett befintligt hus 20 × 8 och en tillbyggnad 6 × 4 på dess norra sida, 6 m från västra gaveln
+  const hus = rekt('hus', 0, 0, 20, 8, { status: 'befintlig', huvudbyggnad: true, namn: 'Lägenheter' });
+  const till = rekt('till', 6, 8, 6, 4, { status: 'tillbyggnad', namn: 'Tillbyggnad' });
+  const v = [hus, till], TOMT2 = [{ pts: [[-10, -10], [40, -10], [40, 30], [-10, 30], [-10, -10]] }];
+  const m = S.matt(v, TOMT2);
+  // åt norr: måtten mellan byggnaderna (6 och 8) och tillbyggnadens yttermått (6) på en rad utanför tillbyggnaden,
+  // husets 20 m på raden utanför
+  const norr = m.filter(x => x.typ !== 'grans' && x.n && x.n[1] > 0.99);
+  const niva = x => x.fran[1] + x.bas;
+  const rad0 = norr.filter(x => x.rad === 0), rad1 = norr.filter(x => x.rad === 1);
+  assert.deepStrictEqual(rad0.map(x => x.text).sort(), ['6,0', '6,0', '8,0'], 'kedjan: ' + norr.map(x => x.text + '/' + x.rad).join(' '));
+  rad0.forEach(x => nara(niva(x), 12, 1e-6, 'kedjan utanför tillbyggnaden'));
+  assert.deepStrictEqual(rad1.map(x => x.text), ['20,0']);
+  nara(niva(rad1[0]), 12, 1e-6);
+  // på papperet: raden utanför ligger 5 mm längre ut
+  nara(S.mattAvst(rad1[0], 0.4) - S.mattAvst(rad0[0], 0.4) + (rad1[0].fran[1] - rad0[0].fran[1]), 2, 1e-6);
+  // ett eget gränsmått från ett hörn (gh|<hörn>), vinkelrätt mot närmaste gräns
+  const e = S.enheter(v).find(x => x.id === 'till');
+  const hi = e.yttre.findIndex(q => Math.abs(q[0] - 12) < 1e-6 && Math.abs(q[1] - 12) < 1e-6);
+  S.satAnnot(v, { agare: 'till', enhet: 'till', nyckel: `gh|${hi}` }, { horn: hi });
+  const g = S.matt(v, TOMT2).find(x => x.nyckel === `gh|${hi}`);
+  assert(g && g.egen && g.typ === 'grans');
+  nara(g.d, 18, 1e-6, 'till norra gränsen (y = 30)');
+  // ett eget yttermått (ys|<sida>) på en sida som inte har något
+  const sd = K.sidor(e.yttre), auto = new Set(S.matt(v, TOMT2).filter(x => x.enhet === 'till' && x.typ === 'sida').map(x => x.nyckel));
+  const fri = sd.find(s => !S.matt(v, TOMT2).some(x => x.enhet === 'till' && x.typ === 'sida' && Math.abs(x.fran[0] - s.a[0]) < 1e-6 && Math.abs(x.fran[1] - s.a[1]) < 1e-6));
+  S.satAnnot(v, { agare: 'till', enhet: 'till', nyckel: `ys|${fri.i}` }, { sida: fri.i });
+  const ys = S.matt(v, TOMT2).filter(x => x.enhet === 'till' && x.typ === 'sida');
+  assert.strictEqual(ys.length, auto.size + 1);
+  assert(ys.some(x => x.egen));
+  // texten dragen ut ur byggnaden: ledare från mitten, och pilen kan pekas om
+  const R0 = S.ritning({ volymer: v, granser: TOMT2 });
+  const namn0 = R0.texter.find(t => t.text === 'LÄGENHETER');
+  assert(K.inuti(hus.fotavtryck, namn0.p[0], namn0.p[1]));
+  S.satAnnot(v, { agare: 'hus', enhet: 'hus', nyckel: 'et|0' }, { t: [0, -12] });
+  let R = S.ritning({ volymer: v, granser: TOMT2 });
+  const namn = R.texter.find(t => t.text === 'LÄGENHETER');
+  assert(!K.inuti(hus.fotavtryck, namn.p[0], namn.p[1]), 'utanför');
+  const led = R.linjer.filter(l => l.lager === 'ETIKETTLEDARE');
+  assert(led.some(l => Math.abs(l.pts[0][0] - 10) < 1e-6 && Math.abs(l.pts[0][1] - 4) < 1e-6), 'ledaren pekar på mitten');
+  S.satAnnot(v, { agare: 'hus', enhet: 'hus', nyckel: 'et|0' }, { t: [0, -12], pil: [-8, -3] });
+  R = S.ritning({ volymer: v, granser: TOMT2 });
+  assert(R.linjer.some(l => l.lager === 'ETIKETTLEDARE' && Math.abs(l.pts[0][0] - 2) < 1e-6 && Math.abs(l.pts[0][1] - 1) < 1e-6), 'ledaren pekar dit den valdes');
+  // dragen inne i byggnaden: ingen ledare, i byggnadens riktning
+  S.satAnnot(v, { agare: 'hus', enhet: 'hus', nyckel: 'et|0' }, { t: [5, 0] });
+  R = S.ritning({ volymer: v, granser: TOMT2 });
+  const inne = R.texter.find(t => t.text === 'LÄGENHETER');
+  nara(inne.p[0], 15, 1e-6); assert.strictEqual(inne.vinkel, 0);
+  // hörnets nummer flyttat: där det släpptes, med en linje till hörnet
+  const h0 = S.numreradeHorn(v)[0];
+  S.satAnnot(v, h0, { d: [3, 3] });
+  const h1 = S.numreradeHorn(v)[0];
+  assert.deepStrictEqual(h1.d, [3, 3]);
+  R = S.ritning({ volymer: v, granser: TOMT2, visa: { koordlista: true } });
+  const nr = R.texter.find(t => t.lager === 'KOORDNR' && t.text === '1');
+  const q = S.nrPunkt(h1, 0.4);
+  nara(nr.p[0], q[0]); nara(nr.p[1], q[1]);
+  assert(R.linjer.some(l => l.lager === 'KOORDNR'), 'linjen till hörnet');
+  // dold med { dold, mot }: Visa dolda behåller mot
+  const gm = S.matt([rekt('n', 10, 10, 8, 6)], TOMT);
+  const nn = [rekt('n', 10, 10, 8, 6)];
+  S.satAnnot(nn, gm[0], { dold: true, mot: [0, 1] });
+  S.visaDolda(nn);
+  assert.deepStrictEqual(Object.values(nn[0].matt)[0], { mot: [0, 1] });
+});
+
 console.log(`${antal} prov gick igenom`);

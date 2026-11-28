@@ -175,6 +175,22 @@ const somDen = p => p;
   globalThis.fetch = async url => { anrop.push(url); return svar(400, ''); };
   await assert.rejects(G.vatten(ll, somDen), /svarade 400/);
   assert.strictEqual(anrop.length, 1);
+  // 0.16.6 (BG): huvudservern svarar inte; reservservern frågas efter en stund och dess svar gäller
+  globalThis.TERRANG_OVERPASS_PARALLELL = 30;
+  anrop = [];
+  globalThis.fetch = (url, o) => { anrop.push(url); return url.includes('overpass-api.de') ? new Promise((_, rej) => o.signal.addEventListener('abort', () => rej(new Error('abort')))) : svar(200, JSON.stringify({ elements: [] })); };
+  const t1 = Date.now();
+  vt = await G.vatten(ll, somDen);
+  assert.deepStrictEqual(vt, []);
+  assert(Date.now() - t1 < 2000, 'reservens svar väntar inte på huvudservern');
+  assert.deepStrictEqual(anrop.map(u => u.includes('kumi')), [false, true]);
+  // relationens inre ringar är öar (inre: true), och varje vatten har sitt id
+  globalThis.fetch = async url => (url.includes('overpass-api.de') ? svar(200, JSON.stringify({ elements: [{ type: 'relation', id: 8, tags: { natural: 'water', name: 'Sjön' },
+    members: [{ type: 'way', role: 'outer', geometry: [{ lat: 58, lon: 15 }, { lat: 58, lon: 15.02 }, { lat: 58.02, lon: 15.02 }, { lat: 58, lon: 15 }] },
+      { type: 'way', role: 'inner', geometry: [{ lat: 58.005, lon: 15.01 }, { lat: 58.005, lon: 15.012 }, { lat: 58.006, lon: 15.012 }, { lat: 58.005, lon: 15.01 }] }] }] })) : svar(500, ''));
+  vt = await G.vatten(ll, somDen);
+  assert.deepStrictEqual(vt.map(x => [x.id, !!x.inre, x.sluten]), [['relation/8', false, true], ['relation/8', true, true]]);
+  delete globalThis.TERRANG_OVERPASS_PARALLELL;
 
   // 0.16.4 (DE): skydden klipps till utsnittet
   const kl = G.klippRingar([[[-100, -100], [500, -100], [500, 500], [-100, 500]], [[900, 900], [950, 900], [950, 950]]], { xmin: 0, ymin: 0, xmax: 200, ymax: 100 });
